@@ -37,6 +37,8 @@ test:
 	#-./testing.x parsing_tree.json calculator_example.txt
 run:
 	-./state_machine.x parsing_tree.json calculator_example.txt
+python3Run:
+	python3 f.py
 
 clean:
 	-rm *.o *.x
