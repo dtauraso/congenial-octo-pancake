@@ -82,15 +82,22 @@ def x2():
                 tracker = tracker.next
     if streak_count > 0:
         tracker = tracker.next
-        parent_line = Point(line_id=streak_count, point_id=0)
-        if streak_count not in lines:
-            lines[streak_count] = [parent_line]
-        elif streak_count in lines:
-            parent_line.point_id = len(lines[streak_count])
-            lines[streak_count].append(parent_line)
-        child_line = lines[tracker.line_id][tracker.point_id]
-        child_line.parent = Point(line_id=parent_line.line_id, point_id=parent_line.point_id)
-        parent_line.child = Point(line_id=child_line.line_id, point_id=child_line.point_id)
+        tracker.parent = Point(line_id=streak_count, point_id=0)
+        while tracker.parent.line_id > 0:
+            if streak_count not in lines:
+                lines[streak_count] = [tracker.parent]
+            elif streak_count in lines:
+                tracker.parent.point_id = len(lines[streak_count])
+                lines[streak_count].append(tracker.parent)
+            parent_line = tracker.parent
+            parent_line.child = Point(line_id=tracker.line_id, point_id=tracker.point_id)
+            parent_line.child.parent = Point(line_id=parent_line.line_id, point_id=parent_line.point_id)
+            if streak_count == 1:
+                break
+            tracker = tracker.parent
+            tracker.parent = Point(line_id=1, point_id=parent_line.point_id)
+            streak_count = 1
+
     for item in lines:
         print(item)
         [print(str(point)) for point in lines[item]]
