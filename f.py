@@ -3,9 +3,14 @@ class Point:
     def __init__(self, line_id, point_id):
         self.line_id = line_id
         self.point_id = point_id
+        self.is_active = False
+        self.sequence_id = 0
+        self.children_streak_difference_distance = 0
         self.next = None
         self.prev = None
         self.parent = None
+    def __str__(self):
+        return f"({self.line_id}, {self.point_id}, {self.parent}, next: {self.next}, prev:{self.prev})"
 
 
 def x():
@@ -46,27 +51,31 @@ def x2():
 
     lines = {}
     
-    tracker = {}
+    tracker = None
     streak_count = 0
     current_item = 0
     new_sequence = []
     print(sequence)
 
-    for _, item in enumerate(sequence):
-        if current_item == item:
-            streak_count += 1
+    for i, item in enumerate(sequence):
         if item not in lines:
             point = Point(line_id=item, point_id=0)
             lines[item] = [point]
-            tracker[item] = point
+            tracker = point
+            streak_count = 1
         else:
-            if tracker[item].next == None:
-                tracker[item].next = Point(line_id=item, point_id=len(lines[item]))
-                tracker[item].next.prev = lines[item][-1]
-                lines[item][-1].next = tracker[item].next
-                lines[item].append(tracker[item].next)
-            tracker[item] = tracker[item].next
-
+            streak_count += 1
+            if tracker.next == None:
+                tracker.next = Point(line_id=item, point_id=len(lines[item]))
+                lines[item][-1].next = Point(line_id=tracker.next.line_id, point_id=tracker.next.point_id)
+                lines[item][-1].next.prev = Point(line_id=lines[item][-1].line_id, point_id=lines[item][-1].point_id)
+                lines[item].append(tracker.next)
+            if i >= len(sequence)-1:
+                continue
+            if tracker.next.line_id == sequence[i+1]:
+                tracker = tracker.next
+    print_lines = [[item, [str(point) for point in lines[item]]] for item in lines]
+    [print(i) for i in print_lines]
     # if streak_count > 0:
     # print(sequence)
 
