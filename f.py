@@ -9,9 +9,15 @@ class Point:
         self.next = None
         self.prev = None
         self.parent = None
+        self.child = None
     def __str__(self):
-        return f"({self.line_id}, {self.point_id}, {self.parent}, next: {self.next}, prev:{self.prev})"
-
+        parent_coordinates = self.parent.returnCoordinates() if self.parent != None else None
+        child_coordinates = self.child.returnCoordinates() if self.child != None else None
+        next_coordinates = self.next.returnCoordinates() if self.next != None else None
+        prev_coordinates = self.prev.returnCoordinates() if self.prev != None else None
+        return f"(line id: {self.line_id}, point id: {self.point_id}, parent: {parent_coordinates}, next: {next_coordinates}, prev: {prev_coordinates}, child: {child_coordinates})"
+    def returnCoordinates(self):
+        return (self.line_id, self.point_id)
 
 def x():
 
@@ -74,9 +80,21 @@ def x2():
                 continue
             if tracker.next.line_id == sequence[i+1]:
                 tracker = tracker.next
-    print_lines = [[item, [str(point) for point in lines[item]]] for item in lines]
-    [print(i) for i in print_lines]
-    # if streak_count > 0:
+    if streak_count > 0:
+        tracker = tracker.next
+        parent_line = Point(line_id=streak_count, point_id=0)
+        if streak_count not in lines:
+            lines[streak_count] = [parent_line]
+        elif streak_count in lines:
+            parent_line.point_id = len(lines[streak_count])
+            lines[streak_count].append(parent_line)
+        child_line = lines[tracker.line_id][tracker.point_id]
+        child_line.parent = Point(line_id=parent_line.line_id, point_id=parent_line.point_id)
+        parent_line.child = Point(line_id=child_line.line_id, point_id=child_line.point_id)
+    for item in lines:
+        print(item)
+        [print(str(point)) for point in lines[item]]
+        print()
     # print(sequence)
 
 x2()
