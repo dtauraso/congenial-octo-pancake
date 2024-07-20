@@ -163,4 +163,22 @@ def x3():
                 print(f"    {j} {str(point)}")
         print()
 
-x3()
+def x4():
+
+    sequence = [1, 2, 1, 1, 3, 1, 3]
+
+    numbers = {}
+    lines = {}
+    for i, item in enumerate(sequence):
+        lines[i] = -1
+        if (i - 1)  in lines:
+            lines[i-1] = i
+        if item not in numbers:
+            numbers[item] = [i]
+        else:
+            numbers[item].append(i)
+
+    print(numbers)
+    print(lines)
+
+x4()
