@@ -194,25 +194,50 @@ class Point2:
         next_coordinates = self.next.returnCoordinates() if self.next != None else None
         prev_coordinates = self.prev.returnCoordinates() if self.prev != None else None
         return f"(line id: {self.line_id}, point id: {self.point_id})"
+
+def addGroup(trees, group_id, streak_count, current_item):
+
+    trees[group_id] = {current_item: {streak_count: {}}}
+    if streak_count > 1:
+        trees[group_id][current_item][streak_count][1] = {}
+    return trees
 def x5():
 
     sequence = [1, 2, 1, 1, 3, 3, 1, 3]
 
     numbers = {}
     lines = {}
+    group_id = 0
+    streak_count = 0
+    current_item = sequence[0]
+    trees = {}
+    print(f"{sequence}")
     for i, item in enumerate(sequence):
-        lines[i] = -1
-        if (i - 1) in lines:
-            lines[i-1] = i
-        if item not in numbers:
-            numbers[item] = [[i]]
-        else:
-            if numbers[item][-1][0] == i-1:
-                numbers[item][-1].append(i)
-            else:
-                numbers[item].append([i])
 
-    print(numbers)
-    print(lines)
+        if item != current_item:
+            # print(f"{group_id} {streak_count}")
+            trees = addGroup(trees, group_id, streak_count, current_item)
+            streak_count = 1
+            group_id += 1
+            current_item = item
+        else:
+            streak_count += 1
+    else:
+        if streak_count > 0:
+            trees = addGroup(trees, group_id, streak_count, current_item)
+        # lines[i] = -1
+        # if (i - 1) in lines:
+        #     lines[i-1] = i
+        # if item not in numbers:
+        #     numbers[item] = [i]
+        # else:
+            # if numbers[item][-1][0] == i-1:
+            #     numbers[item][-1].append(i)
+            # else:
+            # numbers[item].append(i)
+
+    [print(f"{key} {value}") for key, value in trees.items()]
+    # print(numbers)
+    # print(lines)
 
 x5()
