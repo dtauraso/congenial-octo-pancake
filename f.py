@@ -240,4 +240,60 @@ def x5():
     # print(numbers)
     # print(lines)
 
-x5()
+def x6():
+
+    sequence = [1, 2, 1, 1, 3, 3, 1, 3]
+
+    numbers = {}
+    lines = {}
+    group_id = 0
+    streak_count = 0
+    current_item = sequence[0]
+    trees = {}
+    streak_count_last_group_id = {}
+    print(f"{sequence}")
+    for i, item in enumerate(sequence):
+
+        if item != current_item:
+            # print(f"{group_id} {streak_count}")
+            trees = addGroup(trees, group_id, streak_count, current_item)
+            # print(f"current_item: {current_item} group_id: {group_id}")
+            # print(f"streak_count_last_group_id: {streak_count_last_group_id}")
+            # [print(f"{key} {value}") for key, value in trees.items()]
+            # print()
+            # print(streak_count_last_group_id)
+            if group_id in trees and current_item in streak_count_last_group_id:
+                if streak_count_last_group_id[current_item] in trees:
+                    trees[streak_count_last_group_id[current_item]]["next"] = trees[group_id]
+            streak_count_last_group_id[current_item] = group_id
+            streak_count = 1
+            group_id += 1
+            current_item = item
+        else:
+            streak_count += 1
+    else:
+        if streak_count > 0:
+            trees = addGroup(trees, group_id, streak_count, current_item)
+        #     print(f"current_item: {current_item} group_id: {group_id}")
+        #     print(f"streak_count_last_group_id: {streak_count_last_group_id}")
+        #     [print(f"{key} {value}") for key, value in trees.items()]
+        #     print()
+            if group_id in trees and current_item in streak_count_last_group_id:
+                if streak_count_last_group_id[current_item] in trees:
+                    trees[streak_count_last_group_id[current_item]]["next"] = trees[group_id]
+        # lines[i] = -1
+        # if (i - 1) in lines:
+        #     lines[i-1] = i
+        # if item not in numbers:
+        #     numbers[item] = [i]
+        # else:
+            # if numbers[item][-1][0] == i-1:
+            #     numbers[item][-1].append(i)
+            # else:
+            # numbers[item].append(i)
+
+    [print(f"{key} {value}") for key, value in trees.items()]
+    # print(numbers)
+    # print(lines)
+
+x6()
