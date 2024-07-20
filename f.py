@@ -171,7 +171,7 @@ def x4():
     lines = {}
     for i, item in enumerate(sequence):
         lines[i] = -1
-        if (i - 1)  in lines:
+        if (i - 1) in lines:
             lines[i-1] = i
         if item not in numbers:
             numbers[item] = [i]
@@ -181,4 +181,38 @@ def x4():
     print(numbers)
     print(lines)
 
-x4()
+
+class Point2:
+    def __init__(self, line_id, point_id):
+        self.line_id = line_id
+        self.point_id = point_id
+        self.child = None
+        self.parent = None
+    def __str__(self):
+        parent_coordinates = self.parent.returnCoordinates() if self.parent != None else None
+        child_coordinates = self.child.returnCoordinates() if self.child != None else None
+        next_coordinates = self.next.returnCoordinates() if self.next != None else None
+        prev_coordinates = self.prev.returnCoordinates() if self.prev != None else None
+        return f"(line id: {self.line_id}, point id: {self.point_id})"
+def x5():
+
+    sequence = [1, 2, 1, 1, 3, 3, 1, 3]
+
+    numbers = {}
+    lines = {}
+    for i, item in enumerate(sequence):
+        lines[i] = -1
+        if (i - 1) in lines:
+            lines[i-1] = i
+        if item not in numbers:
+            numbers[item] = [[i]]
+        else:
+            if numbers[item][-1][0] == i-1:
+                numbers[item][-1].append(i)
+            else:
+                numbers[item].append([i])
+
+    print(numbers)
+    print(lines)
+
+x5()
