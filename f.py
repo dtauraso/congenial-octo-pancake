@@ -360,7 +360,7 @@ def addGroup2(trees, group_id, streak_count, current_item, streak_count_last_tre
     streak_tree = {}
     
 
-    print(f"{group_id} {streak_count} {streak_count_last_tree}")
+    # print(f"{group_id} {streak_count} {streak_count_last_tree}")
 
     if streak_count in streak_count_last_tree:
         # print(f"{group_id} {streak_count} {streak_count_last_tree}")
