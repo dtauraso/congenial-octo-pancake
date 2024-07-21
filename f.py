@@ -203,14 +203,16 @@ def addGroup(trees, group_id, streak_count, current_item, streak_count_last_tree
     if streak_count in streak_count_last_tree:
         # print(f"{group_id} {streak_count} {streak_count_last_tree}")
         streak_count_last_tree[streak_count]["joined"] = True
+        if "next group" in streak_count_last_tree[streak_count]:
+            streak_count_last_tree[streak_count]["next group"][group_id] = group_id+1
         streak_tree = streak_count_last_tree[streak_count]
         trees[group_id] = {current_item: {streak_count: streak_tree}}
     else:
         trees[group_id] = {current_item: {streak_count: {"joined": False}}}
         if streak_count > 1:
-            trees[group_id][current_item][streak_count][1] = {"joined": False, "next group": group_id+1}
+            trees[group_id][current_item][streak_count][1] = {"joined": False, "next group": {group_id: group_id+1}}
         else:
-            trees[group_id][current_item][streak_count] = {"joined": False, "next group": group_id+1}
+            trees[group_id][current_item][streak_count] = {"joined": False, "next group": {group_id: group_id+1}}
     return trees
 def x5():
 
@@ -309,7 +311,7 @@ def x6():
 
 def x7():
 
-    sequence = [1, 2, 1, 1, 2, 2]
+    sequence = [1, 2, 1, 1, 2, 2, 4, 3, 3]
 
     group_id = 0
     streak_count = 0
