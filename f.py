@@ -497,12 +497,12 @@ def x9():
                     trees[group_id][current_item][streak_count][1] = {"next group": {group_id: group_id+1}}
                 else:
                     trees[group_id][current_item][streak_count] = {"next group": {group_id: group_id+1}}
-            current_item_last_group_id[current_item] = group_id
-            if group_id in trees:
-                if current_item in trees[group_id]:
-                        current_item_last_tree[current_item] = trees[group_id][current_item]
+                current_item_last_group_id[current_item] = group_id
+                if group_id in trees:
+                    if current_item in trees[group_id]:
+                            current_item_last_tree[current_item] = trees[group_id][current_item]
+                group_id += 1
             streak_count = 1
-            group_id += 1
             current_item = item
         else:
             streak_count += 1
@@ -520,6 +520,7 @@ def x9():
             else:
                 if matching_sequence:
                     print(f"i: {i-1} is end of sequence streak")
+                    print(f"group_id: {group_id - 1}")
                     matching_sequence = False
                 trees[group_id] = {current_item: {streak_count: {}}}
                 if streak_count > 1:
