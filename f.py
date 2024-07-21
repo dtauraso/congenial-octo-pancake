@@ -481,11 +481,12 @@ def x9():
                 while "next group" not in root:
                     root = root[list(root.keys())[0]]
                 print(f"current_item {current_item} next group {root['next group']}")
-            trees[group_id] = {current_item: {streak_count: {}}}
-            if streak_count > 1:
-                trees[group_id][current_item][streak_count][1] = {"next group": {group_id: group_id+1}}
             else:
-                trees[group_id][current_item][streak_count] = {"next group": {group_id: group_id+1}}
+                trees[group_id] = {current_item: {streak_count: {}}}
+                if streak_count > 1:
+                    trees[group_id][current_item][streak_count][1] = {"next group": {group_id: group_id+1}}
+                else:
+                    trees[group_id][current_item][streak_count] = {"next group": {group_id: group_id+1}}
 
             # trees = addGroup3(trees, group_id, streak_count, current_item, streak_count_last_tree)
             # print(f"current_item: {current_item} group_id: {group_id}")
@@ -517,11 +518,12 @@ def x9():
                 while "next group" not in root:
                     root = root[list(root.keys())[0]]
                 print(f"current_item {current_item} next group {root['next group']}")
-            trees[group_id] = {current_item: {streak_count: {}}}
-            if streak_count > 1:
-                trees[group_id][current_item][streak_count][1] = {"next group": {group_id: group_id+1}}
             else:
-                trees[group_id][current_item][streak_count] = {"next group": {group_id: group_id+1}}
+                trees[group_id] = {current_item: {streak_count: {}}}
+                if streak_count > 1:
+                    trees[group_id][current_item][streak_count][1] = {"next group": {group_id: group_id+1}}
+                else:
+                    trees[group_id][current_item][streak_count] = {"next group": {group_id: group_id+1}}
 
             # trees = addGroup3(trees, group_id, streak_count, current_item, streak_count_last_tree)
             # if group_id in trees and current_item in current_item_last_group_id:
