@@ -206,7 +206,7 @@ def addGroup(trees, group_id, streak_count, current_item, streak_count_last_tree
         streak_tree = streak_count_last_tree[streak_count]
         trees[group_id] = {current_item: {streak_count: streak_tree}}
     else:
-        trees[group_id] = {current_item: {streak_count: {}}}
+        trees[group_id] = {current_item: {streak_count: {"joined": False}}}
         if streak_count > 1:
             trees[group_id][current_item][streak_count][1] = {"joined": False, "next group": group_id+1}
         else:
