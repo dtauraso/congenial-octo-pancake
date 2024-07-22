@@ -429,35 +429,6 @@ def x8():
     print()
     [print(f"{key} {value}") for key, value in trees.items()]
 
-def addGroup3(trees, group_id, streak_count, current_item, streak_count_last_tree):
-
-    streak_tree = {}
-    
-
-    # print(f"{group_id} {streak_count} {streak_count_last_tree}")
-
-    # if streak_count in streak_count_last_tree:
-        # print(f"{group_id} {streak_count} {streak_count_last_tree}")
-        # streak_count_last_tree[streak_count]["joined"] = True
-        # if "next group" in streak_count_last_tree[streak_count]:
-        #     streak_count_last_tree[streak_count]["next group"][group_id] = group_id+1
-        # streak_tree = streak_count_last_tree[streak_count]
-        # trees[group_id] = {current_item: {streak_count: streak_tree}}
-        # streak_count_level_2 = streak_count_last_tree[streak_count]
-        # if 1 in streak_count_level_2:
-        #     streak_count_level_2[1]["joined"] = True
-        #     if "next group" in streak_count_level_2[1]:
-        #         streak_count_level_2[1]["next group"][group_id] = group_id+1
-        #         streak_tree = streak_count_level_2[1]
-        #         trees[group_id][current_item][streak_count] = streak_tree
-    # else:
-        # trees[group_id] = {current_item: {streak_count: {}}}
-        # if streak_count > 1:
-        #     trees[group_id][current_item][streak_count][1] = {"next group": {group_id: group_id+1}}
-        # else:
-        #     trees[group_id][current_item][streak_count] = {"next group": {group_id: group_id+1}}
-    return trees
-   
 def x9():
 
     sequence = [1, 1, 1, 2, 2, 3, 1, 1, 1, 2, 2, 3, 4]
@@ -468,8 +439,6 @@ def x9():
     trees = {}
     current_item_last_group_id = {}
     current_item_last_tree = {}
-    # sequence_id = 0
-    # sequence_id_sequence = {}
     matching_sequence = False
     print(f"{sequence}")
     for i, item in enumerate(sequence):
@@ -482,10 +451,6 @@ def x9():
             if current_item in current_item_last_tree:
                 if not matching_sequence:
                     matching_sequence = True
-                # if len(sequence_id_sequence) == 0:
-                #     sequence_id_sequence[0] = [group_id]
-                # else:
-                #     sequence_id_sequence[sequence_id].append(group_id)
                 root = current_item_last_tree[current_item]
                 while "next group" not in root:
                     root = root[list(root.keys())[0]]
@@ -536,4 +501,76 @@ def x9():
     print()
     [print(f"{key} {value}") for key, value in trees.items()]
 
-x9()
+def x10():
+# [1, 1, 1, 2, 2, 4, 4, 2, 2, 6]
+# [1, 1, 1, 2, 2, 1, 1, 1, 2, 2, 3]
+    sequence = [1, 1, 1, 2, 2, 4, 4, 1, 1, 1, 2, 2, 6]
+
+    group_id = 0
+    streak_count_2 = 0
+    current_streak_count_1 = sequence[0]
+    sequence_id = 0
+    sequences = {}
+    tree = {}
+    print(f"{sequence}")
+    for i, streak_count_1 in enumerate(sequence):
+        # print(f"{i} {item} {current_item} {matching_sequence}")
+        if streak_count_1 != current_streak_count_1:
+            # print(f"{group_id} {current_item} {streak_count}")
+            # if len(current_item_last_tree) > 0:
+            #     print(f"current_item_last_tree:")
+            #     [print(f"{key} {value}") for key, value in current_item_last_tree.items()]
+            # make streak reverse tree
+            streak_counts = [streak_count_2, current_streak_count_1]
+            if streak_count_2 > 1:
+                streak_counts.insert(0, 1)
+            # reverse_streak_tree = {}
+            subtree = tree
+            match_count = 0
+            print(f"streak_counts: {streak_counts}")
+            for i, streak_count in enumerate(streak_counts):
+                # "l": len(streak_counts) - i
+                if streak_count not in subtree:
+                    subtree[streak_count] = {"order id": group_id} if streak_count > 1 else {}
+                    
+                else:
+                    match_count += 1
+                # if streak_count > 1:
+                
+                subtree = subtree[streak_count]
+            if sequence_id not in sequences:
+                sequences[sequence_id] = []
+            sequences[sequence_id].append(streak_counts)
+            if match_count == len(streak_counts):
+                print(f"sequence {sequence_id} is finished")
+                # print(f"{sequence_id}, {tree}")
+                [print(f"{key} {value}") for key, value in sequences.items()]
+                [print(f"{key} {value}") for key, value in tree.items()]
+
+                print()
+                sequence_id += 1
+            # [print(f"{key} {value}") for key, value in tree.items()]
+            # print()
+            # print(f"tree: {tree}")
+
+            # print(f"reverse_streak_tree: {reverse_streak_tree}")
+                # print(f"here {item} {current_item} {matching_sequence}")
+            # tree[group_id] = {current_streak_count_1: {streak_count_2: {}}}
+            # if streak_count_2 > 1:
+            #     tree[group_id][current_streak_count_1][streak_count_2][1] = {"next group": {group_id: group_id+1}}
+            # else:
+            #     tree[group_id][current_streak_count_1][streak_count_2] = {"next group": {group_id: group_id+1}}
+            group_id += 1
+            streak_count_2 = 1
+            current_streak_count_1 = streak_count_1
+        else:
+            streak_count_2 += 1
+            # trees = addGroup3(trees, group_id, streak_count, current_item, streak_count_last_tree)
+            # if group_id in trees and current_item in current_item_last_group_id:
+            #     if current_item_last_group_id[current_item] in trees:
+            #         trees[current_item_last_group_id[current_item]]["next"] = trees[group_id]
+
+    print()
+    [print(f"{key} {value}") for key, value in tree.items()]
+
+x10()
