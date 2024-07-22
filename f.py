@@ -528,20 +528,24 @@ def x10():
             subtree = tree
             match_count = 0
             print(f"streak_counts: {streak_counts}")
+            order_id = 0
             for i, streak_count in enumerate(streak_counts):
                 # "l": len(streak_counts) - i
                 if streak_count not in subtree:
                     subtree[streak_count] = {"order id": group_id} if streak_count > 1 else {}
                     
                 else:
+                    if "order id" in subtree[streak_count]:
+                        order_id = subtree[streak_count]["order id"]
                     match_count += 1
                 # if streak_count > 1:
                 
                 subtree = subtree[streak_count]
             if sequence_id not in sequences:
                 sequences[sequence_id] = []
-            sequences[sequence_id].append(streak_counts)
+            sequences[sequence_id].append({order_id + group_id: streak_counts})
             if match_count == len(streak_counts):
+                sequences[sequence_id].append({order_id: streak_counts})
                 print(f"sequence {sequence_id} is finished")
                 # print(f"{sequence_id}, {tree}")
                 [print(f"{key} {value}") for key, value in sequences.items()]
