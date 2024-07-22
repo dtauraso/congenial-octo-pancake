@@ -532,9 +532,10 @@ def x10():
             for i, streak_count in enumerate(streak_counts):
                 # "l": len(streak_counts) - i
                 if streak_count not in subtree:
-                    subtree[streak_count] = {"order id": group_id} if streak_count > 1 else {}
-                    
+                    subtree[streak_count] = {"order id": group_id, "sequence id": [sequence_id]} if streak_count > 1 else {}
                 else:
+                    if "sequence id" in subtree[streak_count]:
+                        subtree[streak_count]["sequence id"].append(sequence_id)
                     if "order id" in subtree[streak_count]:
                         order_id = subtree[streak_count]["order id"]
                     match_count += 1
