@@ -575,6 +575,18 @@ def x10():
             #     if current_item_last_group_id[current_item] in trees:
             #         trees[current_item_last_group_id[current_item]]["next"] = trees[group_id]
 
+    # filter_sequence = [1, 2, 4]
+    # root = tree
+    # sequence_ids = []
+    # for i, streak_count in enumerate(filter_sequence):
+    #     root = root[streak_count]
+    #     if i == len(filter_sequence)-1:
+    #         if "sequence id" in root:
+    #             for i in root["sequence id"]:
+    #                 sequence_ids.append(root["sequence id"][i])
+    # print(f"sequence_ids: {sequence_ids}")
+    # for sequence_id in sequence_ids:
+    #     print(f"sequences: {sequences[sequence_ids[sequence_id]]}")
     print()
     [print(f"{key} {value}") for key, value in tree.items()]
 
