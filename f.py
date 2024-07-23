@@ -597,13 +597,18 @@ def x11():
     numbers = {}
     number_window_start_numbers = {sequence[0]: 0}
     print(f"{sequence}\n")
+    first_revisit = True
     for i, item in enumerate(sequence):
 
         if item not in numbers:
             numbers[item] = [i]
         else:
+            if first_revisit:
+                first_revisit = False
+                print(f"i: {i} first revisit {item} {numbers}")
             numbers[item].append(i)
             number_window_start_numbers[item] = i
+            
             # print(f"i: {i} revisit {item} {numbers}")
             if item in number_window_start_numbers:
                 print(f"i: {i} item: {item} {number_window_start_numbers[item]} {numbers[item]}")
@@ -611,5 +616,6 @@ def x11():
     
     print()
     print(numbers)
+    # print(number_window_start_numbers)
 
 x11()
