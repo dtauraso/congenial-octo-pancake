@@ -618,4 +618,58 @@ def x11():
     print(numbers)
     # print(number_window_start_numbers)
 
-x11()
+def x12():
+
+    from collections import OrderedDict
+
+    sequence = [1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 4]
+
+    
+    x = OrderedDict()
+    numbers = OrderedDict()
+    number_window_start_numbers = {}
+    sequence_id = 0
+    print(f"{sequence}\n")
+    expected_number = 0
+    current_position = 0
+    sequence_length = 0
+    streak_count = 0
+    for i, item in enumerate(sequence):
+
+        print(f"{current_position}")
+        if sequence_length > 0:
+            # print(f"{numbers.items()} {current_position}")
+            expected_number, sequence_ids = list(x.items())[current_position]
+            print(f"i: {i} expected_number: {expected_number} {item}")
+            if item != expected_number:
+                print(f"length {len(x)} sequence streak {streak_count+1} broke")
+        if item not in numbers:
+            numbers[item] = [sequence_id]
+            if item not in x:
+                x[item] = [sequence_id]
+            else:
+                x[item].append(sequence_id)
+        else:
+            if sequence_length == 0:
+                sequence_length = len(x)
+            print(f"i: {i} revisit {item} {x} sequence_id: {sequence_id}")
+            if item not in number_window_start_numbers:
+                number_window_start_numbers[item] = [sequence_id]
+            else:
+                number_window_start_numbers[item].append(sequence_id)
+                # print(f"i: {i} revisit {item} {numbers}")
+                print(f"i: {i} item: {item} {number_window_start_numbers[item]}, sequence_id: {sequence_id}")
+            numbers = OrderedDict()
+            sequence_id += 1
+            streak_count += 1
+        if sequence_length > 0:
+            current_position = (current_position + 1) % sequence_length
+
+
+    
+    print()
+    print(numbers)
+    print(number_window_start_numbers)
+    print(x)
+
+x12()
