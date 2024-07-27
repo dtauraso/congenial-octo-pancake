@@ -621,7 +621,8 @@ def x11():
 def x12():
 
     from collections import OrderedDict
-
+# [1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 4]
+# [1, 1, 1, 2, 1, 1, 1, 2, 2]
     sequence = [1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 4]
 
     
@@ -672,4 +673,41 @@ def x12():
     print(number_window_start_numbers)
     print(x)
 
-x12()
+def x13():
+
+    sequence = [1, 2, 3, 1, 1, 3, 1, 2, 3, 1, 2, 3, 4]
+    current_prediction_position = -1
+    numbers = {}
+    is_successful_prediction_started = False
+    prediction_order_number = -1
+    successful_prediction_count = 0
+    for i, item in enumerate(sequence):
+        if item not in numbers:
+            if not is_successful_prediction_started:
+                numbers[item] = {"prev": -1, "next": -1}
+                if i > 0:
+                    numbers[sequence[i-1]]["next"] = item
+                    numbers[item]["prev"] = sequence[i-1]
+            else:
+                print(f"i: {i} new unpredicted item: {item}")
+        else:
+            if numbers[item]["prev"] == -1:
+                if not is_successful_prediction_started:
+                    is_successful_prediction_started = True
+                    prediction_order_number = item
+                    successful_prediction_count += 1
+            # elif numbers[item]["next"] == -1:
+            # else:
+
+            # if not is_successful_prediction_started:
+                # if numbers[item]["prev"] == -1:
+                #     is_successful_prediction_started = True
+                #     prediction_order_number = item
+                #     successful_prediction_count += 1
+            # else:
+            #     if numbers[item]["next"] == -1:
+        [print(f"{key} {value}") for key, value in numbers.items()]
+        print("\n")
+    # print(f"{i} {numbers} {prediction_order_number} {successful_prediction}")
+
+x13()
