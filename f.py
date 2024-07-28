@@ -675,29 +675,90 @@ def x12():
 
 def x13():
 
-    sequence = [1, 2, 3, 1, 1, 3, 1, 2, 3, 1, 2, 3, 4]
-    current_prediction_position = -1
+    sequences = [[1, 2, 3], [1, 2, 3]]
     numbers = {}
+    sequence_id = 0
     is_successful_prediction_started = False
-    prediction_order_number = -1
-    successful_prediction_count = 0
-    for i, item in enumerate(sequence):
-        if item not in numbers:
-            if not is_successful_prediction_started:
-                numbers[item] = {"prev": -1, "next": -1}
+    prev_sequence_id = 0
+    prev_number = -1
+    for sequence in sequences:
+        for i, current_number in enumerate(sequence):
+            # print(f"i: {i} current_number: {current_number}")
+            if current_number not in numbers:
+                if i == 0:
+                    numbers[current_number] = {sequence_id: {
+                            "current sequence": {"prev": -1, "next": -1},
+                            "next sequence": {"prev": -1, "next": -1}}}
                 if i > 0:
-                    numbers[sequence[i-1]]["next"] = item
-                    numbers[item]["prev"] = sequence[i-1]
+                    numbers[current_number] = {sequence_id: {
+                        "current sequence": {"prev": prev_number, "next": -1},
+                        "next sequence": {"prev": -1, "next": -1}}}
+                    numbers[prev_number][sequence_id]["current sequence"]["next"] = current_number
             else:
-                print(f"i: {i} new unpredicted item: {item}")
-        else:
-            if numbers[item]["prev"] == -1:
-                if not is_successful_prediction_started:
-                    is_successful_prediction_started = True
-                    prediction_order_number = item
-                    successful_prediction_count += 1
-            # elif numbers[item]["next"] == -1:
-            # else:
+                if i == 0:
+                    numbers[current_number][sequence_id] = {
+                            "current sequence": {"prev": -1, "next": -1},
+                            "next sequence": {"prev": prev_sequence_id, "next": -1}}
+                    numbers[current_number][prev_sequence_id]["next sequence"]["next"] = sequence_id
+                if i > 0:
+                    numbers[current_number][sequence_id] = {
+                        "current sequence": {"prev": prev_number, "next": -1},
+                        "next sequence": {"prev": prev_sequence_id, "next": -1}}
+                    numbers[prev_number][sequence_id]["current sequence"]["next"] = current_number
+                    numbers[current_number][prev_sequence_id]["next sequence"]["next"] = sequence_id
+
+            prev_number = current_number
+        prev_number = -1
+        prev_sequence_id = sequence_id
+        sequence_id += 1
+        #     if numbers[current_number]["prev"] == -1:
+        #         if not is_successful_prediction_started:
+        #             is_successful_prediction_started = True
+        #             prediction_order_number = numbers[current_number]["next"]
+        #             successful_prediction_count += 1
+        #         elif prediction_order_number != current_number:
+        #             delete_keys = []
+        #             tracker = numbers[current_number]["next"]
+        #             while tracker != -1:
+        #                 delete_keys.append(tracker)
+        #                 tracker = numbers[tracker]["next"]
+        #             for key in delete_keys:
+        #                 del numbers[key]
+        #             numbers[current_number]["next"] = -1
+        #             successful_prediction_count = 1
+        #             prediction_order_number = current_number
+        #             streak_count = 2
+        #             # [print(f"{key} {value}") for key, value in numbers.items()]
+        #             # print(f"{streak_count}")
+        #             # print("\n")
+        #         else:
+        #             if numbers[current_number]["next"] == -1:
+        #                 streak_count += 1
+        #             successful_prediction_count += 1
+        #             prediction_order_number = numbers[current_number]["next"]
+        #     elif numbers[current_number]["next"] == -1:
+        #         if current_number != prediction_order_number:
+        #             delete_keys = []
+        #             tracker = numbers[current_number]["prev"]
+        #             while tracker != -1:
+        #                 delete_keys.append(tracker)
+        #                 tracker = numbers[tracker]["prev"]
+        #             for key in delete_keys:
+        #                 del numbers[key]
+        #             numbers[current_number]["prev"] = -1
+        #             successful_prediction_count = 1
+        #             prediction_order_number = current_number
+        #             streak_count = 2
+        #             [print(f"{key} {value}") for key, value in numbers.items()]
+        #             print(f"{streak_count}")
+        #             print("\n")
+        #         else:
+        #             successful_prediction_count += 1
+        #             streak_count += 1
+        #             prediction_order_number = -1
+        #             is_successful_prediction_started = False
+        #     else:
+        #         if current_number != prediction_order_number:
 
             # if not is_successful_prediction_started:
                 # if numbers[item]["prev"] == -1:
@@ -706,7 +767,9 @@ def x13():
                 #     successful_prediction_count += 1
             # else:
             #     if numbers[item]["next"] == -1:
-        [print(f"{key} {value}") for key, value in numbers.items()]
+    for key, value in numbers.items():
+        print(key)
+        [print(f"{key} {value}") for key, value in value.items()]
         print("\n")
     # print(f"{i} {numbers} {prediction_order_number} {successful_prediction}")
 
