@@ -719,7 +719,7 @@ def x13():
 
 def x14():
 
-    sequences = [[1, 2, 3]]
+    sequences = [[1, 2, 3], [1, 4, 3]]
     numbers = {}
     sequence_id = 0
     prev_sequence_id = 0
@@ -732,7 +732,7 @@ def x14():
                     numbers[current_number] = {sequence_id: {
                             "current sequence": {"prev": -1, "next": -1},
                             "next sequence": {"prev": -1, "next": -1},
-                            "parent": {}}}
+                            "parent": {"s": sequence_id}}}
                 if i > 0:
                     print(f"i: {i} numbers: {numbers[prev_number]}")
                     numbers[current_number] = {sequence_id: {
@@ -740,6 +740,21 @@ def x14():
                         "next sequence": {"prev": -1, "next": -1},
                         "parent": numbers[prev_number][sequence_id]["parent"]}}
                     numbers[prev_number][sequence_id]["current sequence"]["next"] = current_number
+            else:
+                if i == 0:
+                    numbers[current_number][sequence_id] = {
+                            "current sequence": {"prev": -1, "next": -1},
+                            "next sequence": {"prev": prev_sequence_id, "next": -1},
+                             "parent": {"s": sequence_id}}
+                    numbers[current_number][prev_sequence_id]["next sequence"]["next"] = sequence_id
+                if i > 0:
+                    numbers[current_number][sequence_id] = {
+                        "current sequence": {"prev": prev_number, "next": -1},
+                        "next sequence": {"prev": prev_sequence_id, "next": -1},
+                        "parent": numbers[prev_number][sequence_id]["parent"]}
+                    numbers[prev_number][sequence_id]["current sequence"]["next"] = current_number
+                    numbers[current_number][prev_sequence_id]["next sequence"]["next"] = sequence_id
+
             prev_number = current_number
         prev_number = -1
         prev_sequence_id = sequence_id
