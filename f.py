@@ -717,4 +717,38 @@ def x13():
         print("\n")
     # print(f"{i} {numbers} {prediction_order_number} {successful_prediction}")
 
-x13()
+def x14():
+
+    sequences = [[1, 2, 3]]
+    numbers = {}
+    sequence_id = 0
+    prev_sequence_id = 0
+    prev_number = -1
+    for sequence in sequences:
+        for i, current_number in enumerate(sequence):
+            # print(f"i: {i} current_number: {current_number}")
+            if current_number not in numbers:
+                if i == 0:
+                    numbers[current_number] = {sequence_id: {
+                            "current sequence": {"prev": -1, "next": -1},
+                            "next sequence": {"prev": -1, "next": -1},
+                            "parent": {}}}
+                if i > 0:
+                    print(f"i: {i} numbers: {numbers[prev_number]}")
+                    numbers[current_number] = {sequence_id: {
+                        "current sequence": {"prev": prev_number, "next": -1},
+                        "next sequence": {"prev": -1, "next": -1},
+                        "parent": numbers[prev_number][sequence_id]["parent"]}}
+                    numbers[prev_number][sequence_id]["current sequence"]["next"] = current_number
+            prev_number = current_number
+        prev_number = -1
+        prev_sequence_id = sequence_id
+        sequence_id += 1
+
+    for key, value in numbers.items():
+        print(key)
+        [print(f"{key} {value}") for key, value in value.items()]
+        print("\n")
+    # print(f"{i} {numbers} {prediction_order_number} {successful_prediction}")
+
+x14()
