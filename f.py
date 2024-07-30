@@ -719,24 +719,29 @@ def x13():
 
 def x14():
 # [[3, 3, 3], [4]], [[1, 1, 1], [3]]
-    sequence_groups = [[[1, 1, 1], [2, 2, 2]]]
+    sequence_groups = [[[1, 1, 1], [2, 2, 2], [3, 3, 3]]]
     numbers = {"dimensions": {0: {}, 1: {}}}
 
     prev = -1
     prev_number = -1
     for sequences in sequence_groups:
         next_dimension_parent = ["dimensions", 1]
+        if len(sequences) > 1:
+            next_dimension_parent.append(len(sequences[0]))
+            next_dimension_parent.append(1)
         for _, sequence in enumerate(sequences):
             # print(f"i: {i} current_number: {current_number}")
             number = sequence[0]
             # print(f"number: {number} {sequence}, numbers: {numbers}")
             streak_count = len(sequence)
-            if next_dimension_parent[-1] != streak_count:
-                next_dimension_parent.append(streak_count)
             if number not in numbers["dimensions"][0]:
                 numbers["dimensions"][0][number] = {streak_count:{"prev": -1, "next": -1, "next_dimension_parent": next_dimension_parent}}
             if streak_count not in numbers["dimensions"][1]:
-                numbers["dimensions"][1][streak_count] = {"prev": -1, "next": -1, "next_dimension_parent": next_dimension_parent}
+                numbers["dimensions"][1][streak_count] = {1: {"prev": -1, "next": -1,
+                                                            "next_dimension_parent": [],
+                                                            "next_dimension_children": [["dimensions", 0, number, streak_count]]}}
+            else:
+                numbers["dimensions"][1][streak_count][1]["next_dimension_children"].append(["dimensions", 0, number, streak_count])
 
                     # numbers["levels"][0] = {"streak_count": {number:
                     #                             {"streak_of_streak_count": {len(sequence):
