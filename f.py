@@ -718,67 +718,70 @@ def x13():
     # print(f"{i} {numbers} {prediction_order_number} {successful_prediction}")
 
 def x14():
-
-    sequence_groups = [[[1, 1, 1], [2]], [[3, 3, 3], [4]], [[1, 1, 1], [3]]]
-    numbers = {"common_sequence": {}, "levels": {}}
+# [[3, 3, 3], [4]], [[1, 1, 1], [3]]
+    sequence_groups = [[[1, 1, 1], [2, 2, 2]]]
+    numbers = {"dimensions": {0: {}, 1: {}}}
 
     prev = -1
     prev_number = -1
     for sequences in sequence_groups:
-        for i, sequence in enumerate(sequences):
+        next_dimension_parent = ["dimensions", 1]
+        for _, sequence in enumerate(sequences):
             # print(f"i: {i} current_number: {current_number}")
             number = sequence[0]
-            if number not in numbers:
-                if i == 0:
-                    if len(numbers) == 0:
-                        numbers["levels"] = {0:{}}
-                    else:
-                        numbers["levels"][0] = {"streak_count": {number:
-                                                    {"streak_of_streak_count": {len(sequence):
-                                                    {"instance_number": {0:
-                                                        {"sequence_id": {0:
-                                                                {"prev": -1, "next": -1,
-                                                                "parent": {1: {}}, "next_dimension_parent": {}}}}}}}}}}
-                if i > 0:
-                    print(f"i: {i} numbers: {numbers[prev_number]}")
-                    numbers[0][current_number] = {0: {0: {
-                        "current sequence": {"prev": [0, prev_number], "next": -1},
-                        "next sequence": {"prev": -1, "next": -1},
-                        "parent": [0, prev_number, 0, 0, "parent"]}}}
-                    numbers[0][prev_number][0]["current sequence"]["next"] = [0, current_number]
-            else:
-                if i == 0:
-                    numbers[0][current_number][0] = {0:{
-                            "current sequence": {"prev": -1, "next": -1},
-                            "next sequence": {"prev": -1, "next": -1},
-                            "parent": {}}}
-                if i > 0:
-                    if prev_number == current_number:
-                        streak_count += 1
-                        continue
-                    numbers[current_number][0] = {
-                        "current sequence": {"prev": prev_number, "next": -1},
-                        "next sequence": {"prev": 0, "next": -1},
-                        "parent": numbers[prev_number][0]["parent"]}
-                    numbers[prev_number][0]["current sequence"]["next"] = current_number
-                    numbers[current_number][0]["next sequence"]["next"] = 0
+            # print(f"number: {number} {sequence}, numbers: {numbers}")
+            streak_count = len(sequence)
+            if next_dimension_parent[-1] != streak_count:
+                next_dimension_parent.append(streak_count)
+            if number not in numbers["dimensions"][0]:
+                numbers["dimensions"][0][number] = {streak_count:{"prev": -1, "next": -1, "next_dimension_parent": next_dimension_parent}}
+            if streak_count not in numbers["dimensions"][1]:
+                numbers["dimensions"][1][streak_count] = {"prev": -1, "next": -1, "next_dimension_parent": next_dimension_parent}
+
+                    # numbers["levels"][0] = {"streak_count": {number:
+                    #                             {"streak_of_streak_count": {len(sequence):
+                    #                                 {"instance_number": {0:
+                    #                                     {"sequence_id": {0:
+                    #                                             {"prev": -1, "next": -1,
+                    #                                             "parent": {1: {}}, "next_dimension_parent": {}}}}}}}}}}
+                    # print(f"i: {i} numbers: {numbers[prev_number]}")
+                    # numbers[0][current_number] = {0: {0: {
+                    #     "current sequence": {"prev": [0, prev_number], "next": -1},
+                    #     "next sequence": {"prev": -1, "next": -1},
+                    #     "parent": [0, prev_number, 0, 0, "parent"]}}}
+                    # numbers[0][prev_number][0]["current sequence"]["next"] = [0, current_number]
+                # if i == 0:
+                #     numbers[0][current_number][0] = {0:{
+                #             "current sequence": {"prev": -1, "next": -1},
+                #             "next sequence": {"prev": -1, "next": -1},
+                #             "parent": {}}}
+                # if i > 0:
+                #     if prev_number == current_number:
+                #         streak_count += 1
+                #         continue
+                #     numbers[current_number][0] = {
+                #         "current sequence": {"prev": prev_number, "next": -1},
+                #         "next sequence": {"prev": 0, "next": -1},
+                #         "parent": numbers[prev_number][0]["parent"]}
+                #     numbers[prev_number][0]["current sequence"]["next"] = current_number
+                #     numbers[current_number][0]["next sequence"]["next"] = 0
                     
 
-            prev_number = current_number
+            # prev_number = current_number
             
             # print(f"numbers: {numbers}")
             # print(f"streak_count: {streak_count} sequence_id: {sequence_id} prev_number: {prev_number}")
-            parent = numbers[prev_number][0]["parent"]
+            # parent = numbers[prev_number][0]["parent"]
 
-            parent[streak_count] = {0: {
-                            "current sequence": {"prev": -1, "next": -1},
-                            "next sequence": {"prev": -1, "next": -1},
-                            "parent": {}}}
-            if prev != -1:
-                prev[0]["current sequence"]["next"] = parent[streak_count]
-            else:
-                prev = parent[streak_count]         
-            prev_number = -1
+            # parent[streak_count] = {0: {
+            #                 "current sequence": {"prev": -1, "next": -1},
+            #                 "next sequence": {"prev": -1, "next": -1},
+            #                 "parent": {}}}
+            # if prev != -1:
+            #     prev[0]["current sequence"]["next"] = parent[streak_count]
+            # else:
+            #     prev = parent[streak_count]         
+            # prev_number = -1
             
 
     for key, value in numbers.items():
