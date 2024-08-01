@@ -719,7 +719,7 @@ def x13():
 
 def x14():
 # [[3, 3, 3], [4]], [[1, 1, 1], [3]]
-    sequence_groups = [[[1, 1, 1], [2, 2, 2], [3, 3, 3]]]
+    sequence_groups = [[[1, 1, 1], [2, 2, 2], [3, 3, 3], [1, 1]]]
     numbers = {"dimensions": {0: {}, 1: {}}}
 
     for sequences in sequence_groups:
@@ -734,6 +734,8 @@ def x14():
             streak_count = len(sequence)
             if number not in numbers["dimensions"][0]:
                 numbers["dimensions"][0][number] = {streak_count:{"prev": -1, "next": -1, "next_dimension_parent": next_dimension_parent}}
+            else:
+                numbers["dimensions"][0][number][streak_count] = {"prev": -1, "next": -1, "next_dimension_parent": next_dimension_parent}
             if streak_count not in numbers["dimensions"][1]:
                 numbers["dimensions"][1][streak_count] = {1: {"prev": -1, "next": -1,
                                                             "next_dimension_parent": [],
@@ -746,6 +748,23 @@ def x14():
         print(key)
         [print(f"{key} {value}") for key, value in value.items()]
         print("\n")
+    print(f"{findDifferentSequenceSameStreakNumber([1, 1, 1], numbers)}")
     # print(f"{i} {numbers} {prediction_order_number} {successful_prediction}")
 
+def getPoint(vector, tree):
+    root = tree
+    for coordinate in vector:
+        root = root[coordinate]
+    return root
+
+def findDifferentSequenceSameStreakNumber(sequence, numbers):
+    vector = ["dimensions", 0, sequence[0], len(sequence)]
+    
+    next_dimension_parent = getPoint(vector, numbers)["next_dimension_parent"]
+
+    next_dimension_point = getPoint(next_dimension_parent, numbers)
+
+    different_sequences = [i for i in next_dimension_point["next_dimension_children"] if i != vector]
+
+    return different_sequences
 x14()
