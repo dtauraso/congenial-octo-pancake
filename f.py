@@ -719,7 +719,7 @@ def x13():
 
 def x14():
 # [[3, 3, 3], [4]], [[1, 1, 1], [3]]
-    sequence_groups = [[[1, 1, 1], [2, 2, 2], [3, 3, 3], [1, 1]]]
+    sequence_groups = [[[1, 1, 1], [2, 2, 2], [3, 3, 3]], [[1, 1]]]
     numbers = {"dimensions": {0: {}, 1: {}}}
 
     for sequences in sequence_groups:
@@ -727,15 +727,16 @@ def x14():
         if len(sequences) > 1:
             next_dimension_parent.append(len(sequences[0]))
             next_dimension_parent.append(1)
-        for _, sequence in enumerate(sequences):
+        for i, sequence in enumerate(sequences):
             # print(f"i: {i} current_number: {current_number}")
             number = sequence[0]
-            # print(f"number: {number} {sequence}, numbers: {numbers}")
             streak_count = len(sequence)
+            # print(f"number: {number} {sequence} {streak_count}")
             if number not in numbers["dimensions"][0]:
                 numbers["dimensions"][0][number] = {streak_count:{"prev": -1, "next": -1, "next_dimension_parent": next_dimension_parent}}
             else:
                 numbers["dimensions"][0][number][streak_count] = {"prev": -1, "next": -1, "next_dimension_parent": next_dimension_parent}
+                numbers["dimensions"][0][number][streak_count]["next_dimension_parent"].extend([streak_count, 1])
             if streak_count not in numbers["dimensions"][1]:
                 numbers["dimensions"][1][streak_count] = {1: {"prev": -1, "next": -1,
                                                             "next_dimension_parent": [],
@@ -761,10 +762,9 @@ def findDifferentSequenceSameStreakNumber(sequence, numbers):
     vector = ["dimensions", 0, sequence[0], len(sequence)]
     
     next_dimension_parent = getPoint(vector, numbers)["next_dimension_parent"]
-
     next_dimension_point = getPoint(next_dimension_parent, numbers)
-
-    different_sequences = [i for i in next_dimension_point["next_dimension_children"] if i != vector]
+    different_sequences = [[i[-2]] * i[-1] for i in next_dimension_point["next_dimension_children"] if i != vector]
 
     return different_sequences
+
 x14()
