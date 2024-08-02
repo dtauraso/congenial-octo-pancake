@@ -767,4 +767,32 @@ def findDifferentSequenceSameStreakNumber(sequence, numbers):
 
     return different_sequences
 
-x14()
+def x15():
+    sequences = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1]
+
+    print(f"{sequences}")
+    level_count = 1
+    current_level = 0
+    while len(sequences) > 0:
+        if current_level >= level_count:
+            break
+        if len(sequences) == 1 and sequences[0] == 1:
+            break
+        new_sequences = []
+        current_streak_number = sequences[0]
+        current_streak_count = 0
+        for i, sequence in enumerate(sequences):
+            if sequence == current_streak_number:
+                current_streak_count += 1
+            else:
+                new_sequences.append(current_streak_count)
+                current_streak_number = sequence
+                current_streak_count = 1
+        else:
+            if current_streak_count > 0:
+                new_sequences.append(current_streak_count)
+        current_level += 1
+        sequences = new_sequences
+        print(f"{sequences}")
+
+x15()
