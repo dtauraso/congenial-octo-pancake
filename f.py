@@ -768,10 +768,11 @@ def findDifferentSequenceSameStreakNumber(sequence, numbers):
     return different_sequences
 
 def x15():
-    sequences = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1]
+    # 2, 2, 2, 3, 3, 3, 1, 1
+    sequences = [1, 1, 1]
 
     print(f"{sequences}")
-    level_count = 1
+    level_count = 2
     current_level = 0
     while len(sequences) > 0:
         if current_level >= level_count:
@@ -795,4 +796,39 @@ def x15():
         sequences = new_sequences
         print(f"{sequences}")
 
-x15()
+def x16():
+    sequence = [1, 1]
+    numbers = {"dimensions": {0: {}, 1: {}}}
+
+
+    current_streak_number = sequence[0]
+    current_streak_count = 0
+    for number in sequence:
+        if number == current_streak_number:
+            current_streak_count += 1
+        else:
+            # print(f"i: {i} current_number: {current_number}")
+            # print(f"number: {number} {sequence} {current_streak_count}")
+            if current_streak_number not in numbers["dimensions"][0]:
+                numbers["dimensions"][0][current_streak_number] = {current_streak_count:{"prev": -1, "next": -1,
+                                                                    "next_dimension_parent": ["dimensions", 1, current_streak_count, 1]}}
+            else:
+                numbers["dimensions"][0][current_streak_number][current_streak_count] = {"prev": -1, "next": -1,
+                                                                    "next_dimension_parent": ["dimensions", 1, current_streak_count, 1]}
+            if current_streak_count not in numbers["dimensions"][1]:
+                numbers["dimensions"][1][current_streak_count] = {1: {"prev": -1, "next": -1,
+                                                            "next_dimension_parent": [],
+                                                            "next_dimension_children": [["dimensions", 0, current_streak_number, current_streak_count]]}}
+            else:
+                numbers["dimensions"][1][current_streak_count][1]["next_dimension_children"].append(["dimensions", 0, current_streak_number, current_streak_count])
+            current_streak_number = number
+            current_streak_count = 1
+            
+    for key, value in numbers.items():
+        print(key)
+        [print(f"{key} {value}") for key, value in value.items()]
+        print("\n")
+    # print(f"{findDifferentSequenceSameStreakNumber([1, 1, 1], numbers)}")
+    # print(f"{i} {numbers} {prediction_order_number} {successful_prediction}")
+
+x16()
