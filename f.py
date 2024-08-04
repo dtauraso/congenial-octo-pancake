@@ -796,9 +796,41 @@ def x15():
         sequences = new_sequences
         print(f"{sequences}")
 
+
 def x16():
-    sequence = [1, 1]
-    numbers = {"dimensions": {0: {}, 1: {}}}
+
+    sequence = [1, 1, 2]
+
+    consistency_values = {}
+    groups = {}
+    points = []
+    
+    current_group_number = sequence[0]
+    for i, number in enumerate(sequence):
+        if number not in consistency_values:
+            consistency_values[number] = 1
+        else:
+            consistency_values[number] += 1
+        x = [(key, value) for key, value in consistency_values.items()]
+        x.sort(key=lambda x: x[1], reverse=True)
+        winning_number = x[0][0]
+        if number not in groups:
+            groups[number] = {0: i}
+        else:
+            groups[number][len(groups[number])] = i
+        points.append(number)
+        print(f"points: {points}")
+        print(f"groups: {groups}")
+        print(f"consistency_values: {x}")
+        print(f"winning_number: {winning_number}")
+        print(f"\n")
+
+
+def x17():
+    sequences1 = [[1], [2], [1]]
+    sequences2 = [[[1, 2], [1, 3]], [[2, 2], [2, 4]], [2]]
+    correct_sequences = [{2: [2, 1]}, {2: [2, 4]}, {1: [2]}]
+    numbers = {}
 
 
     current_streak_number = sequence[0]
