@@ -798,12 +798,17 @@ def x15():
 
 
 def x16():
+    from collections import OrderedDict as od
+
+    # groups: OrderedDict([(1, [[0, 1]]), (2, [[2]])])
+    # groups: OrderedDict([(1, [[0], [2]]), (2, [[1]])])
+    # groups: OrderedDict([(1, [[0], [1]]), (2, [[2]])])
 
     sequence = [1, 1, 2]
     consistency_values = {}
-    groups = {}
+    groups = od({})
     points = []
-    
+    current_member = {}
     for i, number in enumerate(sequence):
         if number not in consistency_values:
             consistency_values[number] = 1
@@ -811,17 +816,25 @@ def x16():
             consistency_values[number] += 1
         x = [(key, value) for key, value in consistency_values.items()]
         x.sort(key=lambda x: x[1], reverse=True)
-        winning_number = x[0][0]
+        winning_numbers = [i[0] for i in x if i[1] == x[0][1]]
         if number not in groups:
-            groups[number] = [(0, i)]
+            groups[number] = [[i]]
+            current_member[number] = 0
         else:
-            groups[number].append((len(groups[number]), i))
+            if groups[number][current_member[number]][-1] == i - 1:
+                groups[number][current_member[number]].append(i)
+            else:
+                current_member[number] += 1
+                groups[number].append([i])
         points.append(number)
         print(f"points: {points}")
         print(f"groups: {groups}")
         print(f"consistency_values: {x}")
-        print(f"winning_number: {winning_number}")
+        print(f"winning_numbers: {winning_numbers}")
         print(f"\n")
+
+    scrambled_sequence = [1, 2, 1]
+
 
 
 def x17():
