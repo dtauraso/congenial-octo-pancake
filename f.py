@@ -800,12 +800,10 @@ def x15():
 def x16():
 
     sequence = [1, 1, 2]
-
     consistency_values = {}
     groups = {}
     points = []
     
-    current_group_number = sequence[0]
     for i, number in enumerate(sequence):
         if number not in consistency_values:
             consistency_values[number] = 1
@@ -815,9 +813,9 @@ def x16():
         x.sort(key=lambda x: x[1], reverse=True)
         winning_number = x[0][0]
         if number not in groups:
-            groups[number] = {0: i}
+            groups[number] = [(0, i)]
         else:
-            groups[number][len(groups[number])] = i
+            groups[number].append((len(groups[number]), i))
         points.append(number)
         print(f"points: {points}")
         print(f"groups: {groups}")
