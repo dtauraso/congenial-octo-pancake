@@ -905,53 +905,45 @@ def x17():
     # print(f"{i} {numbers} {prediction_order_number} {successful_prediction}")
 
 
+def findStableNumber(sequence):
+
+    current_number = sequence[0]
+    same_count = 0
+    stable_numbers = []
+    for number in sequence:
+        if number == current_number:
+            # print(f"same")
+            same_count += 1
+            if same_count == 2:
+                print(f"{current_number} same for {same_count} times")
+                return current_number
+        else:
+            # print(f"number changed")
+            current_number = number
+            same_count = 1
 def x18():
 
-    sequence = [1, 1, 2]
+    sequence1 = [1, 1, 3, 3, 2, 2]
+    sequence2 = [1, 2, 2, 2, 1, 1]
 
-    priority_list1 = []
-    histogram_dict = histogram(sequence, {}, priority_list1)
-    x = [(key, value) for key, value in histogram_dict.items()]
-    x.sort(key=lambda x: x[1], reverse=True)
-
-    priority_list = x
-    # print(f"priority_list: {priority_list}")
-    new_sequence = [2, 2, 2, 3]
-    histogram_dict, priority_list = histogram(new_sequence, histogram_dict, priority_list)
-
-    
-    print(f"histogram_dict: {histogram_dict} priority_list: {priority_list}")
-
-def histogram(data, histogram_dict, priority_list):
-    if len(priority_list) == 0:
-        for value in data:
-            if value in histogram_dict:
-                histogram_dict[value] += 1
-            else:
-                histogram_dict[value] = 1
-        return histogram_dict
-    else:
-        for value in data:
-            found = False
-            for i, number in enumerate(priority_list):
-                if value == number[0]:
-                    print(f"number {number} is right")
-                    if value in histogram_dict:
-                        histogram_dict[value] += 1
-                    else:
-                        histogram_dict[value] = 1
-                    found = True
-            if not found:
-                print(f"value {value} is not in priority list")
-            if value in histogram_dict:
-                histogram_dict[value] += 1
-            else:
-                histogram_dict[value] = 1
-            x = [(key, value) for key, value in histogram_dict.items()]
-            x.sort(key=lambda x: x[1], reverse=True)
-            priority_list = x
-
-        return histogram_dict, priority_list
-
+    current_number_s1 = sequence1[0]
+    same_count_s1 = 0
+    current_number_s2 = sequence2[0]
+    same_count_s2 = 0
+    for s1, s2 in zip(sequence1, sequence2):
+        if s1 == current_number_s1:
+            same_count_s1 += 1
+        else:
+            current_number_s1 = s1
+            same_count_s1 = 1
+        if s2 == current_number_s2:
+            same_count_s2 += 1
+        else:
+            current_number_s2 = s2
+            same_count_s2 = 1
+        # print(f"s1: {s1} | {same_count_s1} | s2: {s2} | {same_count_s2}")
+        if same_count_s1 >= 2 and same_count_s2 >= 2:
+            print(f"stable numbers {current_number_s1} and {current_number_s2}")
+        # print()
             
 x18()
