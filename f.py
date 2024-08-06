@@ -797,14 +797,10 @@ def x15():
         print(f"{sequences}")
 
 
-def x16():
+def makeGroups(sequence):
+
     from collections import OrderedDict as od
 
-    # groups: OrderedDict([(1, [[0, 1]]), (2, [[2]])])
-    # groups: OrderedDict([(1, [[0], [2]]), (2, [[1]])])
-    # groups: OrderedDict([(1, [[0], [1]]), (2, [[2]])])
-
-    sequence = [1, 1, 2]
     consistency_values = {}
     groups = od({})
     points = []
@@ -827,14 +823,48 @@ def x16():
                 current_member[number] += 1
                 groups[number].append([i])
         points.append(number)
-        print(f"points: {points}")
-        print(f"groups: {groups}")
-        print(f"consistency_values: {x}")
-        print(f"winning_numbers: {winning_numbers}")
-        print(f"\n")
+        # print(f"points: {points}")
+        # print(f"groups: {groups}")
+        # print(f"consistency_values: {x}")
+        # print(f"winning_numbers: {winning_numbers}")
+        # print(f"\n")
+
+    return groups
+def x16():
+
+    # groups: OrderedDict([(1, [[0, 1]]), (2, [[2]])])
+    # groups: OrderedDict([(1, [[0], [2]]), (2, [[1]])])
+    # groups: OrderedDict([(1, [[0], [1]]), (2, [[2]])])
+
+    sequence = [1, 1, 2]
+
+    groups1 = makeGroups(sequence)
+    print(f"groups1: {groups1}")
 
     scrambled_sequence = [1, 2, 1]
 
+    groups2 = makeGroups(scrambled_sequence)
+    print(f"groups2: {groups2}")
+
+    groups2_members_not_matched = {}
+    for group1_member, group2_member in zip(groups1.items(), groups2.items()):
+        print(f"group1_member: {group1_member} group2_member: {group2_member}")
+        for member1, member2 in zip(group1_member[1], group2_member[1]):
+            print(f"member1: {member1} member2: {member2}")
+            while len(member1) < len(member2):
+                member1.append(-1)
+            while len(member2) < len(member1):
+                member2.append(-1)
+            # print(f"zipped {zip(member1, member2)}")
+            for number1, number2 in zip(member1, member2):
+                print(f"number1: {number1} number2: {number2}")
+            if number1 != number2:
+                if number1 not in groups2_members_not_matched:
+                    groups2_members_not_matched[group1_member[0]] = [group2_member[1][0]]
+                else:
+                    groups2_members_not_matched[group1_member[0]].append(group2_member[1][0])
+
+    print(f"groups2_members_not_matched: {groups2_members_not_matched}")
 
 
 def x17():
@@ -874,4 +904,54 @@ def x17():
     # print(f"{findDifferentSequenceSameStreakNumber([1, 1, 1], numbers)}")
     # print(f"{i} {numbers} {prediction_order_number} {successful_prediction}")
 
-x16()
+
+def x18():
+
+    sequence = [1, 1, 2]
+
+    priority_list1 = []
+    histogram_dict = histogram(sequence, {}, priority_list1)
+    x = [(key, value) for key, value in histogram_dict.items()]
+    x.sort(key=lambda x: x[1], reverse=True)
+
+    priority_list = x
+    # print(f"priority_list: {priority_list}")
+    new_sequence = [2, 2, 2, 3]
+    histogram_dict, priority_list = histogram(new_sequence, histogram_dict, priority_list)
+
+    
+    print(f"histogram_dict: {histogram_dict} priority_list: {priority_list}")
+
+def histogram(data, histogram_dict, priority_list):
+    if len(priority_list) == 0:
+        for value in data:
+            if value in histogram_dict:
+                histogram_dict[value] += 1
+            else:
+                histogram_dict[value] = 1
+        return histogram_dict
+    else:
+        for value in data:
+            found = False
+            for i, number in enumerate(priority_list):
+                if value == number[0]:
+                    print(f"number {number} is right")
+                    if value in histogram_dict:
+                        histogram_dict[value] += 1
+                    else:
+                        histogram_dict[value] = 1
+                    found = True
+            if not found:
+                print(f"value {value} is not in priority list")
+            if value in histogram_dict:
+                histogram_dict[value] += 1
+            else:
+                histogram_dict[value] = 1
+            x = [(key, value) for key, value in histogram_dict.items()]
+            x.sort(key=lambda x: x[1], reverse=True)
+            priority_list = x
+
+        return histogram_dict, priority_list
+
+            
+x18()
