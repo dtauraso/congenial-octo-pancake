@@ -930,6 +930,7 @@ def x18():
     same_count_s1 = 0
     current_number_s2 = sequence2[0]
     same_count_s2 = 0
+    new_sequence = []
     for s1, s2 in zip(sequence1, sequence2):
         if s1 == current_number_s1:
             same_count_s1 += 1
@@ -943,7 +944,69 @@ def x18():
             same_count_s2 = 1
         # print(f"s1: {s1} | {same_count_s1} | s2: {s2} | {same_count_s2}")
         if same_count_s1 >= 2 and same_count_s2 >= 2:
+            new_sequence.insert(0, 2)
             print(f"stable numbers {current_number_s1} and {current_number_s2}")
         # print()
+
+    print(new_sequence)
+
+def findStableNumbers(sequences):
+
+    same_counts = [0 for _ in range(len(sequences))]
+    current_numbers = [sequences[0] for _ in range(len(sequences))]
+
+    new_sequence = []
+    for items in zip(*sequences):
+        for i, item in enumerate(items):
+            if item == current_numbers[i]:
+                same_counts[i] += 1
+            else:
+                current_numbers[i] = item
+                same_counts[i] = 1
+        counts = len([True for count in same_counts if count >= 2])
+        if counts >= 2:
+            new_sequence.insert(0, 2)
+            # print(f"stable numbers {items}")
+    return new_sequence
+
+def x19():
+
+    sequence1 = [1, 1, 3, 3, 2, 2]
+    sequence2 = [1, 2, 2, 2, 1, 1]
+
+    levels = {  1: {"pipes": [[sequence1, sequence2], [[], []]]},
+                2: {"pipes": [[], []]},
+                3: {"pipes": []}}
+    sequence3 = findStableNumbers([levels[1]["pipes"][0][0], levels[1]["pipes"][0][1]])
+
+    print(sequence3)
+    levels[2]["pipes"][0] = sequence3
+
+
+    [print(i) for i in levels.values()]
+    return
+    current_number_s1 = sequence1[0]
+    same_count_s1 = 0
+    current_number_s2 = sequence2[0]
+    same_count_s2 = 0
+    new_sequence = []
+    for s1, s2 in zip(sequence1, sequence2):
+        if s1 == current_number_s1:
+            same_count_s1 += 1
+        else:
+            current_number_s1 = s1
+            same_count_s1 = 1
+        if s2 == current_number_s2:
+            same_count_s2 += 1
+        else:
+            current_number_s2 = s2
+            same_count_s2 = 1
+        # print(f"s1: {s1} | {same_count_s1} | s2: {s2} | {same_count_s2}")
+        if same_count_s1 >= 2 and same_count_s2 >= 2:
+            new_sequence.insert(0, 2)
+            print(f"stable numbers {current_number_s1} and {current_number_s2}")
+        # print()
+
+    print(new_sequence)
             
-x18()
+x19()
