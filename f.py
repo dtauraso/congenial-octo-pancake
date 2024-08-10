@@ -965,48 +965,127 @@ def findStableNumbers(sequences):
                 same_counts[i] = 1
         counts = len([True for count in same_counts if count >= 2])
         if counts >= 2:
-            new_sequence.insert(0, 2)
-            # print(f"stable numbers {items}")
+            new_sequence.insert(0, counts)
+            print(f"stable numbers {items}")
     return new_sequence
 
-def x19():
+def findStableNumbers2(levels, pipe_ids):    
+    pass
 
-    sequence1 = [1, 1, 3, 3, 2, 2]
-    sequence2 = [1, 2, 2, 2, 1, 1]
+def addSequence(levels, level_id, sequence, pipe_id):
 
-    levels = {  1: {"pipes": [[sequence1, sequence2], [[], []]]},
-                2: {"pipes": [[], []]},
-                3: {"pipes": []}}
-    sequence3 = findStableNumbers([levels[1]["pipes"][0][0], levels[1]["pipes"][0][1]])
+    prev_pipe_count = -1
+    prev_pipe_count_id = -1
+    for i, pipe_count in enumerate(sequence):
 
-    print(sequence3)
-    levels[2]["pipes"][0] = sequence3
-
-
-    [print(i) for i in levels.values()]
-    return
-    current_number_s1 = sequence1[0]
-    same_count_s1 = 0
-    current_number_s2 = sequence2[0]
-    same_count_s2 = 0
-    new_sequence = []
-    for s1, s2 in zip(sequence1, sequence2):
-        if s1 == current_number_s1:
-            same_count_s1 += 1
+        # print(f"before: {prev_pipe_count} {prev_pipe_count_id}")
+        if pipe_id not in levels[level_id]["pipes"]:
+            levels[level_id]["pipes"][pipe_id] = {"pipe_counts": {}}
+        if pipe_count not in levels[level_id]["pipes"][pipe_id]["pipe_counts"]:
+            levels[level_id]["pipes"][pipe_id]["pipe_counts"][pipe_count] = {"pipe_count_ids": {0: {"next": []}}}
+            if prev_pipe_count != -1 and prev_pipe_count_id != -1:
+                    levels[level_id]["pipes"][pipe_id]["pipe_counts"][prev_pipe_count]["pipe_count_ids"][prev_pipe_count_id]["next"] = [level_id, pipe_id, pipe_count, 0]
+            prev_pipe_count_id = 0
         else:
-            current_number_s1 = s1
-            same_count_s1 = 1
-        if s2 == current_number_s2:
-            same_count_s2 += 1
-        else:
-            current_number_s2 = s2
-            same_count_s2 = 1
-        # print(f"s1: {s1} | {same_count_s1} | s2: {s2} | {same_count_s2}")
-        if same_count_s1 >= 2 and same_count_s2 >= 2:
-            new_sequence.insert(0, 2)
-            print(f"stable numbers {current_number_s1} and {current_number_s2}")
+            new_pipe_count_id = len(levels[level_id]["pipes"][pipe_id]["pipe_counts"][pipe_count]["pipe_count_ids"])
+            levels[level_id]["pipes"][pipe_id]["pipe_counts"][pipe_count]["pipe_count_ids"][new_pipe_count_id] = {"next": []}
+            levels[level_id]["pipes"][pipe_id]["pipe_counts"][prev_pipe_count]["pipe_count_ids"][prev_pipe_count_id]["next"]= [level_id, pipe_id, pipe_count, new_pipe_count_id]
+            prev_pipe_count_id = new_pipe_count_id
+        prev_pipe_count = pipe_count
+        # print(f"after : {prev_pipe_count} {prev_pipe_count_id}")
         # print()
 
-    print(new_sequence)
-            
-x19()
+
+def visitSequence(levels, level_id, pipe_id, pipe_count, pipe_count_id):
+
+    tracker = [level_id, pipe_id, pipe_count, pipe_count_id]
+    # print(f"{pipe_count}")
+    tracker_item = getItem(levels, tracker)
+    # counter = 0
+    pipe_items = []
+    pipe_items.append(pipe_count)
+    while len(tracker_item["next"]) > 0:
+        # print(counter)
+        # if counter > 10:
+        #     break
+        # print(f"{level_id} {pipe_id} {pipe_count} {pipe_count_id} {tracker_item['next']}")
+        level_id, pipe_id, pipe_count, pipe_count_id = tracker_item["next"]
+        pipe_items.append(pipe_count)
+        tracker = [level_id, pipe_id, pipe_count, pipe_count_id]
+        tracker_item = getItem(levels, tracker)
+        # counter += 1
+    print(f"{pipe_items}")
+
+
+def getItem(levels, tracker):
+
+    level_id, pipe_id, pipe_count, pipe_count_id = tracker
+    return levels[level_id]["pipes"][pipe_id]["pipe_counts"][pipe_count]["pipe_count_ids"][pipe_count_id]
+def x19():
+
+    sequence1 = [1, 1, 3, 3, 2, 2, 1, 1, 5, 5, 2, 2]
+    sequence2 = [1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1]
+    sequence3 = [4, 4, 6, 6, 1, 1, 4, 4, 5, 6, 1, 1]
+    sequence4 = [1, 2, 3, 3, 1, 1, 1, 1, 3, 3, 1, 1]
+
+    levels = {  1: {"pipes": [[sequence1, sequence2],
+                                [sequence3, sequence4]]},
+                2: {"pipes": [[], []]},
+                3: {"pipes": []}}
+    levels2 = {0: {"pipes": {}}}
+
+    addSequence(levels=levels2, level_id=0, sequence=sequence1, pipe_id=0)
+    addSequence(levels=levels2, level_id=0, sequence=sequence2, pipe_id=1)
+    addSequence(levels=levels2, level_id=0, sequence=sequence3, pipe_id=2)
+    addSequence(levels=levels2, level_id=0, sequence=sequence4, pipe_id=3)
+    # addSequence(levels2, 0, sequence3, 2)
+    # addSequence(levels2, 0, sequence4, 3)
+
+    visitSequence(levels=levels2, level_id=0, pipe_id=0, pipe_count=1, pipe_count_id=0)
+    visitSequence(levels=levels2, level_id=0, pipe_id=1, pipe_count=1, pipe_count_id=0)
+    visitSequence(levels=levels2, level_id=0, pipe_id=2, pipe_count=4, pipe_count_id=0)
+    visitSequence(levels=levels2, level_id=0, pipe_id=3, pipe_count=1, pipe_count_id=0)
+
+    # [print(key, value) for key, value in levels2.items()]
+
+    # levels[2]["pipes"][0] = findStableNumbers([levels[1]["pipes"][0][0], levels[1]["pipes"][0][1]])
+    # print()
+    # levels[2]["pipes"][1] = findStableNumbers([levels[1]["pipes"][1][0], levels[1]["pipes"][1][1]])
+    # print()
+
+    # levels[3]["pipes"] = findStableNumbers([levels[2]["pipes"][0], levels[2]["pipes"][1]])
+
+    # [print(key, value) for key, value in levels.items()]
+
+def makeSequence(trie, sequence):
+
+    visited = {}
+    tracker = trie
+    for i, item in enumerate(sequence):
+
+        # print(f"{i} {item} {visited} | {tracker} | {trie}")
+        if item in tracker:
+            tracker[item]["visited_count"] += 1
+        if item in visited:
+            tracker = trie
+            visited = {}
+            if item not in tracker:
+                tracker[item] = {"visited_count": 1}
+                visited[item] = True
+                tracker = tracker[item]
+            continue
+        if item not in tracker:
+            tracker[item] = {"visited_count": 1}
+            visited[item] = True
+        tracker = tracker[item]
+
+def x20():
+
+    sequence = [1, 2, 1, 1, 3, 3, 1, 3]
+
+    trie = {}
+    makeSequence(trie, sequence)
+
+    print(trie)
+
+x20()
