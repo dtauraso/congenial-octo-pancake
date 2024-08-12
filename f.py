@@ -1128,9 +1128,12 @@ def pruneTrie(trie, histogram=None):
         new_trie["visited_count"] = trie["visited_count"]
     return new_trie
 
+def getNumericKeys(trie):
+    numeric_keys = [key for key in trie if key != "visited_count"]
+    return numeric_keys
 def x20():
 
-    sequences = [[1, 1], [1, 1], [2, 2], [4], [2, 2], [1, 1], [1, 1], [3, 3], [3, 3], [1, 1], [3, 3]]
+    sequences = [[1, 1], [1, 1], [2, 2], [4], [2, 2], [1, 1], [1, 1], [4, 4], [3, 3], [3, 3], [4], [1, 1], [3, 3]]
 
     leaf_numbers = []
     for i, sequence in enumerate(sequences):
@@ -1149,7 +1152,44 @@ def x20():
     [print(key, value) for key, value in trie2.items()]
     print()
     [print(key, value) for key, value in pruned_trie.items()]
-    # print(pruned_trie)
+    print()
+    arithmatic_s_1 = [7, 8]
+    arithmatic_s_2 = [1, 8]
+    arithmatic_s_3 = [8, 9]
+    arithmatic_s_4 = [1, 9]
+    # arithmatic_s_5 = [7, 9]
+    # arithmatic_s_6 = [2, 9]
+    trie3 = {}
+    makeSequence(trie3, arithmatic_s_1)
+    makeSequence(trie3, arithmatic_s_2)
+    makeSequence(trie3, arithmatic_s_3)
+    makeSequence(trie3, arithmatic_s_4)
+    # makeSequence(trie3, arithmatic_s_5)
+    # makeSequence(trie3, arithmatic_s_6)
+    pruned_trie_2 = pruneTrie(trie3, {})
+    [print(key, value) for key, value in pruned_trie_2.items()]
+    number_1 = 7
+    number_2 = 1
+    n_1 = pruned_trie_2[number_1]
+    n_2 = pruned_trie_2[number_2]
+    tracker_n_1 = n_1
+    print(tracker_n_1)
+    common_number = {}
+    while "visited_count" in tracker_n_1 and len(tracker_n_1) != 1:
+    #     print(tracker_n_1)
+        common_number[getNumericKeys(tracker_n_1)[0]] = True
+        tracker_n_1 = tracker_n_1[getNumericKeys(tracker_n_1)[0]]
+    tracker_n_2 = n_2
+    # print(tracker_n_2)
+    while "visited_count" in tracker_n_2 and len(tracker_n_2) != 1:
+        print(tracker_n_2)
+        if getNumericKeys(tracker_n_2)[0] in common_number:
+            break
+
+        tracker_n_2 = tracker_n_2[getNumericKeys(tracker_n_2)[0]]
+
+    print(list(common_number.keys())[0])
+   
     
 
 x20()
