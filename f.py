@@ -1128,9 +1128,6 @@ def pruneTrie(trie, histogram=None):
         new_trie["visited_count"] = trie["visited_count"]
     return new_trie
 
-def mergeStreaks(trie):
-    # use after pruneTree
-    pass
 def x20():
 
     sequences = [[1, 1], [1, 1], [2, 2], [4], [2, 2], [1, 1], [1, 1], [3, 3], [3, 3], [1, 1], [3, 3]]
