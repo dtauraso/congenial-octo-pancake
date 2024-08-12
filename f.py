@@ -1063,17 +1063,14 @@ def makeSequence(trie, sequence):
     tracker = trie
     for i, item in enumerate(sequence):
 
-        # print(f"{i} {item} {visited} | {tracker} | {trie}")
+        # print(f"{i} {item} {visited} | {tracker}")
+        # [print(key, value) for key, value in trie.items()]
+        # print()
         if item in visited:
             tracker = trie
             visited = {}
             if item in tracker:
                 tracker[item]["visited_count"] += 1
-            if item not in tracker:
-                tracker[item] = {"visited_count": 1}
-                visited[item] = True
-                tracker = tracker[item]
-            continue
         if item not in tracker:
             tracker[item] = {"visited_count": 1}
             visited[item] = True
@@ -1081,40 +1078,62 @@ def makeSequence(trie, sequence):
 
 
 def pruneTrie(trie, histogram=None):
-
     import copy
-    # print(f"{trie} {histogram}")
+    # print(f"{trie}\n")
     if "visited_count" in trie and len(trie) == 1:
         # print("remove")
         # return
-        y = [(key, value) for key, value in histogram.items()]
-        y.sort(key=lambda x: x[1], reverse=False)
         # print(y)
-        return y[0][0]
+        # histogram = {y[0][0]: y[0][1]}
+        return trie
     numeric_keys = [key for key in trie if key != "visited_count"]
+    new_trie = {}
+    returned_trie = {}
+    current_histogram = copy.deepcopy(histogram)
     for i, key in enumerate(numeric_keys):
 
+
         value = trie[key]
+        # print(f"{key}, {value}")
+        max_visited_count = 0
         if i == 0:
             histogram[key] = value["visited_count"]
-            remove_item = pruneTrie(value, histogram)
-        if i > 0:
-            new_histogram = copy.deepcopy(histogram)
-            remove_item = pruneTrie(value, new_histogram)
-        # print(f"remove {remove_item}")
-        # print(f"{key}, {value}, {trie}")
-        if remove_item == key:
-           nested_trie = {}
-           for nested_key in value:
-               if nested_key != "visited_count":
-                   nested_trie[nested_key] = value[nested_key]
-           del trie[key]
-           for nested_key2 in nested_trie:
-               trie[nested_key2] = nested_trie
+            returned_trie = pruneTrie(value, histogram)
+            y = [(key, value) for key, value in histogram.items()]
+            y.sort(key=lambda x: x[1], reverse=True)
+            # print(f"histogram {histogram}")
+            # print(f"keep {y[0][1]}")
+            max_visited_count = y[0][1]
+        elif i > 0:
+            new_histogram = copy.deepcopy(current_histogram)
+            new_histogram[key] = value["visited_count"]
 
+            returned_trie = pruneTrie(value, new_histogram)
+            if len(current_histogram) == 0:
+                new_histogram[key] = value["visited_count"]
+            # if len(new_histogram) > 0:
+            y = [(key, value) for key, value in new_histogram.items()]
+            y.sort(key=lambda x: x[1], reverse=True)
+            # print(f"new_histogram {new_histogram}")
+            # print(f"keep {y[0][1]}")
+            max_visited_count = y[0][1]
+
+        # print(f"returned_trie {returned_trie}")
+        # print(f"{key}, {value}")
+        # print(f"max_visited_count {max_visited_count}\n")
+        if max_visited_count == value["visited_count"]:
+            new_trie[key] = returned_trie
+    # if len(new_trie) == 0:
+    if "visited_count" in trie:
+        new_trie["visited_count"] = trie["visited_count"]
+    return new_trie
+
+def mergeStreaks(trie):
+    # use after pruneTree
+    pass
 def x20():
 
-    sequences = [[1, 1], [1, 1], [2, 2], [1, 1], [1, 1], [3, 3], [3, 3], [1, 1], [3, 3]]
+    sequences = [[1, 1], [1, 1], [2, 2], [4], [2, 2], [1, 1], [1, 1], [3, 3], [3, 3], [1, 1], [3, 3]]
 
     leaf_numbers = []
     for i, sequence in enumerate(sequences):
@@ -1122,13 +1141,18 @@ def x20():
         makeSequence(trie, sequence)
         leaf_numbers.append(list(trie.keys())[0])
         # print(trie)
-    # print(leaf_numbers)
+    print(leaf_numbers)
 
     trie2 = {}
     makeSequence(trie2, leaf_numbers)
-    print(trie2)
-    pruneTrie(trie2, {})
-    print(trie2)
+    # print(trie2)
+    # print()
+    pruned_trie = pruneTrie(trie2, {})
+    # print(trie2)
+    [print(key, value) for key, value in trie2.items()]
+    print()
+    [print(key, value) for key, value in pruned_trie.items()]
+    # print(pruned_trie)
     
 
 x20()
