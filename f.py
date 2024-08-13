@@ -1063,14 +1063,14 @@ def makeSequence(trie, sequence):
     tracker = trie
     for i, item in enumerate(sequence):
 
-        # print(f"{i} {item} {visited} | {tracker}")
-        # [print(key, value) for key, value in trie.items()]
-        # print()
+        print(f"{i} {item} {visited} | {tracker}")
+        [print(key, value) for key, value in trie.items()]
+        print()
         if item in visited:
             tracker = trie
             visited = {}
-            if item in tracker:
-                tracker[item]["visited_count"] += 1
+            if "visited_count" in tracker:
+                tracker["visited_count"] += 1
         if item not in tracker:
             tracker[item] = {"visited_count": 1}
             visited[item] = True
@@ -1190,6 +1190,63 @@ def x20():
 
     print(list(common_number.keys())[0])
    
-    
 
-x20()
+def x21():
+
+    sequence1 = [1, 2, 3, 4, 2, 3]
+
+    lines = {}
+
+    prev_line = 0
+    prev_point = 0
+    current_line = 0
+    current_point = 0
+    for i, item in enumerate(sequence1):
+        current_line = item
+        # print(f"{current_line}")
+        # [print(key, value) for key, value in lines.items()]
+        # print()
+        if current_line not in lines:
+            lines[current_line] = {0: {"prev_line": prev_line, "prev_point": prev_point, "next_line": 0, "next_point": 0}}
+            if prev_line in lines:
+                lines[prev_line][prev_point]["next_line"] = current_line
+                lines[prev_line][prev_point]["next_point"] = current_point
+            prev_line = item
+            prev_point = 0
+        else:
+            lines[current_line][len(lines[current_line])] = {"prev_line": prev_line, "prev_point": prev_point, "next_line": 0, "next_point": 0}
+            current_point = len(lines[current_line])-1
+            lines[prev_line][prev_point]["next_line"] = current_line
+            lines[prev_line][prev_point]["next_point"] = current_point
+    
+    [print(key, value) for key, value in lines.items()]
+    print()
+    return
+    trie = {}
+    makeSequence(trie, [i["n"] for i in sequence1])
+    # print()
+    # [print(key, value) for key, value in trie.items()]
+    sequences = [sequence1]
+    common_sequence = []
+    i = 0
+    start = 0
+    return 
+    for number_1, number_2 in zip(sequence1, sequence2):
+        if number_1["n"] == number_2["n"]:
+            if len(common_sequence) == 0:
+                start = i
+            common_sequence.append(number_1)
+        else:
+            if len(common_sequence) > 0:
+                sequences.append(common_sequence)
+                common_sequence = []
+                sequence1 = sequence1[:start] + [{"n": sequences[-1]}] + sequence1[i:]
+                sequence2 = sequence2[:start] + [{"n": sequences[-1]}] + sequence1[i:]
+                start = 0
+        i += 1
+
+    [print(x) for x in sequence1]
+    print()
+    [print(x) for x in sequence2]
+
+x21()
