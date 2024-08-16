@@ -38,7 +38,7 @@ test:
 run:
 	-./state_machine.x parsing_tree.json calculator_example.txt
 python3Run:
-	python3 f.py
+	python3 f2.py
 
 clean:
 	-rm *.o *.x
