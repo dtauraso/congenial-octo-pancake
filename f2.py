@@ -70,10 +70,7 @@ def x21():
                     print(f"done")
                     print()
                     continue
-                # skip over case if retrace_step_count == 1 case passes
                 retrace_step_count = 1
-                # if prev_point["line"] in lines:
-
                 prev_prev_point = {"line": prev_point["line"], "point": prev_point["point"]}                
                 prev_point["line"] = current_line
                 prev_point["point"] = len(lines[current_line])-1 #current_point
