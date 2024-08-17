@@ -30,29 +30,14 @@ def x21():
                                        "point": getPoint(lines, prediction["prediction"])["next_point"]}}            
                             for prediction in predictions
                                 if getPoint(lines, prediction["prediction"])["next_line"] == current_line]
-        print(f"{i} {current_line} {prev_point} {prev_prev_point} predictions {predictions} retrace {retrace_step_count}")
+        print(f"{i} {current_line} {prev_point} {prev_prev_point} predictions {predictions} retrace {retrace_step_count} prev_successful_predictions {prev_successful_predictions}")
         # print(f"points")
         # [print(key, value) for key, value in lines.items()]
         if len(predictions) == 0:
-            if retrace_step_count > 1:
-                retrace_step_count = 0
-                if len(prev_successful_predictions) > 0:
+            if len(prev_successful_predictions) > 0:
+                if retrace_step_count > 1:
+                    retrace_step_count = 0
                     print(f"found end of pattern")
-                    pass
-                pass
-            if current_line not in lines:
-                print(f"{prev_point} {current_line}")
-                if prev_point["line"] in lines:
-                    getPoint(lines, prev_point)["next_line"] = current_line
-                    getPoint(lines, prev_point)["next_point"] = 0
-                lines[current_line] = {0: {"prev_line": prev_point["line"], "prev_point": prev_point["point"], "next_line": 0, "next_point": 0}}
-                predictions = [
-                    {"prev_point": {"line": prev_point["line"], "point": prev_point["point"]},
-                        "prediction": {"line": current_line, "point": i}} for i, _ in enumerate(lines[current_line])]
-                # [print(key, value) for key, value in lines.items()]
-                prev_point["line"] = current_line
-                prev_point["point"] = 0
-            else:
                 if retrace_step_count == 1:
                     retrace_step_count = 0
                     print(f"retracing")
@@ -69,23 +54,30 @@ def x21():
                     print(f"{i} {current_line} {prev_point} {prev_prev_point} {retrace_step_count}")
                     print(f"done")
                     print()
-                    continue
-                retrace_step_count = 1
-                prev_prev_point = {"line": prev_point["line"], "point": prev_point["point"]}                
-                prev_point["line"] = current_line
-                prev_point["point"] = len(lines[current_line])-1 #current_point
+            else:
+                if current_line in lines:
+                    retrace_step_count = 1
+                    prev_prev_point = {"line": prev_point["line"], "point": prev_point["point"]}                
+                    prev_point["line"] = current_line
+                    prev_point["point"] = len(lines[current_line])-1
 
-                print(f"revisit prev line: {i} {current_line} {predictions} {prev_prev_point}")
-                predictions = [
-                    {"prev_point": {"line": lines[current_line][key]["prev_line"],
-                                               "point": lines[current_line][key]["prev_point"]},
-                     "prediction": {"line": current_line, "point": key}}
-                        for key in lines[current_line]]                
-            
-
+                    print(f"revisit prev line: {i} {current_line} {predictions} {prev_prev_point}")
+                    predictions = [
+                        {"prev_point": {"line": lines[current_line][key]["prev_line"],
+                                                "point": lines[current_line][key]["prev_point"]},
+                        "prediction": {"line": current_line, "point": key}}
+                            for key in lines[current_line]]   
+                elif current_line not in lines:
+                    print(f"{prev_point} {current_line}")
+                    if prev_point["line"] in lines:
+                        getPoint(lines, prev_point)["next_line"] = current_line
+                        getPoint(lines, prev_point)["next_point"] = 0
+                    lines[current_line] = {0: {"prev_line": prev_point["line"], "prev_point": prev_point["point"], "next_line": 0, "next_point": 0}}
+                    # [print(key, value) for key, value in lines.items()]
+                    prev_point["line"] = current_line
+                    prev_point["point"] = 0
         else:
             retrace_step_count += 1
-            pass
         print()
         # print(f"{prev_point} {lines.keys()} {current_line}")
         # prev_point["line"] = current_line
