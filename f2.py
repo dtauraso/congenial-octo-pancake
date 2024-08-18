@@ -10,16 +10,8 @@ def x21():
 
     lines = {}
 
-    # prev_line = 0
-    # prev_point = 0
-    # current_line = 0
-    current_point = 0
     retrace_step_count = 0
     predictions = []
-    start_current_path = {"line": 0, "point": 0}
-    end_current_path = {"line": 0, "point": 0}
-    start_tracker_path = {"line": 0, "point": 0}
-    end_tracker_path = {"line": 0, "point": 0}
     prev_point = {"line": 0, "point": 0}
     prev_prev_point = {"line": 0, "point": 0}
     for i, current_line in enumerate(sequence1):
@@ -36,31 +28,38 @@ def x21():
                     retrace_step_count = 0
                     first_prev_point = prev_successful_predictions[0]["first_prev_point"]
                     end_point = prev_successful_predictions[0]["prediction"]
-                    print(f"{current_line} prev_point: {prev_point} prev_prev_point: {prev_prev_point} {predictions}, {prev_successful_predictions}")
-                    print(f"found end of pattern")
-                    print(f"points")
-                    [print(key, value) for key, value in lines.items()]
-                    pattern_number = len(lines) * -1
-                    lines[pattern_number] = {0: {"prev_line": first_prev_point["line"],
-                                                 "prev_point": first_prev_point["point"],
-                                                 "next_line": 0, "next_point": 0,
-                                                 "start_child": {"line": prev_point["line"], "point": prev_point["point"]},
-                                                 "end_child": {"line": end_point["line"], "point": end_point["point"]}},
-                                            1: {"prev_line": prev_prev_point["line"], "prev_point": prev_prev_point["point"],
-                                                "next_line": 0, "next_point": 0,
-                                                "start_child": {"line": prev_point["line"], "point": prev_point["point"]},
-                                                "end_child": {"line": end_point["line"], "point": end_point["point"]}}}
-                    lines[first_prev_point["line"]][first_prev_point["point"]]["next_line"] = pattern_number
-                    lines[first_prev_point["line"]][first_prev_point["point"]]["next_point"] = 0
-                    lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_line"] = pattern_number
-                    lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_point"] = 1
-                    lines[end_point["line"]][end_point["point"]]["next_line"] = 0
-                    lines[end_point["line"]][end_point["point"]]["next_point"] = 0
-                    lines[prev_point["line"]][prev_point["point"]]["parents"] = [{"line": pattern_number, "point": 0}, {"line": pattern_number, "point": 1}]
-                    lines[end_point["line"]][end_point["point"]]["parents"] = [{"line": pattern_number, "point": 0}, {"line": pattern_number, "point": 1}]
-                    print(f"lines")
-                    [print(key, value) for key, value in lines.items()]
-
+                    if "parents" not in lines[prev_point["line"]][prev_point["point"]]:
+                        pattern_number = len(lines) * -1
+                        lines[pattern_number] = {0: {"prev_line": first_prev_point["line"],
+                                                    "prev_point": first_prev_point["point"],
+                                                    "next_line": lines[end_point["line"]][end_point["point"]]["next_line"],
+                                                    "next_point": lines[end_point["line"]][end_point["point"]]["next_point"],
+                                                    "start_child": {"line": prev_point["line"], "point": prev_point["point"]},
+                                                    "end_child": {"line": end_point["line"], "point": end_point["point"]}},
+                                                1: {"prev_line": prev_prev_point["line"], "prev_point": prev_prev_point["point"],
+                                                    "next_line": 0, "next_point": 0,
+                                                    "start_child": {"line": prev_point["line"], "point": prev_point["point"]},
+                                                    "end_child": {"line": end_point["line"], "point": end_point["point"]}}}
+                        lines[first_prev_point["line"]][first_prev_point["point"]]["next_line"] = pattern_number
+                        lines[first_prev_point["line"]][first_prev_point["point"]]["next_point"] = 0
+                        lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_line"] = pattern_number
+                        lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_point"] = 1
+                        lines[end_point["line"]][end_point["point"]]["next_line"] = 0
+                        lines[end_point["line"]][end_point["point"]]["next_point"] = 0
+                        lines[prev_point["line"]][prev_point["point"]]["parents"] = [{"line": pattern_number, "point": 0}, {"line": pattern_number, "point": 1}]
+                        lines[end_point["line"]][end_point["point"]]["parents"] = [{"line": pattern_number, "point": 0}, {"line": pattern_number, "point": 1}]
+                        prev_point["point"] = 1
+                    else:
+                        parent_number = [parent["line"] for parent in lines[prev_point["line"]][prev_point["point"]]["parents"]][0]
+                        lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_line"] = parent_number
+                        lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_point"] = len(lines[parent_number])
+                        lines[parent_number][len(lines[parent_number])] = {
+                                                    "prev_line": prev_prev_point["line"], "prev_point": prev_prev_point["point"],
+                                                    "next_line": 0, "next_point": 0,
+                                                    "start_child": {"line": prev_point["line"], "point": prev_point["point"]},
+                                                    "end_child": {"line": end_point["line"], "point": end_point["point"]}}
+                        prev_point["point"] = len(lines[parent_number])-1
+                    prev_point["line"] = pattern_number
                 if retrace_step_count == 1:
                     retrace_step_count = 0
                     lines[prev_point["line"]][len(lines[prev_point["line"]])] = {"prev_line": prev_prev_point["line"], "prev_point": prev_prev_point["point"], "next_line": 0, "next_point": 0}
@@ -81,27 +80,32 @@ def x21():
                         lines[current_line][len(lines[current_line])] = {"prev_line": prev_point["line"], "prev_point": prev_point["point"], "next_line": 0, "next_point": 0}
                         lines[prev_point["line"]][prev_point["point"]]["next_line"] = current_line
                         lines[prev_point["line"]][prev_point["point"]]["next_point"] = len(lines[current_line])-1
-                if current_line in lines:
-                    retrace_step_count = 1
-                    prev_prev_point = {"line": prev_point["line"], "point": prev_point["point"]}                
-                    prev_point["line"] = current_line
-                    prev_point["point"] = len(lines[current_line])-1
-                    predictions = [
-                        {"first_prev_point": {"line": lines[current_line][key]["prev_line"],
-                                                "point": lines[current_line][key]["prev_point"]},
-                        "prediction": {"line": current_line, "point": key}}
-                            for key in lines[current_line]]
-                elif current_line not in lines:
-                    if prev_point["line"] in lines:
-                        getPoint(lines, prev_point)["next_line"] = current_line
-                        getPoint(lines, prev_point)["next_point"] = 0
-                    lines[current_line] = {0: {"prev_line": prev_point["line"], "prev_point": prev_point["point"], "next_line": 0, "next_point": 0}}
-                    prev_point["line"] = current_line
-                    prev_point["point"] = 0
+            if current_line in lines:
+                if i == len(sequence1)-1:
+                    lines[current_line][len(lines[current_line])] = {"prev_line": prev_point["line"], "prev_point": prev_point["point"], "next_line": 0, "next_point": 0}
+                    lines[prev_point["line"]][prev_point["point"]]["next_line"] = current_line
+                    lines[prev_point["line"]][prev_point["point"]]["next_point"] = len(lines[current_line])-1
+
+                retrace_step_count = 1
+                prev_prev_point = {"line": prev_point["line"], "point": prev_point["point"]}                
+                prev_point["line"] = current_line
+                prev_point["point"] = len(lines[current_line])-1
+                predictions = [
+                    {"first_prev_point": {"line": lines[current_line][key]["prev_line"],
+                                            "point": lines[current_line][key]["prev_point"]},
+                    "prediction": {"line": current_line, "point": key}}
+                        for key in lines[current_line]]
+            elif current_line not in lines:
+                if prev_point["line"] in lines:
+                    getPoint(lines, prev_point)["next_line"] = current_line
+                    getPoint(lines, prev_point)["next_point"] = 0
+                lines[current_line] = {0: {"prev_line": prev_point["line"], "prev_point": prev_point["point"], "next_line": 0, "next_point": 0}}
+                prev_point["line"] = current_line
+                prev_point["point"] = 0
         else:
             retrace_step_count += 1
 
-    print(f"points")
+    print(f"lines")
     [print(key, value) for key, value in lines.items()]
     print()
     return
