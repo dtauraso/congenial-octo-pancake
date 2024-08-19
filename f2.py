@@ -65,15 +65,14 @@ def x21():
                     lines[prev_point["line"]][len(lines[prev_point["line"]])] = {"prev_line": prev_prev_point["line"], "prev_point": prev_prev_point["point"], "next_line": 0, "next_point": 0}
                     if current_line in lines:
                         lines[current_line][len(lines[current_line])] = {"prev_line": prev_point["line"], "prev_point": len(lines[prev_point["line"]])-1, "next_line": 0, "next_point": 0}
-                    else:
-                        lines[current_line] = {0: {"prev_line": prev_point["line"], "prev_point": len(lines[prev_point["line"]])-1, "next_line": 0, "next_point": 0}}
-                    lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_line"] = prev_point["line"]
-                    lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_point"] = len(lines[prev_point["line"]])-1
-                    lines[prev_point["line"]][len(lines[prev_point["line"]])-1]["next_line"] = current_line
-                    lines[prev_point["line"]][len(lines[prev_point["line"]])-1]["next_point"] = len(lines[current_line])-1
-                    prev_prev_point = {"line": prev_point["line"], "point": len(lines[prev_point["line"]])-1}                
-                    prev_point["line"] = current_line
-                    prev_point["point"] = len(lines[current_line])-1
+                        lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_line"] = prev_point["line"]
+                        lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_point"] = len(lines[prev_point["line"]])-1
+                        lines[prev_point["line"]][len(lines[prev_point["line"]])-1]["next_line"] = current_line
+                        lines[prev_point["line"]][len(lines[prev_point["line"]])-1]["next_point"] = len(lines[current_line])-1
+                        prev_prev_point = {"line": prev_point["line"], "point": len(lines[prev_point["line"]])-1}                
+                        prev_point["line"] = current_line
+                        prev_point["point"] = len(lines[current_line])-1
+
             else:
                 if retrace_step_count == 0:
                     if i == len(sequence1)-1:
@@ -166,8 +165,8 @@ def x22():
                         pattern_number = len(lines) * -1
                         lines[pattern_number] = {0: {"prev_line": first_prev_point["line"],
                                                     "prev_point": first_prev_point["point"],
-                                                    "next_line": lines[end_point["line"]][end_point["point"]]["next_line"],
-                                                    "next_point": lines[end_point["line"]][end_point["point"]]["next_point"],
+                                                    "next_line": getPoint(lines, end_point)["next_line"],
+                                                    "next_point": getPoint(lines, end_point)["next_point"],
                                                     "start_child": {"line": prev_point["line"], "point": prev_point["point"]},
                                                     "end_child": {"line": end_point["line"], "point": end_point["point"]}},
                                                 1: {"prev_line": prev_prev_point["line"],
@@ -175,12 +174,8 @@ def x22():
                                                     "next_line": 0, "next_point": 0,
                                                     "start_child": {"line": prev_point["line"], "point": prev_point["point"]},
                                                     "end_child": {"line": end_point["line"], "point": end_point["point"]}}}
-                        print(f"{i} current_line: {current_line} first_prev_point: {first_prev_point} prev_prev_point: {prev_prev_point} end_point: {end_point} prev_point: {prev_point}")
-                        print(f"lines")
-                        [print(key, value) for key, value in lines.items()]
-                        print()
-                        lines[first_prev_point["line"]][first_prev_point["point"]]["next_line"] = pattern_number
-                        lines[first_prev_point["line"]][first_prev_point["point"]]["next_point"] = 0
+                        getPoint(lines, first_prev_point)["next_line"] = pattern_number
+                        getPoint(lines, first_prev_point)["next_point"] = 0
                         lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_line"] = pattern_number
                         lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_point"] = 1
                         lines[end_point["line"]][end_point["point"]]["next_line"] = 0
@@ -201,7 +196,8 @@ def x22():
                     prev_point["line"] = pattern_number
                 if retrace_step_count == 1:
                     retrace_step_count = 0
-                    lines[prev_point["line"]][len(lines[prev_point["line"]])] = {"prev_line": prev_prev_point["line"], "prev_point": prev_prev_point["point"], "next_line": 0, "next_point": 0}
+                    if not (prev_point["line"] == prev_prev_point["line"] and prev_point["point"] == prev_prev_point["point"]):
+                        lines[prev_point["line"]][len(lines[prev_point["line"]])] = {"prev_line": prev_prev_point["line"], "prev_point": prev_prev_point["point"], "next_line": 0, "next_point": 0}
                     if current_line in lines:
                         lines[current_line][len(lines[current_line])] = {"prev_line": prev_point["line"], "prev_point": len(lines[prev_point["line"]])-1, "next_line": 0, "next_point": 0}
                         lines[prev_prev_point["line"]][prev_prev_point["point"]]["next_line"] = prev_point["line"]
