@@ -297,12 +297,36 @@ def traceLine(sequence):
         prev["point"] = len(lines[current_line])-1
     return lines
 
+
+def findPointWithParent(line):
+    for point in line:
+        if "parent" in point:
+            return point
+    return None
 def foldPatterns(lines):
 
+    line_ids = list(lines.keys())
+    for i, line_id in enumerate(line_ids):
+        match = findPointWithParent(lines[line_id])
+        if match == None:
+            tracker = {"line": line_id, "point": 0}
+            tracker2 = {"line": line_id, "point": 1}
+            prev = getPoint(lines, tracker)["prev"]
+            prev2 = getPoint(lines, tracker2)["prev"]
+            next = getPoint(lines, tracker)["next"]
+            next2 = getPoint(lines, tracker2)["next"]
+            new_line_id = len(lines) * -1
+            lines[new_line_id] = {0: {"prev": {}, "next": {}, "children": {"start": {}, "end": {}}}}
+            new_line_tracker = {"line": new_line_id, "point": 0}
+            pass
+        else:
+            for j, point in enumerate(lines[line_id]):
+                if point != match:
+                    pass
     return lines
 def x23():
 
-    sequence1 = [1, 2, 3, 4, 2, 3, 5, 2, 3, 1, 1, 1, 2, 4, 5, 6, 4, 5, 7]
+    sequence1 = [1, 8, 6, 4, 2, 12, 5, 10, 3, 2, 11, 13, 3, 54]
 
     lines = traceLine(sequence1)
 
