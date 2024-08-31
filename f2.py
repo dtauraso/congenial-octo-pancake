@@ -307,12 +307,13 @@ def findPointWithParent(line):
         if "parent" in line[point_id]:
             return point_id
     return None
-def foldPatterns(lines):
+def foldPatterns(lines, start_point):
 
-    line_ids = list(lines.keys())
-    for i, line_id in enumerate(line_ids):
-        match = findPointWithParent(lines[line_id])
-        if match == None:
+    tracker3 = {"line": start_point["line"], "point": start_point["point"]}
+    while getPoint(lines, tracker3) != None:
+        line_id = tracker3["line"]
+        match_point_id = findPointWithParent(lines[line_id])
+        if match_point_id == None:
             tracker1 = {"line": line_id, "point": 0}
             tracker = {"line": line_id, "point": 0}
             tracker = getPoint(lines, tracker)["next"]
@@ -322,40 +323,39 @@ def foldPatterns(lines):
                 tracker = getPoint(lines, tracker)["next"]
 
             if getPoint(lines, tracker) == None:
+                tracker3 = getPoint(lines, tracker3)["next"]
                 continue
 
             tracker2 = {"line": line_id, "point": tracker["point"]}
             prev1 = getPoint(lines, tracker1)["prev"]
             prev2 = getPoint(lines, tracker2)["prev"]
-            next1 = getPoint(lines, tracker1)["next"]
-            next2 = getPoint(lines, tracker2)["next"]
             new_line_id = len(lines) * -1
             lines[new_line_id] = {0:
                                     {"prev": {"line": prev1["line"], "point": prev1["point"]},
-                                     "next": {"line": tracker2["line"], "point": tracker2["point"]},
-                                     "children": 
+                                    "next": {"line": tracker2["line"], "point": tracker2["point"]},
+                                    "children": 
                                         {"start": {"line": tracker1["line"], "point": tracker1["point"]},
-                                         "end": {"line": prev2["line"], "point": prev2["point"]}}}}
+                                        "end": {"line": prev2["line"], "point": prev2["point"]}}}}
             new_line_tracker1 = {"line": new_line_id, "point": 0}
 
-            print(f"tracker1: {tracker1}")
-            print(f"tracker2: {tracker2}")
-            print(f"prev1: {prev1}")
-            print(f"prev2: {prev2}")
-            print(f"next1: {next1}")
-            print(f"next2: {next2}")
-            print(f"new_line_tracker1: {new_line_tracker1}")
+            # print(f"tracker1: {tracker1}")
+            # print(f"tracker2: {tracker2}")
+            # print(f"prev1: {prev1}")
+            # print(f"prev2: {prev2}")
+            # print(f"next1: {next1}")
+            # print(f"next2: {next2}")
+            # print(f"new_line_tracker1: {new_line_tracker1}")
             getPoint(lines, prev1)["next"] = {"line": new_line_tracker1["line"], "point": new_line_tracker1["point"]}
             getPoint(lines, new_line_tracker1)["next"] = {"line": tracker2["line"], "point": tracker2["point"]}
             getPoint(lines, prev2)["next"] = {"line": 0, "point": 0}
             getPoint(lines, tracker1)["parent"] = {"line": new_line_tracker1["line"], "point": new_line_tracker1["point"]}
             getPoint(lines, prev2)["parent"] = {"line": new_line_tracker1["line"], "point": new_line_tracker1["point"]}
-            print()
-            pass
+            tracker3 = getPoint(lines, new_line_tracker1)["next"]
+            # print()
         else:
-            for j, point in enumerate(lines[line_id]):
-                if point != match:
-                    pass
+            print(f"line_id: {tracker['line']}, match_point_id: {match_point_id}")
+            print(f"tracker3: {tracker3}")
+            tracker3 = getPoint(lines, tracker3)["next"]
     return lines
 def x23():
 
@@ -366,7 +366,7 @@ def x23():
     print(f"lines")
     [print(key, value) for key, value in lines.items()]
     print()
-    foldPatterns(lines)
+    foldPatterns(lines, {"line": 1, "point": 0})
     print(f"lines")
     [print(key, value) for key, value in lines.items()]
     print()
