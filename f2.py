@@ -1,4 +1,6 @@
 def getPoint(lines, tracker):
+    if tracker == None:
+        return None
     if tracker["line"] in lines:
         if tracker["point"] in lines[tracker["line"]]:
             return lines[tracker["line"]][tracker["point"]]
@@ -323,7 +325,24 @@ def foldPatterns(lines, start_point):
                 tracker = getPoint(lines, tracker)["next"]
 
             if getPoint(lines, tracker) == None:
-                tracker3 = getPoint(lines, tracker3)["next"]
+                prev = getPoint(lines, tracker3)["prev"]
+                # print(f"prev: {prev}")
+                next = getPoint(lines, tracker3)["next"]
+                if getPoint(lines, prev) == None:
+                    getPoint(lines, next)["prev"] = {"line": 0, "point": 0}
+                elif getPoint(lines, next) == None:
+                    getPoint(lines, prev)["next"] = {"line": 0, "point": 0}
+                else:    
+                    getPoint(lines, prev)["next"] = next
+                    getPoint(lines, next)["prev"] = prev
+                del lines[tracker3["line"]][tracker3["point"]]
+                del lines[tracker3["line"]]
+                tracker3 = next
+                # print(f"lines")
+                # [print(key, value) for key, value in lines.items()]
+                # print()
+                # print(f"tracker3: {tracker3}")
+
                 continue
 
             tracker2 = {"line": line_id, "point": tracker["point"]}
@@ -342,19 +361,27 @@ def foldPatterns(lines, start_point):
             # print(f"tracker2: {tracker2}")
             # print(f"prev1: {prev1}")
             # print(f"prev2: {prev2}")
-            # print(f"next1: {next1}")
-            # print(f"next2: {next2}")
             # print(f"new_line_tracker1: {new_line_tracker1}")
-            getPoint(lines, prev1)["next"] = {"line": new_line_tracker1["line"], "point": new_line_tracker1["point"]}
+            if getPoint(lines, prev1) != None:
+                getPoint(lines, prev1)["next"] = {"line": new_line_tracker1["line"], "point": new_line_tracker1["point"]}
             getPoint(lines, new_line_tracker1)["next"] = {"line": tracker2["line"], "point": tracker2["point"]}
             getPoint(lines, prev2)["next"] = {"line": 0, "point": 0}
             getPoint(lines, tracker1)["parent"] = {"line": new_line_tracker1["line"], "point": new_line_tracker1["point"]}
             getPoint(lines, prev2)["parent"] = {"line": new_line_tracker1["line"], "point": new_line_tracker1["point"]}
             tracker3 = getPoint(lines, new_line_tracker1)["next"]
+            lines = foldPatterns(lines, getPoint(lines, {"line": tracker1["line"], "point": tracker1["point"]})["next"])
             # print()
         else:
-            print(f"line_id: {tracker['line']}, match_point_id: {match_point_id}")
-            print(f"tracker3: {tracker3}")
+            point = getPoint(lines, tracker3)
+            if "parent" in point:
+                parent_tracker = getPoint(lines, tracker3)["parent"]
+                parent = getPoint(lines, parent_tracker)
+                end_child_tracker = parent["children"]["end"]
+                if end_child_tracker["line"] == tracker3['line'] and end_child_tracker["point"] == tracker3["point"]:
+                    tracker3 = getPoint(lines, tracker3)["next"]
+                    continue
+            print(f"line_id: {tracker3['line']}, match_point_id: {match_point_id}")
+            print(f"tracker3")
             tracker3 = getPoint(lines, tracker3)["next"]
     return lines
 def x23():
