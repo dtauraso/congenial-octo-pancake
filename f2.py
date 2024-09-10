@@ -323,7 +323,6 @@ def removeSingleItems(lines):
 
 def findPatternEdges(lines, start_point):
 
-    import copy
     tracker = {"line": start_point["line"], "point": start_point["point"]}
     while getPoint(lines, tracker) != None:
         print(f"tracker: {tracker}")
@@ -332,27 +331,32 @@ def findPatternEdges(lines, start_point):
         print(f"line: {lines[line_id]} len: {len(lines[line_id])}")
         print()
 
-        if len(lines[line_id]) == 2:
+        if len(lines[line_id]) == 3:
             trackers = [{"start": {"line": line_id, "point": point_id},
                          "end": {"line": line_id, "point": point_id}}
                         for point_id in lines[line_id]
                             if "parent" not in lines[line_id][point_id]]
             count = 0
-            while len(trackers) > 0 and not len([tracker for i, tracker in enumerate(trackers) if tracker["end"]["line"] == 0]) > 0:
+            while len(trackers) > 0:
+                if len([tracker for i, tracker in enumerate(trackers) if tracker["end"]["line"] == 0]) > 0:
+                    break
                 print(f"trackers: {trackers}")
                 trackers = [{"start": tracker["start"],
                             "end": {
                                 "line": getPoint(lines, tracker["end"])["next"]["line"],
                                 "point": getPoint(lines, tracker["end"])["next"]["point"]}}
                             for i, tracker in enumerate(trackers)]
+                print(f"trackers after: {trackers}")
                 count += 1
-                finished_trackers = [tracker["end"]["line"] for i, tracker in enumerate(trackers) if tracker["end"]["line"] == tracker["start"]["line"]]
+                finished_trackers = [tracker for i, tracker in enumerate(trackers)
+                                        if tracker["end"]["line"] == tracker["start"]["line"]]
                 if len(finished_trackers) > 0:
-                    if count == 1:
-                        trackers = [tracker for i, tracker in enumerate(trackers) if tracker["end"]["line"] not in finished_trackers]
-                    elif count > 1:
-                        pass
-                [print(key, value) for key, value in finished_trackers.items()]
+                    if count > 1:
+                        print("finished trackers")
+                        [print(i, tracker) for i, tracker in enumerate(finished_trackers)]
+                    trackers = [tracker for i, tracker in enumerate(trackers) if tracker not in finished_trackers]
+                    print(f"remaining trackers")
+                    [print(i, tracker) for i, tracker in enumerate(trackers)]
 
         tracker = getPoint(lines, tracker)["next"]
 
@@ -452,15 +456,15 @@ def foldPatterns(lines, start_point, new_parent_tracker):
     return new_line_id_count
 def x23():
 
-    sequence1 = [1, 8, 6, 4, 2, 12, 5, 10, 3, 2, 11, 13, 3, 54, 2]
+    sequence1 = [2, 3, 2, 3, 2, 4, 5, 6, 7]
 
     lines = traceLine(sequence1)
 
     print(f"lines")
     [print(key, value) for key, value in lines.items()]
     print()
-    # findPatternEdges(lines, {"line": 1, "point": 0})
-    removeSingleItems(lines)
+    findPatternEdges(lines, {"line": 2, "point": 0})
+    # removeSingleItems(lines)
     # foldPatterns(lines, {"line": 1, "point": 0}, None)
     print(f"lines")
     [print(key, value) for key, value in lines.items()]
