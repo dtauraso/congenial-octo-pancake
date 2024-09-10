@@ -355,9 +355,6 @@ def findPatternEdges(lines, start_point):
                         print("finished trackers")
                         [print(i, tracker) for i, tracker in enumerate(finished_trackers)]
                     trackers = [tracker for i, tracker in enumerate(trackers) if tracker not in finished_trackers]
-                    print(f"remaining trackers")
-                    [print(i, tracker) for i, tracker in enumerate(trackers)]
-
         tracker = getPoint(lines, tracker)["next"]
 
 def findEndLineId():
