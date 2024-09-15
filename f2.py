@@ -301,7 +301,6 @@ def traceLine(sequence):
             lines[prev["line"]][prev["point"]]["next"]["point"] = len(lines[current_line])-1
         prev["line"] = current_line
         prev["point"] = len(lines[current_line])-1
-        groupLines(lines)
     return lines
 
 def removeSingleItems(lines):
@@ -512,30 +511,59 @@ def foldPatterns(lines, start_point, new_parent_tracker):
 
 def groupLines(lines):
 
+    import copy
     histogram = {line: len(points) for line, points in lines.items()}
 
     grouped_lines = {count: [line for line, c in histogram.items() if c == count]
                         for count in set(histogram.values())}
 
     print("Grouped lines by histogram count:")
-    for count, lines in grouped_lines.items():
-        print(f"Count {count}: Lines {lines}")
+    for count, lines1 in grouped_lines.items():
+        print(f"Count {count}: Lines {lines1}")
+    
     print("Histogram of lines:")
     for line, count in histogram.items():
         print(f"Line {line}: {count}")
+
+    max_count = max(histogram.values())
+    max_count_lines = [line for line, count in histogram.items() if count == max_count]
+    print(f"Line(s) with the highest count: {max_count_lines}")
+    new_line_id = len(lines) * -1
+    lines[new_line_id] = {0: {}}
+
+    new_sequence_line_id = len(lines) * -1
+    lines[new_sequence_line_id] = {0: {}}
+    prev = {"line": 0, "point": 0}
+    for line_id in max_count_lines:
+        line = copy.deepcopy(lines[line_id])
+        for point in line:
+            lines[line_id][point]["parent"] = {"line": new_line_id, "point": 0}
+            lines[line_id][len(lines[line_id])] = {"prev": {"line": prev["line"], "point": prev["point"]},
+                                                    "next": {"line": 0, "point": 0},
+                                                    "parent": {"line": new_sequence_line_id, "point": 0}}
+            if prev["line"] in max_count_lines:
+                getPoint(lines, prev)["next"] = {"line": line_id, "point": len(lines[line_id])-1}
+            prev["line"] = line_id
+            prev["point"] = len(lines[line_id])-1
+
+
+    histogram2 = {line_id: len(points) for line_id, points in lines.items()
+                        if len([point_id for point_id in lines[line_id]
+                            if "parent" in lines[line_id][point_id]]) == 0 and line_id > 0}
+    print(f"histogram2")
+    [print(key, value) for key, value in histogram2.items()]
     print()
 
 def x23():
-    # 1, 2, 2, 2, 3, 2, 3, 2, 3, 4, 5, 6
     # 1, 2, 1, 3, 1, 4, 1, 5
-    sequence1 = [1, 2, 1, 3, 1, 4, 1, 5, 1, 2, 1, 3, 1, 4, 1, 5]
+    sequence1 = [1, 2, 1, 3, 1, 4, 1, 5]
 
     lines = traceLine(sequence1)
 
     print(f"lines")
     [print(key, value) for key, value in lines.items()]
     print()
-    # groupLines(lines)
+    groupLines(lines)
     # findPatternEdges(lines, {"line": 2, "point": 0})
     # removeSingleItems(lines)
     # foldPatterns(lines, {"line": 1, "point": 0}, None)
