@@ -552,6 +552,31 @@ def groupLines(lines):
                             if "parent" in lines[line_id][point_id]]) == 0 and line_id > 0}
     print(f"histogram2")
     [print(key, value) for key, value in histogram2.items()]
+
+
+    grouped_lines2 = {count: [line for line, c in histogram2.items() if c == count]
+                    for count in set(histogram2.values())}
+    max_count2 = max(histogram2.values())
+    max_count_lines2 = [line for line, count in histogram2.items() if count == max_count2]
+    print(f"Line(s) with the highest count: {max_count_lines2}")
+    new_line_id2 = len(lines) * -1
+    lines[new_line_id2] = {0: {}}
+
+    new_sequence_line_id2 = len(lines) * -1
+    lines[new_sequence_line_id2] = {0: {}}
+    prev2 = {"line": 0, "point": 0}
+    for line_id in max_count_lines2:
+        line = copy.deepcopy(lines[line_id])
+        for point in line:
+            lines[line_id][point]["parent"] = {"line": new_line_id, "point": 0}
+            lines[line_id][len(lines[line_id])] = {"prev": {"line": prev["line"], "point": prev["point"]},
+                                                    "next": {"line": 0, "point": 0},
+                                                    "parent": {"line": new_sequence_line_id2, "point": 0}}
+            if prev2["line"] in max_count_lines2:
+                getPoint(lines, prev2)["next"] = {"line": line_id, "point": len(lines[line_id])-1}
+            prev2["line"] = line_id
+            prev2["point"] = len(lines[line_id])-1
+
     print()
 
 def x23():
