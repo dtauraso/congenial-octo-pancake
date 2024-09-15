@@ -301,6 +301,7 @@ def traceLine(sequence):
             lines[prev["line"]][prev["point"]]["next"]["point"] = len(lines[current_line])-1
         prev["line"] = current_line
         prev["point"] = len(lines[current_line])-1
+        groupLines(lines)
     return lines
 
 def removeSingleItems(lines):
@@ -522,18 +523,19 @@ def groupLines(lines):
     print("Histogram of lines:")
     for line, count in histogram.items():
         print(f"Line {line}: {count}")
-
+    print()
 
 def x23():
-
-    sequence1 = [1, 2, 1, 3, 1, 4, 1, 5]
+    # 1, 2, 2, 2, 3, 2, 3, 2, 3, 4, 5, 6
+    # 1, 2, 1, 3, 1, 4, 1, 5
+    sequence1 = [1, 2, 1, 3, 1, 4, 1, 5, 1, 2, 1, 3, 1, 4, 1, 5]
 
     lines = traceLine(sequence1)
 
     print(f"lines")
     [print(key, value) for key, value in lines.items()]
     print()
-    x111(lines)
+    # groupLines(lines)
     # findPatternEdges(lines, {"line": 2, "point": 0})
     # removeSingleItems(lines)
     # foldPatterns(lines, {"line": 1, "point": 0}, None)
