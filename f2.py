@@ -511,43 +511,46 @@ def foldPatterns(lines, start_point, new_parent_tracker):
 
 def groupLines(lines):
 
-    lines[1] = {}
-    import copy
-    histogram = {line: len(points) for line, points in lines[0].items()}
-    parent_points = []
-    while len(histogram) > 0:
+    while True:
+        current_level = len(lines) - 1
+        next_level = current_level + 1
+        lines[next_level] = {}
 
-        max_count = max(histogram.values())
-        if max_count == 1:
-            break
-        max_count_lines = [line for line, count in histogram.items() if count == max_count]
-        print(f"Line(s) with the highest count: {max_count_lines}")
-        new_line_id = len(lines[0]) * -1
-        lines[0][new_line_id] = {0: {}}
-
-        new_sequence_line_id = len(max_count_lines) - 1
-        lines[1][new_sequence_line_id] = {0: {"children": []}}
-        parent_points.append({"line": new_sequence_line_id, "point": 0})
-        prev = {"line": 0, "point": 0}
-        for line_id in max_count_lines:
-            line = copy.deepcopy(lines[0][line_id])
-            for point in line:
-                lines[0][line_id][point]["parent"] = {"line": new_line_id, "point": 0}
-                lines[0][line_id][len(lines[0][line_id])] = {"prev": {"line": prev["line"], "point": prev["point"]},
+        point_min_count_pattern_threshold = 3
+        histogram = {line: len(points)
+                        for line, points in lines[current_level].items()
+                            if len(points) >= point_min_count_pattern_threshold}
+        parent_points = []
+        while len(histogram) > 0:
+            max_count = max(histogram.values())
+            if max_count == 1:
+                break
+            max_count_lines = [line for line, count in histogram.items() if count == max_count]
+            # print(f"Line(s) with the highest count: {max_count_lines}")
+            new_sequence_line_id = len(max_count_lines) - 1
+            lines[next_level][new_sequence_line_id] = {0: {"children": []}}
+            parent_points.append({"line": new_sequence_line_id, "point": 0})
+            prev = {"line": 0, "point": 0}
+            for line_id in max_count_lines:
+                point = [point for point in lines[current_level][line_id] if "visited" not in lines[current_level]][0]
+                lines[current_level][line_id][point]["visited"] = True
+                lines[current_level][line_id][len(lines[current_level][line_id])] = {"prev": {"line": prev["line"], "point": prev["point"]},
                                                         "next": {"line": 0, "point": 0},
                                                         "parent": {"line": new_sequence_line_id, "point": 0}}
+                lines[next_level][new_sequence_line_id][0]["children"].append({"line": line_id, "point": len(lines[current_level][line_id])-1})
                 if prev["line"] in max_count_lines:
-                    getPoint(lines[0], prev)["next"] = {"line": line_id, "point": len(lines[0][line_id])-1}
+                    getPoint(lines[current_level], prev)["next"] = {"line": line_id, "point": len(lines[current_level][line_id])-1}
                 prev["line"] = line_id
-                prev["point"] = len(lines[0][line_id])-1
-            lines[1][new_sequence_line_id][0]["children"].append({"line": line_id, "point": point})
-            histogram = {line_id: len(points)
-                        for line_id, points in lines[0].items()
-                            if all("parent" not in lines[0][line_id][point_id]
-                                for point_id in points) and line_id > 0}
-
-    print(f"parent_points: {parent_points}")
-    print()
+                prev["point"] = len(lines[current_level][line_id])-1
+                histogram = {line_id: len(points)
+                            for line_id, points in lines[current_level].items()
+                                if  all("visited" not in lines[current_level][line_id][point_id]
+                                        for point_id in points) and
+                                    len(points) >= point_min_count_pattern_threshold}
+        if len(histogram) == 0:
+            break
+    # print(f"parent_points: {parent_points}")
+    # print()
 
 def groupColumns(lines):
 
@@ -575,7 +578,7 @@ def groupColumns(lines):
 
 def x23():
 
-    sequence1 = [1, 2, 7, 1, 3, 1, 12, 4, 1, 5, 6, 45, 2, 6, 3, 6, 4, 6, 5]
+    sequence1 = [1, 2, 1, 3, 1, 24, 4, 1, 5, 6, 2, 67, 6, 3, 6, 4, 6, 5, 23, 2, 23, 3, 23, 4, 23, 5]
 
     lines = traceLine(sequence1)
 
