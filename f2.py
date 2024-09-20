@@ -289,18 +289,18 @@ def x22():
 
 def traceLine(sequence):
 
-    lines = {}
+    lines = {0:{}}
     prev = {"line": 0, "point": 0}
     for i, current_line in enumerate(sequence):
-        if current_line not in lines:
-            lines[current_line] = {0: {"prev": {"line": prev["line"], "point": prev["point"]}, "next": {"line": 0, "point": 0}}}
+        if current_line not in lines[0]:
+            lines[0][current_line] = {0: {"prev": {"line": prev["line"], "point": prev["point"]}, "next": {"line": 0, "point": 0}}}
         else:
-            lines[current_line][len(lines[current_line])] = {"prev": {"line": prev["line"], "point": prev["point"]}, "next": {"line": 0, "point": 0}}
-        if prev["line"] in lines:
-            lines[prev["line"]][prev["point"]]["next"]["line"] = current_line
-            lines[prev["line"]][prev["point"]]["next"]["point"] = len(lines[current_line])-1
+            lines[0][current_line][len(lines[0][current_line])] = {"prev": {"line": prev["line"], "point": prev["point"]}, "next": {"line": 0, "point": 0}}
+        if prev["line"] in lines[0]:
+            lines[0][prev["line"]][prev["point"]]["next"]["line"] = current_line
+            lines[0][prev["line"]][prev["point"]]["next"]["point"] = len(lines[0][current_line])-1
         prev["line"] = current_line
-        prev["point"] = len(lines[current_line])-1
+        prev["point"] = len(lines[0][current_line])-1
     return lines
 
 def removeSingleItems(lines):
@@ -511,89 +511,86 @@ def foldPatterns(lines, start_point, new_parent_tracker):
 
 def groupLines(lines):
 
+    lines[1] = {}
     import copy
-    histogram = {line: len(points) for line, points in lines.items()}
+    histogram = {line: len(points) for line, points in lines[0].items()}
+    parent_points = []
+    while len(histogram) > 0:
 
-    grouped_lines = {count: [line for line, c in histogram.items() if c == count]
-                        for count in set(histogram.values())}
+        max_count = max(histogram.values())
+        if max_count == 1:
+            break
+        max_count_lines = [line for line, count in histogram.items() if count == max_count]
+        print(f"Line(s) with the highest count: {max_count_lines}")
+        new_line_id = len(lines[0]) * -1
+        lines[0][new_line_id] = {0: {}}
+
+        new_sequence_line_id = len(max_count_lines) - 1
+        lines[1][new_sequence_line_id] = {0: {"children": []}}
+        parent_points.append({"line": new_sequence_line_id, "point": 0})
+        prev = {"line": 0, "point": 0}
+        for line_id in max_count_lines:
+            line = copy.deepcopy(lines[0][line_id])
+            for point in line:
+                lines[0][line_id][point]["parent"] = {"line": new_line_id, "point": 0}
+                lines[0][line_id][len(lines[0][line_id])] = {"prev": {"line": prev["line"], "point": prev["point"]},
+                                                        "next": {"line": 0, "point": 0},
+                                                        "parent": {"line": new_sequence_line_id, "point": 0}}
+                if prev["line"] in max_count_lines:
+                    getPoint(lines[0], prev)["next"] = {"line": line_id, "point": len(lines[0][line_id])-1}
+                prev["line"] = line_id
+                prev["point"] = len(lines[0][line_id])-1
+            lines[1][new_sequence_line_id][0]["children"].append({"line": line_id, "point": point})
+            histogram = {line_id: len(points)
+                        for line_id, points in lines[0].items()
+                            if all("parent" not in lines[0][line_id][point_id]
+                                for point_id in points) and line_id > 0}
+
+    print(f"parent_points: {parent_points}")
+    print()
+
+def groupColumns(lines):
+
+
+    [print(line_id) for line_id in lines]
+    histogram2 = {line_id: sum(1 for point in points
+                                        if "next" in lines[line_id][point] and
+                                            lines[line_id][point]["next"]["line"] != line_id)
+                                        for line_id, points in lines.items() if line_id > 0}
+    print(f"histogram2")
+    [print(key, value) for key, value in histogram2.items()]
+    
+    
+    grouped_lines = {count: [line for line, c in histogram2.items() if c == count]
+                        for count in set(histogram2.values())}
 
     print("Grouped lines by histogram count:")
     for count, lines1 in grouped_lines.items():
         print(f"Count {count}: Lines {lines1}")
-    
-    print("Histogram of lines:")
-    for line, count in histogram.items():
-        print(f"Line {line}: {count}")
-
-    max_count = max(histogram.values())
-    max_count_lines = [line for line, count in histogram.items() if count == max_count]
-    print(f"Line(s) with the highest count: {max_count_lines}")
-    new_line_id = len(lines) * -1
-    lines[new_line_id] = {0: {}}
-
-    new_sequence_line_id = len(lines) * -1
-    lines[new_sequence_line_id] = {0: {}}
-    prev = {"line": 0, "point": 0}
-    for line_id in max_count_lines:
-        line = copy.deepcopy(lines[line_id])
-        for point in line:
-            lines[line_id][point]["parent"] = {"line": new_line_id, "point": 0}
-            lines[line_id][len(lines[line_id])] = {"prev": {"line": prev["line"], "point": prev["point"]},
-                                                    "next": {"line": 0, "point": 0},
-                                                    "parent": {"line": new_sequence_line_id, "point": 0}}
-            if prev["line"] in max_count_lines:
-                getPoint(lines, prev)["next"] = {"line": line_id, "point": len(lines[line_id])-1}
-            prev["line"] = line_id
-            prev["point"] = len(lines[line_id])-1
-
-
-    histogram2 = {line_id: len(points) for line_id, points in lines.items()
-                        if len([point_id for point_id in lines[line_id]
-                            if "parent" in lines[line_id][point_id]]) == 0 and line_id > 0}
-    print(f"histogram2")
-    [print(key, value) for key, value in histogram2.items()]
-
-
-    grouped_lines2 = {count: [line for line, c in histogram2.items() if c == count]
-                    for count in set(histogram2.values())}
-    max_count2 = max(histogram2.values())
-    max_count_lines2 = [line for line, count in histogram2.items() if count == max_count2]
-    print(f"Line(s) with the highest count: {max_count_lines2}")
-    new_line_id2 = len(lines) * -1
-    lines[new_line_id2] = {0: {}}
-
-    new_sequence_line_id2 = len(lines) * -1
-    lines[new_sequence_line_id2] = {0: {}}
-    prev2 = {"line": 0, "point": 0}
-    for line_id in max_count_lines2:
-        line = copy.deepcopy(lines[line_id])
-        for point in line:
-            lines[line_id][point]["parent"] = {"line": new_line_id, "point": 0}
-            lines[line_id][len(lines[line_id])] = {"prev": {"line": prev["line"], "point": prev["point"]},
-                                                    "next": {"line": 0, "point": 0},
-                                                    "parent": {"line": new_sequence_line_id2, "point": 0}}
-            if prev2["line"] in max_count_lines2:
-                getPoint(lines, prev2)["next"] = {"line": line_id, "point": len(lines[line_id])-1}
-            prev2["line"] = line_id
-            prev2["point"] = len(lines[line_id])-1
+        if len(lines1) > 1:
+            print(f"lines1: {lines1}")
+    # makeParentLine(lines, start_end_points)
 
     print()
 
 def x23():
-    # 1, 2, 1, 3, 1, 4, 1, 5
-    sequence1 = [1, 2, 1, 3, 1, 4, 1, 5]
+
+    sequence1 = [1, 2, 7, 1, 3, 1, 12, 4, 1, 5, 6, 45, 2, 6, 3, 6, 4, 6, 5]
 
     lines = traceLine(sequence1)
 
     print(f"lines")
     [print(key, value) for key, value in lines.items()]
     print()
+    # groupColumns(lines)
     groupLines(lines)
     # findPatternEdges(lines, {"line": 2, "point": 0})
     # removeSingleItems(lines)
     # foldPatterns(lines, {"line": 1, "point": 0}, None)
     print(f"lines")
-    [print(key, value) for key, value in lines.items()]
+    for key in lines:
+        print(key)
+        [print(key, value) for key, value in lines[key].items()]
     print()
 
 
