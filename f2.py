@@ -516,15 +516,15 @@ def groupLines(lines):
         next_level = current_level + 1
         lines[next_level] = {}
 
-        point_min_count_pattern_threshold = 3
+        point_min_count_pattern_threshold = 1
         histogram = {line: len(points)
                         for line, points in lines[current_level].items()
                             if len(points) >= point_min_count_pattern_threshold}
         parent_points = []
         while len(histogram) > 0:
             max_count = max(histogram.values())
-            if max_count == 1:
-                break
+            # if max_count == 1:
+            #     break
             max_count_lines = [line for line, count in histogram.items() if count == max_count]
             # print(f"Line(s) with the highest count: {max_count_lines}")
             new_sequence_line_id = len(max_count_lines) - 1
@@ -552,6 +552,18 @@ def groupLines(lines):
     # print(f"parent_points: {parent_points}")
     # print()
 
+def pruneLines(lines):
+
+    for line_id in lines[0].keys():
+        print(f"line_id: {line_id}")
+        different_line_count = len({lines[0][line_id][point]["next"]["line"]
+                                        for point in lines[0][line_id]
+                                            if "next" in lines[0][line_id][point] and
+                                                lines[0][line_id][point]["next"]["line"] != line_id and
+                                                lines[0][line_id][point]["next"]["line"] != 0})
+        print(f"different_line_count: {different_line_count}")
+        print(f"ratio: {different_line_count / len(lines[0])}")
+
 def groupColumns(lines):
 
 
@@ -577,8 +589,9 @@ def groupColumns(lines):
     print()
 
 def x23():
-
-    sequence1 = [1, 2, 1, 3, 1, 24, 4, 1, 5, 6, 2, 67, 6, 3, 6, 4, 6, 5, 23, 2, 23, 3, 23, 4, 23, 5]
+    # 1, 2, 1, 3, 1, 24, 4, 1, 5, 6, 2, 67, 6, 3, 6, 4, 6, 5, 23, 2, 23, 3, 23, 4, 23, 5
+    # 1, 2, 1, 3, 1, 4, 1, 5
+    sequence1 = [1, 2, 3, 2, 3, 1, 3, 2, 1]
 
     lines = traceLine(sequence1)
 
@@ -587,14 +600,15 @@ def x23():
     print()
     # groupColumns(lines)
     groupLines(lines)
+    pruneLines(lines)
     # findPatternEdges(lines, {"line": 2, "point": 0})
     # removeSingleItems(lines)
     # foldPatterns(lines, {"line": 1, "point": 0}, None)
-    print(f"lines")
-    for key in lines:
-        print(key)
-        [print(key, value) for key, value in lines[key].items()]
-    print()
+    # print(f"lines")
+    # for key in lines:
+    #     print(key)
+    #     [print(key, value) for key, value in lines[key].items()]
+    # print()
 
 
         
