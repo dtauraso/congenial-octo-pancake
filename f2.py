@@ -508,7 +508,7 @@ def foldPatterns(lines, start_point, new_parent_tracker):
                     pass
             tracker3 = getPoint(lines, tracker3)["next"]
     return new_line_id_count
-
+            
 def groupLines(lines):
 
     while True:
@@ -526,7 +526,7 @@ def groupLines(lines):
             # if max_count == 1:
             #     break
             max_count_lines = [line for line, count in histogram.items() if count == max_count]
-            # print(f"Line(s) with the highest count: {max_count_lines}")
+            print(f"Line(s) with the highest count: {max_count_lines}")
             new_sequence_line_id = len(max_count_lines) - 1
             lines[next_level][new_sequence_line_id] = {0: {"children": []}}
             parent_points.append({"line": new_sequence_line_id, "point": 0})
@@ -549,11 +549,16 @@ def groupLines(lines):
                                     len(points) >= point_min_count_pattern_threshold}
         if len(histogram) == 0:
             break
+    for line_id in lines[current_level]:
+        points_to_delete = [point for point in lines[current_level][line_id] if "visited" in lines[current_level][line_id][point]]
+        for point in points_to_delete:
+            del lines[current_level][line_id][point]
     # print(f"parent_points: {parent_points}")
     # print()
 
-def pruneLines(lines):
+def x221(lines):
 
+    different_line_count_threshold = 1
     for line_id in lines[0].keys():
         print(f"line_id: {line_id}")
         different_line_count = len({lines[0][line_id][point]["next"]["line"]
@@ -562,7 +567,58 @@ def pruneLines(lines):
                                                 lines[0][line_id][point]["next"]["line"] != line_id and
                                                 lines[0][line_id][point]["next"]["line"] != 0})
         print(f"different_line_count: {different_line_count}")
-        print(f"ratio: {different_line_count / len(lines[0])}")
+        if different_line_count >= different_line_count_threshold:
+            print(f"remove points from line_id: {line_id}")
+            print(f"points in line_id: {len(lines[0][line_id])}")
+            print(f"points in line_id / different_line_count: {len(lines[0][line_id]) / different_line_count}")            
+
+def x222(sequence):
+
+    lines = {0:{}}
+    prev = {"line": 0, "point": 0}
+    prediction_points = []
+    for i, current_line in enumerate(sequence):
+        print(f"i: {i}, current_line: {current_line}, prev: {prev}, prediction_points: {prediction_points}")
+        if current_line not in lines[0]:
+            lines[0][current_line] = {0: {  "prev": {"line": prev["line"], "point": prev["point"]},
+                                            "next": {"line": 0, "point": 0},
+                                            "visit_count": 1}}
+        else:
+            if len(prediction_points) == 0:
+                prediction_points = [lines[0][current_line][point]["next"] for point in lines[0][current_line]]
+                lines[0][current_line][len(lines[0][current_line])] = {
+                                        "prev": {"line": prev["line"], "point": prev["point"]},
+                                        "next": {"line": 0, "point": 0},
+                                        "visit_count": 1}
+                lines[0][prev["line"]][len(lines[0][current_line])] = {
+                                        "prev": {"line": prev["line"], "point": prev["point"]},
+                                        "next": {"line": 0, "point": 0},
+                                        "visit_count": 1}
+                if prev["line"] in lines[0]:
+                    lines[0][prev["line"]][prev["point"]]["next"]["line"] = current_line
+                    
+                    lines[0][prev["line"]][prev["point"]]["next"]["point"] = len(lines[0][current_line])-1
+                prev["point"] = len(lines[0][current_line])-1
+            else:
+                prediction_points = [point for point in prediction_points if point["line"] == current_line]
+                if len(prediction_points) == 0:
+                    # len(lines[0][current_line])
+                    lines[0][current_line][0] = {
+                                            "prev": {"line": prev["line"], "point": prev["point"]},
+                                            "next": {"line": 0, "point": 0},
+                                            "visit_count": 1}
+                    if prev["line"] in lines[0]:
+                        lines[0][prev["line"]][prev["point"]]["next"]["line"] = current_line
+                        # len(lines[0][current_line])-1
+                        lines[0][prev["line"]][prev["point"]]["next"]["point"] = 0
+                    prev["point"] = 0#len(lines[0][current_line])-1
+                else:
+                    for point in prediction_points:
+                        lines[0][point["line"]][point["point"]]["visit_count"] += 1
+                    prev["point"] = prediction_points[-1]["point"]
+        prev["line"] = current_line
+       
+    return lines
 
 def groupColumns(lines):
 
@@ -591,24 +647,27 @@ def groupColumns(lines):
 def x23():
     # 1, 2, 1, 3, 1, 24, 4, 1, 5, 6, 2, 67, 6, 3, 6, 4, 6, 5, 23, 2, 23, 3, 23, 4, 23, 5
     # 1, 2, 1, 3, 1, 4, 1, 5
-    sequence1 = [1, 2, 3, 2, 3, 1, 3, 2, 1]
+    # 1, 2, 3, 2, 3, 1, 3, 2, 1
+    sequence1 = [1, 1, 1, 2]
 
-    lines = traceLine(sequence1)
+    # lines = traceLine(sequence1)
 
-    print(f"lines")
-    [print(key, value) for key, value in lines.items()]
-    print()
-    # groupColumns(lines)
-    groupLines(lines)
-    pruneLines(lines)
-    # findPatternEdges(lines, {"line": 2, "point": 0})
-    # removeSingleItems(lines)
-    # foldPatterns(lines, {"line": 1, "point": 0}, None)
-    # print(f"lines")
     # for key in lines:
     #     print(key)
     #     [print(key, value) for key, value in lines[key].items()]
     # print()
+    # groupColumns(lines)
+    # groupLines(lines)
+    # x221(lines)
+    lines = x222(sequence1)
+    # findPatternEdges(lines, {"line": 2, "point": 0})
+    # removeSingleItems(lines)
+    # foldPatterns(lines, {"line": 1, "point": 0}, None)
+    # print(f"lines")
+    for key in lines:
+        print(key)
+        [print(key, value) for key, value in lines[key].items()]
+    print()
 
 
         
