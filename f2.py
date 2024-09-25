@@ -584,7 +584,18 @@ def x222(sequence):
                                             "next": {"line": 0, "point": 0},
                                             "visit_count": 1}}
         else:
-            if len(prediction_points) == 0:
+            if prev["line"] == current_line:
+                    print(f"here")
+                    lines[0][current_line][0]["next"]["line"] = prev["line"]
+                    lines[0][current_line][0]["visit_count"] += 1
+                    prediction_points = [lines[0][current_line][point]["next"] for point in lines[0][current_line]]
+                    for key in lines:
+                        print(key)
+                        [print(key, value) for key, value in lines[key].items()]
+                    print()
+            elif len(prediction_points) == 0:
+                print(f"i: {i}, before | current_line: {current_line}, prev: {prev}, prediction_points: {prediction_points}")
+
                 prediction_points = [lines[0][current_line][point]["next"] for point in lines[0][current_line]]
                 lines[0][current_line][len(lines[0][current_line])] = {
                                         "prev": {"line": prev["line"], "point": prev["point"]},
