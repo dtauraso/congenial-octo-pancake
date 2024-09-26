@@ -572,65 +572,33 @@ def x221(lines):
             print(f"points in line_id: {len(lines[0][line_id])}")
             print(f"points in line_id / different_line_count: {len(lines[0][line_id]) / different_line_count}")            
 
-def x222(sequence):
+def x222(lines, sequence):
 
-    lines = {0:{}}
     prev = {"line": 0, "point": 0}
-    prediction_points = []
+    visited = {}
+    points_added = []
+    predictions = []
+    if sequence[0] in lines[0]:
+        predictions = [{"line": sequence[0], "point": point} for point in lines[0][sequence[0]]]
     for i, current_line in enumerate(sequence):
-        print(f"i: {i}, current_line: {current_line}, prev: {prev}, prediction_points: {prediction_points}")
         if current_line not in lines[0]:
-            lines[0][current_line] = {0: {  "prev": {"line": prev["line"], "point": prev["point"]},
-                                            "next": {"line": 0, "point": 0},
-                                            "visit_count": 1}}
+            lines[0][current_line] = {0: {"prev": {"line": prev["line"], "point": prev["point"]}, "next": {"line": 0, "point": 0}}}
+            points_added.append({"line": current_line, "point": 0})
         else:
-            if prev["line"] == current_line:
-                    print(f"here")
-                    lines[0][current_line][0]["next"]["line"] = prev["line"]
-                    lines[0][current_line][0]["visit_count"] += 1
-                    prediction_points = [lines[0][current_line][point]["next"] for point in lines[0][current_line]]
-                    for key in lines:
-                        print(key)
-                        [print(key, value) for key, value in lines[key].items()]
-                    print()
-            elif len(prediction_points) == 0:
-                print(f"i: {i}, before | current_line: {current_line}, prev: {prev}, prediction_points: {prediction_points}")
-
-                prediction_points = [lines[0][current_line][point]["next"] for point in lines[0][current_line]]
-                lines[0][current_line][len(lines[0][current_line])] = {
-                                        "prev": {"line": prev["line"], "point": prev["point"]},
-                                        "next": {"line": 0, "point": 0},
-                                        "visit_count": 1}
-                lines[0][prev["line"]][len(lines[0][current_line])] = {
-                                        "prev": {"line": prev["line"], "point": prev["point"]},
-                                        "next": {"line": 0, "point": 0},
-                                        "visit_count": 1}
-                if prev["line"] in lines[0]:
-                    lines[0][prev["line"]][prev["point"]]["next"]["line"] = current_line
-                    
-                    lines[0][prev["line"]][prev["point"]]["next"]["point"] = len(lines[0][current_line])-1
-                prev["point"] = len(lines[0][current_line])-1
-            else:
-                prediction_points = [point for point in prediction_points if point["line"] == current_line]
-                if len(prediction_points) == 0:
-                    # len(lines[0][current_line])
-                    lines[0][current_line][0] = {
-                                            "prev": {"line": prev["line"], "point": prev["point"]},
-                                            "next": {"line": 0, "point": 0},
-                                            "visit_count": 1}
-                    if prev["line"] in lines[0]:
-                        lines[0][prev["line"]][prev["point"]]["next"]["line"] = current_line
-                        # len(lines[0][current_line])-1
-                        lines[0][prev["line"]][prev["point"]]["next"]["point"] = 0
-                    prev["point"] = 0#len(lines[0][current_line])-1
-                else:
-                    for point in prediction_points:
-                        lines[0][point["line"]][point["point"]]["visit_count"] += 1
-                    prev["point"] = prediction_points[-1]["point"]
+            if current_line not in visited:
+                lines[0][current_line][len(lines[0][current_line])] = {"prev": {"line": prev["line"], "point": prev["point"]}, "next": {"line": 0, "point": 0}}
+                points_added.append({"line": current_line, "point": len(lines[0][current_line])-1})
+            predictions = [getPoint(lines[0], point)["next"] for point in predictions if point["line"] == current_line and point["line"] != 0]
+        if prev["line"] in lines[0]:
+            lines[0][prev["line"]][prev["point"]]["next"]["line"] = current_line
+            lines[0][prev["line"]][prev["point"]]["next"]["point"] = len(lines[0][current_line])-1
         prev["line"] = current_line
-       
-    return lines
-
+        prev["point"] = len(lines[0][current_line])-1
+        visited[current_line] = True
+    if len(predictions) > 0:
+        for point in points_added:
+            del lines[0][point["line"]][point["point"]]
+    
 def groupColumns(lines):
 
 
@@ -659,18 +627,23 @@ def x23():
     # 1, 2, 1, 3, 1, 24, 4, 1, 5, 6, 2, 67, 6, 3, 6, 4, 6, 5, 23, 2, 23, 3, 23, 4, 23, 5
     # 1, 2, 1, 3, 1, 4, 1, 5
     # 1, 2, 3, 2, 3, 1, 3, 2, 1
-    sequence1 = [1, 1, 1, 2]
+    sequence1 = [1, 2, 3, 1, 2, 3]
 
     # lines = traceLine(sequence1)
 
-    # for key in lines:
+    # for key in lines: nmj
     #     print(key)
     #     [print(key, value) for key, value in lines[key].items()]
     # print()
     # groupColumns(lines)
     # groupLines(lines)
     # x221(lines)
-    lines = x222(sequence1)
+    lines = {0: {}}
+    x222(lines, sequence1)
+    sequence1 = [1, 2, 3, 1, 2, 3]
+    x222(lines, sequence1)
+    sequence1 = [2, 3, 4, 2, 3, 4]
+    x222(lines, sequence1)
     # findPatternEdges(lines, {"line": 2, "point": 0})
     # removeSingleItems(lines)
     # foldPatterns(lines, {"line": 1, "point": 0}, None)
