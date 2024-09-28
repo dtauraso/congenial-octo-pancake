@@ -595,23 +595,34 @@ def x222(lines, sequence):
         prev["line"] = current_line
         prev["point"] = len(lines[0][current_line])-1
         visited[current_line] = True
-    parent_line_id = len(visited)
-    parent_point_id = 0
     if 1 not in lines:
-        lines[1] = {parent_line_id: {0: {"children": [point for point in points_added]}}}
-    elif parent_line_id not in lines[1]:
-        lines[1][parent_line_id] = {0: {"children": [point for point in points_added]}}
-    else:
-        lines[1][parent_line_id][len(lines[1])] = {"children": [point for point in points_added]}
-    parent_point_id = len(lines[1][parent_line_id])-1
-    for point in points_added:
-        lines[0][point["line"]][point["point"]]["parent"] = {"line": parent_line_id, "point": parent_point_id}
+        lines[1] = {}
+    if len(predictions) == 0:
+        parent_line_id = len(lines[1])
+        parent_point_id = 0
+        if parent_line_id not in lines[1]:
+            lines[1][parent_line_id] = {parent_point_id: {"children": [point for point in points_added]}}
+        parent_point_id = len(lines[1][parent_line_id])-1
+        for point in points_added:
+            lines[0][point["line"]][point["point"]]["parent"] = {"line": parent_line_id, "point": parent_point_id}
     if len(predictions) > 0:
         for point in points_added:
             del lines[0][point["line"]][point["point"]]
 
 def x223(lines, sequence):
-    pass
+
+    line_counts = {line_id: len(lines[0][line_id]) for line_id in sequence}
+
+    min_line_count = min(line_counts.values())
+    min_line_counts = [line_id for line_id, value in line_counts.items() if value == min_line_count]
+    min_count_line_parent = [{  "min_count_line": {"level": 0, "line": {"line_id": line_id, "point": point_id}},
+                                "parent": {"level": 1, "line": getPoint(lines[0], {"line": line_id, "point": point_id})["parent"]}}
+                                for line_id in min_line_counts for point_id in lines[0][line_id] ]
+    print(f"min_count_line_parent:")
+    [print(min_count_line) for min_count_line in min_count_line_parent]
+    print()
+
+    
 
 def groupColumns(lines):
 
@@ -641,7 +652,7 @@ def x23():
     # 1, 2, 1, 3, 1, 24, 4, 1, 5, 6, 2, 67, 6, 3, 6, 4, 6, 5, 23, 2, 23, 3, 23, 4, 23, 5
     # 1, 2, 1, 3, 1, 4, 1, 5
     # 1, 2, 3, 2, 3, 1, 3, 2, 1
-    sequence1 = [1, 2, 3, 1, 2, 3]
+    sequence1 = [1, 2, 1, 2]
 
     # lines = traceLine(sequence1)
 
@@ -654,10 +665,15 @@ def x23():
     # x221(lines)
     lines = {0: {}}
     x222(lines, sequence1)
-    sequence1 = [1, 2, 3, 1, 2, 3]
+    sequence1 = [1, 2, 1, 2]
     x222(lines, sequence1)
-    sequence1 = [2, 3, 4, 2, 3, 4]
+    sequence1 = [2, 3, 2, 3]
     x222(lines, sequence1)
+
+    sequence2 = [1, 2]
+    x223(lines, sequence2)
+    sequence2 = [2]
+    x223(lines, sequence2)
     # findPatternEdges(lines, {"line": 2, "point": 0})
     # removeSingleItems(lines)
     # foldPatterns(lines, {"line": 1, "point": 0}, None)
