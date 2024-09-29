@@ -615,13 +615,19 @@ def x223(lines, sequence):
 
     min_line_count = min(line_counts.values())
     min_line_counts = [line_id for line_id, value in line_counts.items() if value == min_line_count]
-    min_count_line_parent = [{  "min_count_line": {"level": 0, "line": {"line_id": line_id, "point": point_id}},
+    min_count_line_parent = [{  "min_count_line": {"level": 0, "line": {"line": line_id, "point": point_id}},
                                 "parent": {"level": 1, "line": getPoint(lines[0], {"line": line_id, "point": point_id})["parent"]}}
                                 for line_id in min_line_counts for point_id in lines[0][line_id] ]
     print(f"min_count_line_parent:")
     [print(min_count_line) for min_count_line in min_count_line_parent]
     print()
 
+    intersected_lines = {child["line"]: True
+                             for item in min_count_line_parent
+                             for child in lines[item["parent"]["level"]][item["parent"]["line"]["line"]][item["parent"]["line"]["point"]]["children"]
+                             if child["line"] != item["min_count_line"]["line"]["line"]}
+    print(f"intersected_lines: {intersected_lines}")
+    print()
     
 
 def groupColumns(lines):
@@ -652,7 +658,7 @@ def x23():
     # 1, 2, 1, 3, 1, 24, 4, 1, 5, 6, 2, 67, 6, 3, 6, 4, 6, 5, 23, 2, 23, 3, 23, 4, 23, 5
     # 1, 2, 1, 3, 1, 4, 1, 5
     # 1, 2, 3, 2, 3, 1, 3, 2, 1
-    sequence1 = [1, 2, 1, 2]
+    sequence1 = [1, 2, 3, 1, 2, 3]
 
     # lines = traceLine(sequence1)
 
@@ -665,14 +671,14 @@ def x23():
     # x221(lines)
     lines = {0: {}}
     x222(lines, sequence1)
-    sequence1 = [1, 2, 1, 2]
+    sequence1 = [1, 2, 3, 1, 2, 3]
     x222(lines, sequence1)
-    sequence1 = [2, 3, 2, 3]
+    sequence1 = [2, 3, 4, 2, 3, 4]
     x222(lines, sequence1)
 
-    sequence2 = [1, 2]
-    x223(lines, sequence2)
-    sequence2 = [2]
+    # sequence2 = [1, 2]
+    # x223(lines, sequence2)
+    sequence2 = [1, 4]
     x223(lines, sequence2)
     # findPatternEdges(lines, {"line": 2, "point": 0})
     # removeSingleItems(lines)
