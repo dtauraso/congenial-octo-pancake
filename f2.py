@@ -598,10 +598,10 @@ def x222(lines, sequence):
     if 1 not in lines:
         lines[1] = {}
     if len(predictions) == 0:
-        parent_line_id = len(lines[1])
+        parent_line_id = len(lines[1])+1
         parent_point_id = 0
         if parent_line_id not in lines[1]:
-            lines[1][parent_line_id] = {parent_point_id: {"children": [point for point in points_added]}}
+            lines[1][parent_line_id] = {parent_point_id: {"children": points_added}}
         parent_point_id = len(lines[1][parent_line_id])-1
         for point in points_added:
             lines[0][point["line"]][point["point"]]["parent"] = {"line": parent_line_id, "point": parent_point_id}
