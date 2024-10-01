@@ -582,11 +582,15 @@ def x222(lines, sequence):
         predictions = [{"line": sequence[0], "point": point} for point in lines[0][sequence[0]]]
     for i, current_line in enumerate(sequence):
         if current_line not in lines[0]:
-            lines[0][current_line] = {0: {"prev": {"line": prev["line"], "point": prev["point"]}, "next": {"line": 0, "point": 0}}}
+            lines[0][current_line] = {0: {  "prev": {"line": prev["line"], "point": prev["point"]},
+                                            "next": {"line": 0, "point": 0},
+                                            "i": i}}
             points_added.append({"line": current_line, "point": 0})
         else:
             if current_line not in visited:
-                lines[0][current_line][len(lines[0][current_line])] = {"prev": {"line": prev["line"], "point": prev["point"]}, "next": {"line": 0, "point": 0}}
+                lines[0][current_line][len(lines[0][current_line])] = { "prev": {"line": prev["line"], "point": prev["point"]},
+                                                                        "next": {"line": 0, "point": 0},
+                                                                        "i": i}
                 points_added.append({"line": current_line, "point": len(lines[0][current_line])-1})
             predictions = [getPoint(lines[0], point)["next"] for point in predictions if point["line"] == current_line and point["line"] != 0]
         if prev["line"] in lines[0]:
@@ -594,15 +598,17 @@ def x222(lines, sequence):
             lines[0][prev["line"]][prev["point"]]["next"]["point"] = len(lines[0][current_line])-1
         prev["line"] = current_line
         prev["point"] = len(lines[0][current_line])-1
-        visited[current_line] = True
+        visited[current_line] = 1 if current_line not in visited else visited[current_line]+1
     if 1 not in lines:
         lines[1] = {}
     if len(predictions) == 0:
-        parent_line_id = len(lines[1])+1
+        parent_line_id = max(visited.values() if all(value == list(visited.values())[0] for value in visited.values()) == True else min(visited.values()))
         parent_point_id = 0
         if parent_line_id not in lines[1]:
             lines[1][parent_line_id] = {parent_point_id: {"children": points_added}}
-        parent_point_id = len(lines[1][parent_line_id])-1
+        elif parent_line_id in lines[1]:
+            parent_point_id = len(lines[1][parent_line_id])
+            lines[1][parent_line_id][parent_point_id] = {"children": points_added}
         for point in points_added:
             lines[0][point["line"]][point["point"]]["parent"] = {"line": parent_line_id, "point": parent_point_id}
     if len(predictions) > 0:
@@ -615,15 +621,32 @@ def x223(lines, sequence):
 
     min_line_count = min(line_counts.values())
     min_line_counts = [line_id for line_id, value in line_counts.items() if value == min_line_count]
-    min_count_line_parent = [{  "min_count_line": {"level": 0, "line": {"line": line_id, "point": point_id}},
+
+    print(f"min_line_count: {min_line_count}")
+    min_count_line_parent = [{  "min_count_line": {"min_count": min_line_count, "level": 0, "line": {"line": line_id, "point": point_id}},
                                 "parent": {"level": 1, "line": getPoint(lines[0], {"line": line_id, "point": point_id})["parent"]}}
                                 for line_id in min_line_counts for point_id in lines[0][line_id] ]
-    print(f"min_count_line_parent:")
-    [print(min_count_line) for min_count_line in min_count_line_parent]
+    parents = {item["parent"]["line"]["line"]: item["parent"]["line"]["point"] for item in min_count_line_parent}
+
+    print(f"parents:")
+    [print(parent_line_id, parent_point_id) for parent_line_id, parent_point_id in parents.items()]
+    print()
+    x = min_count_line_parent + [
+                {  "min_count_line": {"min_count": min_line_count, "level": 0, "line": {"line": child["line"], "point": child["point"]}},
+                                "parent": {"level": 1, "line": getPoint(lines[0], {"line": child["line"], "point": child["point"]})["parent"]}}
+                for item in min_count_line_parent
+                for child in lines[item["parent"]["level"]][item["parent"]["line"]["line"]][item["parent"]["line"]["point"]]["children"]
+                if len(lines[0][child["line"]]) == min_line_count and child["line"] != item["min_count_line"]["line"]["line"]]
+    print(f"x:")
+    [print(min_count_line) for min_count_line in x]
     print()
 
+    # print(f"min_count_line_parent:")
+    # [print(min_count_line) for min_count_line in min_count_line_parent]
+    # print()
+
     intersected_lines = {child["line"]: True
-                             for item in min_count_line_parent
+                             for item in x
                              for child in lines[item["parent"]["level"]][item["parent"]["line"]["line"]][item["parent"]["line"]["point"]]["children"]
                              if child["line"] != item["min_count_line"]["line"]["line"]}
     print(f"intersected_lines: {intersected_lines}")
@@ -673,13 +696,13 @@ def x23():
     x222(lines, sequence1)
     sequence1 = [1, 2, 3, 1, 2, 3]
     x222(lines, sequence1)
-    sequence1 = [2, 3, 4, 2, 3, 4]
+    sequence1 = [2, 3, 4, 5, 2, 3, 4, 5]
     x222(lines, sequence1)
 
     # sequence2 = [1, 2]
     # x223(lines, sequence2)
-    sequence2 = [1, 4]
-    x223(lines, sequence2)
+    # sequence2 = [1, 4]
+    # x223(lines, sequence2)
     # findPatternEdges(lines, {"line": 2, "point": 0})
     # removeSingleItems(lines)
     # foldPatterns(lines, {"line": 1, "point": 0}, None)
