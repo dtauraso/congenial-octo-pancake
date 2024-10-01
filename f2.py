@@ -651,7 +651,37 @@ def x223(lines, sequence):
                              if child["line"] != item["min_count_line"]["line"]["line"]}
     print(f"intersected_lines: {intersected_lines}")
     print()
+
+def x224(lines):
     
+    min_line_count = min(len(lines[0][line_id]) for line_id in lines[0])
+    print(f"min_line_count: {min_line_count}")
+    min_count_line_ids = [line_id for line_id in lines[0] if len(lines[0][line_id]) == min_line_count]
+
+    print(f"min_count_line_ids: {min_count_line_ids}")
+    
+    parent_points = [lines[0][line_id][0]["parent"] for line_id in min_count_line_ids]
+
+    print(f"parent_line_ids: {parent_points}")
+    
+    parent_dict = {}
+    for parent_point in parent_points:
+        if parent_point["line"] not in parent_dict:
+            parent_dict[parent_point["line"]] = {parent_point["point"]: [child["line"] for child in lines[1][parent_point["line"]][parent_point["point"]]["children"]]}
+        else:
+            parent_dict[parent_point["line"]][parent_point["point"]] = [child["line"] for child in lines[1][parent_point["line"]][parent_point["point"]]["children"]]
+    print(f"parent_dict: {parent_dict}")
+    parent_min_count_child_list = []
+    for parent_line_id in parent_dict:
+        for parent_point_id in parent_dict[parent_line_id]:
+            parent_min_count_child_list.append({"parent": {"line": parent_line_id, "point": parent_point_id}, "children": []})
+            for child_line_id in parent_dict[parent_line_id][parent_point_id]:
+                if child_line_id in min_count_line_ids:
+                    parent_min_count_child_list[-1]["children"].append({"line": child_line_id, "point": 0})
+
+    print(f"parent_min_count_child_list:")
+    [print(item) for item in parent_min_count_child_list]
+    print()
 
 def groupColumns(lines):
 
@@ -699,6 +729,7 @@ def x23():
     sequence1 = [2, 3, 4, 5, 2, 3, 4, 5]
     x222(lines, sequence1)
 
+    x224(lines)
     # sequence2 = [1, 2]
     # x223(lines, sequence2)
     # sequence2 = [1, 4]
