@@ -673,9 +673,9 @@ def x224(lines):
     parent_dict = {}
     for parent_point in parent_points:
         if parent_point["line"] not in parent_dict:
-            parent_dict[parent_point["line"]] = {parent_point["point"]: [child["line"] for child in lines[1][parent_point["line"]][parent_point["point"]]["children"]]}
+            parent_dict[parent_point["line"]] = {parent_point["point"]: [child for child in lines[1][parent_point["line"]][parent_point["point"]]["children"]]}
         else:
-            parent_dict[parent_point["line"]][parent_point["point"]] = [child["line"] for child in lines[1][parent_point["line"]][parent_point["point"]]["children"]]
+            parent_dict[parent_point["line"]][parent_point["point"]] = [child for child in lines[1][parent_point["line"]][parent_point["point"]]["children"]]
     print(f"parent_dict: {parent_dict}")
     parent_min_count_child_list = []
     for parent_line_id in parent_dict:
@@ -737,8 +737,11 @@ def x23():
     # x222(lines, sequence1)
     # sequence1 = [2, 3, 4, 5, 2, 3, 4, 5]
     # x222(lines, sequence1)
-
-    # x224(lines)
+    for key in lines:
+        print(key)
+        [print(key, value) for key, value in lines[key].items()]
+    print()
+    x224(lines)
     # sequence2 = [1, 2]
     # x223(lines, sequence2)
     # sequence2 = [1, 4]
@@ -747,10 +750,7 @@ def x23():
     # removeSingleItems(lines)
     # foldPatterns(lines, {"line": 1, "point": 0}, None)
     # print(f"lines")
-    for key in lines:
-        print(key)
-        [print(key, value) for key, value in lines[key].items()]
-    print()
+    
 
 
         
