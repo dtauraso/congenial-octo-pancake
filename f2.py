@@ -581,7 +581,6 @@ def x222(lines, sequence):
     if sequence[0] in lines[0]:
         predictions = [{"line": sequence[0], "point": point} for point in lines[0][sequence[0]]]
     for i, current_line in enumerate(sequence):
-        print(f"i: {i}, current_line: {current_line}, prev: {prev}, predictions: {predictions}")
         if current_line not in lines[0]:
             lines[0][current_line] = {0: {  "prev": {"line": prev["line"], "point": prev["point"]},
                                             "next": {"line": 0, "point": 0},
@@ -591,7 +590,6 @@ def x222(lines, sequence):
                 lines[0][prev["line"]][prev["point"]]["next"]["line"] = current_line
                 lines[0][prev["line"]][prev["point"]]["next"]["point"] = 0
             prev["point"] = 0
-
         else:
             if current_line not in [point["line"] for point in predictions]:
                 lines[0][current_line][len(lines[0][current_line])] = { "prev": {"line": prev["line"], "point": prev["point"]},
@@ -605,33 +603,23 @@ def x222(lines, sequence):
                     lines[0][prev["line"]][prev["point"]]["next"]["point"] = len(lines[0][current_line])-1
                 prev["point"] = len(lines[0][current_line])-1
             else:
-                print(f"predictions after: {predictions}")
                 prev["point"] = [point["point"] for point in predictions if point["line"] == current_line][0]
                 predictions = [getPoint(lines[0], point)["next"]
                                     for point in predictions if point["line"] == current_line and point["line"] != 0]
         prev["line"] = current_line
         visited[current_line] = 1 if current_line not in visited else visited[current_line]+1
-        for key in lines:
-            print(key)
-            [print(key, value) for key, value in lines[key].items()]
-        print()
-    print(f"visited: {visited}")
     if 1 not in lines:
         lines[1] = {}
-    if len(predictions) == 0:
-        parent_line_id = max(visited.values()) if all(value == list(visited.values())[0]
-                                                        for value in visited.values()) == True else min(visited.values())
-        parent_point_id = 0
-        if parent_line_id not in lines[1]:
-            lines[1][parent_line_id] = {parent_point_id: {"children": points_added}}
-        elif parent_line_id in lines[1]:
-            parent_point_id = len(lines[1][parent_line_id])
-            lines[1][parent_line_id][parent_point_id] = {"children": points_added}
-        for point in points_added:
-            lines[0][point["line"]][point["point"]]["parent"] = {"line": parent_line_id, "point": parent_point_id}
-    if len(predictions) > 0:
-        for point in points_added:
-            del lines[0][point["line"]][point["point"]]
+    parent_line_id = max(visited.values()) if all(value == list(visited.values())[0]
+                                                    for value in visited.values()) == True else min(visited.values())
+    parent_point_id = 0
+    if parent_line_id not in lines[1]:
+        lines[1][parent_line_id] = {parent_point_id: {"children": [line_id for line_id in visited]}}
+    elif parent_line_id in lines[1]:
+        parent_point_id = len(lines[1][parent_line_id])
+        lines[1][parent_line_id][parent_point_id] = {"children": [line_id for line_id in visited]}
+    for point in points_added:
+        lines[0][point["line"]][point["point"]]["parent"] = {"line": parent_line_id, "point": parent_point_id}
 
 def x223(lines, sequence):
 
