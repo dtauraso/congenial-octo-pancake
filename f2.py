@@ -581,28 +581,46 @@ def x222(lines, sequence):
     if sequence[0] in lines[0]:
         predictions = [{"line": sequence[0], "point": point} for point in lines[0][sequence[0]]]
     for i, current_line in enumerate(sequence):
+        print(f"i: {i}, current_line: {current_line}, prev: {prev}, predictions: {predictions}")
         if current_line not in lines[0]:
             lines[0][current_line] = {0: {  "prev": {"line": prev["line"], "point": prev["point"]},
                                             "next": {"line": 0, "point": 0},
                                             "i": i}}
             points_added.append({"line": current_line, "point": 0})
+            if prev["line"] in lines[0]:
+                lines[0][prev["line"]][prev["point"]]["next"]["line"] = current_line
+                lines[0][prev["line"]][prev["point"]]["next"]["point"] = 0
+            prev["point"] = 0
+
         else:
-            if current_line not in visited:
+            if current_line not in [point["line"] for point in predictions]:
                 lines[0][current_line][len(lines[0][current_line])] = { "prev": {"line": prev["line"], "point": prev["point"]},
                                                                         "next": {"line": 0, "point": 0},
                                                                         "i": i}
                 points_added.append({"line": current_line, "point": len(lines[0][current_line])-1})
-            predictions = [getPoint(lines[0], point)["next"] for point in predictions if point["line"] == current_line and point["line"] != 0]
-        if prev["line"] in lines[0]:
-            lines[0][prev["line"]][prev["point"]]["next"]["line"] = current_line
-            lines[0][prev["line"]][prev["point"]]["next"]["point"] = len(lines[0][current_line])-1
+                predictions = [getPoint(lines[0], {"line": current_line, "point": point})["next"]
+                                    for point in lines[0][current_line]]
+                if prev["line"] in lines[0]:
+                    lines[0][prev["line"]][prev["point"]]["next"]["line"] = current_line
+                    lines[0][prev["line"]][prev["point"]]["next"]["point"] = len(lines[0][current_line])-1
+                prev["point"] = len(lines[0][current_line])-1
+            else:
+                print(f"predictions after: {predictions}")
+                prev["point"] = [point["point"] for point in predictions if point["line"] == current_line][0]
+                predictions = [getPoint(lines[0], point)["next"]
+                                    for point in predictions if point["line"] == current_line and point["line"] != 0]
         prev["line"] = current_line
-        prev["point"] = len(lines[0][current_line])-1
         visited[current_line] = 1 if current_line not in visited else visited[current_line]+1
+        for key in lines:
+            print(key)
+            [print(key, value) for key, value in lines[key].items()]
+        print()
+    print(f"visited: {visited}")
     if 1 not in lines:
         lines[1] = {}
     if len(predictions) == 0:
-        parent_line_id = max(visited.values() if all(value == list(visited.values())[0] for value in visited.values()) == True else min(visited.values()))
+        parent_line_id = max(visited.values()) if all(value == list(visited.values())[0]
+                                                        for value in visited.values()) == True else min(visited.values())
         parent_point_id = 0
         if parent_line_id not in lines[1]:
             lines[1][parent_line_id] = {parent_point_id: {"children": points_added}}
@@ -681,6 +699,7 @@ def x224(lines):
 
     print(f"parent_min_count_child_list:")
     [print(item) for item in parent_min_count_child_list]
+    print(f"len(parent_min_count_child_list): {len(parent_min_count_child_list)}")
     print()
 
 def groupColumns(lines):
@@ -711,7 +730,9 @@ def x23():
     # 1, 2, 1, 3, 1, 24, 4, 1, 5, 6, 2, 67, 6, 3, 6, 4, 6, 5, 23, 2, 23, 3, 23, 4, 23, 5
     # 1, 2, 1, 3, 1, 4, 1, 5
     # 1, 2, 3, 2, 3, 1, 3, 2, 1
-    sequence1 = [1, 2, 3, 1, 2, 3]
+    # 1, 2, 3, 1, 2, 3
+    # 1, 2, 1, 3, 1, 4, 1, 5, 1, 2, 1, 3, 1, 4, 1, 5
+    sequence1 = [1, 2, 1, 3, 1, 4, 1, 5, 1, 2, 1, 3, 1, 4, 1, 5]
 
     # lines = traceLine(sequence1)
 
@@ -724,12 +745,12 @@ def x23():
     # x221(lines)
     lines = {0: {}}
     x222(lines, sequence1)
-    sequence1 = [1, 2, 3, 1, 2, 3]
-    x222(lines, sequence1)
-    sequence1 = [2, 3, 4, 5, 2, 3, 4, 5]
-    x222(lines, sequence1)
+    # sequence1 = [1, 2, 3, 1, 2, 3]
+    # x222(lines, sequence1)
+    # sequence1 = [2, 3, 4, 5, 2, 3, 4, 5]
+    # x222(lines, sequence1)
 
-    x224(lines)
+    # x224(lines)
     # sequence2 = [1, 2]
     # x223(lines, sequence2)
     # sequence2 = [1, 4]
