@@ -614,10 +614,10 @@ def x222(lines, sequence):
                                                     for value in visited.values()) == True else min(visited.values())
     parent_point_id = 0
     if parent_line_id not in lines[1]:
-        lines[1][parent_line_id] = {parent_point_id: {"children": [line_id for line_id in visited]}}
+        lines[1][parent_line_id] = {parent_point_id: {"children": points_added}}
     elif parent_line_id in lines[1]:
         parent_point_id = len(lines[1][parent_line_id])
-        lines[1][parent_line_id][parent_point_id] = {"children": [line_id for line_id in visited]}
+        lines[1][parent_line_id][parent_point_id] = {"children": points_added}
     for point in points_added:
         lines[0][point["line"]][point["point"]]["parent"] = {"line": parent_line_id, "point": parent_point_id}
 
@@ -673,21 +673,33 @@ def x224(lines):
     parent_dict = {}
     for parent_point in parent_points:
         if parent_point["line"] not in parent_dict:
-            parent_dict[parent_point["line"]] = {parent_point["point"]: [child for child in lines[1][parent_point["line"]][parent_point["point"]]["children"]]}
+            parent_dict[parent_point["line"]] = {parent_point["point"]: [child for child in lines[1][parent_point["line"]][parent_point["point"]]["children"]
+                                                                                    if child["line"] in min_count_line_ids]}
         else:
-            parent_dict[parent_point["line"]][parent_point["point"]] = [child for child in lines[1][parent_point["line"]][parent_point["point"]]["children"]]
+            parent_dict[parent_point["line"]][parent_point["point"]] = [child for child in lines[1][parent_point["line"]][parent_point["point"]]["children"]
+                                                                                    if child["line"] in min_count_line_ids]
     print(f"parent_dict: {parent_dict}")
     parent_min_count_child_list = []
     for parent_line_id in parent_dict:
         for parent_point_id in parent_dict[parent_line_id]:
             parent_min_count_child_list.append({"parent": {"line": parent_line_id, "point": parent_point_id}, "children": []})
-            for child_line_id in parent_dict[parent_line_id][parent_point_id]:
-                if child_line_id in min_count_line_ids:
-                    parent_min_count_child_list[-1]["children"].append({"line": child_line_id, "point": 0})
+            for child_point in parent_dict[parent_line_id][parent_point_id]:
+                if child_point["line"] in min_count_line_ids:
+                    parent_min_count_child_list[-1]["children"].append(child_point)
 
     print(f"parent_min_count_child_list:")
     [print(item) for item in parent_min_count_child_list]
     print(f"len(parent_min_count_child_list): {len(parent_min_count_child_list)}")
+    print()
+
+    x = [{"parent": {   "line": item["parent"]["line"], "point": item["parent"]["point"]},
+                        "children": [item["children"], [{"line": child, "point": point_id}
+                                                            for child in lines[0] if child not in [x["line"] for x in item["children"]]
+                                                            for point_id in lines[0][child]]]}
+                        for item in parent_min_count_child_list]
+
+    print(f"x:")
+    [print(item) for item in x]
     print()
 
 def groupColumns(lines):
