@@ -693,9 +693,9 @@ def x224(lines):
     print()
 
     x = [{"parent": {   "line": item["parent"]["line"], "point": item["parent"]["point"]},
-                        "children": [item["children"], [{"line": child, "point": point_id}
-                                                            for child in lines[0] if child not in [x["line"] for x in item["children"]]
-                                                            for point_id in lines[0][child]]]}
+                        "children": [item["children"], [{"line": child["line"], "point": child["point"]}
+                                                            for child in [y for y in lines[1][item["parent"]["line"]][item["parent"]["point"]]["children"]]
+                                                                if child["line"] not in [x["line"] for x in item["children"]]]]}
                         for item in parent_min_count_child_list]
 
     print(f"x:")
@@ -732,7 +732,7 @@ def x23():
     # 1, 2, 3, 2, 3, 1, 3, 2, 1
     # 1, 2, 3, 1, 2, 3
     # 1, 2, 1, 3, 1, 4, 1, 5, 1, 2, 1, 3, 1, 4, 1, 5
-    sequence1 = [1, 2, 1, 3, 1, 4, 1, 5, 1, 2, 1, 3, 1, 4, 1, 5]
+    sequence1 = [1, 2, 3, 1, 2, 3]
 
     # lines = traceLine(sequence1)
 
@@ -747,8 +747,8 @@ def x23():
     x222(lines, sequence1)
     # sequence1 = [1, 2, 3, 1, 2, 3]
     # x222(lines, sequence1)
-    # sequence1 = [2, 3, 4, 5, 2, 3, 4, 5]
-    # x222(lines, sequence1)
+    sequence1 = [2, 3, 4, 5, 2, 3, 4, 5]
+    x222(lines, sequence1)
     for key in lines:
         print(key)
         [print(key, value) for key, value in lines[key].items()]
