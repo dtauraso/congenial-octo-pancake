@@ -579,7 +579,9 @@ def x222(lines, sequence):
     points_added = []
     predictions = []
     if sequence[0] in lines[0]:
-        predictions = [{"line": sequence[0], "point": point} for point in lines[0][sequence[0]]]
+        predictions = [{"line": sequence[0], "point": point}
+                            for point in lines[0][sequence[0]]
+                                if "parent" not in lines[0][sequence[0]][point]]
     for i, current_line in enumerate(sequence):
         if current_line not in lines[0]:
             lines[0][current_line] = {0: {  "prev": {"line": prev["line"], "point": prev["point"]},
@@ -597,7 +599,8 @@ def x222(lines, sequence):
                                                                         "i": i}
                 points_added.append({"line": current_line, "point": len(lines[0][current_line])-1})
                 predictions = [getPoint(lines[0], {"line": current_line, "point": point})["next"]
-                                    for point in lines[0][current_line]]
+                                    for point in lines[0][current_line]
+                                        if "parent" not in lines[0][current_line][point]]
                 if prev["line"] in lines[0]:
                     lines[0][prev["line"]][prev["point"]]["next"]["line"] = current_line
                     lines[0][prev["line"]][prev["point"]]["next"]["point"] = len(lines[0][current_line])-1
@@ -605,7 +608,10 @@ def x222(lines, sequence):
             else:
                 prev["point"] = [point["point"] for point in predictions if point["line"] == current_line][0]
                 predictions = [getPoint(lines[0], point)["next"]
-                                    for point in predictions if point["line"] == current_line and point["line"] != 0]
+                                    for point in predictions
+                                        if  point["line"] == current_line and
+                                            point["line"] != 0 and
+                                            "parent" not in lines[0][point["line"]][point["point"]]]
         prev["line"] = current_line
         visited[current_line] = 1 if current_line not in visited else visited[current_line]+1
     if 1 not in lines:
@@ -658,7 +664,7 @@ def x223(lines, sequence):
     print(f"intersected_lines: {intersected_lines}")
     print()
 
-def x224(lines):
+def repartitionParentsWithOverlappingChildLines(lines):
     
     min_line_count = min(len(lines[0][line_id]) for line_id in lines[0])
     print(f"min_line_count: {min_line_count}")
@@ -692,15 +698,28 @@ def x224(lines):
     print(f"len(parent_min_count_child_list): {len(parent_min_count_child_list)}")
     print()
 
+    min_count_children = [child for item in parent_min_count_child_list for child in item["children"]]
+
     x = [{"parent": {   "line": item["parent"]["line"], "point": item["parent"]["point"]},
                         "children": [item["children"], [{"line": child["line"], "point": child["point"]}
                                                             for child in [y for y in lines[1][item["parent"]["line"]][item["parent"]["point"]]["children"]]
-                                                                if child["line"] not in [x["line"] for x in item["children"]]]]}
+                                                                if child["line"] not in [x["line"] for x in min_count_children]]]}
                         for item in parent_min_count_child_list]
-
     print(f"x:")
     [print(item) for item in x]
     print()
+    print(f"min_count_children:")
+    [print(item) for item in min_count_children]
+    print()
+
+    z = [{"line": child, "point": child_point_id}
+                for child in lines[0]
+                    for child_point_id in lines[0][child]
+                    if child not in [x["line"] for x in min_count_children]]
+    print(f"z:")
+    [print(item) for item in z]
+    print()
+
 
 def groupColumns(lines):
 
@@ -753,7 +772,7 @@ def x23():
         print(key)
         [print(key, value) for key, value in lines[key].items()]
     print()
-    x224(lines)
+    repartitionParentsWithOverlappingChildLines(lines)
     # sequence2 = [1, 2]
     # x223(lines, sequence2)
     # sequence2 = [1, 4]
