@@ -716,6 +716,17 @@ def repartitionParentsWithOverlappingChildLines(lines):
     [print(item) for item in min_count_children]
     print()
 
+    y = [{"parent": {   "line": item["parent"]["line"], "point": item["parent"]["point"]},
+                            "children": [children_group
+                                for children_group in item["children"]
+                                    if any(True for child in children_group
+                                        if child["line"] in [x["line"] for x in min_count_children])]}
+                            for item in x]
+
+    print(f"y:")
+    [print(item) for item in y]
+    print()
+
     z = [{"line": child, "point": child_point_id}
                 for child in lines[0]
                     for child_point_id in lines[0][child]
@@ -724,6 +735,20 @@ def repartitionParentsWithOverlappingChildLines(lines):
     [print(item) for item in z]
     print()
 
+   
+    for i, item in enumerate(y):
+        parent_point = item["parent"]
+        del lines[1][parent_point["line"]][parent_point["point"]]
+        for child_group in item["children"]:
+            for child_point in child_group:
+                del lines[0][child_point["line"]][child_point["point"]]["parent"]
+                lines[0][child_point["line"]][child_point["point"]]["parent"] = {"line": 1, "point": i}
+            lines[1][1][i] = {"children": child_group}
+
+    for item in z:
+        lines[0][item["line"]][item["point"]]["parent"] = {"line": 1, "point": 2}
+
+    lines[1][1][2] = {"children": z}
 
 def groupColumns(lines):
 
@@ -754,8 +779,8 @@ def x23():
     # 1, 2, 1, 3, 1, 4, 1, 5
     # 1, 2, 3, 2, 3, 1, 3, 2, 1
     # 1, 2, 3
-    # 1, 2, 1, 3, 1, 4, 1, 5, 1, 2, 1, 3, 1, 4, 1, 5
-    sequence1 = [1, 2, 1, 3, 1, 4, 1, 5]
+    # 1, 2, 1, 3, 1, 4, 1, 5
+    sequence1 = [1, 2, 3]
 
     # lines = traceLine(sequence1)
 
@@ -774,14 +799,14 @@ def x23():
     # print()
     # exit()
     # print()
-    sequence1 = [1, 2, 3]
-    x222(lines, sequence1)
-    sequence1 = [1, 2, 3]
-    x222(lines, sequence1)
+    # sequence1 = [1, 2, 3]
+    # x222(lines, sequence1)
+    # sequence1 = [1, 2, 3]
+    # x222(lines, sequence1)
     # exit()
     # print()
-    # sequence1 = [2, 3, 4, 5]
-    # x222(lines, sequence1)
+    sequence1 = [2, 3, 4, 5]
+    x222(lines, sequence1)
     # sequence1 = [2, 3, 4, 5]
     # x222(lines, sequence1)
     # for key in lines:
@@ -796,7 +821,7 @@ def x23():
     # findPatternEdges(lines, {"line": 2, "point": 0})
     # removeSingleItems(lines)
     # foldPatterns(lines, {"line": 1, "point": 0}, None)
-    # print(f"lines")
+    print(f"lines")
     for key in lines:
         print(key)
         [print(key, value) for key, value in lines[key].items()]
