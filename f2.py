@@ -750,6 +750,59 @@ def repartitionParentsWithOverlappingChildLines(lines):
 
     lines[1][1][2] = {"children": z}
 
+def completeNewPartialSequence(lines, partial_sequence):
+
+    from functools import reduce
+    match_key_line = 0
+    match_key_point = 0
+    match_i = 0
+    print(f"partial_sequence: {partial_sequence}")
+    for i, item in enumerate(partial_sequence):
+        if item in lines[0] and i in [lines[0][item][x]["i"] for x in lines[0][item]]:
+            match_key_line = item
+            match_key_point = len(lines[0][item])-1
+            match_i = i
+            break
+    print(f"match_key_line: {match_key_line}")
+    print(f"match_key_point: {match_key_point}")
+    print(f"match_i: {match_i}")
+    print(f"lines[0][match_key_line]: {lines[0][match_key_line]}")
+    print()
+    tracker = {"line": lines[0][match_key_line][0]["prev"]["line"], "point": lines[0][match_key_line][0]["prev"]["point"]}
+    line_new_number_map = {}
+    non_matched_points = []
+    for i in reversed(range(0, match_i)):
+        if tracker["line"] == 0 and tracker["point"] == 0:
+            break
+        line_new_number_map[tracker["line"]] = partial_sequence[i]
+        non_matched_points.append({"line": tracker["line"], "point": tracker["point"]})
+        tracker = lines[0][tracker["line"]][tracker["point"]]["prev"]
+    print(f"line_new_number_map: {line_new_number_map}")
+    print()
+    non_matched_line_parent = reduce(lambda x: x, [lines[0][x["line"]][x["point"]]["parent"]
+                                    for x in non_matched_points])
+
+    print(f"non_matched_line_parent: 'level': 1, {non_matched_line_parent}")
+    print()
+    matched_parent = lines[0][match_key_line][match_key_point]["parent"]
+    print(f"matched_parent: 'level': 1, {matched_parent}")
+    print()
+    tracker2 = {"line": match_key_line, "point": match_key_point}
+    tracker2 = lines[0][tracker2["line"]][tracker2["point"]]["next"]
+    remaining_sequence = []
+    while tracker2["line"] > 0:
+        if tracker2["line"] in line_new_number_map:
+            remaining_sequence.append(line_new_number_map[tracker2["line"]])
+        else:
+            remaining_sequence.append(tracker2["line"])
+        tracker2 = lines[0][tracker2["line"]][tracker2["point"]]["next"]
+    print()
+    print(f"remaining_sequence: {remaining_sequence}")
+    print()
+    sequence = partial_sequence + remaining_sequence
+    print(f"sequence: {sequence}")
+    print()
+
 def groupColumns(lines):
 
 
@@ -780,7 +833,7 @@ def x23():
     # 1, 2, 3, 2, 3, 1, 3, 2, 1
     # 1, 2, 3
     # 1, 2, 1, 3, 1, 4, 1, 5
-    sequence1 = [1, 2, 3]
+    sequence1 = [1, 2, 1, 3, 1, 4, 1, 5]
 
     # lines = traceLine(sequence1)
 
@@ -805,8 +858,8 @@ def x23():
     # x222(lines, sequence1)
     # exit()
     # print()
-    sequence1 = [2, 3, 4, 5]
-    x222(lines, sequence1)
+    # sequence1 = [2, 3, 4, 5]
+    # x222(lines, sequence1)
     # sequence1 = [2, 3, 4, 5]
     # x222(lines, sequence1)
     # for key in lines:
@@ -814,6 +867,8 @@ def x23():
     #     [print(key, value) for key, value in lines[key].items()]
     # print()
     repartitionParentsWithOverlappingChildLines(lines)
+    partial_sequence1 = [2, 2]
+    completeNewPartialSequence(lines, partial_sequence1)
     # sequence2 = [1, 2]
     # x223(lines, sequence2)
     # sequence2 = [1, 4]
@@ -828,6 +883,30 @@ def x23():
     print()
     
 
+class Node():
 
-        
-x23()
+    def __init__(self, id):
+        self.id = id
+        self.line = None
+        self.is_active = False
+
+    def __str__(self):
+        return f"(id: {self.id}, parent: {self.parent}, child: {self.child}, prev: {self.prev}, next: {self.next}, is_active: {self.is_active})\n"
+
+    def activate(self, nodes, sequence, i):
+        self.is_active = True
+        if len(self.line) == 0:
+            new_id = len(nodes) + 1
+            nodes[new_id] = Node(new_id)
+            # self.line = {0: {"node": new_id}}
+            getPoint(nodes, self.line[0]).activate(nodes, sequence, i+1)
+
+
+def x241(sequence, nodes):
+    pass
+def x24():
+    sequence1 = [1, 2, 1, 3, 1, 4, 1, 5]
+
+    nodes = {}
+
+x24()
