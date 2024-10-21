@@ -897,49 +897,86 @@ class Point():
         return f"(point id: {self.id}, current count: {self.current_count}, same count points: {self.same_count_points})"
     def getCount(self, level_id=0):
         if level_id == 0:
-            if self.top == None and self.bottom == None:
+            if self.top is None and self.bottom is None:
                 self.current_count = 1
-            if self.bottom == None and self.top != None:
+            elif self.bottom is None and self.top is not None:
                 current_count = self.top.getCount(level_id + 1) + 1
-                self.current_count = current_count
                 self.sendCount(current_count, level_id + 1)
-            elif self.bottom != None and self.top == None:
+                self.current_count = current_count
+            elif self.bottom is not None and self.top is None:
                 current_count = self.bottom.getCount(level_id - 1) + 1
-                self.current_count = current_count
                 self.sendCount(current_count, level_id - 1)
-            elif self.bottom != None and self.top != None:
-                current_count = self.top.getCount(level_id + 1) + self.bottom.getCount(level_id - 1) + 1
                 self.current_count = current_count
+            elif self.bottom is not None and self.top is not None:
+                current_count = self.top.getCount(level_id + 1) + self.bottom.getCount(level_id - 1) + 1
                 self.sendCount(current_count, level_id + 1)
                 self.sendCount(current_count, level_id - 1)
+                self.current_count = current_count
         if level_id > 0:
-            return 1 if self.top == None else self.top.getCount(level_id + 1) + 1
+            return 1 if self.top is None else self.top.getCount(level_id + 1) + 1
         elif level_id < 0:
-            return 1 if self.bottom == None else self.bottom.getCount(level_id - 1) + 1
+            return 1 if self.bottom is None else self.bottom.getCount(level_id - 1) + 1
 
     def sendCount(self, count, level_id=0):
         self.current_count = count
         if level_id > 0:
-            if self.top != None:
+            if self.top is not None:
                 self.top.sendCount(count, level_id + 1)
         elif level_id < 0:
-            if self.bottom != None:
+            if self.bottom is not None:
                 self.bottom.sendCount(count, level_id - 1)
     def matchCount(self, count):
         return self.current_count == count
     def findPointsOnOtherLinesWithSameCount(self, current_count, level_id=0):
-        if self.next == None:
-            return [self.id]
-        else:
-            if self.next.matchCount(current_count):
-                same_count_points = [self.id] + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1)
-                print(f"level_id: {level_id}, same_count_points: {same_count_points}")
-                if level_id == 0:
+        if level_id == 0:
+            if self.next is None and self.prev is None:
+                if self.matchCount(current_count):
+                    self.same_count_points = [self.id]
+                else:
+                    return []
+            elif self.next is None and self.prev is not None:
+                if self.matchCount(current_count):
+                    same_count_points = [self.id] + self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1)
                     self.same_count_points = same_count_points
-                
-                return same_count_points
+                    return same_count_points
+                else:
+                    return []
+            elif self.next is not None and self.prev is None:
+                if self.matchCount(current_count):
+                    same_count_points = [self.id] + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
+                    self.same_count_points = same_count_points
+                    return same_count_points
+                else:
+                    return []
+            elif self.next is not None and self.prev is not None:
+                if self.matchCount(current_count):
+                    same_count_points = [self.id] + self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1) + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
+                    self.same_count_points = same_count_points
+                    return same_count_points
+                else:
+                    return []
+        elif level_id > 0:
+            if self.matchCount(current_count):
+                if self.prev is not None:
+                    return [self.id] + self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1)
+                else:
+                    return [self.id]
             else:
-                return self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1)
+                if self.prev is not None:
+                    return self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1)
+                else:
+                    return []
+        elif level_id < 0:
+            if self.matchCount(current_count):
+                if self.next is not None:
+                    return [self.id] + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
+                else:
+                    return [self.id]
+            else:
+                if self.next is not None:
+                    return self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
+                else:
+                    return []
 
 
 def x241(sequence, i, number):
@@ -954,16 +991,16 @@ def x24():
             3: Point(id=3, top=None, bottom=None, prev=None, next=None),
         },
         2: {
-            0: Point(id=0, top=None, bottom=None, prev=None, next=None),
+            0: Point(id=-1, top=None, bottom=None, prev=None, next=None),
         },
         3: {
-            0: Point(id=0, top=None, bottom=None, prev=None, next=None),
+            0: Point(id=-2, top=None, bottom=None, prev=None, next=None),
             },
         4: {
-            0: Point(id=0, top=None, bottom=None, prev=None, next=None),
+            0: Point(id=-3, top=None, bottom=None, prev=None, next=None),
         },
         5: {
-            0: Point(id=0, top=None, bottom=None, prev=None, next=None),
+            0: Point(id=-4, top=None, bottom=None, prev=None, next=None),
         },
     }
     lines[1][0].top = lines[1][1]
@@ -995,13 +1032,17 @@ def x24():
     lines[5][0].prev = lines[1][3]
 
 
-    lines[1][2].getCount()
+    lines[1][0].getCount()
     lines[2][0].getCount()
     lines[3][0].getCount()
     lines[4][0].getCount()
     lines[5][0].getCount()
 
     lines[2][0].findPointsOnOtherLinesWithSameCount(lines[2][0].current_count)
+    lines[3][0].findPointsOnOtherLinesWithSameCount(lines[3][0].current_count)
+    lines[4][0].findPointsOnOtherLinesWithSameCount(lines[4][0].current_count)
+    lines[5][0].findPointsOnOtherLinesWithSameCount(lines[5][0].current_count)
+
 
     print()
     for key in lines:
