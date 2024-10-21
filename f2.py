@@ -892,26 +892,33 @@ class Point():
         self.prev = prev
         self.next = next
         self.current_count = 0
-        self.visited = 0
     def __str__(self):
         return f"(point id: {self.id}, current count: {self.current_count})"
     def getCount(self, level_id):
-        print(f"{level_id} {self.id} {self.bottom == None and self.top != None} {self.bottom != None and self.top == None}")
-        if self.visited == 0:
-            self.visited = 1
-            if level_id == 0:
-                current_count = self.bottom.getCount(level_id + 1) + 1
+        if level_id == 0:
+            if self.bottom == None and self.top != None:
+                current_count = self.top.getCount(level_id + 1) + 1
                 self.current_count = current_count
-            elif self.bottom == None and self.top != None:
-                return 1
+                tracker = self
+                while tracker.top != None:
+                    tracker.top.getCount(0)
+                    tracker = tracker.top
             elif self.bottom != None and self.top == None:
-                return 1
-            elif self.bottom != None and self.top != None:
-                current_count = self.bottom.getCount(level_id + 1) + self.top.getCount(level_id + 1) + 1
+                current_count = self.bottom.getCount(level_id - 1) + 1
                 self.current_count = current_count
-                return current_count
-        else:
-            return 0
+            elif self.bottom != None and self.top != None:
+                current_count = self.top.getCount(level_id + 1) + self.bottom.getCount(level_id - 1) + 1
+                self.current_count = current_count
+        if level_id > 0:
+            if self.top != None:
+                return self.top.getCount(level_id + 1) + 1
+            else:
+                return 1
+        elif level_id < 0:
+            if self.bottom != None:
+                return self.bottom.getCount(level_id - 1) + 1
+            else:
+                return 1
 
 
     def sendCount(self, count):
@@ -979,7 +986,7 @@ def x24():
     lines[5][0].prev = lines[1][3]
 
 
-    lines[1][3].getCount(0)
+    lines[1][0].getCount(0)
 
     print()
     for key in lines:
