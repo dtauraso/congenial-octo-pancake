@@ -881,32 +881,95 @@ def x23():
         print(key)
         [print(key, value) for key, value in lines[key].items()]
     print()
-    
 
-class Node():
 
-    def __init__(self, id):
+class Point():
+
+    def __init__(self, id, top, bottom, prev, next):
         self.id = id
-        self.line = None
-        self.is_active = False
-
+        self.top = top
+        self.bottom = bottom
+        self.prev = prev
+        self.next = next
+        self.current_count = 0
     def __str__(self):
-        return f"(id: {self.id}, parent: {self.parent}, child: {self.child}, prev: {self.prev}, next: {self.next}, is_active: {self.is_active})\n"
+        return f"(point id: {self.id}, current count: {self.current_count})"
+    def getCount(self):
+        if self.bottom == None:
+            return 1
+        else:
+            self.current_count = self.bottom.getCount() + 1
+            return self.current_count
+    def sendCount(self, count):
+        self.current_count = count
+        if self.bottom != None:
+            self.bottom.sendCount(count)
+    def matchCount(self, count):
+        return self.current_count == count
+    def findPointsOnOtherLinesWithSameCount(self):
+        if self.next == None:
+            return [self.id]
+        else:
+            same_count_points = [self.id] + self.next.findPointsOnOtherLinesWithSameCount()
 
-    def activate(self, nodes, sequence, i):
-        self.is_active = True
-        if len(self.line) == 0:
-            new_id = len(nodes) + 1
-            nodes[new_id] = Node(new_id)
-            # self.line = {0: {"node": new_id}}
-            getPoint(nodes, self.line[0]).activate(nodes, sequence, i+1)
-
-
-def x241(sequence, nodes):
+def x241(sequence, i, number):
     pass
 def x24():
-    sequence1 = [1, 2, 1, 3, 1, 4, 1, 5]
 
-    nodes = {}
+    lines = {
+        1: {
+            0: Point(id=0, top=None, bottom=None, prev=None, next=None),
+            1: Point(id=1, top=None, bottom=None, prev=None, next=None),
+            2: Point(id=2, top=None, bottom=None, prev=None, next=None),
+            3: Point(id=3, top=None, bottom=None, prev=None, next=None),
+        },
+        2: {
+            0: Point(id=0, top=None, bottom=None, prev=None, next=None),
+        },
+        3: {
+            0: Point(id=0, top=None, bottom=None, prev=None, next=None),
+            },
+        4: {
+            0: Point(id=0, top=None, bottom=None, prev=None, next=None),
+        },
+        5: {
+            0: Point(id=0, top=None, bottom=None, prev=None, next=None),
+        },
+    }
+    lines[1][0].top = lines[1][1]
+    lines[1][1].bottom = lines[1][0]
+    lines[1][1].top = lines[1][2]
+    lines[1][2].bottom = lines[1][1]
+    lines[1][2].top = lines[1][3]
+    lines[1][3].bottom = lines[1][2]
+
+    lines[1][0].next = lines[2][0]
+    lines[2][0].prev = lines[1][0]
+
+    lines[2][0].next = lines[1][1]
+    lines[1][1].prev = lines[2][0]
+
+    lines[1][1].next = lines[3][0]
+    lines[3][0].prev = lines[1][1]
+
+    lines[3][0].next = lines[1][2]
+    lines[1][2].prev = lines[3][0]
+
+    lines[1][2].next = lines[4][0]
+    lines[4][0].prev = lines[1][2]
+
+    lines[4][0].next = lines[1][3]
+    lines[1][3].prev = lines[4][0]
+
+    lines[1][3].next = lines[5][0]
+    lines[5][0].prev = lines[1][3]
+
+
+    lines[1][3].getCount()
+
+    for key in lines:
+        for key2 in lines[key]:
+            print(lines[key][key2])
+        print()
 
 x24()
