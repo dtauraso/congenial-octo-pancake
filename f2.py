@@ -892,14 +892,28 @@ class Point():
         self.prev = prev
         self.next = next
         self.current_count = 0
+        self.visited = 0
     def __str__(self):
         return f"(point id: {self.id}, current count: {self.current_count})"
-    def getCount(self):
-        if self.bottom == None:
-            return 1
+    def getCount(self, level_id):
+        print(f"{level_id} {self.id} {self.bottom == None and self.top != None} {self.bottom != None and self.top == None}")
+        if self.visited == 0:
+            self.visited = 1
+            if level_id == 0:
+                current_count = self.bottom.getCount(level_id + 1) + 1
+                self.current_count = current_count
+            elif self.bottom == None and self.top != None:
+                return 1
+            elif self.bottom != None and self.top == None:
+                return 1
+            elif self.bottom != None and self.top != None:
+                current_count = self.bottom.getCount(level_id + 1) + self.top.getCount(level_id + 1) + 1
+                self.current_count = current_count
+                return current_count
         else:
-            self.current_count = self.bottom.getCount() + 1
-            return self.current_count
+            return 0
+
+
     def sendCount(self, count):
         self.current_count = count
         if self.bottom != None:
@@ -965,8 +979,9 @@ def x24():
     lines[5][0].prev = lines[1][3]
 
 
-    lines[1][3].getCount()
+    lines[1][3].getCount(0)
 
+    print()
     for key in lines:
         for key2 in lines[key]:
             print(lines[key][key2])
