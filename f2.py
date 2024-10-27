@@ -885,16 +885,21 @@ def x23():
 
 class Point():
 
-    def __init__(self, id, top, bottom, prev, next):
-        self.id = id
+    def __init__(self, top=None, bottom=None, prev=None, next=None, parent=None, children=[], line_ref=None, order_id=0):
         self.top = top
         self.bottom = bottom
         self.prev = prev
         self.next = next
+        self.parent = parent
+        self.children = children
+        self.children_match_count = 0
         self.current_count = 0
         self.same_count_points = []
+        self.is_expected = False
+        self.line_ref = line_ref
+        self.order_id = order_id
     def __str__(self):
-        return f"(point id: {self.id}, current count: {self.current_count}, same count points: {self.same_count_points})"
+        return f"(point id: {id(self)}, current count: {self.current_count}, same count points: {self.same_count_points})"
     def getCount(self, level_id=0):
         if level_id == 0:
             if self.top is None and self.bottom is None:
@@ -931,76 +936,142 @@ class Point():
         if level_id == 0:
             if self.next is None and self.prev is None:
                 if self.matchCount(current_count):
-                    self.same_count_points = [self.id]
+                    self.same_count_points = [id(self)]
                 else:
                     return []
             elif self.next is None and self.prev is not None:
                 if self.matchCount(current_count):
-                    same_count_points = [self.id] + self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1)
+                    same_count_points = [id(self)] + self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1)
                     self.same_count_points = same_count_points
                     return same_count_points
                 else:
                     return []
             elif self.next is not None and self.prev is None:
                 if self.matchCount(current_count):
-                    same_count_points = [self.id] + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
+                    same_count_points = [id(self)] + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
                     self.same_count_points = same_count_points
                     return same_count_points
                 else:
                     return []
             elif self.next is not None and self.prev is not None:
                 if self.matchCount(current_count):
-                    same_count_points = [self.id] + self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1) + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
+                    same_count_points = [id(self)] + self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1) + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
                     self.same_count_points = same_count_points
                     return same_count_points
                 else:
                     return []
         elif level_id > 0:
+            same_count_points = []
             if self.matchCount(current_count):
-                if self.prev is not None:
-                    return [self.id] + self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1)
-                else:
-                    return [self.id]
+                same_count_points = [id(self)]
+            if self.prev is not None:
+                return same_count_points + self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1)
             else:
-                if self.prev is not None:
-                    return self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1)
-                else:
-                    return []
+                return same_count_points
         elif level_id < 0:
+            same_count_points = []
             if self.matchCount(current_count):
-                if self.next is not None:
-                    return [self.id] + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
-                else:
-                    return [self.id]
+                 same_count_points = [id(self)]
+            if self.next is not None:
+                return same_count_points + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
+            if self.next is None:
+                return same_count_points
+    def isExpectedChild(self):
+        if self.children_match_count < len(self.children):
+            self.children_match_count += 1
+            return False
+        elif self.children_match_count == len(self.children):
+            self.is_expected = True
+            return True
+    def isExpected(self):
+        if self.is_expected:
+            if self.next is not None:
+                self.next.is_expected = True
+                return True
             else:
-                if self.next is not None:
-                    return self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
-                else:
-                    return []
+                return self.parent.setExpectedChild()
+        else:
+            if self.top is not None:
+                return self.top.isExpected()
+            else:
+                return False
+    def setExpected(self):
+        if self.next is not None:
+            self.next.is_expected = True
+        if self.top is not None:
+            self.top.setExpected()
+class Line():
+    def __init__(self, id, lines_ref):
+        self.id = id
+        self.start_point = None
+        self.end_point = None
+        self.lines_ref = lines_ref
+    def addPoint(self, point):
+        if self.start_point is None:
+            self.start_point = point
+            self.end_point = point
+        else:
+            temp = self.end_point
+            self.end_point = point
+            self.end_point.bottom = temp
+            temp.top = self.end_point
+    def findExpectedPointsToMatch(self):
+        if not self.start_point.isExpected():
+            self.start_point.setExpected()
+class Lines():
+    def __init__(self, order_id=-1,read_head_ref=None):
+        self.lines = {}
+        self.order_id = order_id
+        self.read_head_ref = read_head_ref
+        self.prev_point = None
+    def addLine(self, line):
+        self.lines[line.id] = line
+    def connectPoints(self, new_point):
+        if self.prev_point:
+            self.prev_point.next = new_point
+            new_point.prev = self.prev_point
+            
+    def matchLine(self, number):
+        if number in self.lines:
+            self.lines[number].findExpectedPointsToMatch()
+        else:
+            new_line = Line(number, self)
+            new_line.addPoint(Point(line_ref=new_line, order_id=self.order_id+1))
+            self.connectPoints(new_line.start_point)
+            self.addLine(new_line)
+class ReadHead():
+    def __init__(self, sequence, lines_ref):
+        self.sequence = sequence
+        self.i = 0
+        self.current_number = 0
+        self.lines_ref = lines_ref
+    def next(self):
+        if 0 > self.i or self.i >= len(self.sequence):
+            return
+        self.current_number = self.sequence[self.id]
+        self.id += 1
+        self.lines_ref.matchLine(self.current_number)
 
-
-def x241(sequence, i, number):
-    pass
 def x24():
 
     lines = {
         1: {
-            0: Point(id=0, top=None, bottom=None, prev=None, next=None),
-            1: Point(id=1, top=None, bottom=None, prev=None, next=None),
-            2: Point(id=2, top=None, bottom=None, prev=None, next=None),
-            3: Point(id=3, top=None, bottom=None, prev=None, next=None),
+            0: Point(top=None, bottom=None, prev=None, next=None),
+            1: Point(top=None, bottom=None, prev=None, next=None),
+            2: Point(top=None, bottom=None, prev=None, next=None),
+            3: Point(top=None, bottom=None, prev=None, next=None),
         },
         2: {
-            0: Point(id=-1, top=None, bottom=None, prev=None, next=None),
+            0: Point(top=None, bottom=None, prev=None, next=None),
         },
         3: {
-            0: Point(id=-2, top=None, bottom=None, prev=None, next=None),
+            0: Point(top=None, bottom=None, prev=None, next=None),
             },
         4: {
-            0: Point(id=-3, top=None, bottom=None, prev=None, next=None),
+            0: Point(top=None, bottom=None, prev=None, next=None),
         },
         5: {
-            0: Point(id=-4, top=None, bottom=None, prev=None, next=None),
+            0: Point(top=None, bottom=None, prev=None, next=None),
         },
     }
     lines[1][0].top = lines[1][1]
@@ -1038,6 +1109,11 @@ def x24():
     lines[4][0].getCount()
     lines[5][0].getCount()
 
+    lines[1][0].findPointsOnOtherLinesWithSameCount(lines[1][0].current_count)
+    lines[1][1].findPointsOnOtherLinesWithSameCount(lines[1][1].current_count)
+    lines[1][2].findPointsOnOtherLinesWithSameCount(lines[1][2].current_count)
+    lines[1][3].findPointsOnOtherLinesWithSameCount(lines[1][3].current_count)
+
     lines[2][0].findPointsOnOtherLinesWithSameCount(lines[2][0].current_count)
     lines[3][0].findPointsOnOtherLinesWithSameCount(lines[3][0].current_count)
     lines[4][0].findPointsOnOtherLinesWithSameCount(lines[4][0].current_count)
@@ -1050,4 +1126,10 @@ def x24():
             print(lines[key][key2])
         print()
 
-x24()
+def x25():
+    
+    lines = Lines()
+    read_head = ReadHead([1, 2], lines)
+
+    
+x25()
