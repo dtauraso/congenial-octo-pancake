@@ -981,14 +981,14 @@ class Point():
             return False
         elif self.children_match_count == len(self.children):
             return True
-    def isExpected(self, i):
+    def isExpected(self, i=None):
         if self.is_expected:
             if self.next is not None:
                 return True
-            else:
-                return self.parent.setExpectedChild()
-        elif self.order_id == i:
-                pass
+            # else:
+            #     return self.parent.setExpectedChild()
+        # elif self.order_id == i:
+        #         pass
         else:  
             if self.top is not None:
                 return self.top.isExpected()
@@ -999,6 +999,11 @@ class Point():
             self.next.is_expected = True
         if self.top is not None:
             self.top.setExpected()
+    def setNextPointToExpected(self):
+        if self.next is not None:
+            self.next.is_expected = True
+        if self.top is not None:
+            self.top.setNextPointToExpected()
     def passExpectedToNextPoint(self):
         if self.is_expected:
             if self.next is not None:
@@ -1008,6 +1013,13 @@ class Point():
         else:
             if self.top is not None:
                 self.top.passExpectedToNextPoint()
+    def f(self, order_id):
+        if self.next.order_id == order_id:
+            return self.next
+        if self.top is not None:
+            self.top.f(order_id)
+        else:
+            return None
 class Line():
     def __init__(self, id, lines_ref):
         self.id = id
@@ -1029,8 +1041,14 @@ class Line():
         else:
             self.start_point.passExpectedToNextPoint()
         self.getNextInput()
+    def setNextPointToExpected(self):
+        self.start_point.setNextPointToExpected()
     def getNextInput(self):
         self.lines_ref.getNextInput()
+    def isAnyPointExpected(self):
+        return self.start_point.isExpected()
+    def f(self, order_id):
+        return self.start_point.f(order_id)
 class Lines():
     def __init__(self, order_id=1,read_head_ref=None):
         self.lines = {}
@@ -1039,11 +1057,13 @@ class Lines():
         self.prev_point = None
         self.modulus_clock = -1
         self.current_clock_length = 0
-        self.expected_line_tracker = -1
+        self.restart_status = False
     def __str__(self):
         return f"(lines: {self.lines})"
     def addLine(self, line):
         self.lines[line.id] = line
+    def f(self, line_id, order_id):
+        return self.lines[line_id].f(order_id)
     def connectPoints(self, new_point):
         if self.prev_point:
             self.prev_point.next = new_point
@@ -1063,19 +1083,21 @@ class Lines():
             #     self.current_clock_length = 0
             #     self.modulus_clock = -1
             #     self.order_id = 1
-            # check for expected points in self.lines[number]
-            # if all points in self.lines[number] are not expected
-            #     use unexpected candidate next points and expected next point to match order_id with self.order_id
-            #     if match
-            #        copy the next link from the point whos order_id matches self.order_id for making the new point
-            #        set the new point variable "expected" to true
-            #     else
-            #        add new point
-            #        do not set the new point variable "expected" to true
+            if not self.lines[number].isAnyPointExpected():
+                if self.restart_status:
+                    self.lines[number].setNextPointToExpected()
+                    self.restart_status = False
+                else:
+                    match = self.f(number, self.order_id)
+                    if match is not None:
+                        new_point = Point(line_ref=self.lines[number], order_id=self.order_id, is_expected=True)
+                        self.lines[number].addPoint(new_point)
+            #       else
+            #           add new point
+            #           do not set the new point variable "expected" to true
             # if 1 point is expected
-            #     save expected next point
-            #     make list of unexpected candidate next points
-            #        set the new point variable "expected" to true
+                # match = self.f(number, self.order_id)
+            #     set the new point variable "expected" to true
             # if new point is expected
             #     if self.modulus_clock == -1:
             #         self.current_clock_length = self.order_id - 1
@@ -1085,10 +1107,11 @@ class Lines():
             #         self.current_clock_length = 0
             #         self.modulus_clock = -1
             #         self.order_id = 1
-
+            #         empty saved unexpected next points and remove expected next point
+            #         set restart status to true
             # else
             #    self.modulus_clock = -1
-
+            #  remove expected status from prev point
             self.lines[number].addPoint(Point(line_ref=self.lines[number], order_id=self.order_id))
 
             self.connectPoints(self.lines[number].end_point)
