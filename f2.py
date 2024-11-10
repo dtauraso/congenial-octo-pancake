@@ -1032,13 +1032,13 @@ class Point():
         else:
             if self.top is not None:
                 self.top.passExpectedToNextPoint()
-    def f(self, order_id):
-        print(f"point.f self: {self} order_id: {order_id}")
+    def f(self, current_clock_length, modulus_clock):
+        print(f"point.f self: {self} order_id: {self.next.order_id} current_clock_length: {current_clock_length}, modulus_clock: {modulus_clock}")
         if self.next is not None:
-            if self.next.order_id == order_id:
+            if self.next.order_id % current_clock_length == modulus_clock:
                 return self.next
         if self.top is not None:
-            self.top.f(order_id)
+            self.top.f(current_clock_length, modulus_clock)
         else:
             return None
 class Line():
@@ -1076,10 +1076,13 @@ class Line():
         return self.start_point.removeExpectedPoints()
     def removeNextExpectedPoints(self):
         return self.start_point.removeNextExpectedPoints()
-    def f(self, order_id):
-        return self.start_point.f(order_id)
+    def getTopPointOrderId(self):
+        if self.end_point is not None:
+            return self.end_point.order_id
+    def f(self, current_clock_length, modulus_clock):
+        return self.start_point.f(current_clock_length, modulus_clock)
 class Lines():
-    def __init__(self, order_id=1,read_head_ref=None):
+    def __init__(self, order_id=0,read_head_ref=None):
         self.lines = {}
         self.order_id = order_id
         self.read_head_ref = read_head_ref
@@ -1091,10 +1094,10 @@ class Lines():
         return f"(lines: {self.lines})"
     def addLine(self, line):
         self.lines[line.id] = line
-    def f(self, order_id):
-        print(f"lines.f self.prev_point: {self.prev_point}, order_id: {order_id}")
+    def f(self, current_clock_length,modulus_clock):
+        print(f"lines.f self.prev_point: {self.prev_point}, current_clock_length: {current_clock_length}, modulus_clock: {modulus_clock}")
         if self.prev_point is not None:
-            return self.lines[self.prev_point.line_ref.id].f(order_id)
+            return self.lines[self.prev_point.line_ref.id].f(current_clock_length, modulus_clock)
     def removeNextExpectedPoints(self):
         if self.prev_point is not None:
             self.lines[self.prev_point.line_ref.id].removeNextExpectedPoints()
@@ -1177,7 +1180,39 @@ class Lines():
         self.getNextInput()
    
     def matchLine2(self, number, i):
-        pass
+        
+        print(f"before: self.order_id: {self.order_id}, number: {number} self.modulus_clock: {self.modulus_clock} self.current_clock_length: {self.current_clock_length}")
+        if number in self.lines:
+            if self.current_clock_length == 0:
+                top_order_id = self.lines[number].getTopPointOrderId()
+                print(f"top_order_id: {top_order_id}")
+                self.current_clock_length = self.order_id - (top_order_id if top_order_id > 1 else 0)
+            if self.lines[number].isAnyPointExpected():
+                self.modulus_clock = (self.modulus_clock + 1) % self.current_clock_length
+        else:
+            new_line = Line(number, self)
+            self.addLine(new_line)
+            print(f"new line {number} created")
+        print(f"after: self.order_id: {self.order_id}, number: {number} self.modulus_clock: {self.modulus_clock} self.current_clock_length: {self.current_clock_length}")
+        self.order_id += 1
+        new_point = Point(line_ref=self.lines[number], order_id=self.order_id)
+        if self.lines[number].start_point is not None:
+            if not self.lines[number].isAnyPointExpected():
+                if self.modulus_clock == -1:
+                    self.modulus_clock = 0
+                match = self.lines[number].f(self.current_clock_length, self.modulus_clock)
+                print(f"match: {match}")
+                if match is not None:
+                    new_point.is_expected = True
+                    new_point.next = match.next
+                    self.modulus_clock = (self.modulus_clock + 1) % self.current_clock_length
+                else:
+                    self.modulus_clock = -1
+                    self.current_clock_length = 0
+        self.lines[number].addPoint(new_point)
+        self.connectPoints(self.lines[number].end_point)
+
+        self.getNextInput()
      # do we add a new line
     #  yes: add new line
     #  no: is clock length set
@@ -1213,7 +1248,7 @@ class ReadHead():
             return
         self.current_number = self.sequence[self.i]
         self.i += 1
-        self.lines_ref.matchLine(self.current_number, self.i)
+        self.lines_ref.matchLine2(self.current_number, self.i)
 
 def x24():
 
@@ -1290,10 +1325,11 @@ def x24():
         print()
 
 def x25():
+    # [1, 2, 2, 1, 3, 3]
     # [1, 2, 3, 1, 2, 3, 1, 4, 5]
     # [1, 2, 1, 2, 1, 3, 1, 3]
     lines = Lines()
-    read_head = ReadHead([1, 2, 2, 1, 3, 3], lines)
+    read_head = ReadHead([1, 2, 1, 3], lines)
     lines.read_head_ref = read_head
 
     read_head.next()
