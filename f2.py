@@ -1103,7 +1103,7 @@ class ModulusClock():
     def increment(self):
         self.prev = self.value
         self.value = (self.value + 1) % self.length
-    def reset(self):
+    def turnOff(self):
         self.value = -1
         self.prev = -1
         self.length = 0
@@ -1123,7 +1123,7 @@ class Lines():
         return f"(lines: {self.lines})"
     def addLine(self, line):
         self.lines[line.id] = line
-    def f(self, current_clock_length,modulus_clock):
+    def f(self, current_clock_length, modulus_clock):
         print(f"lines.f self.prev_point: {self.prev_point}, current_clock_length: {current_clock_length}, modulus_clock: {modulus_clock}")
         if self.prev_point is not None:
             return self.lines[self.prev_point.line_ref.id].f(current_clock_length, modulus_clock)
@@ -1225,50 +1225,81 @@ class Lines():
         # (clock == 0 and clock prev value was clock length - 1)
         # all clock logic before adding a new line or updating a point on a line
         print(f"before: self.order_id: {self.order_id}, number: {number} self.modulus_clock: {self.modulus_clock} self.current_clock_length: {self.current_clock_length}")
+        match = None
         if number in self.lines and modulus_clock.isOff():
-            pass
+            top_order_id = self.lines[number].getTopPointOrderId()
+            print(f"top_order_id: {top_order_id}")
+            clock_length = self.order_id - (top_order_id if top_order_id > 1 else 0)
+            modulus_clock.start(clock_length)
+            self.lines[number].setNextPointToExpected()
+        elif number not in self.lines or modulus_clock.isOn():
+            if number not in self.lines:
+                new_line = Line(number, self)
+                self.addLine(new_line)
+                print(f"new line {number} created")
+            if not self.lines[number].isAnyPointExpected():
+                new_point = Point(line_ref=self.lines[number], order_id=self.order_id+1)
+                match = self.lines[number].f(modulus_clock.length, modulus_clock.value)
+                if match is not None:
+                    modulus_clock.increment()
+                    new_point.is_expected = True
+                    new_point.next = match.next
+                else:
+                    modulus_clock.turnOff()
+                self.lines[number].addPoint(new_point)
+                self.connectPoints(self.lines[number].end_point)
+            else:
+                modulus_clock.increment()
+                self.lines[number].setNextPointToExpected()
+        elif modulus_clock.cycleComplete():
+            modulus_clock.turnOff()
+        self.order_id += 1
+        self.prev_point = self.lines[number].getCurrentPoint()
+        print(f"after: self.order_id: {self.order_id}, number: {number} self.modulus_clock: {self.modulus_clock} self.current_clock_length: {self.current_clock_length}")
+        self.getNextInput()
+
         #     if self.current_clock_length == 0:
         #         top_order_id = self.lines[number].getTopPointOrderId()
         #         print(f"top_order_id: {top_order_id}")
         #         self.current_clock_length = self.order_id - (top_order_id if top_order_id > 1 else 0)
         #     if self.lines[number].isAnyPointExpected():
         #         self.modulus_clock = (self.modulus_clock + 1) % self.current_clock_length
-        if number not in self.lines:
-            new_line = Line(number, self)
-            self.addLine(new_line)
-            print(f"new line {number} created")
+        # if number not in self.lines:
+        #     new_line = Line(number, self)
+        #     self.addLine(new_line)
+        #     print(f"new line {number} created")
         # start clock, continue clock, or reset clock
-        print(f"self.lines[number].isAnyPointExpected: {self.lines[number].isAnyPointExpected()}")
-        print(f"start_clock: {start_clock}")
-        if not self.lines[number].isAnyPointExpected():
-            if start_clock:
-                start_clock = False
-                top_order_id = self.lines[number].getTopPointOrderId()
-                print(f"top_order_id: {top_order_id}")
-                print(f"self.order_id: {self.order_id}")
-                self.current_clock_length = self.order_id - (top_order_id if top_order_id > 1 else 0)
-                self.modulus_clock = 0
-                self.lines[number].setNextPointToExpected()
-                self.prev_point = self.lines[number].getCurrentPoint()
-            else:
-                new_point = Point(line_ref=self.lines[number], order_id=self.order_id+1)
-                if self.modulus_clock == -1:
-                    self.modulus_clock = 0
-                match = self.lines[number].f(self.current_clock_length, self.modulus_clock)
-                print(f"match: {match}")
-                if match is not None:
-                    new_point.is_expected = True
-                    new_point.next = match.next
-                    self.modulus_clock = (self.modulus_clock + 1) % self.current_clock_length
-                else:
-                    self.modulus_clock = -1
-                    self.current_clock_length = 0
-                self.order_id += 1
-                self.lines[number].addPoint(new_point)
-                self.connectPoints(self.lines[number].end_point)
-        print(f"after: self.order_id: {self.order_id}, number: {number} self.modulus_clock: {self.modulus_clock} self.current_clock_length: {self.current_clock_length}")
+        # print(f"self.lines[number].isAnyPointExpected: {self.lines[number].isAnyPointExpected()}")
+        # print(f"start_clock: {start_clock}")
+        # if not self.lines[number].isAnyPointExpected():
+        #     if start_clock:
+        #         start_clock = False
+        #         top_order_id = self.lines[number].getTopPointOrderId()
+        #         print(f"top_order_id: {top_order_id}")
+        #         print(f"self.order_id: {self.order_id}")
+        #         self.current_clock_length = self.order_id - (top_order_id if top_order_id > 1 else 0)
+        #         self.modulus_clock = 0
+        #         self.lines[number].setNextPointToExpected()
+        #         self.prev_point = self.lines[number].getCurrentPoint()
+        #     else:
+        #         new_point = Point(line_ref=self.lines[number], order_id=self.order_id+1)
+        #         if self.modulus_clock == -1:
+        #             self.modulus_clock = 0
+        #         match = self.lines[number].f(self.current_clock_length, self.modulus_clock)
+        #         print(f"match: {match}")
+        #         if match is not None:
+        #             new_point.is_expected = True
+        #             new_point.next = match.next
+        #             self.modulus_clock = (self.modulus_clock + 1) % self.current_clock_length
+        #         else:
+        #             self.modulus_clock = -1
+        #             self.current_clock_length = 0
+        #         self.order_id += 1
+        #         self.lines[number].addPoint(new_point)
+        #         self.connectPoints(self.lines[number].end_point)
+        # print(f"after: self.order_id: {self.order_id}, number: {number} self.modulus_clock: {self.modulus_clock} self.current_clock_length: {self.current_clock_length}")
 
-        self.getNextInput()
+        # self.getNextInput()
      # do we add a new line
     #  yes: add new line
     #  no: is clock length set
