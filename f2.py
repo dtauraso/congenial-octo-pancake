@@ -885,7 +885,7 @@ def x23():
 
 class Point():
 
-    def __init__(self, top=None, bottom=None, prev=None, next=None, parent=None, children=[], line_ref=None, order_id=0, is_expected=False):
+    def __init__(self, top=None, bottom=None, prev=None, next=None, parent=None, children=[], line_ref=None, order_id=0, is_expected=False, expected_sequence_length=0):
         self.top = top
         self.bottom = bottom
         self.prev = prev
@@ -897,6 +897,7 @@ class Point():
         self.same_count_points = []
         self.point_expectation_status_transfered_from = None
         self.is_expected = is_expected
+        self.expected_sequence_length = expected_sequence_length
         self.line_ref = line_ref
         self.order_id = order_id
     def __str__(self):
@@ -1055,8 +1056,7 @@ class Point():
             return None
     def printPoint(self):
         next = None if self.next is None else id(self.next)
-        top = None if self.top is None else id(self.top)
-        print(f"    ({self.order_id}) {id(self)}: next: {next}, is_expected: {self.is_expected}")
+        print(f"    ({self.order_id}) {id(self)}: next: {next}, is_expected: {self.is_expected}, expected_sequence_length: {self.expected_sequence_length}")
         if self.top is not None:
             self.top.printPoint()
 class Line():
@@ -1120,6 +1120,8 @@ class ModulusClock():
         return f"(value: {self.value}, prev: {self.prev}, length: {self.length})"
     def isOn(self):
         return self.value > -1 and not self.cycleComplete()
+    def isOn2(self):
+        return self.value > -1
     def isOff(self):
         return self.value == -1 and self.prev == -1 and self.length == 0
     def start(self, length):
@@ -1133,7 +1135,7 @@ class ModulusClock():
         self.prev = -1
         self.length = 0
     def cycleComplete(self):
-        return self.value == self.length - 1
+        return self.value > 0 and self.value == self.length - 1
 
 class Lines():
     def __init__(self, order_id=0,read_head_ref=None):
@@ -1301,15 +1303,29 @@ class Lines():
         self.getNextInput(modulus_clock)
 
     def matchLine3(self, number, i, modulus_clock):
-        if i == 5:
-            return
+
         prev_point_id = None if self.prev_point is None else id(self.prev_point)
-        print(f"before: self.prev_point: {prev_point_id}, self.order_id: {self.order_id}, number: {number}, modulus_clock_status: {modulus_clock.isOn()}, modulus_clock.value: {modulus_clock.value} modulus_clock.length: {modulus_clock.length}")
+        expected_length = 0
+        print(f"before: self.prev_point: {prev_point_id}, self.order_id: {self.order_id}, number: {number}, modulus_clock_isOn2(): {modulus_clock.isOn2()}, modulus_clock.value: {modulus_clock.value} modulus_clock.length: {modulus_clock.length}")
         if number in self.lines:
+            top_expected_length = self.lines[number].end_point.expected_sequence_length
+            if top_expected_length == 0:
+                if self.prev_point is not None:
+                    if self.prev_point.line_ref.id == number:
+                        expected_length = 1
+                    elif self.prev_point.expected_sequence_length > 0:
+                        expected_length = self.prev_point.expected_sequence_length
+                    else:
+                        expected_length = self.order_id
+                else:
+                    expected_length = self.order_id
+            else:
+                expected_length = top_expected_length
+            print(f"top_expected_length: {top_expected_length}")
+            print(f"expected_length: {expected_length}")
+            print(f"self.order_id: {self.order_id}")
             if modulus_clock.isOff():
-                top_order_id = self.lines[number].getTopPointOrderId() if len(self.lines) == 1 else self.order_id 
-                print(f"top_order_id: {top_order_id}")
-                clock_length = self.order_id - (top_order_id if len(self.lines) == 1 else 0)
+                clock_length = expected_length
                 print(f"clock_length: {clock_length}")
                 if clock_length == 0:
                     print(f"structural cycle length == 1 detected at line {number}")
@@ -1319,15 +1335,30 @@ class Lines():
         elif number not in self.lines:
             new_line = Line(number, self)
             self.addLine(new_line)
+            if self.prev_point is not None:
+                expected_length = self.prev_point.expected_sequence_length
         prev_point_id = None if self.prev_point is None else id(self.prev_point)
         print(f"prev_point: {prev_point_id}")
-        if prev_point_id:
-            print(f"self.prev_point.is_expected: {self.prev_point.is_expected}")
-        new_point = Point(line_ref=self.lines[number], order_id=self.order_id+1)
+        new_point = Point(line_ref=self.lines[number], order_id=self.order_id+1, expected_sequence_length=expected_length)
         print(f"new_point: {id(new_point)}")
-        if modulus_clock.isOn():
-            print(f"number: {number} modulus_clock.isOn(): {modulus_clock.isOn()}")
-            self.prev_point.is_expected = False
+        if modulus_clock.isOn2():
+            print(f"number: {number} modulus_clock.isOn2(): {modulus_clock.isOn2()}")
+            if self.prev_point is not None:
+                if self.prev_point.next is not None:
+                    if self.prev_point.next.is_expected:
+                        line_transition_1 = self.prev_point.line_ref.id == new_point.line_ref.id
+                        line_transition_2 = self.prev_point.line_ref.id == self.prev_point.next.line_ref.id
+                        if line_transition_1 != line_transition_2:
+                            print(f"structural cycle broken at line {number}")
+                            if line_transition_1:
+                                new_point.expected_sequence_length = 1
+                            modulus_clock.turnOff()
+            if modulus_clock.cycleComplete():
+                print(f"structural cycle detected at line {number}")
+                modulus_clock.turnOff()
+            if self.prev_point is not None:
+                if self.prev_point.prev is not None:
+                    self.prev_point.prev.is_expected = False
             self.lines[number].setNextPointToExpected()
             new_point.next = self.lines[number].getNextExpectedPoint()
         self.order_id += 1
@@ -1346,9 +1377,10 @@ class Lines():
         
 
         prev_point_id = None if self.prev_point is None else id(self.prev_point)
-        print(f"after: self.prev_point: {prev_point_id}, self.order_id: {self.order_id}, number: {number}, modulus_clock_status: {modulus_clock.isOn()}, modulus_clock.value: {modulus_clock.value} modulus_clock.length: {modulus_clock.length}")
+        print(f"after: self.prev_point: {prev_point_id}, self.order_id: {self.order_id}, number: {number}, modulus_clock_isOn2(): {modulus_clock.isOn2()}, modulus_clock.value: {modulus_clock.value} modulus_clock.length: {modulus_clock.length}")
         self.printLines()
-
+        if modulus_clock.isOn():
+            modulus_clock.increment()
         print()
         print()
         self.getNextInput(modulus_clock)
@@ -1453,7 +1485,7 @@ def x25():
     # [1, 2, 1, 2, 1, 3, 1, 3]
     # [1, 1, 1, 1, 1]
     lines = Lines()
-    read_head = ReadHead([1, 2, 1, 2], lines)
+    read_head = ReadHead([1, 2, 1, 2, 1, 1], lines)
     lines.read_head_ref = read_head
     modulus_clock = ModulusClock()
 
