@@ -898,6 +898,7 @@ class Point():
         self.point_expectation_status_transfered_from = None
         self.is_expected = is_expected
         self.expected_sequence_length = expected_sequence_length
+        self.line_transition_kind = None
         self.line_ref = line_ref
         self.order_id = order_id
     def __str__(self):
@@ -1057,7 +1058,8 @@ class Point():
             return None
     def printPoint(self):
         next = None if self.next is None else id(self.next)
-        print(f"    ({self.order_id}) {id(self)}: next: {next}, is_expected: {self.is_expected}, expected_sequence_length: {self.expected_sequence_length}")
+        prev = None if self.prev is None else id(self.prev)
+        print(f"    ({self.order_id}) {id(self)}: next: {next}, prev: {prev}, is_expected: {self.is_expected}, expected_sequence_length: {self.expected_sequence_length}")
         if self.top is not None:
             self.top.printPoint()
 class Line():
@@ -1109,6 +1111,39 @@ class Line():
         if self.start_point is not None:
             return self.start_point.f(current_clock_length, modulus_clock)
         return None
+    def getTransitionKind(self, id_1, id_2):
+        if id_1 == id_2:
+            return "same"
+        else:
+            return "different"
+    def visit(self, prev_point):
+
+        number = self.id
+        new_point = Point(line_ref=number)
+
+        if prev_point is None:
+            self.addPoint(new_point)
+            prev_point.next = new_point
+            new_point.prev = prev_point
+        elif prev_point is not None:
+            if prev_point.line_transition_kind is None:
+                line_transition_kind = self.getTransitionKind(prev_point.line_ref.id, new_point.line_ref.id)
+                prev_point.line_transition_kind = line_transition_kind
+                new_point.line_transition_kind = line_transition_kind
+                self.addPoint(new_point)
+                prev_point.next = new_point
+                new_point.prev = prev_point
+            elif prev_point.line_transition_kind is not None:
+                prev_point_line_transition_kind = prev_point.line_transition_kind
+                new_point_line_transition_kind = self.getTransitionKind(prev_point.line_ref.id, new_point.line_ref.id)
+                if prev_point_line_transition_kind != new_point_line_transition_kind:
+                    print(f"structural cycle broken at line {number}")
+                else:
+                    new_point.line_transition_kind = prev_point_line_transition_kind
+                    self.addPoint(new_point)
+                    prev_point.next = new_point
+                    new_point.prev = prev_point
+
     def printLine(self):
         if self.start_point is not None:
             self.start_point.printPoint()
@@ -1359,9 +1394,13 @@ class Lines():
             if modulus_clock.cycleComplete():
                 print(f"structural cycle detected at line {number}")
                 modulus_clock.turnOff()
-            if self.prev_point is not None:
-                if self.prev_point.prev is not None:
-                    self.prev_point.prev.is_expected = False
+        if self.prev_point is not None:
+            print(f"self.prev_point: {id(self.prev_point)}")
+
+            if self.prev_point.prev is not None:
+                print(f"self.prev_point.prev: {id(self.prev_point.prev)}")
+
+                self.prev_point.prev.is_expected = False
             self.lines[number].setNextPointToExpected()
             new_point.next = self.lines[number].getNextExpectedPoint()
         self.order_id += 1
@@ -1378,6 +1417,8 @@ class Lines():
         print()
         self.getNextInput(modulus_clock)
 
+    def visit(self, number, i):
+        pass
     def getNextInput(self, modulus_clock):
         self.read_head_ref.next(modulus_clock)
     def printLines(self):
@@ -1475,11 +1516,12 @@ def x24():
 def x25():
     # [1, 2, 2, 1, 3, 3]
     # [1, 2, 1, 2, 1, 1]
+    # [1, 2, 1, 2, 1, 1, 2, 3, 1, 2, 3]
     # [1, 2, 3, 1, 2, 3, 1, 4, 5]
     # [1, 2, 1, 2, 1, 3, 1, 3]
     # [1, 1, 1, 1, 1]
     lines = Lines()
-    read_head = ReadHead([1, 2, 1, 2, 1, 1], lines)
+    read_head = ReadHead([1, 2, 1, 2, 1, 1, 1, 1], lines)
     lines.read_head_ref = read_head
     modulus_clock = ModulusClock()
 
