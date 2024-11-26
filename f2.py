@@ -1122,12 +1122,10 @@ class Line():
 
         number = self.id
         new_point = Point(line_ref=self)
-        # print(f"number: {number}")
-        # prev_point_id = None if prev_point is None else id(prev_point)
-        # print(f"bfore: prev_point_id: {prev_point_id}, new_point: {id(new_point)}")
         if prev_point is None:
             self.addPoint(new_point)
             prev_point = new_point
+            return prev_point
         elif prev_point is not None:
             if prev_point.line_transition_kind is None:
                 line_transition_kind = self.getTransitionKind(prev_point.line_ref.id, new_point.line_ref.id)
@@ -1136,20 +1134,24 @@ class Line():
                 self.addPoint(new_point)
                 prev_point.next = new_point
                 new_point.prev = prev_point
+                return prev_point.next
             elif prev_point.line_transition_kind is not None:
                 prev_point_line_transition_kind = prev_point.line_transition_kind
                 new_point_line_transition_kind = self.getTransitionKind(prev_point.line_ref.id, new_point.line_ref.id)
+                if prev_point_line_transition_kind == new_point_line_transition_kind:
+                    if new_point_line_transition_kind == "different":
+                        if new_point.line_ref.start_point is not None:
+                            # print(f"structure sequence broken at line {number}")
+                            return None
                 if prev_point_line_transition_kind != new_point_line_transition_kind:
-                    print(f"structure sequence broken at line {number}")
+                    # print(f"structure sequence broken at line {number}")
+                    return None
                 else:
                     new_point.line_transition_kind = prev_point_line_transition_kind
                     self.addPoint(new_point)
                     prev_point.next = new_point
                     new_point.prev = prev_point
-        # prev_point_id = None if prev_point is None else id(prev_point)
-        # print(f"after: prev_point_id: {prev_point_id}, new_point: {id(new_point)}")
-
-        return prev_point
+                    return prev_point.next
 
     def printLine(self):
         if self.start_point is not None:
@@ -1428,15 +1430,11 @@ class Lines():
         if number not in self.lines:
             new_line = Line(number, self)
             self.addLine(new_line)
-        # prev_point_id = None if self.prev_point is None else id(self.prev_point)
-        # print(f"before: self.prev_point: {prev_point_id}")
-        prev_point = self.lines[number].addPoint2(self.prev_point)
-        if self.prev_point is not None and prev_point.next is None:
+        new_point = self.lines[number].addPoint2(self.prev_point)
+        if new_point is None:
             print(f"structure sequence broken at line {number}")
-        self.prev_point = prev_point
-        # prev_point_id = None if self.prev_point is None else id(self.prev_point)
-        # print(f"after: self.prev_point: {prev_point_id}")
-
+        else:
+            self.prev_point = new_point
         self.printLines()
         self.read_head_ref.next2()
         
@@ -1551,7 +1549,7 @@ def x25():
     # [1, 2, 1, 2, 1, 3, 1, 3]
     # [1, 1, 1, 1, 1]
     lines = Lines()
-    read_head = ReadHead([1, 1, 2], lines)
+    read_head = ReadHead([1, 2, 3, 4, 2], lines)
     lines.read_head_ref = read_head
     # modulus_clock = ModulusClock()
 
