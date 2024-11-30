@@ -1059,7 +1059,7 @@ class Point():
     def printPoint(self):
         next = None if self.next is None else id(self.next)
         prev = None if self.prev is None else id(self.prev)
-        print(f"    {id(self)}: next: {next}, prev: {prev}, is_expected: {self.is_expected}, expected_sequence_length: {self.expected_sequence_length}")
+        print(f"    {id(self)}: next: {next}, prev: {prev}, line_transition_kind: {self.line_transition_kind}")
         if self.top is not None:
             self.top.printPoint()
 
@@ -1113,6 +1113,10 @@ class Line():
         if self.start_point is not None:
             return self.start_point.f(current_clock_length, modulus_clock)
         return None
+    def visitParent(self, number):
+        pass
+    def childLineContributesToParentActivation(self, number):
+        return True
     def getTransitionKind(self, id_1, id_2):
         if id_1 == id_2:
             return "same"
@@ -1127,6 +1131,16 @@ class Line():
             prev_point = new_point
             return prev_point
         elif prev_point is not None:
+            if prev_point.parent is not None:
+                prev_point.parent.visitParent(number)
+                if prev_point.parent.childLineContributesToParentActivation(number):
+                    self.addPoint(new_point)
+                    prev_point.next = new_point
+                    new_point.prev = prev_point
+                    return prev_point.next
+                else:
+                    # print(f"structure sequence broken at line {number}")
+                    return None
             if prev_point.line_transition_kind is None:
                 line_transition_kind = self.getTransitionKind(prev_point.line_ref.id, new_point.line_ref.id)
                 prev_point.line_transition_kind = line_transition_kind
@@ -1466,6 +1480,10 @@ class ReadHead():
         self.i += 1
         self.lines_ref.visit(self.current_number, self.i)
 
+class Levels():
+    def __init__(self):
+        self.levels = {}
+        self.read_head_ref = None
 
 def x24():
 
