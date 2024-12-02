@@ -1069,16 +1069,19 @@ class Line():
         self.id = id
         self.start_point = None
         self.end_point = None
+        self.current_point = None
         self.lines_ref = lines_ref
     def addPoint(self, point):
+
+        print(f"adding point self.end_point: {id(self.end_point)}")
         if self.start_point is None:
             self.start_point = point
             self.end_point = point
         else:
-            print(f"adding point self.end_point: {id(self.end_point)}")
             self.end_point.top = point
             point.bottom = self.end_point
             self.end_point = point
+        self.current_point = point
     def findExpectedPointsToMatch(self, i):
         if not self.start_point.isExpected(i):
             self.start_point.setAllPointsToExpected()
@@ -1113,58 +1116,41 @@ class Line():
         if self.start_point is not None:
             return self.start_point.f(current_clock_length, modulus_clock)
         return None
-    def visitParent(self, number):
-        pass
-    def childLineContributesToParentActivation(self, number):
-        return True
+    
     def getTransitionKind(self, id_1, id_2):
         if id_1 == id_2:
             return "same"
         else:
             return "different"
-    def addPoint2(self, prev_point):
+    def connectPoints(self, prev_point):
 
         number = self.id
-        new_point = Point(line_ref=self)
         if prev_point is None:
-            self.addPoint(new_point)
-            prev_point = new_point
+            prev_point = self.current_point
             return prev_point
         elif prev_point is not None:
-            if prev_point.parent is not None:
-                prev_point.parent.visitParent(number)
-                if prev_point.parent.childLineContributesToParentActivation(number):
-                    self.addPoint(new_point)
-                    prev_point.next = new_point
-                    new_point.prev = prev_point
-                    return prev_point.next
-                else:
-                    # print(f"structure sequence broken at line {number}")
-                    return None
             if prev_point.line_transition_kind is None:
-                line_transition_kind = self.getTransitionKind(prev_point.line_ref.id, new_point.line_ref.id)
+                line_transition_kind = self.getTransitionKind(prev_point.line_ref.id, self.current_point.line_ref.id)
                 prev_point.line_transition_kind = line_transition_kind
-                new_point.line_transition_kind = line_transition_kind
-                self.addPoint(new_point)
-                prev_point.next = new_point
-                new_point.prev = prev_point
+                self.current_point.line_transition_kind = line_transition_kind
+                prev_point.next = self.current_point
+                self.current_point.prev = prev_point
                 return prev_point.next
             elif prev_point.line_transition_kind is not None:
                 prev_point_line_transition_kind = prev_point.line_transition_kind
-                new_point_line_transition_kind = self.getTransitionKind(prev_point.line_ref.id, new_point.line_ref.id)
+                new_point_line_transition_kind = self.getTransitionKind(prev_point.line_ref.id, self.current_point.line_ref.id)
                 if prev_point_line_transition_kind == new_point_line_transition_kind:
                     if new_point_line_transition_kind == "different":
-                        if new_point.line_ref.start_point is not None:
-                            # print(f"structure sequence broken at line {number}")
+                        if self.lines_ref.alphabet[number] > 1:
+                            print(f"structure sequence broken at line {number}: number repeated")
                             return None
                 if prev_point_line_transition_kind != new_point_line_transition_kind:
-                    # print(f"structure sequence broken at line {number}")
+                    print(f"structure sequence broken at line {number}")
                     return None
                 else:
-                    new_point.line_transition_kind = prev_point_line_transition_kind
-                    self.addPoint(new_point)
-                    prev_point.next = new_point
-                    new_point.prev = prev_point
+                    self.current_point.line_transition_kind = prev_point_line_transition_kind
+                    prev_point.next = self.current_point
+                    self.current_point.prev = prev_point
                     return prev_point.next
 
     def printLine(self):
@@ -1207,6 +1193,7 @@ class Lines():
         self.modulus_clock = -1
         self.current_clock_length = 0
         self.start_status = True
+        self.alphabet = {}
     def __str__(self):
         return f"(lines: {self.lines})"
     def addLine(self, line):
@@ -1444,12 +1431,18 @@ class Lines():
         if number not in self.lines:
             new_line = Line(number, self)
             self.addLine(new_line)
-        new_point = self.lines[number].addPoint2(self.prev_point)
+        self.lines[number].addPoint(Point(line_ref=self.lines[number]))
+        if number in self.alphabet:
+            self.alphabet[number] += 1
+        else:
+            self.alphabet[number] = 1
+        new_point = self.lines[number].connectPoints(self.prev_point)
         if new_point is None:
             print(f"structure sequence broken at line {number}")
         else:
             self.prev_point = new_point
         self.printLines()
+        print()
         self.read_head_ref.next2()
         
     def getNextInput(self, modulus_clock):
@@ -1480,9 +1473,9 @@ class ReadHead():
         self.i += 1
         self.lines_ref.visit(self.current_number, self.i)
 
-class Levels():
+class Level():
     def __init__(self):
-        self.levels = {}
+        self.lines = {}
         self.read_head_ref = None
 
 def x24():
@@ -1566,6 +1559,7 @@ def x25():
     # [1, 2, 3, 1, 2, 3, 1, 4, 5]
     # [1, 2, 1, 2, 1, 3, 1, 3]
     # [1, 1, 1, 1, 1]
+
     lines = Lines()
     read_head = ReadHead([1, 2, 3, 4, 2], lines)
     lines.read_head_ref = read_head
