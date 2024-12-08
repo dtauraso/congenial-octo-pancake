@@ -1056,6 +1056,7 @@ class Point():
             self.top.f(current_clock_length, modulus_clock)
         else:
             return None
+
     def printPoint(self):
         next = None if self.next is None else id(self.next)
         prev = None if self.prev is None else id(self.prev)
@@ -1068,7 +1069,6 @@ class Point():
                 print(f"            {child}")
         if self.top is not None:
             self.top.printPoint()
-
 
 class Line():
     def __init__(self, id, lines_ref):
@@ -1122,7 +1122,7 @@ class Line():
         if self.start_point is not None:
             return self.start_point.f(current_clock_length, modulus_clock)
         return None
-    
+
     def getTransitionKind(self, id_1, id_2):
         if id_1 == id_2:
             return "same"
@@ -1190,6 +1190,76 @@ class ModulusClock():
             return self.value == 0 and self.value == self.length - 1
         return self.value > 0 and self.value == self.length - 1
 
+class Line2():
+    def __init__(self, id, lines_ref):
+        self.id = id
+        self.groups = [[]]
+        self.current_group = 0
+        self.current_point = None
+        self.lines_ref = lines_ref
+
+    def addPoint(self, point):
+
+        print(f"adding point point: {id(point)}")
+        self.groups[self.current_group].append(point)
+        self.current_point = point
+
+    def addGroup(self):
+        self.current_group += 1
+        self.groups.append([])
+
+    def getTransitionKind(self, id_1, id_2):
+        if id_1 == id_2:
+            return "same"
+        else:
+            return "different"
+
+    def connectPoints(self, prev_point):
+
+        number = self.id
+        if prev_point is None:
+            prev_point = self.current_point
+            return True
+        elif prev_point is not None:
+            if prev_point.line_transition_kind is None:
+                line_transition_kind = self.getTransitionKind(prev_point.line_ref.id, self.current_point.line_ref.id)
+                prev_point.line_transition_kind = line_transition_kind
+                self.current_point.line_transition_kind = line_transition_kind
+                prev_point.next = self.current_point
+                self.current_point.prev = prev_point
+                return True
+            elif prev_point.line_transition_kind is not None:
+                prev_point_line_transition_kind = prev_point.line_transition_kind
+                new_point_line_transition_kind = self.getTransitionKind(prev_point.line_ref.id, self.current_point.line_ref.id)
+                if prev_point_line_transition_kind == new_point_line_transition_kind:
+                    if new_point_line_transition_kind == "different":
+                        if self.lines_ref.alphabet[number] > 1:
+                            print(f"structure sequence broken at line {number}: number repeated")
+                            return False
+                if prev_point_line_transition_kind != new_point_line_transition_kind:
+                    print(f"structure sequence broken at line {number}")
+                    return False
+                else:
+                    self.current_point.line_transition_kind = prev_point_line_transition_kind
+                    prev_point.next = self.current_point
+                    self.current_point.prev = prev_point
+                    return True
+    def printLine(self):
+
+        for i, group in enumerate(self.groups):
+            print(f"    {i}:")
+            for point in group:
+
+                next = None if point.next is None else id(point.next)
+                prev = None if point.prev is None else id(point.prev)
+                parent = None if point.parent is None else id(point.parent)
+                print(f"    {id(point)}: next: {next}, prev: {prev}, parent: {parent}, line_transition_kind: {point.line_transition_kind}")
+                children = [] if point.children is None else [id(child) for child in point.children if child is not None]
+                if len(children) > 0:
+                    print(f"        children:")
+                    for child in children:
+                        print(f"            {child}")
+
 class Lines():
     def __init__(self, order_id=0,read_head_ref=None, level_ref=None):
         self.lines = {}
@@ -1201,10 +1271,12 @@ class Lines():
         self.current_clock_length = 0
         self.start_status = True
         self.alphabet = {}
+        self.child_sequence_length = 0
     def __str__(self):
         return f"(lines: {self.lines})"
-    def addLine(self, line):
+    def addLine(self, line, child_sequence_length=0):
         self.lines[line.id] = line
+        self.lines[line.id].child_sequence_length = child_sequence_length
     def f(self, current_clock_length, modulus_clock):
         # print(f"lines.f self.prev_point: {self.prev_point}, current_clock_length: {current_clock_length}, modulus_clock: {modulus_clock}")
         if self.prev_point is not None:
@@ -1436,7 +1508,7 @@ class Lines():
 
     def visit(self, number, i):
         if number not in self.lines:
-            new_line = Line(number, self)
+            new_line = Line2(number, self)
             self.addLine(new_line)
         self.lines[number].addPoint(Point(line_ref=self.lines[number]))
         if number in self.alphabet:
@@ -1456,7 +1528,7 @@ class Lines():
         self.read_head_ref.next(modulus_clock)
     def printLines(self):
         for line_id in self.lines:
-            print(f"{line_id}")
+            print(f"line_id: {line_id} child_sequence_length: {self.lines[line_id].child_sequence_length}")
             self.lines[line_id].printLine()
 class ReadHead():
     def __init__(self, sequence, lines_ref):
@@ -1507,13 +1579,14 @@ class Levels():
     def visit(self):
 
         points = self.levels[self.current_level].visit()
+        child_sequence_length = len(points)
         [print(point.line_ref.id) for point in points]
         new_level = Level()
         self.levels.append(new_level)
         self.current_level += 1
         parent_line = Line(0, self)
         self.levels[self.current_level].lines = Lines(self)
-        self.levels[self.current_level].lines.addLine(parent_line)
+        self.levels[self.current_level].lines.addLine(parent_line, child_sequence_length)
         parent_point = Point(line_ref=parent_line)
         self.levels[self.current_level].lines.lines[0].addPoint(parent_point)
         parent_point.children = points
@@ -1523,6 +1596,7 @@ class Levels():
         self.levels[0].lines.printLines()
         print("----------")
         self.levels[1].lines.printLines()
+
 
         
 
@@ -1609,7 +1683,7 @@ def x25():
     # [1, 1, 1, 1, 1]
 
     level = Level()
-    level.setupSequence([1, 2, 3, 4, 2])
+    level.setupSequence([1, 2, 3, 4, 1, 3, 2, 4])
     levels = Levels(level)
     # level = Level([1, 2, 3, 4, 2])
     # lines = Lines()
