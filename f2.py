@@ -1528,14 +1528,14 @@ class Lines():
         self.read_head_ref.next(modulus_clock)
     def printLines(self):
         for line_id in self.lines:
-            print(f"line_id: {line_id} child_sequence_length: {self.lines[line_id].child_sequence_length}")
+            print(f"{line_id} child_sequence_length: {self.lines[line_id].child_sequence_length}")
             self.lines[line_id].printLine()
 class ReadHead():
-    def __init__(self, sequence, lines_ref):
+    def __init__(self, sequence, lines=[]):
         self.sequence = sequence
         self.i = 0
         self.current_number = 0
-        self.lines_ref = lines_ref
+        self.lines = lines
     def next(self, modulus_clock):
         if 0 > self.i or self.i >= len(self.sequence):
             return
@@ -1554,48 +1554,54 @@ class ReadHead():
         return self.i >= len(self.sequence)
 class Level():
     def __init__(self):
-        self.lines = {}
-        self.read_head = None
+        self.lines = Lines()
+        self.current_point = None
+        self.activated_point = None
         self.points = []
-    def setupSequence(self, sequence):
-        self.lines = Lines(self)
-        self.read_head = ReadHead(sequence, self.lines)
-        self.lines.read_head_ref = self.read_head
-        self.points = []
+    # def setupSequence(self):
+    #     self.lines = Lines(self)
 
-    def visit(self):
-        while not self.read_head.doneReading():
-            self.read_head.next2()
-            new_point = self.lines.visit(self.read_head.current_number, self.read_head.i)
-            if new_point is not None:
-                self.points.append(new_point)
+    def visit(self, read_head):
+        new_point = self.lines.visit(read_head.current_number, read_head.i)
+        self.points.append(new_point)
         return self.points
 
-class Levels():
-    def __init__(self, level):
-        self.levels = [level]
+class F():
+    def __init__(self, read_head):
+        self.levels = [Level()]
+        self.read_head = read_head
         self.current_level = 0
         self.current_point = None
-    def visit(self):
+    def makeLevels(self):
 
-        points = self.levels[self.current_level].visit()
-        child_sequence_length = len(points)
-        [print(point.line_ref.id) for point in points]
-        new_level = Level()
-        self.levels.append(new_level)
-        self.current_level += 1
-        parent_line = Line(0, self)
-        self.levels[self.current_level].lines = Lines(self)
-        self.levels[self.current_level].lines.addLine(parent_line, child_sequence_length)
-        parent_point = Point(line_ref=parent_line)
-        self.levels[self.current_level].lines.lines[0].addPoint(parent_point)
-        parent_point.children = points
-        for point in points:
-            point.parent = parent_point
-        self.current_point = parent_point
-        self.levels[0].lines.printLines()
-        print("----------")
-        self.levels[1].lines.printLines()
+        count = 0
+        while not self.read_head.doneReading():
+            if count == 5:
+                break
+            count += 1
+            self.read_head.next2()
+            points = self.levels[self.current_level].visit(self.read_head)
+            new_point = points[-1]
+            if new_point is None:
+                points = points[:-1]
+                child_sequence_length = len(points)
+                print(f"child_sequence_length: {child_sequence_length}")
+                [print(point.line_ref.id) for point in points]
+                # new_level = Level()
+                # self.levels.append(new_level)
+                # self.current_level += 1
+                # parent_line = Line(0, self)
+                # self.levels[self.current_level].lines = Lines(self)
+                # self.levels[self.current_level].lines.addLine(parent_line, child_sequence_length)
+                # parent_point = Point(line_ref=parent_line)
+                # self.levels[self.current_level].lines.lines[0].addPoint(parent_point)
+                # parent_point.children = points
+                # for point in points:
+                #     point.parent = parent_point
+                # self.current_point = parent_point
+                # self.levels[0].lines.printLines()
+                # print("----------")
+                # self.levels[1].lines.printLines()
 
 
         
@@ -1682,16 +1688,17 @@ def x25():
     # [1, 2, 1, 2, 1, 3, 1, 3]
     # [1, 1, 1, 1, 1]
 
-    level = Level()
-    level.setupSequence([1, 2, 3, 4, 1, 3, 2, 4])
-    levels = Levels(level)
+    # level = Level()
+    # level.setupSequence([1, 2, 3, 4, 1, 3, 2, 4])
+    # levels = Levels(level)
+    f = F(ReadHead([1, 2, 3, 4, 1, 3, 2, 4]))
     # level = Level([1, 2, 3, 4, 2])
     # lines = Lines()
     # read_head = ReadHead([1, 2, 3, 4, 2], lines)
     # lines.read_head_ref = read_head
     # modulus_clock = ModulusClock()
 
-    levels.visit()
+    f.makeLevels()
     # level.visit()
     # level.read_head.next2()
     # lines.printLines()
