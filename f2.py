@@ -1217,6 +1217,7 @@ class Line2():
     def connectPoints(self, prev_point):
 
         number = self.id
+        print(f"prev_point: {prev_point}")
         if prev_point is None:
             prev_point = self.current_point
             return True
@@ -1544,6 +1545,11 @@ class ReadHead():
         self.i += 1
         self.lines_ref.matchLine3(self.current_number, self.i, modulus_clock)
 
+    def prev(self):
+        if 0 > self.i or self.i >= len(self.sequence):
+            return
+        print(f"self.i: {self.i}")
+        self.i -= 1
     def next2(self):
         if 0 > self.i or self.i >= len(self.sequence):
             return
@@ -1562,46 +1568,55 @@ class Level():
     #     self.lines = Lines(self)
 
     def visit(self, read_head):
+        if len(self.points) > 0:
+            if self.points[-1] is None:
+                return self.points
         new_point = self.lines.visit(read_head.current_number, read_head.i)
         self.points.append(new_point)
         return self.points
 
 class F():
     def __init__(self, read_head):
-        self.levels = [Level()]
+        self.levels = [Level(), Level()]
         self.read_head = read_head
-        self.current_level = 0
-        self.current_point = None
+
     def makeLevels(self):
 
         count = 0
         while not self.read_head.doneReading():
-            if count == 5:
-                break
+            # if count == 20:
+            #     break
             count += 1
             self.read_head.next2()
-            points = self.levels[self.current_level].visit(self.read_head)
+            print(f"self.read_head.i: {self.read_head.i}")
+            print(f"self.read_head.current_number: {self.read_head.current_number}")
+            print(f"self.points: {self.levels[0].points}")
+
+            points = self.levels[0].visit(self.read_head)
             new_point = points[-1]
-            if new_point is None:
-                points = points[:-1]
-                child_sequence_length = len(points)
-                print(f"child_sequence_length: {child_sequence_length}")
-                [print(point.line_ref.id) for point in points]
-                # new_level = Level()
-                # self.levels.append(new_level)
-                # self.current_level += 1
-                # parent_line = Line(0, self)
-                # self.levels[self.current_level].lines = Lines(self)
-                # self.levels[self.current_level].lines.addLine(parent_line, child_sequence_length)
-                # parent_point = Point(line_ref=parent_line)
-                # self.levels[self.current_level].lines.lines[0].addPoint(parent_point)
-                # parent_point.children = points
-                # for point in points:
-                #     point.parent = parent_point
-                # self.current_point = parent_point
-                # self.levels[0].lines.printLines()
-                # print("----------")
-                # self.levels[1].lines.printLines()
+            print(f"new_point: {new_point}")
+            if new_point is None or self.read_head.doneReading():
+                self.levels[0].points = points[:-1]
+                points = self.levels[0].points
+                for level in self.levels[1:]:
+                    print(f"points: {points}")
+                    child_sequence_length = len(points)
+                    print(f"child_sequence_length: {child_sequence_length}")
+                    [print(point.line_ref.id) for point in points]
+                    parent_line = Line2(0, self)
+                    level.lines = Lines(self)
+                    level.lines.addLine(parent_line, child_sequence_length)
+                    parent_point = Point(line_ref=parent_line)
+                    level.lines.lines[0].addPoint(parent_point)
+                    parent_point.children = points
+                    for point in points:
+                        point.parent = parent_point
+                    self.current_point = parent_point
+                    self.levels[0].lines.printLines()
+                    print("----------")
+                    level.lines.printLines()
+                self.levels[0].lines.prev_point = None
+                self.read_head.prev()
 
 
         
