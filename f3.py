@@ -187,12 +187,12 @@ class Point():
             self.top.printPoint()
 
 class Line2():
-    def __init__(self, id, lines_ref):
+    def __init__(self, id, level):
         self.id = id
         self.groups = [[]]
         self.current_group = 0
         self.current_point = None
-        self.lines_ref = lines_ref
+        self.level = level
 
     def addPoint(self, point):
 
@@ -232,7 +232,7 @@ class Line2():
                 new_point_line_transition_kind = self.getTransitionKind(prev_point.line_ref.id, self.current_point.line_ref.id)
                 if prev_point_line_transition_kind == new_point_line_transition_kind:
                     if new_point_line_transition_kind == "different":
-                        if self.lines_ref.alphabet[number] > 1:
+                        if self.level.alphabet[number] > 1:
                             print(f"structure sequence broken at line {number}: number repeated")
                             return False
                 if prev_point_line_transition_kind != new_point_line_transition_kind:
@@ -258,281 +258,6 @@ class Line2():
                     print(f"        children:")
                     for child in children:
                         print(f"            {child}")
-
-# class Lines():
-#     def __init__(self, order_id=0,read_head_ref=None, level_ref=None):
-#         self.lines = {}
-#         self.order_id = order_id
-#         self.read_head_ref = read_head_ref
-#         self.level_ref = level_ref
-#         self.prev_point = None
-#         self.modulus_clock = -1
-#         self.current_clock_length = 0
-#         self.start_status = True
-#         self.alphabet = {}
-#         self.child_sequence_length = 0
-#     def __str__(self):
-#         return f"(lines: {self.lines})"
-#     def addLine(self, line, child_sequence_length=0):
-#         self.lines[line.id] = line
-#         self.lines[line.id].child_sequence_length = child_sequence_length
-#     def f(self, current_clock_length, modulus_clock):
-#         # print(f"lines.f self.prev_point: {self.prev_point}, current_clock_length: {current_clock_length}, modulus_clock: {modulus_clock}")
-#         if self.prev_point is not None:
-#             return self.lines[self.prev_point.line_ref.id].f(current_clock_length, modulus_clock)
-#     def removeExpectedPoints(self):
-#         if self.prev_point is not None:
-#             self.lines[self.prev_point.line_ref.id].removeExpectedPoints()
-#     def removeNextExpectedPoints(self):
-#         if self.prev_point is not None:
-#             self.lines[self.prev_point.line_ref.id].removeNextExpectedPoints()
-#     def connectPoints(self, new_point):
-#         if self.prev_point:
-#             # print(f"connect points")
-#             # self.printLines()
-#             self.prev_point.next = new_point
-#             new_point.prev = self.prev_point
-#         self.prev_point = new_point
-            
-#     def matchLine(self, number, i):
-#         print(f"self.order_id: {self.order_id}, number: {number} self.modulus_clock: {self.modulus_clock} self.current_clock_length: {self.current_clock_length} self.start_status: {self.start_status}")
-#         # print(f"self.prev_point: {self.prev_point}")
-         
-#         if number in self.lines:
-#             print(f"self.lines[number].isAnyPointExpected(): {self.lines[number].isAnyPointExpected()}")
-#             if not self.lines[number].isAnyPointExpected():
-#                 if self.start_status:
-#                     self.lines[number].setNextPointToExpected()
-#                     self.prev_point = self.lines[number].getCurrentPoint()
-#                     self.start_status = False
-#                     if self.modulus_clock == -1:
-#                         self.current_clock_length = self.order_id - 1
-#                         self.order_id = 1
-#                         self.modulus_clock = 0
-#                     self.modulus_clock = (self.modulus_clock + 1) % self.current_clock_length
-#                 else:
-#                     self.removeNextExpectedPoints()
-#                     match = self.f(self.order_id)
-#                     print(f"match: {match}")
-#                     new_point = Point(line_ref=self.lines[number], order_id=self.order_id)
-#                     if match is not None:
-#                         new_point.is_expected = True
-#                         new_point.next = match.next
-#                         self.lines[number].setNextPointToExpected()
-#                         self.prev_point = self.lines[number].getCurrentPoint()
-#                     else:
-#                         self.modulus_clock = -1
-#                         self.current_clock_length = 0
-#                         self.order_id = 1 #
-#                     self.lines[number].addPoint(new_point)
-#                     self.connectPoints(self.lines[number].end_point)
-
-#             else:
-#                 self.lines[number].removeExpectedPoints()
-#                 new_point = Point(line_ref=self.lines[number], order_id=self.order_id, is_expected=True)
-#                 self.lines[number].addPoint(new_point)
-#                 self.connectPoints(self.lines[number].end_point)
-#                 self.lines[number].setNextPointToExpected()
-#                 self.modulus_clock = (self.modulus_clock + 1) % self.current_clock_length
-#                 if self.modulus_clock == 0:
-#                     print(f"structural cycle detected at line {number}")
-#                     self.current_clock_length = 0
-#                     self.modulus_clock = -1
-#                     self.order_id = 1
-#                     self.start_status = True
-#         else:
-#             new_line = Line(number, self)
-#             self.addLine(new_line)
-#             match = self.f(self.order_id)
-#             print(f"match: {match}")
-#             # clock length can't be 0 when adding a new line
-#             if match is not None:
-#                 new_point = Point(line_ref=self.lines[number], order_id=self.order_id, is_expected=True, next=match.next)
-#                 self.lines[number].addPoint(new_point)
-#                 self.connectPoints(self.lines[number].end_point)
-#                 self.modulus_clock = (self.modulus_clock + 1) % self.current_clock_length
-#                 if self.modulus_clock == 0:
-#                     print(f"structural cycle detected at line {number}")
-#             else:
-#                 self.lines[number].addPoint(Point(line_ref=self.lines[number], order_id=self.order_id))
-#                 self.connectPoints(self.lines[number].end_point)
-#                 self.modulus_clock = -1
-#                 self.current_clock_length = 0
-#                 # self.order_id = 1 #
-
-#             print(f"new line {number} created")
-#             print(f"self.modulus_clock: {self.modulus_clock}")
-#         print()
-#         self.order_id += 1
-#         self.getNextInput()
-   
-#     def addNewPoint(self, number, modulus_clock):
-#         new_point = Point(line_ref=self.lines[number], order_id=self.order_id+1)
-#         self.order_id += 1
-#         match = self.f(modulus_clock.length, modulus_clock.value)
-#         print(f"match: {match}")
-#         if match is not None:
-#             if modulus_clock.cycleComplete():
-#                 print(f"structural cycle detected at line {number}")
-#                 modulus_clock.turnOff()
-#             else:
-#                 modulus_clock.increment()
-#                 new_point.is_expected = True
-#                 new_point.next = match.next
-#         else:
-#             modulus_clock.turnOff()
-#         self.lines[number].addPoint(new_point)
-#         return new_point
-#     def matchLine2(self, number, i, modulus_clock):
-#         if i == 6:
-#             return
-#         prev_point_id = None if self.prev_point is None else id(self.prev_point)
-#         print(f"before: self.prev_point: {prev_point_id}, self.order_id: {self.order_id}, number: {number} modulus_clock.value: {modulus_clock.value} modulus_clock.length: {modulus_clock.length}")
-#         if number in self.lines and modulus_clock.isOff():
-#             top_order_id = self.lines[number].getTopPointOrderId()
-#             clock_length = self.order_id - (top_order_id if top_order_id > 1 else 0)
-#             if clock_length > 0:
-#                 modulus_clock.start(clock_length)
-#                 new_point = Point(line_ref=self.lines[number], order_id=self.order_id+1)
-#                 self.order_id += 1
-#                 self.lines[number].setNextPointToExpected()
-#                 new_point.next = self.lines[number].getNextExpectedPoint()
-#                 self.connectPoints(new_point)
-#                 self.lines[number].addPoint(new_point)
-#                 self.prev_point = new_point
-#         elif number in self.lines and modulus_clock.isOn():
-#             if self.lines[number].isAnyPointExpected():
-#                 modulus_clock.increment()
-#                 if modulus_clock.cycleComplete():
-#                     print(f"structural cycle detected at line {number}")
-#                     modulus_clock.turnOff()
-#                 else:
-#                     self.lines[number].setNextPointToExpected()
-#             else:
-#                 new_point = self.addNewPoint(self, number, modulus_clock)
-#                 self.connectPoints(new_point)
-#         elif number not in self.lines:
-#             new_line = Line(number, self)
-#             self.addLine(new_line)
-#             print(f"new line {number} created")
-#             if modulus_clock.isOn():
-#                 modulus_clock.increment()
-#             new_point = self.addNewPoint(number, modulus_clock)
-#             self.connectPoints(new_point)
-#             self.prev_point = new_point
-#         prev_point_id = None if self.prev_point is None else id(self.prev_point)
-#         print(f"after: self.prev_point: {prev_point_id}, self.order_id: {self.order_id}, number: {number} modulus_clock.value: {modulus_clock.value} modulus_clock.length: {modulus_clock.length}")
-#         self.printLines()
-
-#         print()
-#         print()
-#         self.getNextInput(modulus_clock)
-
-#     def matchLine3(self, number, i, modulus_clock):
-
-#         prev_point_id = None if self.prev_point is None else id(self.prev_point)
-#         expected_length = 0
-#         print(f"before: self.prev_point: {prev_point_id}, self.order_id: {self.order_id}, number: {number}, modulus_clock_isOn2(): {modulus_clock.isOn2()}, modulus_clock.value: {modulus_clock.value} modulus_clock.length: {modulus_clock.length}")
-#         if number in self.lines:
-#             top_expected_length = self.lines[number].end_point.expected_sequence_length
-#             if top_expected_length == 0:
-#                 if self.prev_point is not None:
-#                     if self.prev_point.line_ref.id == number:
-#                         expected_length = 1
-#                     elif self.prev_point.expected_sequence_length > 0:
-#                         expected_length = self.prev_point.expected_sequence_length
-#                     else:
-#                         expected_length = self.order_id
-#                 else:
-#                     expected_length = self.order_id
-#             else:
-#                 expected_length = top_expected_length
-#             print(f"top_expected_length: {top_expected_length}")
-#             print(f"expected_length: {expected_length}")
-#             print(f"self.order_id: {self.order_id}")
-#             if modulus_clock.isOff():
-#                 clock_length = expected_length
-#                 print(f"clock_length: {clock_length}")
-#                 if clock_length == 0:
-#                     print(f"structural cycle length == 1 detected at line {number}")
-#                     modulus_clock.turnOff()
-#                 else:
-#                     modulus_clock.start(clock_length)
-#         elif number not in self.lines:
-#             new_line = Line(number, self)
-#             self.addLine(new_line)
-#             if self.prev_point is not None:
-#                 expected_length = self.prev_point.expected_sequence_length
-#         prev_point_id = None if self.prev_point is None else id(self.prev_point)
-#         print(f"prev_point: {prev_point_id}")
-#         new_point = Point(line_ref=self.lines[number], order_id=self.order_id+1, expected_sequence_length=expected_length)
-#         print(f"new_point: {id(new_point)}")
-#         if modulus_clock.isOn2():
-#             print(f"number: {number} modulus_clock.isOn2(): {modulus_clock.isOn2()}")
-#             if self.prev_point is not None:
-#                 if self.prev_point.next is not None:
-#                     if self.prev_point.next.is_expected:
-#                         line_transition_1 = self.prev_point.line_ref.id == new_point.line_ref.id
-#                         line_transition_2 = self.prev_point.line_ref.id == self.prev_point.next.line_ref.id
-#                         if line_transition_1 != line_transition_2:
-#                             print(f"structural cycle broken at line {number}")
-#                             if line_transition_1:
-#                                 new_point.expected_sequence_length = 1
-#                             modulus_clock.turnOff()
-#             if modulus_clock.cycleComplete():
-#                 print(f"structural cycle detected at line {number}")
-#                 modulus_clock.turnOff()
-#         if self.prev_point is not None:
-#             print(f"self.prev_point: {id(self.prev_point)}")
-
-#             if self.prev_point.prev is not None:
-#                 print(f"self.prev_point.prev: {id(self.prev_point.prev)}")
-
-#                 self.prev_point.prev.is_expected = False
-#             self.lines[number].setNextPointToExpected()
-#             new_point.next = self.lines[number].getNextExpectedPoint()
-#         self.order_id += 1
-#         self.lines[number].addPoint(new_point)
-#         self.connectPoints(new_point)
-#         self.prev_point = new_point
-
-#         prev_point_id = None if self.prev_point is None else id(self.prev_point)
-#         print(f"after: self.prev_point: {prev_point_id}, self.order_id: {self.order_id}, number: {number}, modulus_clock_isOn2(): {modulus_clock.isOn2()}, modulus_clock.value: {modulus_clock.value} modulus_clock.length: {modulus_clock.length}")
-#         self.printLines()
-#         if modulus_clock.isOn():
-#             modulus_clock.increment()
-#         print()
-#         print()
-#         self.getNextInput(modulus_clock)
-
-#     def visit(self, number):
-#         if number not in self.lines:
-#             new_line = Line2(number, self)
-#             self.addLine(new_line)
-#         self.lines[number].addPoint(Point(line_ref=self.lines[number]))
-#         if number in self.alphabet:
-#             self.alphabet[number] += 1
-#         else:
-#             self.alphabet[number] = 1
-#         is_connected = self.lines[number].connectPoints(self.prev_point)
-#         self.prev_point = self.lines[number].current_point
-        
-#         self.printLines()
-#         print()
-#         if not is_connected:
-#             self.prev_point = None
-#             self.lines[number].current_point = None
-#             self.lines[number].removePoint()
-#             self.alphabet = {}
-#             print(f"structure sequence broken at line {number}")
-#         return self.prev_point if is_connected else None
-        
-#     def getNextInput(self, modulus_clock):
-#         self.read_head_ref.next(modulus_clock)
-#     def printLines(self):
-#         for line_id in self.lines:
-#             print(f"{line_id} child_sequence_length: {self.lines[line_id].child_sequence_length}")
-#             self.lines[line_id].printLine()
 
 
 class ReadHead():
@@ -585,51 +310,53 @@ class Level():
 
     def __str__(self):
         return f"(lines: {self.lines})"
-    def addLine(self, line, child_sequence_length=0):
-        self.lines[line.id] = line
-        self.lines[line.id].child_sequence_length = child_sequence_length
-    def visit2(self, number):
-        if number not in self.lines:
-            new_line = Line2(number, self)
-            self.addLine(new_line)
-        self.lines[number].addPoint(Point(line_ref=self.lines[number]))
+    def addLine(self, number, child_sequence_length=0):
+        new_line = Line2(number, self)
+        self.lines[new_line.id] = new_line
+        self.lines[new_line.id].child_sequence_length = child_sequence_length
+    def updateAlphabet(self, number):
         if number in self.alphabet:
             self.alphabet[number] += 1
         else:
             self.alphabet[number] = 1
-        is_connected = self.lines[number].connectPoints(self.prev_point)
-        self.prev_point = self.lines[number].current_point
+    def cleanup(self, number):
+        self.prev_point = None
+        self.lines[number].current_point = None
+        self.lines[number].removePoint()
+        self.alphabet = {}
+
+    def makeNewLineId(self, child_sequence_length):
+        new_line_id = len(self.lines)
+        self.sequence_length_parent_line_id[child_sequence_length] = new_line_id
+        return new_line_id
+
+    def lastPointIsNone(self):
+        if len(self.points) > 0:
+            return self.points[-1] is None
+                 
+    def visit(self, current_number):
+        if self.lastPointIsNone():
+                return self.points
+        if current_number not in self.lines:
+            self.addLine(current_number)
+        self.lines[current_number].addPoint(Point(line_ref=self.lines[current_number]))
+        self.updateAlphabet(current_number)
+        is_connected = self.lines[current_number].connectPoints(self.prev_point)
+        self.prev_point = self.lines[current_number].current_point
         
         self.printLines()
         print()
         if not is_connected:
-            self.prev_point = None
-            self.lines[number].current_point = None
-            self.lines[number].removePoint()
-            self.alphabet = {}
-            print(f"structure sequence broken at line {number}")
-        return self.prev_point if is_connected else None
+            self.cleanup(current_number)
+            print(f"structure sequence broken at line {current_number}")
+        new_point = self.prev_point
+        self.points.append(new_point)
+        return self.points
 
     def printLines(self):
         for line_id in self.lines:
             print(f"{line_id} child_sequence_length: {self.lines[line_id].child_sequence_length}")
             self.lines[line_id].printLine()
-    def makeNewLine(self, child_sequence_length):
-        if child_sequence_length not in self.sequence_length_parent_line_id:
-            new_line_id = len(self.lines)
-            self.sequence_length_parent_line_id[child_sequence_length] = new_line_id
-            self.addLine(Line2(new_line_id, self.lines), child_sequence_length) 
-            return self.lines[new_line_id]
-        return self.lines[self.sequence_length_parent_line_id[child_sequence_length]]
-    def visit(self, read_head):
-        print(f"read_head: {read_head}")
-        if len(self.points) > 0:
-            if self.points[-1] is None:
-                return self.points
-        new_point = self.visit2(read_head.current_number)
-        self.points.append(new_point)
-        return self.points
-
 class F():
     def __init__(self, read_head):
         self.levels = [Level(), Level(), Level()]
@@ -647,7 +374,7 @@ class F():
             print(f"self.read_head.current_number: {self.read_head.current_number}")
             print(f"self.points: {self.levels[0].points}")
 
-            points = self.levels[0].visit(self.read_head)
+            points = self.levels[0].visit(self.read_head.current_number)
             new_point = points[-1]
             print(f"new_point: {new_point}")
             if new_point is None or self.read_head.isLastNumberRead():
@@ -657,14 +384,20 @@ class F():
                 new_level_made = True
                 while new_level_made:
                     for i, level in enumerate(self.levels):
-                        if i > 0:
+                        if i > 1:
                             continue
                         print(f"i: {i}")
                         print(f"points: {points}")
                         child_sequence_length = len(points)
                         print(f"child_sequence_length: {child_sequence_length}")
                         [print(point.line_ref.id) for point in points]
-                        parent_line = self.levels[i+1].makeNewLine(child_sequence_length)
+                        parent_line = None
+                        if child_sequence_length not in self.levels[i+1].sequence_length_parent_line_id:
+                            new_line_id = self.levels[i+1].makeNewLineId(child_sequence_length)
+                            self.levels[i+1].addLine(new_line_id, child_sequence_length)
+                            parent_line = self.levels[i+1].lines[new_line_id]
+                        else:
+                            parent_line = self.levels[i+1].lines[self.levels[i+1].sequence_length_parent_line_id[child_sequence_length]]
                         parent_point = Point(line_ref=parent_line)
                         self.levels[i+1].lines[parent_line.id].addPoint(parent_point)
                         parent_point.children = points
@@ -672,11 +405,28 @@ class F():
                             point.parent = parent_point
                             level.lines[point.line_ref.id].current_group += 1
                             level.lines[point.line_ref.id].current_point = None
-                            level.lines[point.line_ref.id].groups.append([]) 
-                        self.current_point = parent_point
+                            level.lines[point.line_ref.id].groups.append([])
+                        self.levels[i+1].updateAlphabet(parent_line.id)
+                        is_connected = self.levels[i+1].lines[parent_line.id].connectPoints(self.levels[i+1].prev_point)
+                        self.levels[i+1].prev_point = self.levels[i+1].lines[parent_line.id].current_point
+                        
+                        self.levels[i+1].printLines()
+                        print()
+                        if not is_connected:
+                            self.levels[i+1].cleanup(parent_line.id)
+                            print(f"structure sequence broken at line {parent_line.id}")
+                        new_point = self.levels[i+1].prev_point
+                        self.levels[i+1].points.append(new_point)
+                        points = self.levels[i+1].points
+                        # points = self.levels[i+1].visit(parent_line.id)
+                    print(f"level 0\n")
                     self.levels[0].printLines()
                     print("----------")
+                    print(f"level 1\n")
                     self.levels[1].printLines()
+                    print("----------")
+                    print(f"level 2\n")
+                    self.levels[2].printLines()
                     new_level_made = False
                 self.levels[0].points = []
                 if self.read_head.isLastNumberRead():
