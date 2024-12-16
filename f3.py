@@ -260,10 +260,11 @@ class Line2():
 
 
 class ReadHead():
-    def __init__(self, sequence, lines=[]):
+    def __init__(self, sequence=[], lines=[]):
         self.sequence = sequence
         self.i = 0
         self.current_number = 0
+        self.current_children = []
         self.lines = lines
     def next(self, modulus_clock):
         if 0 > self.i or self.i >= len(self.sequence):
@@ -287,7 +288,8 @@ class ReadHead():
     def setCurrentNumber(self):
         if 0 > self.i or self.i >= len(self.sequence):
             return
-        self.current_number = self.sequence[self.i]
+        self.current_number = self.sequence[self.i]["parent_line_id"]
+        self.current_children = self.sequence[self.i]["children"]
 
     def doneReading(self):
         return self.i >= len(self.sequence)
@@ -296,7 +298,7 @@ class ReadHead():
 
 
 class Level():
-    def __init__(self):
+    def __init__(self, read_head=ReadHead()):
         self.lines = {}
         self.current_point = None
         self.activated_point = None
@@ -305,6 +307,8 @@ class Level():
         self.alphabet = {}
         self.child_sequence_length = 0
         self.prev_point = None
+        self.parent_point = None
+        self.read_head = read_head
 
 
     def __str__(self):
@@ -332,21 +336,41 @@ class Level():
     def lastPointIsNone(self):
         if len(self.points) > 0:
             return self.points[-1] is None
-                 
-    def visit(self, current_number):
+    def addToNextReadHead(self, next_level):
+        new_line_id = len(next_level.lines)            
+        next_level.read_head.sequence.append({"parent_line_id": new_line_id, "children": self.points})
+
+    def visit(self, current_parent_line_id, current_children):
         if self.lastPointIsNone():
                 return self.points
-        if current_number not in self.lines:
-            self.addLine(current_number)
-        self.lines[current_number].addPoint(Point(line_ref=self.lines[current_number]))
-        self.updateAlphabet(current_number)
-        is_connected = self.lines[current_number].connectPoints(self.prev_point)
-        self.prev_point = self.lines[current_number].current_point
+        if current_parent_line_id not in self.lines:
+            child_sequence_length = len(current_children)
+            if child_sequence_length not in self.sequence_length_parent_line_id:
+                self.sequence_length_parent_line_id[child_sequence_length] = current_parent_line_id
+            self.addLine(current_parent_line_id)
+        parent_point = Point(line_ref=self.lines[current_parent_line_id])
+        self.lines[current_parent_line_id].addPoint(parent_point)
+        parent_point.children = list(current_children)
+        prev_group_id = -1
+        for point in parent_point.children:
+            point.parent = parent_point
+            if prev_group_id != -1:
+                if prev_group_id != self.lines[point.line_ref.id].current_group:
+                    self.lines[point.line_ref.id].current_group += 1
+                    self.lines[point.line_ref.id].current_point = None
+                    self.lines[point.line_ref.id].groups.append([])
+                    prev_group_id = self.lines[point.line_ref.id].current_group
+            else:
+                prev_group_id = 0
+
+        self.updateAlphabet(current_parent_line_id)
+        is_connected = self.lines[current_parent_line_id].connectPoints(self.prev_point)
+        self.prev_point = self.lines[current_parent_line_id].current_point
         # self.printLines()
         # print()
         if not is_connected:
             print(f"is_connected0: {is_connected}")
-            self.cleanup(current_number)
+            self.cleanup(current_parent_line_id)
             # print(f"structure sequence broken at line {current_number}")
         new_point = self.prev_point
         self.points.append(new_point)
@@ -358,30 +382,28 @@ class Level():
             self.lines[line_id].printLine()
 class F():
     def __init__(self, read_head):
-        self.levels = [Level(), Level(), Level()]
-        self.read_head = read_head
+        self.levels = [Level(read_head), Level(), Level()]
 
     def makeLevels(self):
 
         count = 0
         while True:
-            # if count == 20:
-            #     break
+            if count == 5:
+                break
             count += 1
-            self.read_head.setCurrentNumber()
-            print(f"self.read_head.i: {self.read_head.i}")
-            print(f"self.read_head.current_number: {self.read_head.current_number}")
-            print(f"self.points: {self.levels[0].points}")
+            i = 0
+            level_count = 0
+            # move_up_level = True
+            while True:
+                if level_count == 2:
+                    break
+                level_count += 1
+                self.levels[i].read_head.setCurrentNumber()
+                print(f"self.read_head.i: {self.levels[i].read_head.i}")
+                print(f"self.read_head.current_number: {self.levels[i].read_head.current_number}")
+                print(f"self.points: {self.levels[i].points}")
 
-            points = self.levels[0].visit(self.read_head.current_number)
-            new_point = points[-1]
-            print(f"new_point: {new_point}")
-            if new_point is None or self.read_head.isLastNumberRead():
-                if new_point is None:
-                    self.levels[0].points = points[:-1]
-                points = self.levels[0].points
-                # new_level_made = True
-                # while new_level_made:
+                points = self.levels[i].visit(self.levels[i].read_head.current_number, self.levels[i].read_head.current_children)
                 print(f"before")
                 print(f"level 0\n")
                 self.levels[0].printLines()
@@ -391,68 +413,24 @@ class F():
                 print("----------")
                 print(f"level 2\n")
                 self.levels[2].printLines()
-                print(f"after")
-                i = 0
-                move_up_level = True
-                # for i, level in enumerate(self.levels):
-                while move_up_level:
-                    level = self.levels[i]
-                    # if i > 1:
-                    #     break
-                    print(f"i: {i}")
-                    print(f"move_up_level: {move_up_level}")
-                    print(f"points: {points}")
-                    child_sequence_length = len(points)
-                    # if child_sequence_length == 0:
-                    #     continue
-                    if child_sequence_length == 1:
-                        if points[0] is None:
-                            break
-                        continue
-                    print(f"child_sequence_length: {child_sequence_length}")
-                    [print(point.line_ref.id) for point in points]
-                    parent_line = None
-                    if child_sequence_length not in self.levels[i+1].sequence_length_parent_line_id:
-                        new_line_id = self.levels[i+1].makeNewLineId(child_sequence_length)
-                        self.levels[i+1].addLine(new_line_id, child_sequence_length)
-                        parent_line = self.levels[i+1].lines[new_line_id]
-                    else:
-                        parent_line = self.levels[i+1].lines[self.levels[i+1].sequence_length_parent_line_id[child_sequence_length]]
-                    parent_point = Point(line_ref=parent_line)
-                    self.levels[i+1].lines[parent_line.id].addPoint(parent_point)
-                    parent_point.children = list(points)
-
-                    prev_group_id = -1
-                    for point in points:
-                        point.parent = parent_point
-                        if prev_group_id != -1:
-                            if prev_group_id != level.lines[point.line_ref.id].current_group:
-                                level.lines[point.line_ref.id].current_group += 1
-                                level.lines[point.line_ref.id].current_point = None
-                                level.lines[point.line_ref.id].groups.append([])
-                                prev_group_id = level.lines[point.line_ref.id].current_group
-                        else:
-                            prev_group_id = 0
-                    self.levels[i+1].updateAlphabet(parent_line.id)
-                    is_connected = self.levels[i+1].lines[parent_line.id].connectPoints(self.levels[i+1].prev_point)
-                    self.levels[i+1].prev_point = self.levels[i+1].lines[parent_line.id].current_point
-                    print(f"is_connected{i+1}: {is_connected}")
-                    print(f"current_point: {self.levels[i+1].lines[parent_line.id].current_point}")
-                    if not is_connected:
-                        self.levels[i+1].cleanup(parent_line.id)
-                        print(f"structure sequence broken at line {parent_line.id}")
-                        print(f"points[i+1]: {[point.line_ref.id for point in points]}")
-                        self.levels[i+1].points = []
-                        new_point = self.levels[i+1].prev_point
-                        self.levels[i+1].points.append(new_point)
-                    if is_connected:    
-                        move_up_level = False
-                    # new_point = self.levels[i+1].prev_point
-                    # if len(self.levels[i+1].points) == 2:
-                        # self.levels[i+1].points = []
-                    # self.levels[i+1].points.append(new_point)
-                    points = self.levels[i+1].points
-                    i += 1
+                print(f"points: {points}")
+                new_point = points[-1]
+                # print(f"new_point: {new_point}")
+                if new_point is None or self.levels[i].read_head.isLastNumberRead():
+                    if new_point is None:
+                        self.levels[i].points = points[:-1]  
+                    self.levels[i].addToNextReadHead(self.levels[i])
+                    print(f"read head level 1: {[{'parent': item['parent_line_id'], 'children': [id(i) for i in item['children']]} for item in self.levels[1].read_head.sequence]}")
+                    
+                        # points = self.levels[0].points
+                    # make new parent line number
+                    # add new parent line and points to level 1 read_head
+                    # make new points with visit function at level 1
+                    # repeat for all levels reachable
+                    # new_level_made = True
+                    # while new_level_made:
+                    # print(f"before")
+                    print(f"after")
                     print(f"level 0\n")
                     self.levels[0].printLines()
                     print("----------")
@@ -461,24 +439,108 @@ class F():
                     print("----------")
                     print(f"level 2\n")
                     self.levels[2].printLines()
-                    # self.levels[i+1].printLines()
-                    print()
+                    self.levels[i].points = []
+                    # print(f"is last number read: {self.read_head.isLastNumberRead()}")
+                    if self.levels[i].read_head.isLastNumberRead():
+                        break
+                    self.levels[i].read_head.prev()
+                self.levels[i].read_head.next2()
+                if new_point is None:
+                        i += 1
+                    # print(f"after")
+                    # i = 0
+                    # move_up_level = True
+                    # for i, level in enumerate(self.levels):
+                    # prepare for connection from level 0 to level 1
+                    # while move_up_level:
+                    #     level = self.levels[i]
+                    #     if points[-1] is None:
+                    #         points = points[:-1]
+                        # connect points if can from
+                        # if i > 1:
+                        #     break
+                        # print(f"i: {i}")
+                        # print(f"move_up_level: {move_up_level}")
+                        # print(f"points: {points}")
+                        # child_sequence_length = len(points)
+                        # if child_sequence_length == 0:
+                        #     continue
+                        # if child_sequence_length == 1:
+                        #     if points[0] is None:
+                        #         break
+                        #     break
+                        # print(f"child_sequence_length: {child_sequence_length}")
+                        # [print(point.line_ref.id) for point in points]
+                        # if self.levels[i+1].parent_point is None:
+                        #     parent_line = None
+                        #     if child_sequence_length not in self.levels[i+1].sequence_length_parent_line_id:
+                        #         new_line_id = self.levels[i+1].makeNewLineId(child_sequence_length)
+                        #         self.levels[i+1].addLine(new_line_id, child_sequence_length)
+                        #         parent_line = self.levels[i+1].lines[new_line_id]
+                        #     else:
+                        #         parent_line = self.levels[i+1].lines[self.levels[i+1].sequence_length_parent_line_id[child_sequence_length]]
+                        #     parent_point = Point(line_ref=parent_line)
+                        # else:
+                        #     parent_point = self.levels[i+1].parent_point
+                        #     self.levels[i+1].parent_point = None
+                        # self.levels[i+1].lines[parent_line.id].addPoint(parent_point)
+                        # parent_point.children = list(points)
+                        # self.levels[i].points = []
+                        # prev_group_id = -1
+                        # for point in points:
+                        #     point.parent = parent_point
+                        #     if prev_group_id != -1:
+                        #         if prev_group_id != level.lines[point.line_ref.id].current_group:
+                        #             level.lines[point.line_ref.id].current_group += 1
+                        #             level.lines[point.line_ref.id].current_point = None
+                        #             level.lines[point.line_ref.id].groups.append([])
+                        #             prev_group_id = level.lines[point.line_ref.id].current_group
+                        #     else:
+                        #         prev_group_id = 0
+                        # self.levels[i+1].updateAlphabet(parent_line.id)
+                        # is_connected = self.levels[i+1].lines[parent_line.id].connectPoints(self.levels[i+1].prev_point)
+                        # self.levels[i+1].prev_point = self.levels[i+1].lines[parent_line.id].current_point
+                        # print(f"is_connected{i+1}: {is_connected}")
+                        # print(f"current_point: {self.levels[i+1].lines[parent_line.id].current_point}")
+                        # if not is_connected:
+                        #     self.levels[i+1].cleanup(parent_line.id)
+                        #     print(f"structure sequence broken at line {parent_line.id}")
+                        #     print(f"points[i+1]: {[point.line_ref.id for point in points]}")
+                        #     self.levels[i+1].parent_point = parent_point
+        
+                        #     # new_point = self.levels[i+1].prev_point
+                        #     self.levels[i+1].points.append(parent_point)
+                        # if is_connected:
+                        #     move_up_level = False
+                        # new_point = self.levels[i+1].prev_point
+                        # if len(self.levels[i+1].points) == 2:
+                            # self.levels[i+1].points = []
+                        # self.levels[i+1].points.append(new_point)
+                        # points = self.levels[i+1].points
+                        # i += 1
+                        # print(f"level 0\n")
+                        # self.levels[0].printLines()
+                        # print("----------")
+                        # print(f"level 1\n")
+                        # self.levels[1].printLines()
+                        # print("----------")
+                        # print(f"level 2\n")
+                        # self.levels[2].printLines()
+                        # self.levels[i+1].printLines()
+                        # print()
 
-                # print(f"level 0\n")
-                # self.levels[0].printLines()
-                # print("----------")
-                # print(f"level 1\n")
-                # self.levels[1].printLines()
-                # print("----------")
-                # print(f"level 2\n")
-                # self.levels[2].printLines()
-                # new_level_made = False
-                self.levels[0].points = []
-                # print(f"is last number read: {self.read_head.isLastNumberRead()}")
-                if self.read_head.isLastNumberRead():
-                    break
-                self.read_head.prev()
-            self.read_head.next2()
+                    # print(f"level 0\n")
+                    # self.levels[0].printLines()
+                    # print("----------")
+                    # print(f"level 1\n")
+                    # self.levels[1].printLines()
+                    # print("----------")
+                    # print(f"level 2\n")
+                    # self.levels[2].printLines()
+                    # new_level_made = False
+            if self.levels[0].read_head.isLastNumberRead():
+                break    
+                
         # print(f"level 0\n")
         # self.levels[0].printLines()
         # print("----------")
@@ -495,7 +557,7 @@ def x25():
     # [1, 2, 1, 2, 1, 3, 1, 3]
     # [1, 1, 1, 1, 1]
     # 2, 1, 3
-    f = F(ReadHead([1, 2, 3, 4, 1, 3, 2, 4, 4, 2, 1, 3, 3, 1, 4, 2, 2, 1, 3]))
+    f = F(ReadHead([{"parent_line_id":i, "children": []} for i in [1, 2, 3, 4, 1, 3, 2, 4, 4, 2, 1, 3, 3, 1, 4, 2, 2, 1, 3]]))
     # level = Level([1, 2, 3, 4, 2])
     # lines = Lines()
     # read_head = ReadHead([1, 2, 3, 4, 2], lines)
