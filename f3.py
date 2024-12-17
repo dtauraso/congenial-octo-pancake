@@ -260,7 +260,9 @@ class Line2():
 
 
 class ReadHead():
-    def __init__(self, sequence=[], lines=[]):
+    def __init__(self, sequence=None, lines=[]):
+        if sequence is None:
+            sequence = []
         self.sequence = sequence
         self.i = 0
         self.current_number = 0
@@ -433,8 +435,10 @@ class F():
                     print(f"{i+1} {len(self.levels)} {i + 1 >= len(self.levels)}")
                     print(f"i: {i}")
                     if i + 1 >= len(self.levels):
-                        
+                        print(f"{len(self.levels)}")
+                        print(f"new level made")
                         self.levels.append(Level(ReadHead()))
+                        print(f"{len(self.levels)}")
                     # print(f"self.points after break: {self.levels[i].points}")
                     # self.levels[i].addToNextReadHead(self.levels[i+1])
                     child_sequence_length = len(self.levels[i].points)
@@ -593,7 +597,7 @@ def x25():
     # [1, 1, 1, 1, 1]
     # 2, 1, 3
     # 1, 2, 3, 4, 1, 3, 2, 4, 4, 2, 1, 3, 3, 1, 4, 2, 2, 1, 3
-    f = F(ReadHead([{"parent_line_id":i, "children": []} for i in [1, 2, 3, 4, 1, 3, 2, 4, 4, 2, 1, 3, 3, 1, 4, 2, 2, 1, 3, 3]]))
+    f = F(ReadHead([{"parent_line_id":i, "children": []} for i in [1, 2, 3, 4, 1, 3, 2, 4, 4, 2, 1, 3, 3, 1, 4, 2, 2, 1, 3, 3, 2]]))
     # level = Level([1, 2, 3, 4, 2])
     # lines = Lines()
     # read_head = ReadHead([1, 2, 3, 4, 2], lines)
