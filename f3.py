@@ -435,10 +435,7 @@ class F():
                     print(f"{i+1} {len(self.levels)} {i + 1 >= len(self.levels)}")
                     print(f"i: {i}")
                     if i + 1 >= len(self.levels):
-                        print(f"{len(self.levels)}")
-                        print(f"new level made")
                         self.levels.append(Level(ReadHead()))
-                        print(f"{len(self.levels)}")
                     # print(f"self.points after break: {self.levels[i].points}")
                     # self.levels[i].addToNextReadHead(self.levels[i+1])
                     child_sequence_length = len(self.levels[i].points)
