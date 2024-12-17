@@ -280,8 +280,8 @@ class ReadHead():
         print(f"self.i: {self.i}")
         self.i -= 1
     def next2(self):
-        if 0 > self.i or self.i >= len(self.sequence):
-            return
+        # if 0 > self.i or self.i >= len(self.sequence):
+        #     return
         print(f"self.i: {self.i}")
         # self.current_number = self.sequence[self.i]
         self.i += 1
@@ -391,11 +391,9 @@ class F():
 
     def makeLevels(self):
 
-        count = 0
         while True:
-            if count >= len(self.levels[0].read_head.sequence):
+            if self.levels[0].read_head.i >= len(self.levels[0].read_head.sequence):
                 break
-            count += 1
             i = 0
             level_count = 0
             # move_up_level = True
@@ -413,7 +411,9 @@ class F():
                 print(f"self.read_head.i: {self.levels[i].read_head.i}")
                 print(f"self.read_head.current_number: {self.levels[i].read_head.current_number}")
                 print(f"self.points: {self.levels[i].points}")
-                print(f"read head level {i}: {[{'parent_line_id': item['parent_line_id'], 'children': [id(i) for i in item['children']]} for item in self.levels[i].read_head.sequence]}")
+                # print(f"read head level {i}: {[{'parent_line_id': item['parent_line_id'], 'children': [id(i) for i in item['children']]} for item in self.levels[i].read_head.sequence]}")
+                print(f"read head level {i}: {[item['parent_line_id'] for item in self.levels[i].read_head.sequence]}")
+
                 points = self.levels[i].visit(self.levels, i, self.levels[i].read_head.current_number, self.levels[i].read_head.current_children)
                 # print(f"before")
                 # print(f"level 0\n")
@@ -428,7 +428,6 @@ class F():
                 new_point = points[-1]
                 print(f"new_point: {new_point}")
                 print(f"self.levels[i].read_head.isLastNumberRead(): {self.levels[i].read_head.isLastNumberRead()}")
-                # if len(points) > 1:
                 if new_point is None:
                     self.levels[i].points = points[:-1]
                     print(f"{i+1} {len(self.levels)} {i + 1 >= len(self.levels)}")
@@ -447,8 +446,11 @@ class F():
                     self.levels[i+1].read_head.sequence.append({"parent_line_id": new_line_id, "children": self.levels[i].points})
 
                     self.levels[i].points = []
+                    self.levels[i].read_head.sequence = self.levels[i].read_head.sequence[child_sequence_length:]
+                    print(f"after crop {child_sequence_length}")
+                    print(f"read head level {i}: {[item['parent_line_id'] for item in self.levels[i].read_head.sequence]}")
                     print(f"read head level {i+1}: {[{'parent_line_id': item['parent_line_id'], 'children': [id(i) for i in item['children']]} for item in self.levels[i+1].read_head.sequence]}")
-
+                    # print(f"read head level {i+1}: {[item['parent_line_id'] for item in self.levels[i+1].read_head.sequence]}")
                         # points = self.levels[0].points
                     # make new parent line number
                     # add new parent line and points to level 1 read_head
@@ -465,10 +467,10 @@ class F():
                     print(f"is last number read: {self.levels[i].read_head.isLastNumberRead()}")
                     # if self.levels[i].read_head.isLastNumberRead():
                     #     break
-                    self.levels[i].read_head.prev()
+                    self.levels[i].read_head.i = -1
+                    self.levels[i].read_head.current_number = -1
                 self.levels[i].read_head.next2()
                 # print(f"i: {i}")
-                # if len(points) > 1:
                 if new_point is None:
                     i += 1
                 else:
@@ -591,7 +593,7 @@ def x25():
     # [1, 1, 1, 1, 1]
     # 2, 1, 3
     # 1, 2, 3, 4, 1, 3, 2, 4, 4, 2, 1, 3, 3, 1, 4, 2, 2, 1, 3
-    f = F(ReadHead([{"parent_line_id":i, "children": []} for i in [1, 2, 3, 4, 1, 3, 2, 4, 4, 2, 1, 3, 3, 1]]))
+    f = F(ReadHead([{"parent_line_id":i, "children": []} for i in [1, 2, 3, 4, 1, 3, 2, 4, 4, 2, 1, 3, 3, 1, 4, 2, 2, 1, 3, 3]]))
     # level = Level([1, 2, 3, 4, 2])
     # lines = Lines()
     # read_head = ReadHead([1, 2, 3, 4, 2], lines)
