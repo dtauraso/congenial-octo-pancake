@@ -369,6 +369,10 @@ class Level():
                     prev_group_id = levels[current_level-1].lines[point.line_ref.id].current_group
             else:
                 prev_group_id = 0
+                levels[current_level-1].lines[point.line_ref.id].current_group += 1
+                levels[current_level-1].lines[point.line_ref.id].current_point = None
+                levels[current_level-1].lines[point.line_ref.id].groups.append([])
+                prev_group_id = levels[current_level-1].lines[point.line_ref.id].current_group
 
         self.updateAlphabet(current_parent_line_id)
         is_connected = self.lines[current_parent_line_id].connectPoints(self.prev_point)
@@ -594,7 +598,8 @@ def x25():
     # [1, 1, 1, 1, 1]
     # 2, 1, 3
     # 1, 2, 3, 4, 1, 3, 2, 4, 4, 2, 1, 3, 3, 1, 4, 2, 2, 1, 3
-    f = F(ReadHead([{"parent_line_id":i, "children": []} for i in [1, 2, 3, 4, 1, 3, 2, 4, 4, 2, 1, 3, 3, 1, 4, 2, 2, 1, 3, 3, 2]]))
+    f = F(ReadHead([{"parent_line_id":i, "children": []} for i in [1, 2, 3, 4, 1, 3, 2, 4, 2, 3, 4, 4, 3, 2, 4, 2, 1, 3, 3, 1, 4, 2, 2, 1, 3, 3, 2, 1, 2, 4]]))
+
     # level = Level([1, 2, 3, 4, 2])
     # lines = Lines()
     # read_head = ReadHead([1, 2, 3, 4, 2], lines)
