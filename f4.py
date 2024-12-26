@@ -1,5 +1,8 @@
-class Point():
+class Point2():
 
+    def __init__(self, prev=None, next=None, parent=None, children=[], line_ref=None, order_id=0, is_expected=False, expected_sequence_length=0):
+        self.prev = prev
+        self.next = next
     def __init__(self, top=None, bottom=None, prev=None, next=None, parent=None, children=[], line_ref=None, order_id=0, is_expected=False, expected_sequence_length=0):
         self.top = top
         self.bottom = bottom
@@ -185,14 +188,18 @@ class Point():
         if self.top is not None:
             self.top.printPoint()
 
-class Line2():
+class Line3():
+    
+    def __init__(self, id, level):
+        self.id = id
+        self.level = level
     def __init__(self, id, level):
         self.id = id
         self.groups = [[]]
         self.current_group = 0
         self.current_point = None
         self.level = level
-
+    
     def addPoint(self, point):
 
         print(f"adding point point: {id(point)}")
@@ -259,7 +266,7 @@ class Line2():
                         print(f"            {child}")
 
 
-class ReadHead():
+class ReadHead2():
     def __init__(self, sequence=None, lines=[]):
         if sequence is None:
             sequence = []
@@ -299,7 +306,7 @@ class ReadHead():
         return self.i == len(self.sequence) - 1
 
 
-class Level():
+class Level2():
     def __init__(self, read_head=None):
         self.lines = {}
         self.current_point = None
@@ -481,4 +488,39 @@ def x25():
     #         tracker = tracker.top
     
 
-x25()
+def x26():
+    x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
+    counts = {}
+    total = len(x)
+    items = {}
+    count = 0
+    lower_threshold = True
+    while count < 9:
+        for i, number in enumerate(x):
+            # print(f"i: {i}, number: {number}")
+            if number in counts:
+                counts[number] += 1
+                if number in items:
+                    # print(f"i: {i}, number: {number} lower threshold: {lower_threshold}, counts: {counts}")
+                    if lower_threshold:
+                        # print(f"i: {i}, counts: {counts}")
+                        if counts[number] / total >= items[number]:
+                            items[number] = (counts[number] -1) / total
+                            print(f"{number} found at {i}")
+                            lower_threshold = False
+            else:
+                counts[number] = 1
+            if number not in items:
+                if counts[number] / total >= .5:
+                    items[number] = .5
+        counts = {}
+        lower_threshold = True
+        print(f"items: {items}")
+        count += 1
+    
+    # print("Percentage Table:")
+    # for number, count in counts.items():
+    #     percentage = (count / total) * 100
+    #     print(f"Number {number}: {percentage:.2f}%")
+
+x26()
