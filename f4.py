@@ -495,8 +495,12 @@ def x26():
     items = {}
     count = 0
     lower_threshold = True
-    while count < 9:
-        for i, number in enumerate(x):
+    while count < 10:
+        i = 0
+        print(f"{x}, i:{i}, count: {count}, counts: {counts}, items: {items}")
+        # for i, number in enumerate(x):
+        while i < len(x):
+            number = x[i]
             # print(f"i: {i}, number: {number}")
             if number in counts:
                 counts[number] += 1
@@ -505,14 +509,20 @@ def x26():
                     if lower_threshold:
                         # print(f"i: {i}, counts: {counts}")
                         if counts[number] / total >= items[number]:
-                            items[number] = (counts[number] -1) / total
+                            items[number] = (counts[number] - 1) / total
                             print(f"{number} found at {i}")
+                            if items[number] <= .06:
+                                x = [j for j in x if j != number]
+                                i = -1
+                                total = len(x)
+                                print(f"removed {number} from x")
                             lower_threshold = False
             else:
                 counts[number] = 1
             if number not in items:
                 if counts[number] / total >= .5:
                     items[number] = .5
+            i += 1
         counts = {}
         lower_threshold = True
         print(f"items: {items}")
