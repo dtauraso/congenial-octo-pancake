@@ -532,5 +532,81 @@ def x26():
     # for number, count in counts.items():
     #     percentage = (count / total) * 100
     #     print(f"Number {number}: {percentage:.2f}%")
+class node():
+    def __init__(self, number=0, threshold=0, streak_count=0):
+        self.number = number
+        self.threshold = threshold
+        self.streak_count = streak_count
+class graph():
+    def __init__(self):
+        self.nodes = []
+        self.head = -1
+    def appendNode(self, node):
+        self.nodes.append(node)
+        if self.head == -1:
+            self.head = 0
+        else:
+            self.head += 1
+    def nextNode(self):
+        self.head += 1
+    def start(self):
+        if len(self.nodes) > 0:
+            self.head = 0
+    def print(self):
+        for node in self.nodes:
+            print(f"Number: {node.number}, Threshold: {node.threshold}, Streak Count: {node.streak_count}")
 
-x26()
+def updateCounts(counts, number):
+    if number in counts:
+        counts[number] += 1
+    else:
+        counts[number] = 1
+
+def numberLastPosition(x, i, number):
+    for j in range(i, len(x)):
+        if x[j] != number:
+            return j
+    return len(x)
+def streakCount(x, i, number):
+    count = 0
+    j = i-1
+    while j > 0 and x[j] == number:
+        count += 1
+        j -= 1
+    while i < len(x) and x[i] == number:
+        count += 1
+        i += 1
+    return count
+    
+def x27():
+    x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
+
+    path = graph()
+
+    count = 0
+    while count < 1:
+        counts = {}
+        i = 0
+        while i < len(x):
+            number = x[i]
+            print(f"path.head: {path.head}")
+            if path.head == -1:
+                updateCounts(counts, number)
+                highest_count = max(counts.values())
+                highest_count_numbers = {num: cnt for num, cnt in counts.items() if cnt == highest_count}
+                highest_count_number = max(highest_count_numbers, key=highest_count_numbers.get)
+                print(f"Highest count: {highest_count}, Number: {highest_count_number}")
+                percentage = counts[highest_count_number] / len(x)
+                if percentage >= .7:
+                    print(f"highest percentage: {percentage}, i: {i}, len(x): {len(x)}")
+                    path.appendNode(node(highest_count_number, percentage, streakCount(x, i, highest_count_number)))
+                    x = x[numberLastPosition(x, i, highest_count_number):]
+                    print(x)
+                    break
+            i += 1
+        path.print()
+        print()
+        count += 1
+
+
+x27()
