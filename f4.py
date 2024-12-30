@@ -533,9 +533,8 @@ def x26():
     #     percentage = (count / total) * 100
     #     print(f"Number {number}: {percentage:.2f}%")
 class node():
-    def __init__(self, number=0, threshold=0, streak_count=0):
+    def __init__(self, number=0, streak_count=0):
         self.number = number
-        self.threshold = threshold
         self.streak_count = streak_count
 class graph():
     def __init__(self):
@@ -559,7 +558,7 @@ class graph():
             self.head = 0
     def print(self):
         for node in self.nodes:
-            print(f"Number: {node.number}, Threshold: {node.threshold}, Streak Count: {node.streak_count}")
+            print(f"Number: {node.number}, Streak Count: {node.streak_count}")
 
 def updateCounts(counts, number):
     if number in counts:
@@ -638,8 +637,6 @@ def x27():
                     print(f"{counts[highest_count_number] - 1}, {len(x)}")
                     path.nextNode()
                     print(f"path.head: {path.head}")
-                    second_highest_percentage = sorted(percentages.values(), reverse=True)[1] if len(percentages) > 1 else 0
-                    print(f"second highest percentage: {second_highest_percentage}")
                     #  1 - path.nodes[path.head - 1].threshold >= second highest percentage
                     # x = x[numberLastPosition(x, i, highest_count_number):]
                     # i = -1
@@ -666,28 +663,76 @@ def x28():
     path = graph()
 
     count = 0
-    while count < 1:
+    while count < 9:
         counts = {}
         i = 0
-        count_budget = len(x)
+        counting_budget = len(x)
         print(f"count: {count}")
+        if path.head > -1:
+            current_item_streak = path.nodes[path.head].streak_count
+        current_count = 0
+        current_streak_removed_from_counting_budget = False
+        current_streak_is_too_long = False
         while i < len(x):
             number = x[i]
-            print(f"i: {i}")
-            # if seen before stop counting early
-            # does the number get removed from the counting budget fast enough for the next number
-            # to have a count value before it fades away
+            print(f"i: {i}, path.head: {path.head}, number: {number}")
             if path.head > -1:
-                pass
+                if current_streak_removed_from_counting_budget:
+                    current_streak_removed_from_counting_budget = False
+                    print("here")
+                    current_count = 0
+                    if counting_budget > 0:
+                        if number != path.nodes[path.head].number:
+                            print(f"new number: {number}")
+                            path.nextNode()
+                else:
+                    current_count += 1
+                    if number != path.nodes[path.head].number:
+                        print(f"streak goes too far, {path.head}, current_count: {current_count}")
+                        current_streak_is_too_long = True
+                    if current_count == current_item_streak:
+                        counting_budget -= current_count
+                        if current_streak_is_too_long:
+                            path.nodes[path.head].streak_count -= 1
+                            current_streak_is_too_long = False
+                        print(f"found match with number: {path.nodes[path.head].number}")
+                        print(f"current number: {number}, counting_budget: {counting_budget}")
+                        current_streak_removed_from_counting_budget = True
+                        # if counting_budget > 0:
+                        #     if number != path.nodes[path.head].number:
+                        #         print(f"new number: {number}")
+                        # path.nextNode()
+                        # counts = {}
+                        # while i < len(x) and x[i] == number:
+                        #     i += 1
+                        # if path.head == -1:
+                        #     continue
+                        # print(f"counts: {counts}")
+                        # sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+                        # if len(sorted_counts) > 1:
+                        #     second_largest_count = sorted_counts[1][1]
+                        #     print(f"second_largest_count: {second_largest_count}")
+                        #     if second_largest_count > 0:
+                        #         if second_largest_count < counting_budget:
+                        #             path.appendNode(node(sorted_counts[1][0], second_largest_count))
+                # print(f"sorted_counts: {sorted_counts}")
             updateCounts2(counts, number)
-            i += 1
+            print(f"counts: {counts}")
 
+            i += 1
+        if path.head == -1:
+            highest_count = max(counts.values())
+            highest_count_numbers = {num: cnt for num, cnt in counts.items() if cnt == highest_count}
+            highest_count_number = max(highest_count_numbers, key=highest_count_numbers.get)
+            path.appendNode(node(highest_count_number, counts[highest_count_number]))
+        path.head = 0
+        
         # print(f"count: {count}")
         # print(f"len(path.nodes): {len(path.nodes)}")
-        # path.print()
-        print(f"counts: {counts}")
+        # print(f"counts: {counts}")
+        path.print()
         print()
-        x = copy.deepcopy(tmp)
+        # x = copy.deepcopy(tmp)
         count += 1
 
 
