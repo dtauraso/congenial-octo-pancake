@@ -543,12 +543,17 @@ class graph():
         self.head = -1
     def appendNode(self, node):
         self.nodes.append(node)
-        if self.head == -1:
-            self.head = 0
-        else:
-            self.head += 1
+        # if self.head == -1:
+        #     self.head = 0
+        # else:
+        #     self.head += 1
     def nextNode(self):
+        # if self.head == len(self.nodes) - 1:
+        #     self.head = -1
+        # else:
         self.head += 1
+        if self.head >= len(self.nodes):
+            self.head = -1
     def start(self):
         if len(self.nodes) > 0:
             self.head = 0
@@ -562,6 +567,16 @@ def updateCounts(counts, number):
     else:
         counts[number] = 1
 
+def updateCounts2(counts, number):
+    if number in counts:
+        counts[number] += 1
+    else:
+        counts[number] = 1
+    for key in counts:
+        if key != number:
+            counts[key] -= 1
+            if counts[key] < 0:
+                counts[key] = 0
 def numberLastPosition(x, i, number):
     for j in range(i, len(x)):
         if x[j] != number:
@@ -578,35 +593,102 @@ def streakCount(x, i, number):
         i += 1
     return count
     
+def numberChanged(x, i, number):
+    for j in range(i, len(x)):
+        if x[j] != number:
+            return True
+    return False
 def x27():
+    import copy
     x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
+    tmp = copy.deepcopy(x)
+    path = graph()
 
+    count = 0
+    while count < 3:
+        counts = {}
+        i = 0
+        print(f"count: {count}")
+        while i < len(x):
+            number = x[i]
+            print(f"i: {i}, path.head: {path.head}")
+            updateCounts(counts, number)
+            highest_count = max(counts.values())
+            highest_count_numbers = {num: cnt for num, cnt in counts.items() if cnt == highest_count}
+            highest_count_number = max(highest_count_numbers, key=highest_count_numbers.get)
+            print(f"Highest count: {highest_count}, Number: {highest_count_number}")
+            percentage = counts[highest_count_number] / len(x)
+            percentages = {num: cnt / len(x) for num, cnt in counts.items()}
+            print(f"percentages: {percentages}")
+            if path.head == -1:
+                if percentage >= .7:
+                    print(f"highest percentage: {percentage}, i: {i}, len(x): {len(x)}")
+                    path.appendNode(node(highest_count_number, percentage, streakCount(x, i, highest_count_number)))
+                    x = x[numberLastPosition(x, i, highest_count_number):]
+                    if len(path.nodes) > 0:
+                        path.head = 0
+                    # path.print()
+                    print(x)
+            else:
+                print(len(path.nodes), path.head)
+                print(f"highest percentage: {percentage}, path.nodes[path.head].threshold: {path.nodes[path.head].threshold}, i: {i}, len(x): {len(x)}")
+                if  percentage >= path.nodes[path.head].threshold:
+                    path.nodes[path.head].threshold = (counts[highest_count_number] - 1) / len(x)
+                    print(f"new percentage: {(counts[highest_count_number] - 1) / len(x)}")
+                    print(f"{counts[highest_count_number] - 1}, {len(x)}")
+                    path.nextNode()
+                    print(f"path.head: {path.head}")
+                    second_highest_percentage = sorted(percentages.values(), reverse=True)[1] if len(percentages) > 1 else 0
+                    print(f"second highest percentage: {second_highest_percentage}")
+                    #  1 - path.nodes[path.head - 1].threshold >= second highest percentage
+                    # x = x[numberLastPosition(x, i, highest_count_number):]
+                    # i = -1
+                    if path.head == -1:
+                        # x = [j for j in x if j != highest_count_number]
+                        # i = -1
+                        if not numberChanged(x, i, highest_count_number):
+                            i = len(x)
+                        # if len(x) == 0:
+                            path.head = 0
+                    counts = {}
+                    print(x)
+                    # path.print()
+            i += 1
+        # print(f"count: {count}")
+        print(f"len(path.nodes): {len(path.nodes)}")
+        path.print()
+        print()
+        x = copy.deepcopy(tmp)
+        count += 1
+
+def x28():
+    x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
     path = graph()
 
     count = 0
     while count < 1:
         counts = {}
         i = 0
+        count_budget = len(x)
+        print(f"count: {count}")
         while i < len(x):
             number = x[i]
-            print(f"path.head: {path.head}")
-            if path.head == -1:
-                updateCounts(counts, number)
-                highest_count = max(counts.values())
-                highest_count_numbers = {num: cnt for num, cnt in counts.items() if cnt == highest_count}
-                highest_count_number = max(highest_count_numbers, key=highest_count_numbers.get)
-                print(f"Highest count: {highest_count}, Number: {highest_count_number}")
-                percentage = counts[highest_count_number] / len(x)
-                if percentage >= .7:
-                    print(f"highest percentage: {percentage}, i: {i}, len(x): {len(x)}")
-                    path.appendNode(node(highest_count_number, percentage, streakCount(x, i, highest_count_number)))
-                    x = x[numberLastPosition(x, i, highest_count_number):]
-                    print(x)
-                    break
+            print(f"i: {i}")
+            # if seen before stop counting early
+            # does the number get removed from the counting budget fast enough for the next number
+            # to have a count value before it fades away
+            if path.head > -1:
+                pass
+            updateCounts2(counts, number)
             i += 1
-        path.print()
+
+        # print(f"count: {count}")
+        # print(f"len(path.nodes): {len(path.nodes)}")
+        # path.print()
+        print(f"counts: {counts}")
         print()
+        x = copy.deepcopy(tmp)
         count += 1
 
 
-x27()
+x28()
