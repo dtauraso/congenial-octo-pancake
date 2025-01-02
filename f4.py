@@ -533,9 +533,10 @@ def x26():
     #     percentage = (count / total) * 100
     #     print(f"Number {number}: {percentage:.2f}%")
 class node():
-    def __init__(self, number=0, streak_count=0):
+    def __init__(self, number=0, streak_count=0, current_streak_is_too_long=False):
         self.number = number
         self.streak_count = streak_count
+        self.current_streak_is_too_long = current_streak_is_too_long
 class graph():
     def __init__(self):
         self.nodes = []
@@ -597,6 +598,79 @@ def numberChanged(x, i, number):
         if x[j] != number:
             return True
     return False
+class MaxHeap:
+    def __init__(self):
+        self.heap = []
+
+    def insert(self, element):
+        self.heap.append(element)
+        self._heapify_up(len(self.heap) - 1)
+
+    def extract_max(self):
+        if len(self.heap) == 0:
+            return None
+        if len(self.heap) == 1:
+            return self.heap.pop()
+        root = self.heap[0]
+        self.heap[0] = self.heap.pop()
+        self._heapify_down(0)
+        return root
+
+    def update(self, key, new_value):
+        index = self._find_index(key)
+        if index is not None:
+            old_value = self.heap[index]["streak"]
+            self.heap[index]["streak"] = new_value
+            if new_value > old_value:
+                self._heapify_up(index)
+            else:
+                self._heapify_down(index)
+    def findItem(self, key):
+        index = self._find_index(key)
+        if index is not None:
+            return self.heap[index]
+        return None
+    def decrementItems(self):
+        for i, element in enumerate(self.heap):
+            if element["streak"] > 0:
+                self.heap[i]["streak"] -= 1
+                if self.heap[i]["streak"] == 0:
+                    self.heap = self.heap[:i] + self.heap[i+1:]
+    def _find_index(self, key):
+        for i, element in enumerate(self.heap):
+            if element["number"] == key:
+                return i
+        return None
+
+    def _heapify_up(self, index):
+        """
+        Restore the heap property from bottom to top at the given index
+        by swapping the element at the given index with its parent if
+        necessary. This is used after inserting a new element into the heap.
+        """
+        parent_index = (index - 1) // 2
+        if index > 0 and self.heap[index]["streak"] > self.heap[parent_index]["streak"]:
+            self.heap[index], self.heap[parent_index] = self.heap[parent_index], self.heap[index]
+            self._heapify_up(parent_index)
+
+    def _heapify_down(self, index):
+        """
+        Restore the heap property from top to bottom at the given index
+        by swapping the element at the given index with its largest child if
+        necessary. This is used after extracting the maximum element from the heap.
+        """
+        left_child_index = 2 * index + 1
+        right_child_index = 2 * index + 2
+        largest = index
+
+        if left_child_index < len(self.heap) and self.heap[left_child_index]["streak"] > self.heap[largest]["streak"]:
+            largest = left_child_index
+        if right_child_index < len(self.heap) and self.heap[right_child_index]["streak"] > self.heap[largest]["streak"]:
+            largest = right_child_index
+        if largest != index:
+            self.heap[index], self.heap[largest] = self.heap[largest], self.heap[index]
+            self._heapify_down(largest)
+
 def x27():
     import copy
     x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
@@ -663,7 +737,7 @@ def x28():
     path = graph()
 
     count = 0
-    while count < 9:
+    while count < 5:
         counts = {}
         i = 0
         counting_budget = len(x)
@@ -693,8 +767,8 @@ def x28():
                     if current_count == current_item_streak:
                         counting_budget -= current_count
                         if current_streak_is_too_long:
-                            path.nodes[path.head].streak_count -= 1
                             current_streak_is_too_long = False
+                            path.nodes[path.head].streak_count -= 1
                         print(f"found match with number: {path.nodes[path.head].number}")
                         print(f"current number: {number}, counting_budget: {counting_budget}")
                         current_streak_removed_from_counting_budget = True
@@ -735,5 +809,42 @@ def x28():
         # x = copy.deepcopy(tmp)
         count += 1
 
+def x29():
+    x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
+    path = graph()
 
-x28()
+    max_heap = MaxHeap()
+    count = 0
+    while count < 1:
+        i = 0
+        # print(f"count: {count}")
+        while i < len(x):
+            number = x[i]
+            print(f"i: {i}, number: {number}")
+            top_heap_item = max_heap.extract_max()
+            # print(f"top_heap_item: {top_heap_item}")
+            # print(f"max_heap before insert: {max_heap.heap}")
+
+            if top_heap_item is None:
+                max_heap.insert({"number": number, "streak": 1})
+            elif top_heap_item["number"] == number:
+                max_heap.decrementItems()
+                max_heap.insert({"number": number, "streak": top_heap_item["streak"] + 1})
+            else:
+                item = max_heap.findItem(number)
+                max_heap.insert({"number": top_heap_item["number"], "streak": top_heap_item["streak"]})
+                if item is None:
+                    max_heap.insert({"number": number, "streak": 2})
+                else:
+                    max_heap.update(number, item["streak"] + 2)
+                max_heap.decrementItems()
+
+            i += 1
+        
+            print(f"max_heap: {max_heap.heap}")
+        # path.print()
+        print()
+        count += 1
+
+
+x29()
