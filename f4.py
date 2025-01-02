@@ -631,11 +631,15 @@ class MaxHeap:
             return self.heap[index]
         return None
     def decrementItems(self):
-        for i, element in enumerate(self.heap):
+        i = 0
+        while i < len(self.heap):
+            element = self.heap[i]
             if element["streak"] > 0:
                 self.heap[i]["streak"] -= 1
                 if self.heap[i]["streak"] == 0:
                     self.heap = self.heap[:i] + self.heap[i+1:]
+                    i -= 1
+            i += 1
     def _find_index(self, key):
         for i, element in enumerate(self.heap):
             if element["number"] == key:
@@ -809,6 +813,21 @@ def x28():
         # x = copy.deepcopy(tmp)
         count += 1
 
+def updateMaxHeap(max_heap, number):
+    max_item = max_heap.extract_max()
+    if max_item is None:
+        max_heap.insert({"number": number, "streak": 1})
+    elif max_item["number"] == number:
+        max_heap.decrementItems()
+        max_heap.insert({"number": number, "streak": max_item["streak"] + 1})
+    else:
+        item = max_heap.findItem(number)
+        max_heap.insert({"number": max_item["number"], "streak": max_item["streak"]})
+        if item is None:
+            max_heap.insert({"number": number, "streak": 2})
+        else:
+            max_heap.update(number, item["streak"] + 2)
+        max_heap.decrementItems()
 def x29():
     x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
     path = graph()
@@ -821,28 +840,22 @@ def x29():
         while i < len(x):
             number = x[i]
             print(f"i: {i}, number: {number}")
-            top_heap_item = max_heap.extract_max()
-            # print(f"top_heap_item: {top_heap_item}")
-            # print(f"max_heap before insert: {max_heap.heap}")
-
-            if top_heap_item is None:
-                max_heap.insert({"number": number, "streak": 1})
-            elif top_heap_item["number"] == number:
-                max_heap.decrementItems()
-                max_heap.insert({"number": number, "streak": top_heap_item["streak"] + 1})
-            else:
-                item = max_heap.findItem(number)
-                max_heap.insert({"number": top_heap_item["number"], "streak": top_heap_item["streak"]})
-                if item is None:
-                    max_heap.insert({"number": number, "streak": 2})
-                else:
-                    max_heap.update(number, item["streak"] + 2)
-                max_heap.decrementItems()
-
+            updateMaxHeap(max_heap, number)
+            max_item = max_heap.extract_max()
+            if path.head > -1:
+                if max_item is not None:
+                    if max_item["number"] == path.nodes[path.head].number:
+                        if max_item["streak"] > path.nodes[path.head].streak_count:
+                            pass
             i += 1
-        
+        if len(path.nodes) == 0:
+            max_item = max_heap.extract_max()
+            if max_item is not None:
+                path.appendNode(node(max_item["number"], max_item["streak"]))
+                path.head = 0
+            max_heap.insert(max_item)
             print(f"max_heap: {max_heap.heap}")
-        # path.print()
+            path.print()
         print()
         count += 1
 
