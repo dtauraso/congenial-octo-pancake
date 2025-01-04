@@ -537,6 +537,12 @@ class node():
         self.number = number
         self.streak_count = streak_count
         self.current_streak_is_too_long = current_streak_is_too_long
+    def decreaseStreakCount(self):
+        self.streak_count -= 1
+        if self.streak_count < 0:
+            self.streak_count = 0
+    def increaseStreakCount(self):
+        self.streak_count += 1
 class graph():
     def __init__(self):
         self.nodes = []
@@ -559,7 +565,7 @@ class graph():
             self.head = 0
     def print(self):
         for node in self.nodes:
-            print(f"Number: {node.number}, Streak Count: {node.streak_count}")
+            print(f"Number: {node.number}, Streak Count: {node.streak_count}, Current Streak Is Too Long: {node.current_streak_is_too_long}")
 
 def updateCounts(counts, number):
     if number in counts:
@@ -601,10 +607,11 @@ def numberChanged(x, i, number):
 class MaxHeap:
     def __init__(self):
         self.heap = []
-
+        self.max_length = 0        
     def insert(self, element):
         self.heap.append(element)
         self._heapify_up(len(self.heap) - 1)
+        self.max_length = max(self.max_length, len(self.heap))
 
     def extract_max(self):
         if len(self.heap) == 0:
@@ -619,8 +626,8 @@ class MaxHeap:
     def update(self, key, new_value):
         index = self._find_index(key)
         if index is not None:
-            old_value = self.heap[index]["streak"]
-            self.heap[index]["streak"] = new_value
+            old_value = self.heap[index]["growth"]
+            self.heap[index]["growth"] = new_value
             if new_value > old_value:
                 self._heapify_up(index)
             else:
@@ -634,9 +641,9 @@ class MaxHeap:
         i = 0
         while i < len(self.heap):
             element = self.heap[i]
-            if element["streak"] > 0:
-                self.heap[i]["streak"] -= 1
-                if self.heap[i]["streak"] == 0:
+            if element["growth"] > 0:
+                self.heap[i]["growth"] -= 1
+                if self.heap[i]["growth"] == 0:
                     self.heap = self.heap[:i] + self.heap[i+1:]
                     i -= 1
             i += 1
@@ -653,7 +660,7 @@ class MaxHeap:
         necessary. This is used after inserting a new element into the heap.
         """
         parent_index = (index - 1) // 2
-        if index > 0 and self.heap[index]["streak"] > self.heap[parent_index]["streak"]:
+        if index > 0 and self.heap[index]["growth"] > self.heap[parent_index]["growth"]:
             self.heap[index], self.heap[parent_index] = self.heap[parent_index], self.heap[index]
             self._heapify_up(parent_index)
 
@@ -667,9 +674,9 @@ class MaxHeap:
         right_child_index = 2 * index + 2
         largest = index
 
-        if left_child_index < len(self.heap) and self.heap[left_child_index]["streak"] > self.heap[largest]["streak"]:
+        if left_child_index < len(self.heap) and self.heap[left_child_index]["growth"] > self.heap[largest]["growth"]:
             largest = left_child_index
-        if right_child_index < len(self.heap) and self.heap[right_child_index]["streak"] > self.heap[largest]["streak"]:
+        if right_child_index < len(self.heap) and self.heap[right_child_index]["growth"] > self.heap[largest]["growth"]:
             largest = right_child_index
         if largest != index:
             self.heap[index], self.heap[largest] = self.heap[largest], self.heap[index]
@@ -814,50 +821,139 @@ def x28():
         count += 1
 
 def updateMaxHeap(max_heap, number):
-    max_item = max_heap.extract_max()
-    if max_item is None:
-        max_heap.insert({"number": number, "streak": 1})
-    elif max_item["number"] == number:
+    max_heap_item = max_heap.extract_max()
+    if max_heap_item is None:
+        max_heap.insert({"number": number, "growth": 1})
+    elif max_heap_item["number"] == number:
         max_heap.decrementItems()
-        max_heap.insert({"number": number, "streak": max_item["streak"] + 1})
+        max_heap.insert({"number": number, "growth": max_heap_item["growth"] + 1})
     else:
         item = max_heap.findItem(number)
-        max_heap.insert({"number": max_item["number"], "streak": max_item["streak"]})
+        max_heap.insert({"number": max_heap_item["number"], "growth": max_heap_item["growth"]})
         if item is None:
-            max_heap.insert({"number": number, "streak": 2})
+            max_heap.insert({"number": number, "growth": 2})
         else:
-            max_heap.update(number, item["streak"] + 2)
+            max_heap.update(number, item["growth"] + 2)
         max_heap.decrementItems()
+
 def x29():
     x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
     path = graph()
 
-    max_heap = MaxHeap()
     count = 0
-    while count < 1:
+    while count < 5:
         i = 0
         # print(f"count: {count}")
+        max_heap = MaxHeap()
         while i < len(x):
             number = x[i]
-            print(f"i: {i}, number: {number}")
             updateMaxHeap(max_heap, number)
-            max_item = max_heap.extract_max()
+            print(f"i: {i}, number: {number}")
+            print(f"max_heap: {max_heap.heap}, max_heap.max_length: {max_heap.max_length}")
+            path.print()
+            max_heap_item = max_heap.extract_max()
             if path.head > -1:
-                if max_item is not None:
-                    if max_item["number"] == path.nodes[path.head].number:
-                        if max_item["streak"] > path.nodes[path.head].streak_count:
-                            pass
+                if max_heap_item is not None:
+                    if max_heap_item["number"] == path.nodes[path.head].number:
+                        if max_heap_item["streak"] == path.nodes[path.head].streak_count:
+                            path.nodes[path.head].current_streak_is_too_long = max_heap.max_length > 1
+                            if path.nodes[path.head].current_streak_is_too_long:
+                                path.nodes[path.head].decreaseStreakCount()
+                            second_largest_heap_item = max_heap.extract_max()
+                            if second_largest_heap_item is not None:
+                                if path.head + 1 >= len(path.nodes):
+                                    print(f"here {max_heap.max_length}, max_heap.max_length > 2: {max_heap.max_length > 2}")
+                                    path.appendNode(node(second_largest_heap_item["number"], second_largest_heap_item["streak"], max_heap.max_length > 2))
+                                    path.nextNode()
+                                else:
+                                    if second_largest_heap_item["number"] == path.nodes[path.head + 1].number:
+                                        path.nodes[path.head + 1].streak_count += 1
+                                        path.nextNode()
+                                max_heap.insert(second_largest_heap_item)
+            max_heap.insert(max_heap_item)
+            # print()
+            print(f"max_heap: {max_heap.heap}, max_heap.max_length: {max_heap.max_length}")
+            path.print()
+
             i += 1
         if len(path.nodes) == 0:
-            max_item = max_heap.extract_max()
-            if max_item is not None:
-                path.appendNode(node(max_item["number"], max_item["streak"]))
+            max_heap_item = max_heap.extract_max()
+            if max_heap_item is not None:
+                path.appendNode(node(max_heap_item["number"], max_heap_item["streak"], max_heap.max_length == 1))
                 path.head = 0
-            max_heap.insert(max_item)
-            print(f"max_heap: {max_heap.heap}")
-            path.print()
+            max_heap.insert(max_heap_item)
         print()
         count += 1
 
 
-x29()
+def doesMaxHeapItemMatchRecord(max_heap_item, record):
+    if max_heap_item["number"] == record["number"]:
+        if max_heap_item["growth"] == record["growth"]:
+            return True
+    return False
+
+def x30():
+    x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
+    items = []
+    items2 = {}
+    count = 0
+    while count < 7:
+        i = 0
+        # print(f"count: {count}")
+        max_heap = MaxHeap()
+        while i < len(x):
+            number = x[i]
+            updateMaxHeap(max_heap, number)
+            print(f"i: {i}, number: {number}")
+            print(f"max_heap: {max_heap.heap}, max_heap.max_length: {max_heap.max_length}")
+            # print(f"items: {items}")
+            if len(items) > 0:
+                max_heap_item = max_heap.extract_max()
+                if doesMaxHeapItemMatchRecord(max_heap_item, items[0]):
+                    if len(max_heap.heap) == 0:
+                        if not items[0]["streak_status"]:
+                            items[0]["streak_status"] = max_heap.max_length == 1
+                            if not items[0]["streak_status"]:
+                                items[0]["growth"] -= 1
+                max_heap.insert(max_heap_item)
+
+            i += 1
+        if len(items) == 0:
+            max_heap_item = max_heap.extract_max()
+            if max_heap_item is not None:
+                items.append({"number": max_heap_item["number"], "growth": max_heap_item["growth"], "streak_status": max_heap.max_length == 1})
+            max_heap.insert(max_heap_item)
+        print(f"items: {items}")
+        print()
+        count += 1
+
+
+
+
+def x31():
+    x = [[1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]]
+
+    count = 0
+    print(f"x: {x}")
+    print()
+    while count < 6:
+        i = 0
+        while i < len(x):
+            partition = x[i]
+            numbers = {num: True for num in partition}
+            if len(numbers) > 1:
+                if len(partition) > 1:
+                    x = x[:i] + [partition[:len(partition) // 2]] + [partition[len(partition) // 2:]] + x[i+1:]
+                    i += 2
+            elif i + 1 < len(x):
+                numbers2 = {num: True for num in x[i+1]}
+                if len(numbers2) == 1 and len(numbers) == 1:
+                    if list(numbers.keys())[0] == list(numbers2.keys())[0]:
+                        x = x[:i] + [partition + x[i+1]] + x[i+2:]
+                        i -= 1
+            i += 1
+        print(f"x: {x}")
+        print()
+        count += 1
+
+x31()
