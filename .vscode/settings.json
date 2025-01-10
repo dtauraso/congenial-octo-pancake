@@ -53,5 +53,6 @@
             "source.organizeImports": "explicit"
         }
     },
-    "editor.minimap.enabled": false
+    "editor.minimap.enabled": false,
+    "codium.codeCompletion.enable": true
 }
