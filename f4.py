@@ -1,201 +1,26 @@
-class Point2():
+class Point():
 
-    def __init__(self, prev=None, next=None, parent=None, children=[], line_ref=None, order_id=0, is_expected=False, expected_sequence_length=0):
+    def __init__(self, prev=None, next=None, line=None):
         self.prev = prev
         self.next = next
-    def __init__(self, top=None, bottom=None, prev=None, next=None, parent=None, children=[], line_ref=None, order_id=0, is_expected=False, expected_sequence_length=0):
-        self.top = top
-        self.bottom = bottom
-        self.prev = prev
-        self.next = next
-        self.parent = parent
-        self.children = children
-        self.children_match_count = 0
-        self.current_count = 0
-        self.same_count_points = []
-        self.point_expectation_status_transfered_from = None
-        self.is_expected = is_expected
-        self.expected_sequence_length = expected_sequence_length
-        self.line_transition_kind = None
-        self.line_ref = line_ref
-        self.order_id = order_id
+        self.line = line
+        self.partition_length = 0
+
     def __str__(self):
-        return f"(point id: {id(self)}, next: {self.next}, is_expected: {self.is_expected}, order_id: {self.order_id}, line id: {self.line_ref.id})"
-    def getCount(self, level_id=0):
-        if level_id == 0:
-            if self.top is None and self.bottom is None:
-                self.current_count = 1
-            elif self.bottom is None and self.top is not None:
-                current_count = self.top.getCount(level_id + 1) + 1
-                self.sendCount(current_count, level_id + 1)
-                self.current_count = current_count
-            elif self.bottom is not None and self.top is None:
-                current_count = self.bottom.getCount(level_id - 1) + 1
-                self.sendCount(current_count, level_id - 1)
-                self.current_count = current_count
-            elif self.bottom is not None and self.top is not None:
-                current_count = self.top.getCount(level_id + 1) + self.bottom.getCount(level_id - 1) + 1
-                self.sendCount(current_count, level_id + 1)
-                self.sendCount(current_count, level_id - 1)
-                self.current_count = current_count
-        if level_id > 0:
-            return 1 if self.top is None else self.top.getCount(level_id + 1) + 1
-        elif level_id < 0:
-            return 1 if self.bottom is None else self.bottom.getCount(level_id - 1) + 1
-
-    def sendCount(self, count, level_id=0):
-        self.current_count = count
-        if level_id > 0:
-            if self.top is not None:
-                self.top.sendCount(count, level_id + 1)
-        elif level_id < 0:
-            if self.bottom is not None:
-                self.bottom.sendCount(count, level_id - 1)
-    def matchCount(self, count):
-        return self.current_count == count
-    def findPointsOnOtherLinesWithSameCount(self, current_count, level_id=0):
-        if level_id == 0:
-            if self.next is None and self.prev is None:
-                if self.matchCount(current_count):
-                    self.same_count_points = [id(self)]
-                else:
-                    return []
-            elif self.next is None and self.prev is not None:
-                if self.matchCount(current_count):
-                    same_count_points = [id(self)] + self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1)
-                    self.same_count_points = same_count_points
-                    return same_count_points
-                else:
-                    return []
-            elif self.next is not None and self.prev is None:
-                if self.matchCount(current_count):
-                    same_count_points = [id(self)] + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
-                    self.same_count_points = same_count_points
-                    return same_count_points
-                else:
-                    return []
-            elif self.next is not None and self.prev is not None:
-                if self.matchCount(current_count):
-                    same_count_points = [id(self)] + self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1) + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
-                    self.same_count_points = same_count_points
-                    return same_count_points
-                else:
-                    return []
-        elif level_id > 0:
-            same_count_points = []
-            if self.matchCount(current_count):
-                same_count_points = [id(self)]
-            if self.prev is not None:
-                return same_count_points + self.prev.findPointsOnOtherLinesWithSameCount(current_count, level_id + 1)
-            else:
-                return same_count_points
-        elif level_id < 0:
-            same_count_points = []
-            if self.matchCount(current_count):
-                 same_count_points = [id(self)]
-            if self.next is not None:
-                return same_count_points + self.next.findPointsOnOtherLinesWithSameCount(current_count, level_id - 1)
-            if self.next is None:
-                return same_count_points
-    def isExpectedChild(self):
-        if self.children_match_count < len(self.children):
-            return False
-        elif self.children_match_count == len(self.children):
-            return True
-    def isExpected(self, i=None):
-        if self.is_expected:
-            # if self.next is not None:
-            return True
-            # else:
-            #     return self.parent.setExpectedChild()
-        # elif self.order_id == i:
-        #         pass
-        else:  
-            if self.top is not None:
-                return self.top.isExpected()
-            else:
-                return False
-    def removeExpectedPoints(self):
-        if self.is_expected:
-            self.is_expected = False
-        else:  
-            if self.top is not None:
-                self.top.removeExpectedPoints()
-    def removeNextExpectedPoints(self):
-        if self.next is not None:
-            if self.is_expected:
-                self.is_expected = False
-        else:  
-            if self.top is not None:
-                self.top.removeNextExpectedPoints()
-    def setAllPointsToExpected(self):
-        if self.next is not None:
-            self.next.is_expected = True
-        if self.bottom is not None:
-            self.bottom.setExpected()
-    def setNextPointToExpected(self):
-        if self.next is not None:
-            self.next.is_expected = True
-            return
-        if self.bottom is not None:
-            self.bottom.setNextPointToExpected()
-    def getNextExpectedPoint(self):
-        if self.next is not None:
-            if self.next.is_expected:
-                return self.next
-        if self.bottom is not None:
-            return self.bottom.getNextExpectedPoint()
-    def getCurrentPoint(self):
-        if self.next is not None:
-            if self.next.is_expected:
-                return self
-        if self.top is not None:
-            return self.top.getCurrentPoint()
-    def passExpectedToNextPoint(self):
-        if self.is_expected:
-            if self.next is not None:
-                self.next.is_expected = True
-            if self.top is not None:
-                self.top.setExpected()
-        else:
-            if self.top is not None:
-                self.top.passExpectedToNextPoint()
-    def f(self, current_clock_length, modulus_clock):
-        # print(f"point.f self: {self}, current_clock_length: {current_clock_length}, modulus_clock: {modulus_clock}")
-        if self.next is not None:
-            if current_clock_length > 0:
-                remainder = self.next.order_id % current_clock_length
-                if remainder > 0:
-                    if remainder - 1 == modulus_clock:
-                        return self.next
-                elif self.next.order_id - 1 == modulus_clock:
-                    return self.next
-        if self.top is not None:
-            self.top.f(current_clock_length, modulus_clock)
-        else:
-            return None
+        return f"(point id: {id(self)}, next: {self.next}, line id: {self.line.id})"
 
     def printPoint(self):
         next = None if self.next is None else id(self.next)
         prev = None if self.prev is None else id(self.prev)
-        parent = None if self.parent is None else id(self.parent)
-        print(f"    {id(self)}: next: {next}, prev: {prev}, parent: {parent}, line_transition_kind: {self.line_transition_kind}")
-        children = [] if self.children is None else [id(child) for child in self.children if child is not None]
-        if len(children) > 0:
-            print(f"        children:")
-            for child in children:
-                print(f"            {child}")
-        if self.top is not None:
-            self.top.printPoint()
-
-class Line3():
+        print(f"{id(self)}: next: {next}, prev: {prev}")
+class Line():
     
     def __init__(self, id, level):
         self.id = id
         self.level = level
     def __init__(self, id, level):
         self.id = id
-        self.groups = [[]]
+        self.points = []
         self.current_group = 0
         self.current_point = None
         self.level = level
@@ -266,7 +91,7 @@ class Line3():
                         print(f"            {child}")
 
 
-class ReadHead2():
+class ReadHead():
     def __init__(self, sequence=None, lines=[]):
         if sequence is None:
             sequence = []
@@ -306,7 +131,7 @@ class ReadHead2():
         return self.i == len(self.sequence) - 1
 
 
-class Level2():
+class Level():
     def __init__(self, read_head=None):
         self.lines = {}
         self.current_point = None
@@ -927,9 +752,6 @@ def x30():
         print()
         count += 1
 
-
-
-
 def x31():
     x = [[1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]]
 
@@ -944,7 +766,7 @@ def x31():
             if len(numbers) > 1:
                 if len(partition) > 1:
                     x = x[:i] + [partition[:len(partition) // 2]] + [partition[len(partition) // 2:]] + x[i+1:]
-                    i += 2
+                    i += 1
             elif i + 1 < len(x):
                 numbers2 = {num: True for num in x[i+1]}
                 if len(numbers2) == 1 and len(numbers) == 1:
@@ -952,7 +774,14 @@ def x31():
                         x = x[:i] + [partition + x[i+1]] + x[i+2:]
                         i -= 1
             i += 1
+        max_heap_list = []
+        for k, partition in enumerate(x):
+            max_heap_list.append(MaxHeap())
+            for number in partition:
+                updateMaxHeap(max_heap_list[k], number)
         print(f"x: {x}")
+        for heap in max_heap_list:
+            print(heap.heap[0])
         print()
         count += 1
 
