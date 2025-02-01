@@ -20,7 +20,7 @@
         "editor.codeActionsOnSave": {
             "source.organizeImports": "explicit"
         },
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
+        "editor.defaultFormatter": "vscode.typescript-language-features"
     },
     "[json]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -28,7 +28,7 @@
     "javascript.updateImportsOnFileMove.enabled": "always",
     "typescript.updateImportsOnFileMove.enabled": "always",
     "[html]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
+        "editor.defaultFormatter": "vscode.html-language-features"
     },
     "[javascriptreact]": {
         "editor.codeActionsOnSave": {
@@ -53,5 +53,6 @@
             "source.organizeImports": "explicit"
         }
     },
-    "editor.minimap.enabled": false
+    "editor.minimap.enabled": false,
+    "codium.codeCompletion.enable": true
 }
