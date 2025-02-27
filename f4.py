@@ -452,3 +452,399 @@ def x32():
     f.levels[0].processSequence3()
 
 x32()
+
+def x26():
+    x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
+    counts = {}
+    total = len(x)
+    items = {}
+    count = 0
+    lower_threshold = True
+    while count < 10:
+        i = 0
+        print(f"{x}, i:{i}, count: {count}, counts: {counts}, items: {items}")
+        # for i, number in enumerate(x):
+        while i < len(x):
+            number = x[i]
+            # print(f"i: {i}, number: {number}")
+            if number in counts:
+                counts[number] += 1
+                if number in items:
+                    # print(f"i: {i}, number: {number} lower threshold: {lower_threshold}, counts: {counts}")
+                    if lower_threshold:
+                        # print(f"i: {i}, counts: {counts}")
+                        if counts[number] / total >= items[number]:
+                            items[number] = (counts[number] - 1) / total
+                            print(f"{number} found at {i}")
+                            if items[number] <= .06:
+                                x = [j for j in x if j != number]
+                                i = -1
+                                total = len(x)
+                                print(f"removed {number} from x")
+                            lower_threshold = False
+            else:
+                counts[number] = 1
+            if number not in items:
+                if counts[number] / total >= .5:
+                    items[number] = .5
+            i += 1
+        counts = {}
+        lower_threshold = True
+        print(f"items: {items}")
+        count += 1
+    
+    # print("Percentage Table:")
+    # for number, count in counts.items():
+    #     percentage = (count / total) * 100
+    #     print(f"Number {number}: {percentage:.2f}%")
+class node():
+    def __init__(self, number=0, streak_count=0, current_streak_is_too_long=False):
+        self.number = number
+        self.streak_count = streak_count
+        self.current_streak_is_too_long = current_streak_is_too_long
+    def decreaseStreakCount(self):
+        self.streak_count -= 1
+        if self.streak_count < 0:
+            self.streak_count = 0
+    def increaseStreakCount(self):
+        self.streak_count += 1
+class graph():
+    def __init__(self):
+        self.nodes = []
+        self.head = -1
+    def appendNode(self, node):
+        self.nodes.append(node)
+        # if self.head == -1:
+        #     self.head = 0
+        # else:
+        #     self.head += 1
+    def nextNode(self):
+        # if self.head == len(self.nodes) - 1:
+        #     self.head = -1
+        # else:
+        self.head += 1
+        if self.head >= len(self.nodes):
+            self.head = -1
+    def start(self):
+        if len(self.nodes) > 0:
+            self.head = 0
+    def print(self):
+        for node in self.nodes:
+            print(f"Number: {node.number}, Streak Count: {node.streak_count}, Current Streak Is Too Long: {node.current_streak_is_too_long}")
+
+def updateCounts(counts, number):
+    if number in counts:
+        counts[number] += 1
+    else:
+        counts[number] = 1
+
+def updateCounts2(counts, number):
+    if number in counts:
+        counts[number] += 1
+    else:
+        counts[number] = 1
+    for key in counts:
+        if key != number:
+            counts[key] -= 1
+            if counts[key] < 0:
+                counts[key] = 0
+def numberLastPosition(x, i, number):
+    for j in range(i, len(x)):
+        if x[j] != number:
+            return j
+    return len(x)
+def streakCount(x, i, number):
+    count = 0
+    j = i-1
+    while j > 0 and x[j] == number:
+        count += 1
+        j -= 1
+    while i < len(x) and x[i] == number:
+        count += 1
+        i += 1
+    return count
+    
+def numberChanged(x, i, number):
+    for j in range(i, len(x)):
+        if x[j] != number:
+            return True
+    return False
+
+def x27():
+    import copy
+    x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
+    tmp = copy.deepcopy(x)
+    path = graph()
+
+    count = 0
+    while count < 3:
+        counts = {}
+        i = 0
+        print(f"count: {count}")
+        while i < len(x):
+            number = x[i]
+            print(f"i: {i}, path.head: {path.head}")
+            updateCounts(counts, number)
+            highest_count = max(counts.values())
+            highest_count_numbers = {num: cnt for num, cnt in counts.items() if cnt == highest_count}
+            highest_count_number = max(highest_count_numbers, key=highest_count_numbers.get)
+            print(f"Highest count: {highest_count}, Number: {highest_count_number}")
+            percentage = counts[highest_count_number] / len(x)
+            percentages = {num: cnt / len(x) for num, cnt in counts.items()}
+            print(f"percentages: {percentages}")
+            if path.head == -1:
+                if percentage >= .7:
+                    print(f"highest percentage: {percentage}, i: {i}, len(x): {len(x)}")
+                    path.appendNode(node(highest_count_number, percentage, streakCount(x, i, highest_count_number)))
+                    x = x[numberLastPosition(x, i, highest_count_number):]
+                    if len(path.nodes) > 0:
+                        path.head = 0
+                    # path.print()
+                    print(x)
+            else:
+                print(len(path.nodes), path.head)
+                print(f"highest percentage: {percentage}, path.nodes[path.head].threshold: {path.nodes[path.head].threshold}, i: {i}, len(x): {len(x)}")
+                if  percentage >= path.nodes[path.head].threshold:
+                    path.nodes[path.head].threshold = (counts[highest_count_number] - 1) / len(x)
+                    print(f"new percentage: {(counts[highest_count_number] - 1) / len(x)}")
+                    print(f"{counts[highest_count_number] - 1}, {len(x)}")
+                    path.nextNode()
+                    print(f"path.head: {path.head}")
+                    #  1 - path.nodes[path.head - 1].threshold >= second highest percentage
+                    # x = x[numberLastPosition(x, i, highest_count_number):]
+                    # i = -1
+                    if path.head == -1:
+                        # x = [j for j in x if j != highest_count_number]
+                        # i = -1
+                        if not numberChanged(x, i, highest_count_number):
+                            i = len(x)
+                        # if len(x) == 0:
+                            path.head = 0
+                    counts = {}
+                    print(x)
+                    # path.print()
+            i += 1
+        # print(f"count: {count}")
+        print(f"len(path.nodes): {len(path.nodes)}")
+        path.print()
+        print()
+        x = copy.deepcopy(tmp)
+        count += 1
+
+def x28():
+    x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
+    path = graph()
+
+    count = 0
+    while count < 5:
+        counts = {}
+        i = 0
+        counting_budget = len(x)
+        print(f"count: {count}")
+        if path.head > -1:
+            current_item_streak = path.nodes[path.head].streak_count
+        current_count = 0
+        current_streak_removed_from_counting_budget = False
+        current_streak_is_too_long = False
+        while i < len(x):
+            number = x[i]
+            print(f"i: {i}, path.head: {path.head}, number: {number}")
+            if path.head > -1:
+                if current_streak_removed_from_counting_budget:
+                    current_streak_removed_from_counting_budget = False
+                    print("here")
+                    current_count = 0
+                    if counting_budget > 0:
+                        if number != path.nodes[path.head].number:
+                            print(f"new number: {number}")
+                            path.nextNode()
+                else:
+                    current_count += 1
+                    if number != path.nodes[path.head].number:
+                        print(f"streak goes too far, {path.head}, current_count: {current_count}")
+                        current_streak_is_too_long = True
+                    if current_count == current_item_streak:
+                        counting_budget -= current_count
+                        if current_streak_is_too_long:
+                            current_streak_is_too_long = False
+                            path.nodes[path.head].streak_count -= 1
+                        print(f"found match with number: {path.nodes[path.head].number}")
+                        print(f"current number: {number}, counting_budget: {counting_budget}")
+                        current_streak_removed_from_counting_budget = True
+                        # if counting_budget > 0:
+                        #     if number != path.nodes[path.head].number:
+                        #         print(f"new number: {number}")
+                        # path.nextNode()
+                        # counts = {}
+                        # while i < len(x) and x[i] == number:
+                        #     i += 1
+                        # if path.head == -1:
+                        #     continue
+                        # print(f"counts: {counts}")
+                        # sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+                        # if len(sorted_counts) > 1:
+                        #     second_largest_count = sorted_counts[1][1]
+                        #     print(f"second_largest_count: {second_largest_count}")
+                        #     if second_largest_count > 0:
+                        #         if second_largest_count < counting_budget:
+                        #             path.appendNode(node(sorted_counts[1][0], second_largest_count))
+                # print(f"sorted_counts: {sorted_counts}")
+            updateCounts2(counts, number)
+            print(f"counts: {counts}")
+
+            i += 1
+        if path.head == -1:
+            highest_count = max(counts.values())
+            highest_count_numbers = {num: cnt for num, cnt in counts.items() if cnt == highest_count}
+            highest_count_number = max(highest_count_numbers, key=highest_count_numbers.get)
+            path.appendNode(node(highest_count_number, counts[highest_count_number]))
+        path.head = 0
+        
+        # print(f"count: {count}")
+        # print(f"len(path.nodes): {len(path.nodes)}")
+        # print(f"counts: {counts}")
+        path.print()
+        print()
+        # x = copy.deepcopy(tmp)
+        count += 1
+
+def updateMaxHeap(max_heap, number):
+    max_heap_item = max_heap.extract_max()
+    if max_heap_item is None:
+        max_heap.insert({"number": number, "growth": 1})
+    elif max_heap_item["number"] == number:
+        max_heap.decrementItems()
+        max_heap.insert({"number": number, "growth": max_heap_item["growth"] + 1})
+    else:
+        item = max_heap.findItem(number)
+        max_heap.insert({"number": max_heap_item["number"], "growth": max_heap_item["growth"]})
+        if item is None:
+            max_heap.insert({"number": number, "growth": 2})
+        else:
+            max_heap.update(number, item["growth"] + 2)
+        max_heap.decrementItems()
+
+def x29():
+    x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
+    path = graph()
+
+    count = 0
+    while count < 5:
+        i = 0
+        # print(f"count: {count}")
+        max_heap = MaxHeap()
+        while i < len(x):
+            number = x[i]
+            updateMaxHeap(max_heap, number)
+            print(f"i: {i}, number: {number}")
+            print(f"max_heap: {max_heap.heap}, max_heap.max_length: {max_heap.max_length}")
+            path.print()
+            max_heap_item = max_heap.extract_max()
+            if path.head > -1:
+                if max_heap_item is not None:
+                    if max_heap_item["number"] == path.nodes[path.head].number:
+                        if max_heap_item["streak"] == path.nodes[path.head].streak_count:
+                            path.nodes[path.head].current_streak_is_too_long = max_heap.max_length > 1
+                            if path.nodes[path.head].current_streak_is_too_long:
+                                path.nodes[path.head].decreaseStreakCount()
+                            second_largest_heap_item = max_heap.extract_max()
+                            if second_largest_heap_item is not None:
+                                if path.head + 1 >= len(path.nodes):
+                                    print(f"here {max_heap.max_length}, max_heap.max_length > 2: {max_heap.max_length > 2}")
+                                    path.appendNode(node(second_largest_heap_item["number"], second_largest_heap_item["streak"], max_heap.max_length > 2))
+                                    path.nextNode()
+                                else:
+                                    if second_largest_heap_item["number"] == path.nodes[path.head + 1].number:
+                                        path.nodes[path.head + 1].streak_count += 1
+                                        path.nextNode()
+                                max_heap.insert(second_largest_heap_item)
+            max_heap.insert(max_heap_item)
+            # print()
+            print(f"max_heap: {max_heap.heap}, max_heap.max_length: {max_heap.max_length}")
+            path.print()
+
+            i += 1
+        if len(path.nodes) == 0:
+            max_heap_item = max_heap.extract_max()
+            if max_heap_item is not None:
+                path.appendNode(node(max_heap_item["number"], max_heap_item["streak"], max_heap.max_length == 1))
+                path.head = 0
+            max_heap.insert(max_heap_item)
+        print()
+        count += 1
+
+
+def doesMaxHeapItemMatchRecord(max_heap_item, record):
+    if max_heap_item["number"] == record["number"]:
+        if max_heap_item["growth"] == record["growth"]:
+            return True
+    return False
+
+def x30():
+    x = [1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]
+    items = []
+    items2 = {}
+    count = 0
+    while count < 7:
+        i = 0
+        # print(f"count: {count}")
+        max_heap = MaxHeap()
+        while i < len(x):
+            number = x[i]
+            updateMaxHeap(max_heap, number)
+            print(f"i: {i}, number: {number}")
+            print(f"max_heap: {max_heap.heap}, max_heap.max_length: {max_heap.max_length}")
+            # print(f"items: {items}")
+            if len(items) > 0:
+                max_heap_item = max_heap.extract_max()
+                if doesMaxHeapItemMatchRecord(max_heap_item, items[0]):
+                    if len(max_heap.heap) == 0:
+                        if not items[0]["streak_status"]:
+                            items[0]["streak_status"] = max_heap.max_length == 1
+                            if not items[0]["streak_status"]:
+                                items[0]["growth"] -= 1
+                max_heap.insert(max_heap_item)
+
+            i += 1
+        if len(items) == 0:
+            max_heap_item = max_heap.extract_max()
+            if max_heap_item is not None:
+                items.append({"number": max_heap_item["number"], "growth": max_heap_item["growth"], "streak_status": max_heap.max_length == 1})
+            max_heap.insert(max_heap_item)
+        print(f"items: {items}")
+        print()
+        count += 1
+
+def x31():
+    x = [[1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1]]
+
+    count = 0
+    print(f"x: {x}")
+    print()
+    while count < 6:
+        i = 0
+        while i < len(x):
+            partition = x[i]
+            numbers = {num: True for num in partition}
+            if len(numbers) > 1:
+                if len(partition) > 1:
+                    x = x[:i] + [partition[:len(partition) // 2]] + [partition[len(partition) // 2:]] + x[i+1:]
+                    i += 1
+            elif i + 1 < len(x):
+                numbers2 = {num: True for num in x[i+1]}
+                if len(numbers2) == 1 and len(numbers) == 1:
+                    if list(numbers.keys())[0] == list(numbers2.keys())[0]:
+                        x = x[:i] + [partition + x[i+1]] + x[i+2:]
+                        i -= 1
+            i += 1
+        max_heap_list = []
+        for k, partition in enumerate(x):
+            max_heap_list.append(MaxHeap())
+            for number in partition:
+                updateMaxHeap(max_heap_list[k], number)
+        print(f"x: {x}")
+        for heap in max_heap_list:
+            print(heap.heap[0])
+        print()
+        count += 1
+x32()
