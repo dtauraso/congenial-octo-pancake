@@ -847,3 +847,4 @@ def x31():
             print(heap.heap[0])
         print()
         count += 1
+x32()
