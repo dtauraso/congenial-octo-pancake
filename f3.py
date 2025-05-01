@@ -1,6 +1,40 @@
-# from graphics import *
+from graphics import *
 
 class Point1():
+
+    def __init__(self, next=None, parent=None, children=None, line=None):
+        self.next = next
+        self.parent = parent
+        self.lateral = None
+        if children is None:
+            children = []
+        self.children = children
+        self.line = line
+
+    def __str__(self):
+        next = None if self.next is None else id(self.next)
+        lateral = None if self.lateral is None else id(self.lateral)
+        return f"(Point1 id: {id(self)}, next: {next}, lateral: {lateral} parent: {self.parent}, line id: {self.line.id})"
+
+    def printPoint(self):
+        print(f"{self}")
+        # if self.next is not None:
+        #     next = self.next
+        #     while next.line == self.line:
+        #         print(f"{next}")
+        #         next = next.next
+        children = [] if self.children is None else [id(child) for child in self.children if child is not None]
+        if len(children) > 0:
+            print(f"    children:")
+            for child in children:
+                print(f"        {child}")
+class Line():
+    def __init__(self, id, order_id, level):
+        self.id = id
+        self.order_id = order_id
+        self.points = []
+
+class Point():
 
     def __init__(self, prev=None, next=None, lateral=None, line=None):
         self.prev = prev
@@ -57,6 +91,9 @@ class Line():
             pass
 
     def addPoint(self, point):
+
+        # print(f"adding point point: {id(point)}")
+        point.point_position = len(self.points)
         self.points.append(point)
         self.current_point = point
 
@@ -118,17 +155,64 @@ class Line():
         self.points = [point for point in self.points if point not in points]
     
     def printLine(self):
-        for i, point in enumerate(self.points):
-            point.printPoint()
 
-class Tracker():
-    def __init__(self):
-        self.prev = None
-        self.current = None
+        for i, group in enumerate(self.groups):
+            print(f"    {i}:")
+            for point in group:
 
-class Unit():
-    def __init__(self, sequences=None):
-        self.id = 0
+                next = None if point.next is None else id(point.next)
+                prev = None if point.prev is None else id(point.prev)
+                parent = None if point.parent is None else id(point.parent)
+                print(f"    {id(point)}: next: {next}, prev: {prev}, parent: {parent}, line_transition_kind: {point.line_transition_kind}")
+                children = [] if point.children is None else [id(child) for child in point.children if child is not None]
+                if len(children) > 0:
+                    print(f"        children:")
+                    for child in children:
+                        print(f"            {child}")
+
+
+class ReadHead():
+    def __init__(self, sequence=None, lines=[]):
+        if sequence is None:
+            sequence = []
+        self.sequence = sequence
+        self.i = 0
+        self.current_number = 0
+        self.current_children = []
+        self.lines = lines
+    def next(self, modulus_clock):
+        if 0 > self.i or self.i >= len(self.sequence):
+            return
+        print(f"self.i: {self.i}")
+        self.current_number = self.sequence[self.i]
+        self.i += 1
+        self.lines_ref.matchLine3(self.current_number, self.i, modulus_clock)
+
+    def prev(self):
+        if 0 > self.i or self.i >= len(self.sequence):
+            return
+        print(f"self.i: {self.i}")
+        self.i -= 1
+    def next2(self):
+        # if 0 > self.i or self.i >= len(self.sequence):
+        #     return
+        print(f"self.i: {self.i}")
+        # self.current_number = self.sequence[self.i]
+        self.i += 1
+    def setCurrentNumber(self):
+        if 0 > self.i or self.i >= len(self.sequence):
+            return
+        self.current_number = self.sequence[self.i]["parent_line_id"]
+        self.current_children = self.sequence[self.i]["children"]
+
+    def doneReading(self):
+        return self.i >= len(self.sequence)
+    def isLastNumberRead(self):
+        return self.i == len(self.sequence) - 1
+
+
+class Level():
+    def __init__(self, read_head=None):
         self.lines = {}
         self.active_line_id = 0
         self.tracker_points = Tracker()

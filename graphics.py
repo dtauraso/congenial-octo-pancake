@@ -160,6 +160,10 @@ try:  # import as appropriate for 2.x vs. 3.x
 except:
    import Tkinter as tk
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> d4008c9a27ed9fc158ea0f92b93786863d025b8e
 ##########################################################################
 # Module Exceptions
 
@@ -178,6 +182,7 @@ _root.withdraw()
 def update():
     _root.update()
 
+<<<<<<< HEAD
 def center_window(window):
     window.update_idletasks()
     width = window.winfo_width()
@@ -190,6 +195,8 @@ def center_window(window):
     y = (screen_height - height) // 2
     window.geometry(f"{width+500}x{height+200}+{x-200}+{y}")
 
+=======
+>>>>>>> d4008c9a27ed9fc158ea0f92b93786863d025b8e
 ############################################################################
 # Graphics classes start here
         
@@ -204,7 +211,10 @@ class GraphWin(tk.Canvas):
         tk.Canvas.__init__(self, master, width=width, height=height)
         self.master.title(title)
         self.pack()
+<<<<<<< HEAD
         center_window(_root)
+=======
+>>>>>>> d4008c9a27ed9fc158ea0f92b93786863d025b8e
         master.resizable(0,0)
         self.foreground = "black"
         self.items = []
