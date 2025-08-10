@@ -653,24 +653,96 @@ def x32(input):
 # makeDictLinkedList([5, 7])
 # x32([5, 7, 4, 7])
 
+
+class Node1():
+    def __init__(self):
+        self.next = None
+        self.parent = None
+        self.children_lists = []
+
+class Clock():
+    def __init__(self, clock_length=1):
+        self.count = 0
+        self.clock_length = clock_length
+        self.saved_points = {}
+        self.overflow_status = False
+        self.parent = None
+
+    def increment(self, number):
+        self.count += number
+        if self.count > self.clock_length:
+            self.overflow_status = True
+            print(f"oveflow status: {self.overflow_status}")
+            overflow = self.count
+            self.count = 0
+            self.overflow_status = False
+            return overflow
+        else:
+            return 0
+
+def process1Number(number, unit_clock):
+    
+    tracker = unit_clock
+    while tracker is not None:
+        number = tracker.increment(number)
+        if number == 0:
+            break
+        else:
+            tracker = tracker.parent
+
+def processExample(example, unit_clock):
+
+    for number in example:
+        process1Number(number, unit_clock)
+
+
+def x1():
+
+    unit_clock = Clock()
+    unit_2_clock = Clock(2)
+    unit_4_clock = Clock(4)
+
+    unit_clock.parent = unit_2_clock
+    unit_2_clock.parent = unit_4_clock
+
+    example_1 = [1]
+    example_2 = [1, 1]
+    example_3 = [1, 1, 1]
+    example_4 = [1, 1, 1, 1]
+    example_5 = [2, 2]
+    example_6 = [1, 3]
+
+
+
+    processExample(example_6, unit_clock)
+
+    tracker = unit_clock
+    while tracker is not None:
+        print(f"clock value: {tracker.count}")
+        tracker = tracker.parent
+
+
+# x1()
 class Node():
     def __init__(self):
-        self.number = 1
-        self.filter_threshold = 0.9
+        self.base = 1
+        self.charge = 0
+        self.threshold = 2
         self.next = None
-        self.parent_list = []
-        self.children_list = []
+        self.prev = None
+        self.parent = None
+        self.children = []
 
     def __str__(self):
-        return f"{self.number}"
+        return f"{self.base}, {self.charge}"
 
     def process(self, test_number):
-        print(test_number)
-        result = abs(self.number - test_number)
+        print(f"base: {self.base}, charge: {self.charge}, test_number: {test_number}")
+        self.charge += test_number
         # print(self.number, test_number, percentage)
         # if self.parent:
         #     print(self.parent.children_locked)
-        return result <= self.filter_threshold
+        return (self.base * self.charge) <= self.threshold
         '''
         if percentage <= 0.1:
             if self.next:
@@ -697,10 +769,13 @@ class Node():
 
 class Level():
     def __init__(self):
-        self.root = Node()
-        self.tracker = None
+        # self.root = Node()
+        self.tracker = Node()
         self.count = 0
         self.new_number_added = False
+
+    def process(self, number):
+        pass
 
     def start(self, number):
         is_match = self.root.process(test_number=number)
@@ -713,36 +788,48 @@ class Level():
             print(f"new number added")
 
     def add(self, number):
-        if self.count == 0:
-            self.start(number)
-            self.count += 1
-        elif self.count == 1:
-            is_match = self.tracker.process(test_number=number)
-            if is_match:
-                pass
-            else:
+        is_match = self.tracker.process(test_number=number)
+        if is_match:
+            if self.tracker.parent is not None:
+                self.tracker.parent.charge -= 1
+        else:
+            if self.count == 0:
+                print("send signal to next node")
                 if self.tracker.next is None:
                     self.tracker.next = Node()
+                    self.tracker.next.prev = self.tracker
                     print(f"new number added")
-                    self.count += 1
+                if self.tracker.parent is None:
+                    self.tracker.parent = Node()
+                    self.tracker.parent.base = 2
+                    self.tracker.parent.charge += 1
+                    self.tracker.next.parent = self.tracker.parent
                 else:
-                    print("skipped")
-                    self.tracker = None
-                    self.count = 0
-        elif self.count == 2:
-            is_match = self.tracker.process(test_number=number)
-            if is_match:
-                pass
-            else:
-                self.tracker = None
-                self.start(number)
+                    self.tracker.parent.charge += 1
                 self.count = 1
+            if self.count == 1:
+                pass
+
+        # elif self.count == 1:
+        #     is_match = self.tracker.process(test_number=number)
+        #     if is_match:
+        #         pass
+        #     else:
+        #         if self.tracker.next is None:
+        #             self.tracker.next = Node()
+        #             self.tracker.next.prev = self.tracker
+        #             print(f"new number added")
+        #             self.count = 1
+        #         else:
+        #             self.tracker = self.tracker.next.prev
+        #             print("restarted")
+        #             self.count = 1
 
         print()
 
     def process(self):
 
-        input = [1, 1.1, 1.3]
+        input = [1, 1, 1, -1, 1, 1, 1, -1]
         for i, item in enumerate(input):
             print(f"i: {i}, item: {item}")
             # print(f"i before: {i}")
@@ -751,11 +838,11 @@ class Level():
             # print(f"{[str(node) for node in self.root]}")
             # print(f"start_node: {self.start_node}")
 
-        print(f"{str(self.root)}")
+        print(f"{str(self.tracker)}")
         print()            
         print("lists")
         # for item in self.root:
-        tracker2 = self.root
+        tracker2 = self.tracker
         print(tracker2)
         # print("^^^")
         j = 0
@@ -799,8 +886,8 @@ class Level():
 
         #     print()
 
-x = Level()
-x.process()
+# x = Level()
+# x.process()
 
 def test():
     win = GraphWin()
