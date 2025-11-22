@@ -4,6 +4,7 @@ import (
 	EdN "github.com/dtauraso/congenial-octo-pancake/go-project/EdgeNode"
 	ExN "github.com/dtauraso/congenial-octo-pancake/go-project/ExcitatoryNode"
 	IN "github.com/dtauraso/congenial-octo-pancake/go-project/InhibitorNode"
+	PN "github.com/dtauraso/congenial-octo-pancake/go-project/PartitionNode"
 )
 
 type Line struct {
@@ -12,63 +13,104 @@ type Line struct {
 }
 
 func (l *Line) Setup() {
-
-	ToInhibitorFromExcitatory := make(chan int, 1)
-	FromInhibitorToExcitatory := make(chan int, 1)
-	ToInhibitorFromExcitatory2 := make(chan int, 1)
-	FromInhibitorToExcitatory2 := make(chan int, 1)
-	FromNextInhibitorToPrevInhibitor := make(chan int, 1)
-	ToNextInhibitorFromPrevInhibitor := make(chan int, 1)
-	ToEdgeNodeFromFirstInhibitor := make(chan int, 1)
-	FromEdgeNodeToFirstInhibitor := make(chan int, 1)
-	FromSecondInhibitorToEdgeNode := make(chan int, 1)
-	// Transfer payload (spawn + tracker channel) between inhibitors
-	TransferSpawnedPartition := make(chan IN.SpawnTransfer, 1)
-	// Channel-of-channel transfer between inhibitors
-	MoveChannelFromFirstToSecond := make(chan chan<- int, 1)
+	ToInhibitor1FromExcitatory1 := make(chan int, 1)
+	FromInhibitor1ToExcitatory1 := make(chan int, 1)
 
 	exn1 := ExN.ExcitatoryNode{
 		Id:            0,
 		Count:         0,
-		ToInhibitor:   ToInhibitorFromExcitatory,
-		FromInhibitor: FromInhibitorToExcitatory,
+		ToInhibitor:   ToInhibitor1FromExcitatory1,
+		FromInhibitor: FromInhibitor1ToExcitatory1,
 	}
-	// First inhibitor (no previous inhibitor)
+	ToInhibitor2FromExcitatory2 := make(chan int, 1)
+	FromInhibitor2ToExcitatory2 := make(chan int, 1)
+	ToInhibitor1FromInhibitor2 := make(chan int, 1)
+	ToInhibitor2FromInhibitor1 := make(chan int, 1)
+	ToEdgeNode1FromInhibitor1 := make(chan int, 1)
+	FromEdgeNode1ToInhibitor1 := make(chan int, 1)
+	ToEdgeNode2ToInhibitor1 := make(chan int, 1)
+	FromEdgeNode2ToInhibitor1 := make(chan int, 1)
+	FromInhibitor2ToEdgeNode1 := make(chan int, 1)
+	TransferTrackerChannelFromInhibitor1ToInhibitor2 := make(chan chan<- int, 1)
+	TransferEndPartitionChannelFromInhibitor1ToInhibitor2 := make(chan chan<- int, 1)
+
+	EndToInhibitorEndFromPartition := make(chan int, 1)
+	EndToInhibitorEndToPartition := make(chan int, 1)
+
 	i1 := IN.InhibitorNode{
-		Id:                      1,
-		FromExcitatory:          ToInhibitorFromExcitatory,
-		ToExcitatory:            FromInhibitorToExcitatory,
-		FromNextInhibitor:       FromNextInhibitorToPrevInhibitor,
-		ToNextInhibitor:         ToNextInhibitorFromPrevInhibitor,
-		ToEdgeNode:              ToEdgeNodeFromFirstInhibitor,
-		FromEdgeNode:            FromEdgeNodeToFirstInhibitor,
-		MoveToNextInhibitor:     MoveChannelFromFirstToSecond,
-		TransferToNextInhibitor: TransferSpawnedPartition,
+		Id:                1,
+		FromExcitatory:    ToInhibitor1FromExcitatory1,
+		ToExcitatory:      FromInhibitor1ToExcitatory1,
+		FromNextInhibitor: ToInhibitor1FromInhibitor2,
+		ToNextInhibitor:   ToInhibitor2FromInhibitor1,
+		ToEdgeNode:        ToEdgeNode1FromInhibitor1,
+		FromEdgeNode:      FromEdgeNode1ToInhibitor1,
+		EndFromPartition:  EndToInhibitorEndFromPartition,
+		EndToPartition:    EndToInhibitorEndToPartition,
+		TransferTrackerChannelFromCurrentInhibitorToNextInhibitor:      TransferTrackerChannelFromInhibitor1ToInhibitor2,
+		TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor: TransferEndPartitionChannelFromInhibitor1ToInhibitor2,
 	}
 	edn1 := EdN.EdgeNode{
-		FromFirstInhibitor:  ToEdgeNodeFromFirstInhibitor,
-		ToFirstInhibitor:    FromEdgeNodeToFirstInhibitor,
-		FromSecondInhibitor: FromSecondInhibitorToEdgeNode,
+		FromCurrentInhibitor: ToEdgeNode1FromInhibitor1,
+		ToCurrentInhibitor:   FromEdgeNode1ToInhibitor1,
+		FromNextInhibitor:    FromInhibitor2ToEdgeNode1,
 	}
 	exn2 := ExN.ExcitatoryNode{
 		Id:            2,
 		Count:         0,
-		ToInhibitor:   ToInhibitorFromExcitatory2,
-		FromInhibitor: FromInhibitorToExcitatory2,
+		ToInhibitor:   ToInhibitor2FromExcitatory2,
+		FromInhibitor: FromInhibitor2ToExcitatory2,
 	}
-	// Second inhibitor (has previous inhibitor)
+	ToInhibitor3ToExcitatory3 := make(chan int, 1)
+	FromInhibitor3ToExcitatory3 := make(chan int, 1)
+	ToInhibitor2FromInhibitor3 := make(chan int, 1)
+	ToInhibitor3FromInhibitor2 := make(chan int, 1)
+	FromInhibitor3ToEdgeNode2 := make(chan int, 1)
+
 	i2 := IN.InhibitorNode{
-		Id:                        3,
-		FromExcitatory:            ToInhibitorFromExcitatory2,
-		ToExcitatory:              FromInhibitorToExcitatory2,
-		FromPrevInhibitor:         ToNextInhibitorFromPrevInhibitor,
-		ToPrevInhibitor:           FromNextInhibitorToPrevInhibitor,
-		ToEdgeNode:                FromSecondInhibitorToEdgeNode,
-		MoveFromPrevInhibitor:     MoveChannelFromFirstToSecond,
-		TransferFromPrevInhibitor: TransferSpawnedPartition,
+		Id:                2,
+		FromExcitatory:    ToInhibitor2FromExcitatory2,
+		ToExcitatory:      FromInhibitor2ToExcitatory2,
+		FromPrevInhibitor: ToInhibitor2FromInhibitor1,
+		ToPrevInhibitor:   ToInhibitor1FromInhibitor2,
+		FromNextInhibitor: ToInhibitor2FromInhibitor3,
+		ToNextInhibitor:   ToInhibitor3FromInhibitor2,
+		ToEdgeNode:        FromInhibitor2ToEdgeNode1,
+		TransferTrackerChannelFromPrevInhibitorToCurrentInhibitor:      TransferTrackerChannelFromInhibitor1ToInhibitor2,
+		TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor: TransferEndPartitionChannelFromInhibitor1ToInhibitor2,
+	}
+	edn2 := EdN.EdgeNode{
+		FromCurrentInhibitor: ToEdgeNode2ToInhibitor1,
+		ToCurrentInhibitor:   FromEdgeNode2ToInhibitor1,
+		FromNextInhibitor:    FromInhibitor3ToEdgeNode2,
+	}
+	exn3 := ExN.ExcitatoryNode{
+		Id:            2,
+		Count:         0,
+		ToInhibitor:   ToInhibitor3ToExcitatory3,
+		FromInhibitor: FromInhibitor3ToExcitatory3,
 	}
 
-	l.Line = []any{&exn1, &i1, &edn1, &exn2, &i2}
+	i3 := IN.InhibitorNode{
+		Id:                3,
+		FromExcitatory:    ToInhibitor3ToExcitatory3,
+		ToExcitatory:      FromInhibitor3ToExcitatory3,
+		FromPrevInhibitor: ToInhibitor2FromInhibitor3,
+		ToPrevInhibitor:   ToInhibitor3FromInhibitor2,
+		ToEdgeNode:        FromInhibitor3ToEdgeNode2,
+	}
+	StartFromInhibitorStartFromPartition := make(chan int, 1)
+	StartToInhibitorStartToPartition := make(chan int, 1)
+	TrackerFromInhibitorTrackerFromPartition := make(chan int, 1)
+	TrackerToInhibitorTrackerToPartition := make(chan int, 1)
+	partition_node := PN.PartitionNode{Id: 0,
+		StartFromInhibitor:   StartFromInhibitorStartFromPartition,
+		StartToInhibitor:     StartToInhibitorStartToPartition,
+		TrackerFromInhibitor: TrackerFromInhibitorTrackerFromPartition,
+		TrackerToInhibitor:   TrackerToInhibitorTrackerToPartition,
+		EndToInhibitor:       EndToInhibitorEndFromPartition,
+	}
+	l.Line = []any{&exn1, &i1, &edn1, &exn2, &i2, &edn2, &exn3, &i3, &partition_node}
 
 }
 

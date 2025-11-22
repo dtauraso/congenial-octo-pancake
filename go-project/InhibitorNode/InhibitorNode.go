@@ -1,129 +1,118 @@
 package InhibitorNode
 
 import (
-	"context"
 	"fmt"
-	"sync"
 
+	EDN "github.com/dtauraso/congenial-octo-pancake/go-project/EdgeNode"
+	EN "github.com/dtauraso/congenial-octo-pancake/go-project/ExcitatoryNode"
 	PN "github.com/dtauraso/congenial-octo-pancake/go-project/PartitionNode"
+	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
 )
 
 type InhibitorNode struct {
-	Id                   int
-	FromExcitatory       <-chan int
-	ToExcitatory         chan<- int
-	FromPrevInhibitor    <-chan int
-	ToPrevInhibitor      chan<- int
-	FromNextInhibitor    <-chan int
-	ToNextInhibitor      chan<- int
-	ToEdgeNode           chan<- int
-	FromEdgeNode         <-chan int
-	StartFromPartition   <-chan int
-	StartToPartition     chan<- int
-	TrackerFromPartition <-chan int
-	TrackerToPartition   chan<- int
-	EndFromPartition     <-chan int
-	EndToPartition       chan<- int
-	IsNewParitionSpawned bool
+	Id                           int
+	PartitionIsMadeFromPartition <-chan bool
+	FromExcitatory               <-chan int
+	ToExcitatory                 chan<- int
+	LinkToExcitatory             *EN.ExcitatoryNode
+	FromPrevInhibitor            <-chan int
+	ToPrevInhibitor              chan<- int
+	LinkToPrevInhibitor          *InhibitorNode
+	FromNextInhibitor            <-chan int
+	ToNextInhibitor              chan<- int
+	LinkToNextInhibitor          *InhibitorNode
+	ToEdgeNode                   chan<- int
+	FromEdgeNode                 <-chan int
+	LinkToEdgeNode               *EDN.EdgeNode
+	StartFromPartition           <-chan int
+	StartToPartition             chan<- int
+	TrackerFromPartition         <-chan int
+	TrackerToPartition           chan<- int
+	EndFromPartition             <-chan int
+	EndToPartition               chan<- int
+	LinkToPartitinNode           *PN.PartitionNode
+	IsNewParitionSpawned         bool
 
-	// Carry partition spawn state and tracker channel to neighbor inhibitor
-	TransferToNextInhibitor   chan<- SpawnTransfer
-	TransferFromPrevInhibitor <-chan SpawnTransfer
-	// Channel-of-channel: allow passing an outbound int channel to the next inhibitor
-	MoveToNextInhibitor   chan<- chan<- int
-	MoveFromPrevInhibitor <-chan chan<- int
+	TransferTrackerChannelFromCurrentInhibitorToNextInhibitor      chan<- chan<- int
+	TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor chan<- chan<- int
+
+	TransferTrackerChannelFromPrevInhibitorToCurrentInhibitor      <-chan chan<- int
+	TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor <-chan chan<- int
 }
 
-// SpawnTransfer is sent from one inhibitor to the next to carry partition state and tracker channel
-type SpawnTransfer struct {
-	// True once a partition has been created upstream.
-	Spawned bool
-	// Outbound tracking channel (inhibitor -> partition) to be adopted by the receiver.
-	Tracker          chan<- int
-	EndFromPartition <-chan int
-}
+var grow int = 1
 
-func (in *InhibitorNode) AddPartitionNode(ctx context.Context, wg *sync.WaitGroup) {
-	StartFromInhibitorStartFromPartition := make(chan int, 1)
-	StartToInhibitorStartToPartition := make(chan int, 1)
-	TrackerFromInhibitorTrackerFromPartition := make(chan int, 1)
-	TrackerToInhibitorTrackerToPartition := make(chan int, 1)
-	EndFromInhibitorEndFromPartition := make(chan int, 1)
-	EndToInhibitorEndToPartition := make(chan int, 1)
-	wg.Add(1)
-	partition_node := PN.PartitionNode{Id: 0,
-		StartFromInhibitor:   StartFromInhibitorStartFromPartition,
-		StartToInhibitor:     StartToInhibitorStartToPartition,
-		TrackerFromInhibitor: TrackerFromInhibitorTrackerFromPartition,
-		TrackerToInhibitor:   TrackerToInhibitorTrackerToPartition,
-		EndFromInhibitor:     EndFromInhibitorEndFromPartition,
-		EndToInhibitor:       EndToInhibitorEndToPartition,
-	}
-	in.StartFromPartition = StartFromInhibitorStartFromPartition
-	in.StartToPartition = StartToInhibitorStartToPartition
-	in.TrackerFromPartition = TrackerToInhibitorTrackerToPartition
-	in.TrackerToPartition = TrackerFromInhibitorTrackerFromPartition
-	in.EndFromPartition = EndFromInhibitorEndFromPartition
-	in.EndToPartition = EndToInhibitorEndToPartition
-	go partition_node.Update(ctx, wg)
-}
-
-func (in *InhibitorNode) Update(ctx context.Context, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (in *InhibitorNode) Update(s *S.SafeWorker) {
+	defer s.Wg.Done()
 	for {
-		fmt.Printf("%dI1 is being run\n", in.Id)
 		select {
-		case <-ctx.Done():
+		case <-s.Ctx.Done():
 			return
+		default:
+		}
+
+		select {
 		case value := <-in.FromExcitatory:
 			fmt.Printf("%dI1: %d\n", in.Id, value)
 			switch value {
 			case 0:
-				in.ToEdgeNode <- 0
+				S.Send(s, in.ToEdgeNode, 0)
 			case 1:
-				in.ToEdgeNode <- 1
-				if in.FromPrevInhibitor == nil {
-					switch {
-					case !in.IsNewParitionSpawned:
-						in.IsNewParitionSpawned = true
-						fmt.Printf("first inhibitor\n")
-						in.AddPartitionNode(ctx, wg)
-					}
-				} else {
-					fmt.Printf("second inhibitor\n")
-					select {
-					case <-ctx.Done():
-						return
-					case st := <-in.TransferFromPrevInhibitor:
-						in.IsNewParitionSpawned = st.Spawned
-						in.TrackerToPartition = st.Tracker
-						fmt.Printf("%dI: received transfer with tracker type %T from previous inhibitor\n", in.Id, st.Tracker)
-					}
+				S.Send(s, in.ToEdgeNode, 1)
+				fmt.Printf("second inhibitor\n")
+				select {
+				case end := <-in.TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor:
+					fmt.Printf("%dI: received end partition transfer with tracker type %T from previous inhibitor\n", in.Id, end)
+					in.EndToPartition = end
+					fmt.Printf("%dI: set end partition channel after transfer from previous inhibitor\n", in.Id)
+				default:
 				}
+
+				select {
+				case tracker := <-in.TransferTrackerChannelFromPrevInhibitorToCurrentInhibitor:
+					fmt.Printf("%dI: received tracker channel transfer with tracker type %T from previous inhibitor\n", in.Id, tracker)
+					in.TrackerToPartition = tracker
+					fmt.Printf("%dI: set tracker channel after transfer from previous inhibitor\n", in.Id)
+				default:
+				}
+
 			case 2:
-				in.ToExcitatory <- -1
-				in.ToNextInhibitor <- 1
-				EndFromPartition := (<-chan int)(nil)
-				if !in.IsNewParitionSpawned {
-					EndFromPartition = in.EndFromPartition
+				S.Send(s, in.ToExcitatory, -1)
+				S.Send(s, in.ToNextInhibitor, 1)
+				select {
+				case message := <-in.EndFromPartition:
+					switch message {
+					case grow:
+						S.Send(s, in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)
+						fmt.Printf("%dI: sent end partition transfer with tracker type %T to next inhibitor\n", in.Id, in.EndToPartition)
+						in.EndToPartition = nil
+						fmt.Printf("%dI: cleared end partition channel after transfer to next inhibitor\n", in.Id)
+					}
 				}
-				// Send combined spawn info and tracker channel to next inhibitor
-				st := SpawnTransfer{
-					Spawned:          in.IsNewParitionSpawned,
-					Tracker:          in.TrackerToPartition,
-					EndFromPartition: EndFromPartition}
-				in.TransferToNextInhibitor <- st
-				fmt.Printf("%dI: sent transfer with tracker type %T to next inhibitor\n", in.Id, in.TrackerToPartition)
+
+				S.Send(s, in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor, in.TrackerToPartition)
+				fmt.Printf("%dI: sent tracker channel transfer with tracker type %T to next inhibitor\n", in.Id, in.TrackerToPartition)
+				in.TrackerToPartition = nil
+				fmt.Printf("%dI: cleared tracker channel after transfer to next inhibitor\n", in.Id)
+
 			}
+		default:
+		}
+
+		select {
 		case value := <-in.FromPrevInhibitor:
 			fmt.Printf("%dI2: %d\n", in.Id, value)
 			switch value {
 			case 1:
-				in.ToExcitatory <- 1
+				S.Send(s, in.ToExcitatory, 1)
 			}
+		default:
+		}
+
+		select {
 		case value := <-in.FromEdgeNode:
 			fmt.Printf("%dEdI: edge result: %d\n", in.Id, value)
-
+		default:
 		}
 	}
 

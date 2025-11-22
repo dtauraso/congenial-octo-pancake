@@ -1,30 +1,29 @@
 package EdgeNode
 
 import (
-	"context"
 	"fmt"
-	"sync"
+	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
 )
 
 type EdgeNode struct {
-	Id                  int
-	FromFirstInhibitor  <-chan int
-	ToFirstInhibitor    chan<- int
-	FromSecondInhibitor <-chan int
-	EdgeFlag            int
+	Id                   int
+	FromCurrentInhibitor <-chan int
+	ToCurrentInhibitor   chan<- int
+	FromNextInhibitor    <-chan int
+	EdgeFlag             int
 }
 
-func (en *EdgeNode) Update(ctx context.Context, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (en *EdgeNode) Update(s *S.SafeWorker) {
+	defer s.Wg.Done()
 	for {
 		fmt.Printf("Ed was called\n")
 		select {
-		case <-ctx.Done():
+		case <-s.Ctx.Done():
 			return
-		case value := <-en.FromFirstInhibitor:
+		case value := <-en.FromCurrentInhibitor:
 			fmt.Printf("Ed1 was run: %d\n", value)
 			en.EdgeFlag ^= value
-		case value := <-en.FromSecondInhibitor:
+		case value := <-en.FromNextInhibitor:
 			fmt.Printf("Ed2 was run: %d\n", value)
 			en.EdgeFlag ^= value
 
@@ -32,7 +31,7 @@ func (en *EdgeNode) Update(ctx context.Context, wg *sync.WaitGroup) {
 		fmt.Printf("edge flag: %d\n", en.EdgeFlag)
 		switch en.EdgeFlag {
 		case 1:
-			en.ToFirstInhibitor <- 1
+			S.Send(s, en.ToCurrentInhibitor, 1)
 			fmt.Printf("Ed3 was run\n")
 		}
 	}

@@ -1,9 +1,8 @@
 package PartitionNode
 
 import (
-	"context"
-	"fmt"
-	"sync"
+	// "fmt"
+	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
 )
 
 type PartitionNode struct {
@@ -20,14 +19,16 @@ type PartitionNode struct {
 	EndToInhibitor   chan<- int
 }
 
-func (pn *PartitionNode) Update(ctx context.Context, wg *sync.WaitGroup) {
-	defer wg.Done()
+var grow int = 1
+
+func (pn *PartitionNode) Update(s *S.SafeWorker) {
+	defer s.Wg.Done()
 	for {
-		fmt.Printf("%dPN is being run\n", pn.Id)
 		select {
-		case <-ctx.Done():
+		case <-s.Ctx.Done():
 			return
-			// Additional cases can be added here to react to Start/Tracker/End messages
+		default:
 		}
+		S.Send(s, pn.EndToInhibitor, grow)
 	}
 }
