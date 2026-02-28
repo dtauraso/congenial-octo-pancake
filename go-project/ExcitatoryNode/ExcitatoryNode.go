@@ -7,9 +7,9 @@ import (
 
 type ExcitatoryNode struct {
 	Id            int
-	Count         int
-	ToInhibitor   chan<- int
-	FromInhibitor <-chan int
+	Count         int        ///
+	ToInhibitor   chan<- int ///
+	FromInhibitor <-chan int ///
 }
 
 func (en *ExcitatoryNode) Update(s *S.SafeWorker) {

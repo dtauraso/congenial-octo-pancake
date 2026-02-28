@@ -12,17 +12,17 @@ import (
 type InhibitorNode struct {
 	Id                           int
 	PartitionIsMadeFromPartition <-chan bool
-	FromExcitatory               <-chan int
-	ToExcitatory                 chan<- int
+	FromExcitatory               <-chan int ///
+	ToExcitatory                 chan<- int ///
 	LinkToExcitatory             *EN.ExcitatoryNode
-	FromPrevInhibitor            <-chan int
-	ToPrevInhibitor              chan<- int
+	FromPrevInhibitor            <-chan int ///
+	ToPrevInhibitor              chan<- int ///
 	LinkToPrevInhibitor          *InhibitorNode
-	FromNextInhibitor            <-chan int
-	ToNextInhibitor              chan<- int
+	FromNextInhibitor            <-chan int ///
+	ToNextInhibitor              chan<- int ///
 	LinkToNextInhibitor          *InhibitorNode
-	ToEdgeNode                   chan<- int
-	FromEdgeNode                 <-chan int
+	ToEdgeNode                   chan<- int ///
+	FromEdgeNode                 <-chan int ///
 	LinkToEdgeNode               *EDN.EdgeNode
 	StartFromPartition           <-chan int
 	StartToPartition             chan<- int
