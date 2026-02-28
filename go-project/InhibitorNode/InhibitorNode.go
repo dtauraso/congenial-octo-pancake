@@ -55,9 +55,9 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 		case value := <-in.FromExcitatory:
 			fmt.Printf("%dI1: %d\n", in.Id, value)
 			switch value {
-			case 0:
+			case 0: ///
 				S.Send(s, in.ToEdgeNode, 0)
-			case 1:
+			case 1: ///
 				S.Send(s, in.ToEdgeNode, 1)
 				fmt.Printf("second inhibitor\n")
 				select {
@@ -76,7 +76,7 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 				default:
 				}
 
-			case 2:
+			case 2: ///
 				S.Send(s, in.ToExcitatory, -1)
 				S.Send(s, in.ToNextInhibitor, 1)
 				select {

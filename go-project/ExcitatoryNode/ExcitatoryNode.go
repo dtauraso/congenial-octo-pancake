@@ -22,7 +22,7 @@ func (en *ExcitatoryNode) Update(s *S.SafeWorker) {
 			return
 		case value := <-en.FromInhibitor:
 			fmt.Printf("%dE: value: %d\n", en.Id, value)
-			en.Count += value
+			en.Count += value ///
 			fmt.Printf("%dE: count: %d\n", en.Id, en.Count)
 		}
 	}
