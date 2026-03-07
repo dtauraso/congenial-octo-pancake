@@ -26,9 +26,9 @@ func RunTest() {
 	for _, node := range l.Line {
 		switch node := node.(type) {
 		case *ExN.ExcitatoryNode:
-			go node.Update(&s)
+			go node.Update2(&s)
 		case *IN.InhibitorNode:
-			go node.Update(&s)
+			go node.Update2(&s)
 		case *EdN.EdgeNode:
 			go node.Update(&s)
 		case *PN.PartitionNode:
