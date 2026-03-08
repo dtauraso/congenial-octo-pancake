@@ -6,10 +6,13 @@ import (
 )
 
 type ExcitatoryNode struct {
-	Id            int
-	Count         int        ///
-	ToInhibitor   chan<- int ///
+	Id          int
+	Count       int ///
+	Symbol      string
+	ToInhibitor chan<- int ///
+	// ToInhibitor chan<- string
 	FromInhibitor <-chan int ///
+	// fro
 }
 
 func (en *ExcitatoryNode) Update(s *S.SafeWorker) {
