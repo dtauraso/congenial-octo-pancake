@@ -24,9 +24,7 @@ func (l *Line) Setup() {
 	partition_node := PN.PartitionNode{Id: 0}
 
 	fromInhibitor := make(chan int, 1)
-	toInhibitor := make(chan int, 1)
 	i1.FromInhibitor = fromInhibitor
-	i1.ToInhibitor = toInhibitor
 	l.InputChannel = fromInhibitor
 
 	W.ConnectInhibitorPair(&i1, &i2)
