@@ -10,15 +10,8 @@ import (
 )
 
 type DistributeNode struct {
-	Id                                int
-	Input                             <-chan int
-	CanAddTimeline                    bool
-	PartitionIsMadeFromInhibitor      <-chan bool
-	FromFirstNextInhibitor            <-chan int
-	ToFirstNextInhibitor              chan<- int
-	FromSecondNextInhibitor           <-chan int
-	ToSecondNextInhibitor             chan<- int
-	SelfReferenceToFirstNextInhibitor chan<- *DistributeNode
+	Id    int
+	Input <-chan int
 }
 
 func (d *DistributeNode) MakeNewTimelineAndPartition(line *[]S.Node, s *S.SafeWorker) {
