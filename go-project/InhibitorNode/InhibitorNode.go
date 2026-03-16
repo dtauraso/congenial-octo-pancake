@@ -7,14 +7,15 @@ import (
 )
 
 type InhibitorNode struct {
-	Id            int
-	FromInhibitor     <-chan int
+	Id                int
+	HeldValue         int
+	HasValue          bool
 	FromPrevInhibitor <-chan int
 	ToNextInhibitor   chan<- int
 	ToEdgeNode        chan<- int
 	FromEdgeNode      <-chan int
-	EndFromPartition <-chan int
-	EndToPartition     chan<- int
+	EndFromPartition  <-chan int
+	EndToPartition    chan<- int
 
 	TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor chan<- chan<- int
 
@@ -31,22 +32,8 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 		}
 
 		select {
-		case value := <-in.FromInhibitor:
-			fmt.Printf("%dI: received %d from input\n", in.Id, value)
-			S.Send(in.ToEdgeNode, value)
-			S.Send(in.ToNextInhibitor, value)
-
-			if in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor != nil && in.EndToPartition != nil {
-				S.Send(in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)
-				fmt.Printf("%dI: sent end partition transfer to next\n", in.Id)
-				in.EndToPartition = nil
-			}
-		default:
-		}
-
-		select {
 		case value := <-in.FromPrevInhibitor:
-			fmt.Printf("%dI: received %d from prev inhibitor\n", in.Id, value)
+			fmt.Printf("%dI: received %d from prev\n", in.Id, value)
 
 			select {
 			case end := <-in.TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor:
@@ -55,8 +42,14 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 			default:
 			}
 
-			S.Send(in.ToEdgeNode, value)
-			S.Send(in.ToNextInhibitor, value)
+			if in.HasValue {
+				fmt.Printf("%dI: pushing %d to next\n", in.Id, in.HeldValue)
+				S.Send(in.ToEdgeNode, in.HeldValue)
+				S.Send(in.ToNextInhibitor, in.HeldValue)
+			}
+
+			in.HeldValue = value
+			in.HasValue = true
 
 			if in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor != nil && in.EndToPartition != nil {
 				S.Send(in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)

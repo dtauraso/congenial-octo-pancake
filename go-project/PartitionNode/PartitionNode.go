@@ -35,7 +35,7 @@ func (pn *PartitionNode) Update(s *S.SafeWorker) {
 			switch pn.State {
 			case NotInitialized:
 				switch value {
-				case 0:
+				case 1:
 					pn.State = Growing
 					fmt.Printf("p%d: start growing\n", pn.Id)
 				}

@@ -12,7 +12,6 @@ import (
 func RunTest() {
 	l := L.Line{}
 	l.Setup()
-	l.Input()
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)
 	wg.Add(len(l.Line))
@@ -21,10 +20,7 @@ func RunTest() {
 	for _, node := range l.Line {
 		go node.Update(&s)
 	}
-	for _, input := range l.TestInput {
-		l.InputChannel <- input
-	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 	cancel()
 	wg.Wait()
 }
