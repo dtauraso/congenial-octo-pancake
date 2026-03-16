@@ -23,11 +23,11 @@
   <!-- Title -->
   <text x="350" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#222">Line Topology — After Settle</text>
 
-  <!-- Partition Node (now above) -->
-  <rect x="270" y="50" width="200" height="70" fill="#e8f5e9" stroke="#2e7d32" rx="6" stroke-width="2"/>
-  <text x="370" y="75" text-anchor="middle" font-weight="bold" fill="#2e7d32">p0 — Partition</text>
-  <text x="370" y="92" text-anchor="middle" font-size="10" fill="#1b5e20">1st contrast (1) → Growing</text>
-  <text x="370" y="108" text-anchor="middle" font-size="10" fill="#1b5e20">2nd contrast (1) → Stopped</text>
+  <!-- Partition Node (between i1 center=355 and i2 center=575, midpoint=465) -->
+  <rect x="365" y="50" width="200" height="70" fill="#e8f5e9" stroke="#2e7d32" rx="6" stroke-width="2"/>
+  <text x="465" y="75" text-anchor="middle" font-weight="bold" fill="#2e7d32">p0 — Partition</text>
+  <text x="465" y="92" text-anchor="middle" font-size="10" fill="#1b5e20">1st contrast (1) → Growing</text>
+  <text x="465" y="108" text-anchor="middle" font-size="10" fill="#1b5e20">2nd contrast (1) → Stopped</text>
 
   <!-- edn0 (now above chain) -->
   <rect x="210" y="155" width="80" height="50" fill="#ffebee" stroke="#c62828" rx="20" stroke-width="2"/>
@@ -84,18 +84,18 @@
   <line x1="550" y1="250" x2="460" y2="207" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
 
   <!-- === edn0 -> partition === -->
-  <path d="M 250 155 C 250 130, 290 125, 290 120" fill="none" stroke="#cc2222" stroke-width="2" marker-end="url(#arrow-red)"/>
-  <text x="250" y="140" text-anchor="middle" font-size="10" fill="#cc2222">0/1</text>
+  <path d="M 250 155 C 250 125, 360 115, 365 112" fill="none" stroke="#cc2222" stroke-width="2" marker-end="url(#arrow-red)"/>
+  <text x="290" y="128" text-anchor="middle" font-size="10" fill="#cc2222">0/1</text>
 
   <!-- === PARTITION -> i1 (Grow) === -->
-  <line x1="370" y1="120" x2="355" y2="248" stroke="#228844" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <text x="340" y="190" text-anchor="middle" font-size="9" fill="#228844">Grow</text>
-  <text x="340" y="202" text-anchor="middle" font-size="9" fill="#228844">(to i1)</text>
+  <line x1="430" y1="120" x2="360" y2="248" stroke="#228844" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <text x="410" y="190" text-anchor="middle" font-size="9" fill="#228844">Grow</text>
+  <text x="410" y="202" text-anchor="middle" font-size="9" fill="#228844">(to i1)</text>
 
   <!-- === i2 -> partition (EndToPartition, after transfer) === -->
-  <path d="M 570 250 C 570 170, 490 130, 470 120" fill="none" stroke="#e65100" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
-  <text x="555" y="175" text-anchor="middle" font-size="9" fill="#e65100">EndToPartition</text>
-  <text x="555" y="187" text-anchor="middle" font-size="9" fill="#e65100">(after transfer)</text>
+  <path d="M 575 250 C 575 180, 520 135, 500 120" fill="none" stroke="#e65100" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+  <text x="565" y="175" text-anchor="middle" font-size="9" fill="#e65100">EndToPartition</text>
+  <text x="565" y="187" text-anchor="middle" font-size="9" fill="#e65100">(after transfer)</text>
 
   <!-- Behavior note -->
   <rect x="20" y="340" width="170" height="55" fill="#fff9c4" stroke="#f9a825" rx="4"/>
