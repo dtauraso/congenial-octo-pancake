@@ -17,24 +17,19 @@ type EdgeNode struct {
 func (en *EdgeNode) Update(s *S.SafeWorker) {
 	defer s.Wg.Done()
 	for {
-		fmt.Printf("Ed was called\n")
 		select {
 		case <-s.Ctx.Done():
 			return
 		case value := <-en.FromCurrentInhibitor:
-			fmt.Printf("Ed1 was run: %d\n", value)
+			fmt.Printf("edn%d: received %d from current\n", en.Id, value)
 			en.EdgeFlag ^= value
 		case value := <-en.FromNextInhibitor:
-			fmt.Printf("Ed2 was run: %d\n", value)
+			fmt.Printf("edn%d: received %d from next\n", en.Id, value)
 			en.EdgeFlag ^= value
-
 		}
-		fmt.Printf("edge flag: %d\n", en.EdgeFlag)
-		switch en.EdgeFlag {
-		case 1:
-			S.Send(en.ToCurrentInhibitor, 1)
-			S.Send(en.ToPartition, 1)
-			fmt.Printf("Ed3 was run\n")
-		}
+		fmt.Printf("edn%d: flag=%d\n", en.Id, en.EdgeFlag)
+		S.Send(en.ToCurrentInhibitor, en.EdgeFlag)
+		S.Send(en.ToPartition, en.EdgeFlag)
+		fmt.Printf("edn%d: sent flag to inhibitor and partition\n", en.Id)
 	}
 }

@@ -31,14 +31,8 @@ func ConnectEdgeBetweenInhibitors(current *IN.InhibitorNode, edge *EdN.EdgeNode,
 }
 
 func ConnectInhibitorToPartition(inhibitor *IN.InhibitorNode, partition *PN.PartitionNode) {
-	startToPartition := make(chan int, 1)
-	startFromPartition := make(chan int, 1)
 	endToPartition := make(chan int, 1)
 	endFromPartition := make(chan int, 1)
-	inhibitor.StartToPartition = startToPartition
-	partition.StartFromInhibitor = startToPartition
-	partition.StartToInhibitor = startFromPartition
-	inhibitor.StartFromPartition = startFromPartition
 	inhibitor.EndToPartition = endToPartition
 	partition.EndFromInhibitor = endToPartition
 	partition.EndToInhibitor = endFromPartition

@@ -5,19 +5,23 @@ import (
 	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
 )
 
+const (
+	NotInitialized = 0
+	Growing        = 1
+	Stopped        = 2
+)
+
 type PartitionNode struct {
-	Id                   int
-	PartitionIsMade      <-chan bool
-	StopGrowingFromEdge  <-chan int
-	StartFromInhibitor   <-chan int
-	StartToInhibitor     chan<- int
-	EndFromInhibitor     <-chan int
-	EndToInhibitor       chan<- int
+	Id               int
+	State            int
+	PartitionIsMade  <-chan bool
+	FromEdge         <-chan int
+	EndFromInhibitor <-chan int
+	EndToInhibitor   chan<- int
 }
 
 func (pn *PartitionNode) Update(s *S.SafeWorker) {
 	defer s.Wg.Done()
-	growing := true
 	for {
 		select {
 		case <-s.Ctx.Done():
@@ -26,13 +30,27 @@ func (pn *PartitionNode) Update(s *S.SafeWorker) {
 		}
 
 		select {
-		case <-pn.StopGrowingFromEdge:
-			growing = false
-			fmt.Printf("p%d: stop growing\n", pn.Id)
+		case value := <-pn.FromEdge:
+			fmt.Printf("p%d: received %d from edge\n", pn.Id, value)
+			switch pn.State {
+			case NotInitialized:
+				switch value {
+				case 0:
+					pn.State = Growing
+					fmt.Printf("p%d: start growing\n", pn.Id)
+				}
+			case Growing:
+				switch value {
+				case 1:
+					pn.State = Stopped
+					fmt.Printf("p%d: stop growing\n", pn.Id)
+				}
+			}
 		default:
 		}
 
-		if growing {
+		switch pn.State {
+		case Growing:
 			S.Send(pn.EndToInhibitor, S.Grow)
 		}
 	}
