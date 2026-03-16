@@ -29,8 +29,8 @@ type InhibitorNode struct {
 	TrackerToPartition           chan<- int
 	EndFromPartition             <-chan int
 	EndToPartition               chan<- int
-	LinkToPartitinNode           *PN.PartitionNode
-	IsNewParitionSpawned         bool
+	LinkToPartitionNode          *PN.PartitionNode
+	IsNewPartitionSpawned        bool
 
 	TransferTrackerChannelFromCurrentInhibitorToNextInhibitor      chan<- chan<- int
 	TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor chan<- chan<- int
