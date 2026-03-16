@@ -10,8 +10,6 @@ type InhibitorNode struct {
 	Id            int
 	FromInhibitor     <-chan int
 	FromPrevInhibitor <-chan int
-	ToPrevInhibitor   chan<- int
-	FromNextInhibitor <-chan int
 	ToNextInhibitor   chan<- int
 	ToEdgeNode        chan<- int
 	FromEdgeNode      <-chan int

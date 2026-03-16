@@ -8,11 +8,8 @@ import (
 
 func ConnectInhibitorPair(prev *IN.InhibitorNode, next *IN.InhibitorNode) {
 	toNext := make(chan int, 1)
-	toPrev := make(chan int, 1)
 	prev.ToNextInhibitor = toNext
 	next.FromPrevInhibitor = toNext
-	next.ToPrevInhibitor = toPrev
-	prev.FromNextInhibitor = toPrev
 }
 
 func ConnectInhibitorTransferChannels(prev *IN.InhibitorNode, next *IN.InhibitorNode) {
