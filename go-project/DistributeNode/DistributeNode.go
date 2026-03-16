@@ -1,12 +1,11 @@
 package DistributeNode
 
 import (
-	"context"
 	"fmt"
 	EdN "github.com/dtauraso/congenial-octo-pancake/go-project/EdgeNode"
 	IN "github.com/dtauraso/congenial-octo-pancake/go-project/InhibitorNode"
 	PN "github.com/dtauraso/congenial-octo-pancake/go-project/PartitionNode"
-	"sync"
+	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
 )
 
 type DistributeNode struct {
@@ -21,7 +20,7 @@ type DistributeNode struct {
 	SelfReferenceToFirstNextInhibitor chan<- *DistributeNode
 }
 
-func (d *DistributeNode) MakeNewTimelineAndPartition(line *[]any, ctx context.Context, wg *sync.WaitGroup) {
+func (d *DistributeNode) MakeNewTimelineAndPartition(line *[]S.Node, s *S.SafeWorker) {
 
 	ToInhibitor1FromInhibitor2 := make(chan int, 1)
 	ToInhibitor2FromInhibitor1 := make(chan int, 1)
@@ -80,13 +79,13 @@ func (d *DistributeNode) MakeNewTimelineAndPartition(line *[]any, ctx context.Co
 		EndFromInhibitor:     EndFromInhibitorEndFromPartition,
 		EndToInhibitor:       EndToInhibitorEndToPartition,
 	}
-	wg.Add(6)
-	*line = append(*line, &i1, &edn1, &i2, &edn2, &i3, &partition_node)
+	s.Wg.Add(6)
+	*line = append(*line, S.Node(&i1), S.Node(&edn1), S.Node(&i2), S.Node(&edn2), S.Node(&i3), S.Node(&partition_node))
 
 }
 
-func (d *DistributeNode) Update(ctx context.Context, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (d *DistributeNode) Update(s *S.SafeWorker) {
+	defer s.Wg.Done()
 	for {
 		fmt.Printf("%dI1 is being run\n", d.Id)
 		select {

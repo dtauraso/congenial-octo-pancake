@@ -4,11 +4,13 @@ import (
 	EdN "github.com/dtauraso/congenial-octo-pancake/go-project/EdgeNode"
 	IN "github.com/dtauraso/congenial-octo-pancake/go-project/InhibitorNode"
 	PN "github.com/dtauraso/congenial-octo-pancake/go-project/PartitionNode"
+	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
 )
 
 type Line struct {
-	Line      []any
-	TestInput []int
+	Line       []S.Node
+	TestInput  []int
+	InputNode  *IN.InhibitorNode
 }
 
 func (l *Line) Setup() {
@@ -78,7 +80,8 @@ func (l *Line) Setup() {
 		TrackerToInhibitor:   TrackerToInhibitorTrackerToPartition,
 		EndToInhibitor:       EndToInhibitorEndFromPartition,
 	}
-	l.Line = []any{&i1, &edn1, &i2, &edn2, &i3, &partition_node}
+	l.InputNode = &i1
+	l.Line = []S.Node{&i1, &edn1, &i2, &edn2, &i3, &partition_node}
 
 }
 

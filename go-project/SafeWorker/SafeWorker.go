@@ -10,6 +10,10 @@ type SafeWorker struct {
 	Wg  *sync.WaitGroup
 }
 
+type Node interface {
+	Update(s *SafeWorker)
+}
+
 func Send[T any](w *SafeWorker, ch chan<- T, val T) {
 	select {
 	case ch <- val:
