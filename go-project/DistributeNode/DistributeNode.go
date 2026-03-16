@@ -49,17 +49,9 @@ func (d *DistributeNode) Update(s *S.SafeWorker) {
 	for {
 		fmt.Printf("%dI1 is being run\n", d.Id)
 		select {
-		case number := <-d.Input:
-			d.ToFirstNextInhibitor <- number
-
-			if d.ToSecondNextInhibitor == nil {
-				if d.CanAddTimeline {
-				}
-			} else {
-				d.ToSecondNextInhibitor <- number
-			}
-		case CanAddTimeline := <-d.PartitionIsMadeFromInhibitor:
-			d.CanAddTimeline = CanAddTimeline
+		case <-s.Ctx.Done():
+			return
+		default:
 		}
 	}
 }
