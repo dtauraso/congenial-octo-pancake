@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200" font-family="monospace" font-size="8">
+  <defs>
+    <marker id="arr" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto">
+      <path d="M0,0 L5,2 L0,4" fill="#555"/>
+    </marker>
+  </defs>
+
+  <rect width="300" height="200" fill="#fafafa" rx="4"/>
+  <text x="150" y="18" text-anchor="middle" font-size="10" fill="#333">AND Gate Tree — 3 gates, 2 levels</text>
+
+  <!-- Level 0 (leaves): 4 inputs -->
+  <circle cx="40" cy="160" r="6" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
+  <text x="40" y="163" text-anchor="middle" font-size="6" fill="#e65100">in0</text>
+
+  <circle cx="110" cy="160" r="6" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
+  <text x="110" y="163" text-anchor="middle" font-size="6" fill="#e65100">in1</text>
+
+  <circle cx="190" cy="160" r="6" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
+  <text x="190" y="163" text-anchor="middle" font-size="6" fill="#e65100">in2</text>
+
+  <circle cx="260" cy="160" r="6" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
+  <text x="260" y="163" text-anchor="middle" font-size="6" fill="#e65100">in3</text>
+
+  <!-- Level 1: 2 AND gates -->
+  <circle cx="75" cy="100" r="9" fill="#e8eaf6" stroke="#283593" stroke-width="1.5"/>
+  <text x="75" y="103" text-anchor="middle" font-size="6" fill="#283593">a0</text>
+  <text x="75" y="83" text-anchor="middle" font-size="6" fill="#283593">AND</text>
+
+  <circle cx="225" cy="100" r="9" fill="#e8eaf6" stroke="#283593" stroke-width="1.5"/>
+  <text x="225" y="103" text-anchor="middle" font-size="6" fill="#283593">a1</text>
+  <text x="225" y="83" text-anchor="middle" font-size="6" fill="#283593">AND</text>
+
+  <!-- Level 2: 1 AND gate (root) -->
+  <circle cx="150" cy="45" r="10" fill="#e8eaf6" stroke="#283593" stroke-width="2"/>
+  <text x="150" y="48" text-anchor="middle" font-size="7" fill="#283593">a2</text>
+  <text x="150" y="35" text-anchor="middle" font-size="7" fill="#283593">AND</text>
+
+  <!-- Output -->
+  <circle cx="150" cy="10" r="3" fill="#2e7d32"/>
+  <text x="165" y="13" text-anchor="start" font-size="6" fill="#2e7d32">out</text>
+
+  <!-- Lines: inputs -> level 1 -->
+  <line x1="40" y1="154" x2="68" y2="109" stroke="#555" stroke-width="0.8" marker-end="url(#arr)"/>
+  <line x1="110" y1="154" x2="82" y2="109" stroke="#555" stroke-width="0.8" marker-end="url(#arr)"/>
+  <line x1="190" y1="154" x2="218" y2="109" stroke="#555" stroke-width="0.8" marker-end="url(#arr)"/>
+  <line x1="260" y1="154" x2="232" y2="109" stroke="#555" stroke-width="0.8" marker-end="url(#arr)"/>
+
+  <!-- Lines: level 1 -> level 2 -->
+  <line x1="82" y1="93" x2="141" y2="53" stroke="#555" stroke-width="0.8" marker-end="url(#arr)"/>
+  <line x1="218" y1="93" x2="159" y2="53" stroke="#555" stroke-width="0.8" marker-end="url(#arr)"/>
+
+  <!-- Line: level 2 -> output -->
+  <line x1="150" y1="35" x2="150" y2="15" stroke="#2e7d32" stroke-width="0.8" marker-end="url(#arr)"/>
+</svg>
