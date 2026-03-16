@@ -43,7 +43,6 @@ func (d *DistributeNode) MakeNewTimelineAndPartition(line *[]any, ctx context.Co
 	FromEdgeNode2ToInhibitor1 := make(chan int, 1)
 	FromInhibitor2ToEdgeNode1 := make(chan int, 1)
 
-	// First inhibitor (no previous inhibitor)
 	i1 := IN.InhibitorNode{
 		Id:                1,
 		FromExcitatory:    ToInhibitor1FromExcitatory1,
@@ -70,7 +69,6 @@ func (d *DistributeNode) MakeNewTimelineAndPartition(line *[]any, ctx context.Co
 	ToInhibitor3FromInhibitor2 := make(chan int, 1)
 	FromInhibitor3ToEdgeNode2 := make(chan int, 1)
 
-	// Second inhibitor (has previous inhibitor)
 	i2 := IN.InhibitorNode{
 		Id:                3,
 		FromExcitatory:    ToInhibitor2FromExcitatory2,
@@ -92,7 +90,6 @@ func (d *DistributeNode) MakeNewTimelineAndPartition(line *[]any, ctx context.Co
 		ToInhibitor:   ToInhibitor3ToExcitatory3,
 		FromInhibitor: FromInhibitor3ToExcitatory3,
 	}
-	// Second inhibitor (has previous inhibitor)
 	i3 := IN.InhibitorNode{
 		Id:                3,
 		FromExcitatory:    ToInhibitor3ToExcitatory3,

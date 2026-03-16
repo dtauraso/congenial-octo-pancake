@@ -13,8 +13,8 @@ type Line struct {
 }
 
 func (l *Line) Setup() {
-	ToInhibitor1FromExcitatory1 := make(chan int, 1) ///
-	FromInhibitor1ToExcitatory1 := make(chan int, 1) ///
+	ToInhibitor1FromExcitatory1 := make(chan int, 1)
+	FromInhibitor1ToExcitatory1 := make(chan int, 1)
 
 	exn1 := ExN.ExcitatoryNode{
 		Id:            0,
@@ -22,15 +22,15 @@ func (l *Line) Setup() {
 		ToInhibitor:   ToInhibitor1FromExcitatory1,
 		FromInhibitor: FromInhibitor1ToExcitatory1,
 	}
-	ToInhibitor2FromExcitatory2 := make(chan int, 1) ///
-	FromInhibitor2ToExcitatory2 := make(chan int, 1) ///
-	ToInhibitor1FromInhibitor2 := make(chan int, 1)  ///
-	ToInhibitor2FromInhibitor1 := make(chan int, 1)  ///
-	ToEdgeNode1FromInhibitor1 := make(chan int, 1)   ///
-	FromEdgeNode1ToInhibitor1 := make(chan int, 1)   ///
-	ToEdgeNode2ToInhibitor1 := make(chan int, 1)     ///
-	FromEdgeNode2ToInhibitor1 := make(chan int, 1)   ///
-	FromInhibitor2ToEdgeNode1 := make(chan int, 1)   ///
+	ToInhibitor2FromExcitatory2 := make(chan int, 1)
+	FromInhibitor2ToExcitatory2 := make(chan int, 1)
+	ToInhibitor1FromInhibitor2 := make(chan int, 1)
+	ToInhibitor2FromInhibitor1 := make(chan int, 1)
+	ToEdgeNode1FromInhibitor1 := make(chan int, 1)
+	FromEdgeNode1ToInhibitor1 := make(chan int, 1)
+	ToEdgeNode2ToInhibitor1 := make(chan int, 1)
+	FromEdgeNode2ToInhibitor1 := make(chan int, 1)
+	FromInhibitor2ToEdgeNode1 := make(chan int, 1)
 	TransferTrackerChannelFromInhibitor1ToInhibitor2 := make(chan chan<- int, 1)
 	TransferEndPartitionChannelFromInhibitor1ToInhibitor2 := make(chan chan<- int, 1)
 
@@ -57,15 +57,15 @@ func (l *Line) Setup() {
 	}
 	exn2 := ExN.ExcitatoryNode{
 		Id:            2,
-		Count:         0, ///
+		Count:         0,
 		ToInhibitor:   ToInhibitor2FromExcitatory2,
 		FromInhibitor: FromInhibitor2ToExcitatory2,
 	}
-	ToInhibitor3ToExcitatory3 := make(chan int, 1)   ///
-	FromInhibitor3ToExcitatory3 := make(chan int, 1) ///
-	ToInhibitor2FromInhibitor3 := make(chan int, 1)  ///
-	ToInhibitor3FromInhibitor2 := make(chan int, 1)  ///
-	FromInhibitor3ToEdgeNode2 := make(chan int, 1)   ///
+	ToInhibitor3ToExcitatory3 := make(chan int, 1)
+	FromInhibitor3ToExcitatory3 := make(chan int, 1)
+	ToInhibitor2FromInhibitor3 := make(chan int, 1)
+	ToInhibitor3FromInhibitor2 := make(chan int, 1)
+	FromInhibitor3ToEdgeNode2 := make(chan int, 1)
 
 	i2 := IN.InhibitorNode{
 		Id:                2,
@@ -86,7 +86,7 @@ func (l *Line) Setup() {
 	}
 	exn3 := ExN.ExcitatoryNode{
 		Id:            2,
-		Count:         0, ///
+		Count:         0,
 		ToInhibitor:   ToInhibitor3ToExcitatory3,
 		FromInhibitor: FromInhibitor3ToExcitatory3,
 	}

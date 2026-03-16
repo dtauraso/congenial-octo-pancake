@@ -12,17 +12,17 @@ import (
 type InhibitorNode struct {
 	Id                           int
 	PartitionIsMadeFromPartition <-chan bool
-	FromExcitatory               <-chan int ///
-	ToExcitatory                 chan<- int ///
+	FromExcitatory               <-chan int
+	ToExcitatory                 chan<- int
 	LinkToExcitatory             *EN.ExcitatoryNode
-	FromPrevInhibitor            <-chan int ///
-	ToPrevInhibitor              chan<- int ///
+	FromPrevInhibitor            <-chan int
+	ToPrevInhibitor              chan<- int
 	LinkToPrevInhibitor          *InhibitorNode
-	FromNextInhibitor            <-chan int ///
-	ToNextInhibitor              chan<- int ///
+	FromNextInhibitor            <-chan int
+	ToNextInhibitor              chan<- int
 	LinkToNextInhibitor          *InhibitorNode
-	ToEdgeNode                   chan<- int ///
-	FromEdgeNode                 <-chan int ///
+	ToEdgeNode                   chan<- int
+	FromEdgeNode                 <-chan int
 	LinkToEdgeNode               *EDN.EdgeNode
 	StartFromPartition           <-chan int
 	StartToPartition             chan<- int
@@ -55,9 +55,9 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 		case value := <-in.FromExcitatory:
 			fmt.Printf("%dI1: %d\n", in.Id, value)
 			switch value {
-			case 0: ///
+			case 0:
 				S.Send(s, in.ToEdgeNode, 0)
-			case 1: ///
+			case 1:
 				S.Send(s, in.ToEdgeNode, 1)
 				fmt.Printf("second inhibitor\n")
 				select {
@@ -76,7 +76,7 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 				default:
 				}
 
-			case 2: ///
+			case 2:
 				S.Send(s, in.ToExcitatory, -1)
 				S.Send(s, in.ToNextInhibitor, 1)
 				select {
@@ -131,9 +131,9 @@ func (in *InhibitorNode) Update2(s *S.SafeWorker) {
 		case value := <-in.FromExcitatory:
 			fmt.Printf("%dI1: %d\n", in.Id, value)
 			switch value {
-			case 0: ///
+			case 0:
 				S.Send(s, in.ToEdgeNode, 0)
-			case 1: ///
+			case 1:
 				S.Send(s, in.ToEdgeNode, 1)
 				fmt.Printf("second inhibitor\n")
 				select {
@@ -152,7 +152,7 @@ func (in *InhibitorNode) Update2(s *S.SafeWorker) {
 				default:
 				}
 
-			case 2: ///
+			case 2:
 				S.Send(s, in.ToExcitatory, -1)
 				S.Send(s, in.ToNextInhibitor, 1)
 				select {

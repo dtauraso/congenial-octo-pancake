@@ -1,22 +1,18 @@
 package PartitionNode
 
 import (
-	// "fmt"
 	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
 )
 
 type PartitionNode struct {
-	Id              int
-	PartitionIsMade <-chan bool
-	// Lifespan start handshake: inhibitor -> partition and reply back
-	StartFromInhibitor <-chan int
-	StartToInhibitor   chan<- int
-	// Tracking messages flowing both ways during the partition's lifetime
+	Id                   int
+	PartitionIsMade      <-chan bool
+	StartFromInhibitor   <-chan int
+	StartToInhibitor     chan<- int
 	TrackerFromInhibitor <-chan int
 	TrackerToInhibitor   chan<- int
-	// Lifespan end handshake: inhibitor -> partition and reply back
-	EndFromInhibitor <-chan int
-	EndToInhibitor   chan<- int
+	EndFromInhibitor     <-chan int
+	EndToInhibitor       chan<- int
 }
 
 var grow int = 1
