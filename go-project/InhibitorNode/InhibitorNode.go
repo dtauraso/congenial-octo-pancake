@@ -7,9 +7,8 @@ import (
 )
 
 type InhibitorNode struct {
-	Id                int
-	Count             int
-	FromInhibitor     <-chan int
+	Id            int
+	FromInhibitor <-chan int
 	ToInhibitor       chan<- int
 	FromPrevInhibitor <-chan int
 	ToPrevInhibitor   chan<- int
@@ -31,7 +30,6 @@ type InhibitorNode struct {
 	TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor <-chan chan<- int
 }
 
-
 func (in *InhibitorNode) Update(s *S.SafeWorker) {
 	defer s.Wg.Done()
 	for {
@@ -43,67 +41,63 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 
 		select {
 		case value := <-in.FromInhibitor:
-			fmt.Printf("%dI1: %d\n", in.Id, value)
-			switch value {
-			case 0:
-				S.Send(s, in.ToEdgeNode, 0)
-			case 1:
-				S.Send(s, in.ToEdgeNode, 1)
-				fmt.Printf("second inhibitor\n")
-				select {
-				case end := <-in.TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor:
-					fmt.Printf("%dI: received end partition transfer with tracker type %T from previous inhibitor\n", in.Id, end)
-					in.EndToPartition = end
-					fmt.Printf("%dI: set end partition channel after transfer from previous inhibitor\n", in.Id)
-				default:
-				}
+			fmt.Printf("%dI: received %d from input\n", in.Id, value)
+			S.Send(s, in.ToEdgeNode, value)
+			S.Send(s, in.ToNextInhibitor, value)
 
-				select {
-				case tracker := <-in.TransferTrackerChannelFromPrevInhibitorToCurrentInhibitor:
-					fmt.Printf("%dI: received tracker channel transfer with tracker type %T from previous inhibitor\n", in.Id, tracker)
-					in.TrackerToPartition = tracker
-					fmt.Printf("%dI: set tracker channel after transfer from previous inhibitor\n", in.Id)
-				default:
-				}
+			if in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor != nil && in.EndToPartition != nil {
+				S.Send(s, in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)
+				fmt.Printf("%dI: sent end partition transfer to next\n", in.Id)
+				in.EndToPartition = nil
+			}
 
-			case 2:
-				S.Send(s, in.ToInhibitor, -1)
-				S.Send(s, in.ToNextInhibitor, 1)
-				select {
-				case message := <-in.EndFromPartition:
-					switch message {
-					case S.Grow:
-						S.Send(s, in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)
-						fmt.Printf("%dI: sent end partition transfer with tracker type %T to next inhibitor\n", in.Id, in.EndToPartition)
-						in.EndToPartition = nil
-						fmt.Printf("%dI: cleared end partition channel after transfer to next inhibitor\n", in.Id)
-					}
-				}
-
+			if in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor != nil && in.TrackerToPartition != nil {
 				S.Send(s, in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor, in.TrackerToPartition)
-				fmt.Printf("%dI: sent tracker channel transfer with tracker type %T to next inhibitor\n", in.Id, in.TrackerToPartition)
+				fmt.Printf("%dI: sent tracker transfer to next\n", in.Id)
 				in.TrackerToPartition = nil
-				fmt.Printf("%dI: cleared tracker channel after transfer to next inhibitor\n", in.Id)
-
 			}
 		default:
 		}
 
 		select {
 		case value := <-in.FromPrevInhibitor:
-			fmt.Printf("%dI2: %d\n", in.Id, value)
-			switch value {
-			case 1:
-				S.Send(s, in.ToInhibitor, 1)
+			fmt.Printf("%dI: received %d from prev inhibitor\n", in.Id, value)
+
+			select {
+			case end := <-in.TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor:
+				fmt.Printf("%dI: received end partition transfer from prev\n", in.Id)
+				in.EndToPartition = end
+			default:
+			}
+
+			select {
+			case tracker := <-in.TransferTrackerChannelFromPrevInhibitorToCurrentInhibitor:
+				fmt.Printf("%dI: received tracker transfer from prev\n", in.Id)
+				in.TrackerToPartition = tracker
+			default:
+			}
+
+			S.Send(s, in.ToEdgeNode, value)
+			S.Send(s, in.ToNextInhibitor, value)
+
+			if in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor != nil && in.EndToPartition != nil {
+				S.Send(s, in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)
+				fmt.Printf("%dI: sent end partition transfer to next\n", in.Id)
+				in.EndToPartition = nil
+			}
+
+			if in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor != nil && in.TrackerToPartition != nil {
+				S.Send(s, in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor, in.TrackerToPartition)
+				fmt.Printf("%dI: sent tracker transfer to next\n", in.Id)
+				in.TrackerToPartition = nil
 			}
 		default:
 		}
 
 		select {
 		case value := <-in.FromEdgeNode:
-			fmt.Printf("%dEdI: edge result: %d\n", in.Id, value)
+			fmt.Printf("%dI: edge result: %d\n", in.Id, value)
 		default:
 		}
 	}
-
 }
