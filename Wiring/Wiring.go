@@ -1,9 +1,9 @@
 package Wiring
 
 import (
-	EdN "github.com/dtauraso/congenial-octo-pancake/go-project/EdgeNode"
-	IN "github.com/dtauraso/congenial-octo-pancake/go-project/InhibitorNode"
-	PN "github.com/dtauraso/congenial-octo-pancake/go-project/PartitionNode"
+	EdN "github.com/dtauraso/congenial-octo-pancake/EdgeNode"
+	IN "github.com/dtauraso/congenial-octo-pancake/InhibitorNode"
+	PN "github.com/dtauraso/congenial-octo-pancake/PartitionNode"
 )
 
 func ConnectInhibitorPair(prev *IN.InhibitorNode, next *IN.InhibitorNode) {
