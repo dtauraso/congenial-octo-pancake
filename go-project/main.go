@@ -7,7 +7,6 @@ import (
 
 	D "github.com/dtauraso/congenial-octo-pancake/go-project/DistributeNode"
 	EdN "github.com/dtauraso/congenial-octo-pancake/go-project/EdgeNode"
-	ExN "github.com/dtauraso/congenial-octo-pancake/go-project/ExcitatoryNode"
 	IN "github.com/dtauraso/congenial-octo-pancake/go-project/InhibitorNode"
 	L "github.com/dtauraso/congenial-octo-pancake/go-project/Line"
 	PN "github.com/dtauraso/congenial-octo-pancake/go-project/PartitionNode"
@@ -25,8 +24,6 @@ func RunTest() {
 
 	for _, node := range l.Line {
 		switch node := node.(type) {
-		case *ExN.ExcitatoryNode:
-			go node.Update2(&s)
 		case *IN.InhibitorNode:
 			go node.Update2(&s)
 		case *EdN.EdgeNode:
@@ -39,7 +36,7 @@ func RunTest() {
 	}
 	for _, input := range l.TestInput {
 		switch x := l.Line[0].(type) {
-		case *ExN.ExcitatoryNode:
+		case *IN.InhibitorNode:
 			x.Count += input
 		}
 	}

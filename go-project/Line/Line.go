@@ -2,7 +2,6 @@ package Line
 
 import (
 	EdN "github.com/dtauraso/congenial-octo-pancake/go-project/EdgeNode"
-	ExN "github.com/dtauraso/congenial-octo-pancake/go-project/ExcitatoryNode"
 	IN "github.com/dtauraso/congenial-octo-pancake/go-project/InhibitorNode"
 	PN "github.com/dtauraso/congenial-octo-pancake/go-project/PartitionNode"
 )
@@ -13,17 +12,6 @@ type Line struct {
 }
 
 func (l *Line) Setup() {
-	ToInhibitor1FromExcitatory1 := make(chan int, 1)
-	FromInhibitor1ToExcitatory1 := make(chan int, 1)
-
-	exn1 := ExN.ExcitatoryNode{
-		Id:            0,
-		Count:         0,
-		ToInhibitor:   ToInhibitor1FromExcitatory1,
-		FromInhibitor: FromInhibitor1ToExcitatory1,
-	}
-	ToInhibitor2FromExcitatory2 := make(chan int, 1)
-	FromInhibitor2ToExcitatory2 := make(chan int, 1)
 	ToInhibitor1FromInhibitor2 := make(chan int, 1)
 	ToInhibitor2FromInhibitor1 := make(chan int, 1)
 	ToEdgeNode1FromInhibitor1 := make(chan int, 1)
@@ -39,8 +27,6 @@ func (l *Line) Setup() {
 
 	i1 := IN.InhibitorNode{
 		Id:                1,
-		FromExcitatory:    ToInhibitor1FromExcitatory1,
-		ToExcitatory:      FromInhibitor1ToExcitatory1,
 		FromNextInhibitor: ToInhibitor1FromInhibitor2,
 		ToNextInhibitor:   ToInhibitor2FromInhibitor1,
 		ToEdgeNode:        ToEdgeNode1FromInhibitor1,
@@ -55,22 +41,12 @@ func (l *Line) Setup() {
 		ToCurrentInhibitor:   FromEdgeNode1ToInhibitor1,
 		FromNextInhibitor:    FromInhibitor2ToEdgeNode1,
 	}
-	exn2 := ExN.ExcitatoryNode{
-		Id:            2,
-		Count:         0,
-		ToInhibitor:   ToInhibitor2FromExcitatory2,
-		FromInhibitor: FromInhibitor2ToExcitatory2,
-	}
-	ToInhibitor3ToExcitatory3 := make(chan int, 1)
-	FromInhibitor3ToExcitatory3 := make(chan int, 1)
 	ToInhibitor2FromInhibitor3 := make(chan int, 1)
 	ToInhibitor3FromInhibitor2 := make(chan int, 1)
 	FromInhibitor3ToEdgeNode2 := make(chan int, 1)
 
 	i2 := IN.InhibitorNode{
 		Id:                2,
-		FromExcitatory:    ToInhibitor2FromExcitatory2,
-		ToExcitatory:      FromInhibitor2ToExcitatory2,
 		FromPrevInhibitor: ToInhibitor2FromInhibitor1,
 		ToPrevInhibitor:   ToInhibitor1FromInhibitor2,
 		FromNextInhibitor: ToInhibitor2FromInhibitor3,
@@ -84,17 +60,9 @@ func (l *Line) Setup() {
 		ToCurrentInhibitor:   FromEdgeNode2ToInhibitor1,
 		FromNextInhibitor:    FromInhibitor3ToEdgeNode2,
 	}
-	exn3 := ExN.ExcitatoryNode{
-		Id:            2,
-		Count:         0,
-		ToInhibitor:   ToInhibitor3ToExcitatory3,
-		FromInhibitor: FromInhibitor3ToExcitatory3,
-	}
 
 	i3 := IN.InhibitorNode{
 		Id:                3,
-		FromExcitatory:    ToInhibitor3ToExcitatory3,
-		ToExcitatory:      FromInhibitor3ToExcitatory3,
 		FromPrevInhibitor: ToInhibitor2FromInhibitor3,
 		ToPrevInhibitor:   ToInhibitor3FromInhibitor2,
 		ToEdgeNode:        FromInhibitor3ToEdgeNode2,
@@ -110,7 +78,7 @@ func (l *Line) Setup() {
 		TrackerToInhibitor:   TrackerToInhibitorTrackerToPartition,
 		EndToInhibitor:       EndToInhibitorEndFromPartition,
 	}
-	l.Line = []any{&exn1, &i1, &edn1, &exn2, &i2, &edn2, &exn3, &i3, &partition_node}
+	l.Line = []any{&i1, &edn1, &i2, &edn2, &i3, &partition_node}
 
 }
 

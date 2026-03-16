@@ -4,17 +4,16 @@ import (
 	"fmt"
 
 	EDN "github.com/dtauraso/congenial-octo-pancake/go-project/EdgeNode"
-	EN "github.com/dtauraso/congenial-octo-pancake/go-project/ExcitatoryNode"
 	PN "github.com/dtauraso/congenial-octo-pancake/go-project/PartitionNode"
 	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
 )
 
 type InhibitorNode struct {
 	Id                           int
+	Count                        int
 	PartitionIsMadeFromPartition <-chan bool
-	FromExcitatory               <-chan int
-	ToExcitatory                 chan<- int
-	LinkToExcitatory             *EN.ExcitatoryNode
+	FromInhibitor                <-chan int
+	ToInhibitor                  chan<- int
 	FromPrevInhibitor            <-chan int
 	ToPrevInhibitor              chan<- int
 	LinkToPrevInhibitor          *InhibitorNode
@@ -52,7 +51,7 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 		}
 
 		select {
-		case value := <-in.FromExcitatory:
+		case value := <-in.FromInhibitor:
 			fmt.Printf("%dI1: %d\n", in.Id, value)
 			switch value {
 			case 0:
@@ -77,7 +76,7 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 				}
 
 			case 2:
-				S.Send(s, in.ToExcitatory, -1)
+				S.Send(s, in.ToInhibitor, -1)
 				S.Send(s, in.ToNextInhibitor, 1)
 				select {
 				case message := <-in.EndFromPartition:
@@ -104,7 +103,7 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 			fmt.Printf("%dI2: %d\n", in.Id, value)
 			switch value {
 			case 1:
-				S.Send(s, in.ToExcitatory, 1)
+				S.Send(s, in.ToInhibitor, 1)
 			}
 		default:
 		}
@@ -128,7 +127,7 @@ func (in *InhibitorNode) Update2(s *S.SafeWorker) {
 		}
 
 		select {
-		case value := <-in.FromExcitatory:
+		case value := <-in.FromInhibitor:
 			fmt.Printf("%dI1: %d\n", in.Id, value)
 			switch value {
 			case 0:
@@ -153,7 +152,7 @@ func (in *InhibitorNode) Update2(s *S.SafeWorker) {
 				}
 
 			case 2:
-				S.Send(s, in.ToExcitatory, -1)
+				S.Send(s, in.ToInhibitor, -1)
 				S.Send(s, in.ToNextInhibitor, 1)
 				select {
 				case message := <-in.EndFromPartition:
@@ -180,7 +179,7 @@ func (in *InhibitorNode) Update2(s *S.SafeWorker) {
 			fmt.Printf("%dI2: %d\n", in.Id, value)
 			switch value {
 			case 1:
-				S.Send(s, in.ToExcitatory, 1)
+				S.Send(s, in.ToInhibitor, 1)
 			}
 		default:
 		}
