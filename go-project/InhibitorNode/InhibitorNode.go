@@ -116,7 +116,3 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 	}
 
 }
-
-func Run2() {
-	fmt.Println("Process2 started")
-}
