@@ -2,6 +2,7 @@ package Line
 
 import (
 	EdN "github.com/dtauraso/congenial-octo-pancake/go-project/EdgeNode"
+
 	IN "github.com/dtauraso/congenial-octo-pancake/go-project/InhibitorNode"
 	PN "github.com/dtauraso/congenial-octo-pancake/go-project/PartitionNode"
 	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
@@ -13,76 +14,79 @@ type Line struct {
 	InputNode  *IN.InhibitorNode
 }
 
+func ConnectInhibitorPair(prev *IN.InhibitorNode, next *IN.InhibitorNode) {
+	toNext := make(chan int, 1)
+	toPrev := make(chan int, 1)
+	prev.ToNextInhibitor = toNext
+	next.FromPrevInhibitor = toNext
+	next.ToPrevInhibitor = toPrev
+	prev.FromNextInhibitor = toPrev
+}
+
+func ConnectInhibitorTransferChannels(prev *IN.InhibitorNode, next *IN.InhibitorNode) {
+	tracker := make(chan chan<- int, 1)
+	endPartition := make(chan chan<- int, 1)
+	prev.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor = tracker
+	next.TransferTrackerChannelFromPrevInhibitorToCurrentInhibitor = tracker
+	prev.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor = endPartition
+	next.TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor = endPartition
+}
+
+func ConnectEdgeBetweenInhibitors(current *IN.InhibitorNode, edge *EdN.EdgeNode, next *IN.InhibitorNode) {
+	toEdge := make(chan int, 1)
+	fromEdge := make(chan int, 1)
+	nextToEdge := make(chan int, 1)
+	current.ToEdgeNode = toEdge
+	edge.FromCurrentInhibitor = toEdge
+	edge.ToCurrentInhibitor = fromEdge
+	current.FromEdgeNode = fromEdge
+	next.ToEdgeNode = nextToEdge
+	edge.FromNextInhibitor = nextToEdge
+}
+
+func ConnectInhibitorToPartition(inhibitor *IN.InhibitorNode, partition *PN.PartitionNode) {
+	startToPartition := make(chan int, 1)
+	startFromPartition := make(chan int, 1)
+	trackerToPartition := make(chan int, 1)
+	trackerFromPartition := make(chan int, 1)
+	endToPartition := make(chan int, 1)
+	endFromPartition := make(chan int, 1)
+	inhibitor.StartToPartition = startToPartition
+	partition.StartFromInhibitor = startToPartition
+	partition.StartToInhibitor = startFromPartition
+	inhibitor.StartFromPartition = startFromPartition
+	inhibitor.TrackerToPartition = trackerToPartition
+	partition.TrackerFromInhibitor = trackerToPartition
+	partition.TrackerToInhibitor = trackerFromPartition
+	inhibitor.TrackerFromPartition = trackerFromPartition
+	inhibitor.EndToPartition = endToPartition
+	partition.EndFromInhibitor = endToPartition
+	partition.EndToInhibitor = endFromPartition
+	inhibitor.EndFromPartition = endFromPartition
+}
+
 func (l *Line) Setup() {
-	ToInhibitor1FromInhibitor2 := make(chan int, 1)
-	ToInhibitor2FromInhibitor1 := make(chan int, 1)
-	ToEdgeNode1FromInhibitor1 := make(chan int, 1)
-	FromEdgeNode1ToInhibitor1 := make(chan int, 1)
-	ToEdgeNode2ToInhibitor1 := make(chan int, 1)
-	FromEdgeNode2ToInhibitor1 := make(chan int, 1)
-	FromInhibitor2ToEdgeNode1 := make(chan int, 1)
-	TransferTrackerChannelFromInhibitor1ToInhibitor2 := make(chan chan<- int, 1)
-	TransferEndPartitionChannelFromInhibitor1ToInhibitor2 := make(chan chan<- int, 1)
+	i1 := IN.InhibitorNode{Id: 1}
+	i2 := IN.InhibitorNode{Id: 2}
+	i3 := IN.InhibitorNode{Id: 3}
+	edn1 := EdN.EdgeNode{}
+	edn2 := EdN.EdgeNode{}
+	partition_node := PN.PartitionNode{Id: 0}
 
-	EndToInhibitorEndFromPartition := make(chan int, 1)
-	EndToInhibitorEndToPartition := make(chan int, 1)
+	ConnectInhibitorPair(&i1, &i2)
+	ConnectInhibitorPair(&i2, &i3)
+	ConnectInhibitorTransferChannels(&i1, &i2)
+	ConnectEdgeBetweenInhibitors(&i1, &edn1, &i2)
+	ConnectInhibitorToPartition(&i1, &partition_node)
 
-	i1 := IN.InhibitorNode{
-		Id:                1,
-		FromNextInhibitor: ToInhibitor1FromInhibitor2,
-		ToNextInhibitor:   ToInhibitor2FromInhibitor1,
-		ToEdgeNode:        ToEdgeNode1FromInhibitor1,
-		FromEdgeNode:      FromEdgeNode1ToInhibitor1,
-		EndFromPartition:  EndToInhibitorEndFromPartition,
-		EndToPartition:    EndToInhibitorEndToPartition,
-		TransferTrackerChannelFromCurrentInhibitorToNextInhibitor:      TransferTrackerChannelFromInhibitor1ToInhibitor2,
-		TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor: TransferEndPartitionChannelFromInhibitor1ToInhibitor2,
-	}
-	edn1 := EdN.EdgeNode{
-		FromCurrentInhibitor: ToEdgeNode1FromInhibitor1,
-		ToCurrentInhibitor:   FromEdgeNode1ToInhibitor1,
-		FromNextInhibitor:    FromInhibitor2ToEdgeNode1,
-	}
-	ToInhibitor2FromInhibitor3 := make(chan int, 1)
-	ToInhibitor3FromInhibitor2 := make(chan int, 1)
+	edn2.FromCurrentInhibitor = make(chan int, 1)
+	edn2.ToCurrentInhibitor = make(chan int, 1)
 	FromInhibitor3ToEdgeNode2 := make(chan int, 1)
+	i3.ToEdgeNode = FromInhibitor3ToEdgeNode2
+	edn2.FromNextInhibitor = FromInhibitor3ToEdgeNode2
 
-	i2 := IN.InhibitorNode{
-		Id:                2,
-		FromPrevInhibitor: ToInhibitor2FromInhibitor1,
-		ToPrevInhibitor:   ToInhibitor1FromInhibitor2,
-		FromNextInhibitor: ToInhibitor2FromInhibitor3,
-		ToNextInhibitor:   ToInhibitor3FromInhibitor2,
-		ToEdgeNode:        FromInhibitor2ToEdgeNode1,
-		TransferTrackerChannelFromPrevInhibitorToCurrentInhibitor:      TransferTrackerChannelFromInhibitor1ToInhibitor2,
-		TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor: TransferEndPartitionChannelFromInhibitor1ToInhibitor2,
-	}
-	edn2 := EdN.EdgeNode{
-		FromCurrentInhibitor: ToEdgeNode2ToInhibitor1,
-		ToCurrentInhibitor:   FromEdgeNode2ToInhibitor1,
-		FromNextInhibitor:    FromInhibitor3ToEdgeNode2,
-	}
-
-	i3 := IN.InhibitorNode{
-		Id:                3,
-		FromPrevInhibitor: ToInhibitor2FromInhibitor3,
-		ToPrevInhibitor:   ToInhibitor3FromInhibitor2,
-		ToEdgeNode:        FromInhibitor3ToEdgeNode2,
-	}
-	StartFromInhibitorStartFromPartition := make(chan int, 1)
-	StartToInhibitorStartToPartition := make(chan int, 1)
-	TrackerFromInhibitorTrackerFromPartition := make(chan int, 1)
-	TrackerToInhibitorTrackerToPartition := make(chan int, 1)
-	partition_node := PN.PartitionNode{Id: 0,
-		StartFromInhibitor:   StartFromInhibitorStartFromPartition,
-		StartToInhibitor:     StartToInhibitorStartToPartition,
-		TrackerFromInhibitor: TrackerFromInhibitorTrackerFromPartition,
-		TrackerToInhibitor:   TrackerToInhibitorTrackerToPartition,
-		EndToInhibitor:       EndToInhibitorEndFromPartition,
-	}
 	l.InputNode = &i1
 	l.Line = []S.Node{&i1, &edn1, &i2, &edn2, &i3, &partition_node}
-
 }
 
 func (l *Line) Input() {
