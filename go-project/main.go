@@ -22,7 +22,7 @@ func RunTest() {
 		go node.Update(&s)
 	}
 	for _, input := range l.TestInput {
-		l.InputNode.Count += input
+		l.InputChannel <- input
 	}
 	time.Sleep(100 * time.Millisecond)
 	cancel()
