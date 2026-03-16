@@ -41,17 +41,17 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 		select {
 		case value := <-in.FromInhibitor:
 			fmt.Printf("%dI: received %d from input\n", in.Id, value)
-			S.Send(s, in.ToEdgeNode, value)
-			S.Send(s, in.ToNextInhibitor, value)
+			S.Send(in.ToEdgeNode, value)
+			S.Send(in.ToNextInhibitor, value)
 
 			if in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor != nil && in.EndToPartition != nil {
-				S.Send(s, in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)
+				S.Send(in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)
 				fmt.Printf("%dI: sent end partition transfer to next\n", in.Id)
 				in.EndToPartition = nil
 			}
 
 			if in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor != nil && in.TrackerToPartition != nil {
-				S.Send(s, in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor, in.TrackerToPartition)
+				S.Send(in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor, in.TrackerToPartition)
 				fmt.Printf("%dI: sent tracker transfer to next\n", in.Id)
 				in.TrackerToPartition = nil
 			}
@@ -76,17 +76,17 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 			default:
 			}
 
-			S.Send(s, in.ToEdgeNode, value)
-			S.Send(s, in.ToNextInhibitor, value)
+			S.Send(in.ToEdgeNode, value)
+			S.Send(in.ToNextInhibitor, value)
 
 			if in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor != nil && in.EndToPartition != nil {
-				S.Send(s, in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)
+				S.Send(in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)
 				fmt.Printf("%dI: sent end partition transfer to next\n", in.Id)
 				in.EndToPartition = nil
 			}
 
 			if in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor != nil && in.TrackerToPartition != nil {
-				S.Send(s, in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor, in.TrackerToPartition)
+				S.Send(in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor, in.TrackerToPartition)
 				fmt.Printf("%dI: sent tracker transfer to next\n", in.Id)
 				in.TrackerToPartition = nil
 			}

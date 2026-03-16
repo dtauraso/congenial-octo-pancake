@@ -16,7 +16,7 @@ type Node interface {
 	Update(s *SafeWorker)
 }
 
-func Send[T any](w *SafeWorker, ch chan<- T, val T) {
+func Send[T any](ch chan<- T, val T) {
 	select {
 	case ch <- val:
 	default:

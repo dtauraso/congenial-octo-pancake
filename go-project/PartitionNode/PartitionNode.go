@@ -23,6 +23,6 @@ func (pn *PartitionNode) Update(s *S.SafeWorker) {
 			return
 		default:
 		}
-		S.Send(s, pn.EndToInhibitor, S.Grow)
+		S.Send(pn.EndToInhibitor, S.Grow)
 	}
 }

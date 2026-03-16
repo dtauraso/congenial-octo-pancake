@@ -31,7 +31,7 @@ func (en *EdgeNode) Update(s *S.SafeWorker) {
 		fmt.Printf("edge flag: %d\n", en.EdgeFlag)
 		switch en.EdgeFlag {
 		case 1:
-			S.Send(s, en.ToCurrentInhibitor, 1)
+			S.Send(en.ToCurrentInhibitor, 1)
 			fmt.Printf("Ed3 was run\n")
 		}
 	}
