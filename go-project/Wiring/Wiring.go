@@ -13,10 +13,7 @@ func ConnectInhibitorPair(prev *IN.InhibitorNode, next *IN.InhibitorNode) {
 }
 
 func ConnectInhibitorTransferChannels(prev *IN.InhibitorNode, next *IN.InhibitorNode) {
-	tracker := make(chan chan<- int, 1)
 	endPartition := make(chan chan<- int, 1)
-	prev.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor = tracker
-	next.TransferTrackerChannelFromPrevInhibitorToCurrentInhibitor = tracker
 	prev.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor = endPartition
 	next.TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor = endPartition
 }
@@ -36,18 +33,12 @@ func ConnectEdgeBetweenInhibitors(current *IN.InhibitorNode, edge *EdN.EdgeNode,
 func ConnectInhibitorToPartition(inhibitor *IN.InhibitorNode, partition *PN.PartitionNode) {
 	startToPartition := make(chan int, 1)
 	startFromPartition := make(chan int, 1)
-	trackerToPartition := make(chan int, 1)
-	trackerFromPartition := make(chan int, 1)
 	endToPartition := make(chan int, 1)
 	endFromPartition := make(chan int, 1)
 	inhibitor.StartToPartition = startToPartition
 	partition.StartFromInhibitor = startToPartition
 	partition.StartToInhibitor = startFromPartition
 	inhibitor.StartFromPartition = startFromPartition
-	inhibitor.TrackerToPartition = trackerToPartition
-	partition.TrackerFromInhibitor = trackerToPartition
-	partition.TrackerToInhibitor = trackerFromPartition
-	inhibitor.TrackerFromPartition = trackerFromPartition
 	inhibitor.EndToPartition = endToPartition
 	partition.EndFromInhibitor = endToPartition
 	partition.EndToInhibitor = endFromPartition

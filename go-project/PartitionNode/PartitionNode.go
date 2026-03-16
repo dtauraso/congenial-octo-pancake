@@ -7,11 +7,9 @@ import (
 type PartitionNode struct {
 	Id                   int
 	PartitionIsMade      <-chan bool
-	StartFromInhibitor   <-chan int
-	StartToInhibitor     chan<- int
-	TrackerFromInhibitor <-chan int
-	TrackerToInhibitor   chan<- int
-	EndFromInhibitor     <-chan int
+	StartFromInhibitor <-chan int
+	StartToInhibitor   chan<- int
+	EndFromInhibitor   <-chan int
 	EndToInhibitor       chan<- int
 }
 

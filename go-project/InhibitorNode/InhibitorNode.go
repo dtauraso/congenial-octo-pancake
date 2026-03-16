@@ -15,15 +15,11 @@ type InhibitorNode struct {
 	FromEdgeNode      <-chan int
 	StartFromPartition <-chan int
 	StartToPartition   chan<- int
-	TrackerFromPartition <-chan int
-	TrackerToPartition   chan<- int
 	EndFromPartition   <-chan int
 	EndToPartition     chan<- int
 
-	TransferTrackerChannelFromCurrentInhibitorToNextInhibitor      chan<- chan<- int
 	TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor chan<- chan<- int
 
-	TransferTrackerChannelFromPrevInhibitorToCurrentInhibitor      <-chan chan<- int
 	TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor <-chan chan<- int
 }
 
@@ -47,12 +43,6 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 				fmt.Printf("%dI: sent end partition transfer to next\n", in.Id)
 				in.EndToPartition = nil
 			}
-
-			if in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor != nil && in.TrackerToPartition != nil {
-				S.Send(in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor, in.TrackerToPartition)
-				fmt.Printf("%dI: sent tracker transfer to next\n", in.Id)
-				in.TrackerToPartition = nil
-			}
 		default:
 		}
 
@@ -67,13 +57,6 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 			default:
 			}
 
-			select {
-			case tracker := <-in.TransferTrackerChannelFromPrevInhibitorToCurrentInhibitor:
-				fmt.Printf("%dI: received tracker transfer from prev\n", in.Id)
-				in.TrackerToPartition = tracker
-			default:
-			}
-
 			S.Send(in.ToEdgeNode, value)
 			S.Send(in.ToNextInhibitor, value)
 
@@ -81,12 +64,6 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 				S.Send(in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)
 				fmt.Printf("%dI: sent end partition transfer to next\n", in.Id)
 				in.EndToPartition = nil
-			}
-
-			if in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor != nil && in.TrackerToPartition != nil {
-				S.Send(in.TransferTrackerChannelFromCurrentInhibitorToNextInhibitor, in.TrackerToPartition)
-				fmt.Printf("%dI: sent tracker transfer to next\n", in.Id)
-				in.TrackerToPartition = nil
 			}
 		default:
 		}
