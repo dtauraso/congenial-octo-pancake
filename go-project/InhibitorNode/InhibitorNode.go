@@ -46,6 +46,12 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 				fmt.Printf("%dI: pushing %d to next\n", in.Id, in.HeldValue)
 				S.Send(in.ToEdgeNode, in.HeldValue)
 				S.Send(in.ToNextInhibitor, in.HeldValue)
+
+				select {
+				case value := <-in.FromEdgeNode:
+					fmt.Printf("%dI: edge result: %d\n", in.Id, value)
+				default:
+				}
 			}
 
 			in.HeldValue = value
@@ -56,12 +62,6 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 				fmt.Printf("%dI: sent end partition transfer to next\n", in.Id)
 				in.EndToPartition = nil
 			}
-		default:
-		}
-
-		select {
-		case value := <-in.FromEdgeNode:
-			fmt.Printf("%dI: edge result: %d\n", in.Id, value)
 		default:
 		}
 	}
