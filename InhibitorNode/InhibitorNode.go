@@ -3,7 +3,7 @@ package InhibitorNode
 import (
 	"fmt"
 
-	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
+	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
 )
 
 type InhibitorNode struct {

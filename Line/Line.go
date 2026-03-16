@@ -1,12 +1,12 @@
 package Line
 
 import (
-	EdN "github.com/dtauraso/congenial-octo-pancake/go-project/EdgeNode"
-	IN "github.com/dtauraso/congenial-octo-pancake/go-project/InhibitorNode"
-	INN "github.com/dtauraso/congenial-octo-pancake/go-project/InputNode"
-	PN "github.com/dtauraso/congenial-octo-pancake/go-project/PartitionNode"
-	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
-	W "github.com/dtauraso/congenial-octo-pancake/go-project/Wiring"
+	EdN "github.com/dtauraso/congenial-octo-pancake/EdgeNode"
+	IN "github.com/dtauraso/congenial-octo-pancake/InhibitorNode"
+	INN "github.com/dtauraso/congenial-octo-pancake/InputNode"
+	PN "github.com/dtauraso/congenial-octo-pancake/PartitionNode"
+	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
+	W "github.com/dtauraso/congenial-octo-pancake/Wiring"
 )
 
 type Line struct {

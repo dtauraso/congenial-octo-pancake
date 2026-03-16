@@ -1,7 +1,7 @@
 package AndGateNode
 
 import (
-	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
+	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
 )
 
 type AndGateNode struct {

@@ -2,7 +2,7 @@ package InputNode
 
 import (
 	"fmt"
-	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
+	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
 )
 
 type InputNode struct {

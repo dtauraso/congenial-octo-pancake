@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	L "github.com/dtauraso/congenial-octo-pancake/go-project/Line"
-	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
+	L "github.com/dtauraso/congenial-octo-pancake/Line"
+	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
 )
 
 func RunTest() {
