@@ -19,55 +19,56 @@
   <!-- ========================================= -->
   <!-- === VERTICAL (top, rotated CCW 90deg) === -->
   <!-- ========================================= -->
+  <!-- chain at x=183 to align with bottom p0 -->
 
-  <!-- p1 (between i4 y=75 and i5 y=20, midpoint y=48) -->
-  <circle cx="100" cy="48" r="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.5"/>
-  <text x="100" y="51" text-anchor="middle" font-size="6" fill="#2e7d32">p1</text>
+  <!-- p1 -->
+  <circle cx="133" cy="48" r="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.5"/>
+  <text x="133" y="51" text-anchor="middle" font-size="6" fill="#2e7d32">p1</text>
 
   <!-- e2, e3 -->
-  <circle cx="125" cy="105" r="5" fill="#ffebee" stroke="#c62828" stroke-width="1"/>
-  <text x="125" y="107" text-anchor="middle" font-size="5" fill="#c62828">e2</text>
-  <circle cx="125" cy="45" r="5" fill="#e3f2fd" stroke="#1565c0" stroke-width="1"/>
-  <text x="125" y="47" text-anchor="middle" font-size="5" fill="#1565c0">e3</text>
+  <circle cx="158" cy="105" r="5" fill="#ffebee" stroke="#c62828" stroke-width="1"/>
+  <text x="158" y="107" text-anchor="middle" font-size="5" fill="#c62828">e2</text>
+  <circle cx="158" cy="45" r="5" fill="#e3f2fd" stroke="#1565c0" stroke-width="1"/>
+  <text x="158" y="47" text-anchor="middle" font-size="5" fill="#1565c0">e3</text>
 
   <!-- in1 -->
-  <circle cx="150" cy="155" r="5" fill="#e0e0e0" stroke="#666" stroke-width="1"/>
-  <text x="150" y="157" text-anchor="middle" font-size="5" fill="#333">in1</text>
+  <circle cx="183" cy="155" r="5" fill="#e0e0e0" stroke="#666" stroke-width="1"/>
+  <text x="183" y="157" text-anchor="middle" font-size="5" fill="#333">in1</text>
 
   <!-- i3, i4, i5 -->
-  <circle cx="150" cy="130" r="7" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
-  <text x="150" y="132" text-anchor="middle" font-size="6" fill="#e65100">i3</text>
+  <circle cx="183" cy="130" r="7" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
+  <text x="183" y="132" text-anchor="middle" font-size="6" fill="#e65100">i3</text>
 
-  <circle cx="150" cy="75" r="7" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
-  <text x="150" y="77" text-anchor="middle" font-size="6" fill="#e65100">i4</text>
+  <circle cx="183" cy="75" r="7" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
+  <text x="183" y="77" text-anchor="middle" font-size="6" fill="#e65100">i4</text>
 
-  <circle cx="150" cy="20" r="7" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
-  <text x="150" y="22" text-anchor="middle" font-size="6" fill="#e65100">i5</text>
+  <circle cx="183" cy="20" r="7" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
+  <text x="183" y="22" text-anchor="middle" font-size="6" fill="#e65100">i5</text>
 
   <!-- in1 -> i3 -->
-  <line x1="150" y1="150" x2="150" y2="139" stroke="#555" stroke-width="0.7" marker-end="url(#arr)"/>
+  <line x1="183" y1="150" x2="183" y2="139" stroke="#555" stroke-width="0.7" marker-end="url(#arr)"/>
   <!-- i3 -> i4 -->
-  <line x1="150" y1="123" x2="150" y2="84" stroke="#555" stroke-width="0.7" marker-end="url(#arr)"/>
+  <line x1="183" y1="123" x2="183" y2="84" stroke="#555" stroke-width="0.7" marker-end="url(#arr)"/>
   <!-- i4 -> i5 -->
-  <line x1="150" y1="68" x2="150" y2="29" stroke="#555" stroke-width="0.7" marker-end="url(#arr)"/>
+  <line x1="183" y1="68" x2="183" y2="29" stroke="#555" stroke-width="0.7" marker-end="url(#arr)"/>
 
   <!-- i3 <-> e2 -->
-  <line x1="143" y1="126" x2="128" y2="110" stroke="#2266aa" stroke-width="0.5"/>
-  <line x1="126" y1="108" x2="143" y2="125" stroke="#2266aa" stroke-width="0.5"/>
+  <line x1="176" y1="126" x2="161" y2="110" stroke="#2266aa" stroke-width="0.5"/>
+  <line x1="159" y1="108" x2="176" y2="125" stroke="#2266aa" stroke-width="0.5"/>
   <!-- i4 -> e2 -->
-  <line x1="143" y1="80" x2="128" y2="110" stroke="#2266aa" stroke-width="0.5"/>
+  <line x1="176" y1="80" x2="161" y2="110" stroke="#2266aa" stroke-width="0.5"/>
   <!-- i4 <-> e3 -->
-  <line x1="143" y1="70" x2="128" y2="50" stroke="#2266aa" stroke-width="0.5"/>
-  <line x1="126" y1="48" x2="143" y2="70" stroke="#2266aa" stroke-width="0.5"/>
+  <line x1="176" y1="70" x2="161" y2="50" stroke="#2266aa" stroke-width="0.5"/>
+  <line x1="159" y1="48" x2="176" y2="70" stroke="#2266aa" stroke-width="0.5"/>
   <!-- i5 -> e3 -->
-  <line x1="143" y1="24" x2="128" y2="50" stroke="#2266aa" stroke-width="0.5"/>
+  <line x1="176" y1="24" x2="161" y2="50" stroke="#2266aa" stroke-width="0.5"/>
 
   <!-- e2 -> p1 -->
-  <line x1="120" y1="102" x2="107" y2="55" stroke="#cc2222" stroke-width="0.8" marker-end="url(#arr-r)"/>
+  <line x1="153" y1="102" x2="140" y2="55" stroke="#cc2222" stroke-width="0.8" marker-end="url(#arr-r)"/>
   <!-- p1 -> i4 -->
-  <line x1="108" y1="50" x2="141" y2="73" stroke="#228844" stroke-width="0.7" marker-end="url(#arr-g)"/>
+  <line x1="141" y1="50" x2="174" y2="73" stroke="#228844" stroke-width="0.7" marker-end="url(#arr-g)"/>
   <!-- i5 -> p1 -->
-  <path d="M 143 22 C 115 22, 100 32, 100 38" fill="none" stroke="#e65100" stroke-width="0.7" marker-end="url(#arr-o)"/>
+  <path d="M 176 22 C 148 22, 133 32, 133 38" fill="none" stroke="#e65100" stroke-width="0.7" marker-end="url(#arr-o)"/>
 
   <!-- ========================================= -->
   <!-- === HORIZONTAL (bottom) ================= -->
