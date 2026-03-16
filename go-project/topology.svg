@@ -38,7 +38,7 @@
 
   <!-- Input -->
   <rect x="20" y="90" width="80" height="40" fill="#eee" stroke="#999" rx="4"/>
-  <text x="60" y="112" text-anchor="middle" font-size="11" fill="#555">[1, 1, 0]</text>
+  <text x="60" y="112" text-anchor="middle" font-size="11" fill="#555">[0, 1, 1]</text>
 
   <!-- i0 - Starting Inhibitor -->
   <rect x="140" y="80" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
