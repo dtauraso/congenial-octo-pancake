@@ -10,6 +10,8 @@ type SafeWorker struct {
 	Wg  *sync.WaitGroup
 }
 
+var Grow int = 1
+
 type Node interface {
 	Update(s *SafeWorker)
 }

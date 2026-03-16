@@ -31,7 +31,6 @@ type InhibitorNode struct {
 	TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor <-chan chan<- int
 }
 
-var grow int = 1
 
 func (in *InhibitorNode) Update(s *S.SafeWorker) {
 	defer s.Wg.Done()
@@ -73,7 +72,7 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 				select {
 				case message := <-in.EndFromPartition:
 					switch message {
-					case grow:
+					case S.Grow:
 						S.Send(s, in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)
 						fmt.Printf("%dI: sent end partition transfer with tracker type %T to next inhibitor\n", in.Id, in.EndToPartition)
 						in.EndToPartition = nil

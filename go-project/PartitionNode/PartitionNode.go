@@ -15,8 +15,6 @@ type PartitionNode struct {
 	EndToInhibitor       chan<- int
 }
 
-var grow int = 1
-
 func (pn *PartitionNode) Update(s *S.SafeWorker) {
 	defer s.Wg.Done()
 	for {
@@ -25,6 +23,6 @@ func (pn *PartitionNode) Update(s *S.SafeWorker) {
 			return
 		default:
 		}
-		S.Send(s, pn.EndToInhibitor, grow)
+		S.Send(s, pn.EndToInhibitor, S.Grow)
 	}
 }
