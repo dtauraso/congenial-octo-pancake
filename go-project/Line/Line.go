@@ -32,6 +32,10 @@ func (l *Line) Setup() {
 	W.ConnectInhibitorPair(&i1, &i2)
 	W.ConnectInhibitorPair(&i2, &i3)
 	W.ConnectInhibitorTransferChannels(&i1, &i2)
+	stopGrowing := make(chan int, 1)
+	edn0.ToPartition = stopGrowing
+	partition_node.StopGrowingFromEdge = stopGrowing
+
 	W.ConnectEdgeBetweenInhibitors(&i0, &edn0, &i1)
 	W.ConnectEdgeBetweenInhibitors(&i1, &edn1, &i2)
 	W.ConnectInhibitorToPartition(&i1, &partition_node)

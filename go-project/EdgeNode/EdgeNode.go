@@ -10,6 +10,7 @@ type EdgeNode struct {
 	FromCurrentInhibitor <-chan int
 	ToCurrentInhibitor   chan<- int
 	FromNextInhibitor    <-chan int
+	ToPartition          chan<- int
 	EdgeFlag             int
 }
 
@@ -32,6 +33,7 @@ func (en *EdgeNode) Update(s *S.SafeWorker) {
 		switch en.EdgeFlag {
 		case 1:
 			S.Send(en.ToCurrentInhibitor, 1)
+			S.Send(en.ToPartition, 1)
 			fmt.Printf("Ed3 was run\n")
 		}
 	}
