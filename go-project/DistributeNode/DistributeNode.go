@@ -6,6 +6,7 @@ import (
 	IN "github.com/dtauraso/congenial-octo-pancake/go-project/InhibitorNode"
 	PN "github.com/dtauraso/congenial-octo-pancake/go-project/PartitionNode"
 	S "github.com/dtauraso/congenial-octo-pancake/go-project/SafeWorker"
+	W "github.com/dtauraso/congenial-octo-pancake/go-project/Wiring"
 )
 
 type DistributeNode struct {
@@ -21,67 +22,26 @@ type DistributeNode struct {
 }
 
 func (d *DistributeNode) MakeNewTimelineAndPartition(line *[]S.Node, s *S.SafeWorker) {
+	i1 := IN.InhibitorNode{Id: 1}
+	i2 := IN.InhibitorNode{Id: 3}
+	i3 := IN.InhibitorNode{Id: 3}
+	edn1 := EdN.EdgeNode{}
+	edn2 := EdN.EdgeNode{}
+	partition_node := PN.PartitionNode{Id: 0}
 
-	ToInhibitor1FromInhibitor2 := make(chan int, 1)
-	ToInhibitor2FromInhibitor1 := make(chan int, 1)
-	ToEdgeNode1FromInhibitor1 := make(chan int, 1)
-	FromEdgeNode1ToInhibitor1 := make(chan int, 1)
-	ToEdgeNode2ToInhibitor1 := make(chan int, 1)
-	FromEdgeNode2ToInhibitor1 := make(chan int, 1)
-	FromInhibitor2ToEdgeNode1 := make(chan int, 1)
+	W.ConnectInhibitorPair(&i1, &i2)
+	W.ConnectInhibitorPair(&i2, &i3)
+	W.ConnectEdgeBetweenInhibitors(&i1, &edn1, &i2)
+	W.ConnectInhibitorToPartition(&i1, &partition_node)
 
-	i1 := IN.InhibitorNode{
-		Id:                1,
-		FromNextInhibitor: ToInhibitor1FromInhibitor2,
-		ToNextInhibitor:   ToInhibitor2FromInhibitor1,
-		ToEdgeNode:        ToEdgeNode1FromInhibitor1,
-		FromEdgeNode:      FromEdgeNode1ToInhibitor1,
-	}
-	edn1 := EdN.EdgeNode{
-		FromCurrentInhibitor: ToEdgeNode1FromInhibitor1,
-		ToCurrentInhibitor:   FromEdgeNode1ToInhibitor1,
-		FromNextInhibitor:    FromInhibitor2ToEdgeNode1,
-	}
-	ToInhibitor2FromInhibitor3 := make(chan int, 1)
-	ToInhibitor3FromInhibitor2 := make(chan int, 1)
+	edn2.FromCurrentInhibitor = make(chan int, 1)
+	edn2.ToCurrentInhibitor = make(chan int, 1)
 	FromInhibitor3ToEdgeNode2 := make(chan int, 1)
+	i3.ToEdgeNode = FromInhibitor3ToEdgeNode2
+	edn2.FromNextInhibitor = FromInhibitor3ToEdgeNode2
 
-	i2 := IN.InhibitorNode{
-		Id:                3,
-		FromPrevInhibitor: ToInhibitor2FromInhibitor1,
-		ToPrevInhibitor:   ToInhibitor1FromInhibitor2,
-		FromNextInhibitor: ToInhibitor2FromInhibitor3,
-		ToNextInhibitor:   ToInhibitor3FromInhibitor2,
-		ToEdgeNode:        FromInhibitor2ToEdgeNode1,
-	}
-	edn2 := EdN.EdgeNode{
-		FromCurrentInhibitor: ToEdgeNode2ToInhibitor1,
-		ToCurrentInhibitor:   FromEdgeNode2ToInhibitor1,
-		FromNextInhibitor:    FromInhibitor3ToEdgeNode2,
-	}
-	i3 := IN.InhibitorNode{
-		Id:                3,
-		FromPrevInhibitor: ToInhibitor2FromInhibitor3,
-		ToPrevInhibitor:   ToInhibitor3FromInhibitor2,
-		ToEdgeNode:        FromInhibitor3ToEdgeNode2,
-	}
-	StartFromInhibitorStartFromPartition := make(chan int, 1)
-	StartToInhibitorStartToPartition := make(chan int, 1)
-	TrackerFromInhibitorTrackerFromPartition := make(chan int, 1)
-	TrackerToInhibitorTrackerToPartition := make(chan int, 1)
-	EndFromInhibitorEndFromPartition := make(chan int, 1)
-	EndToInhibitorEndToPartition := make(chan int, 1)
-	partition_node := PN.PartitionNode{Id: 0,
-		StartFromInhibitor:   StartFromInhibitorStartFromPartition,
-		StartToInhibitor:     StartToInhibitorStartToPartition,
-		TrackerFromInhibitor: TrackerFromInhibitorTrackerFromPartition,
-		TrackerToInhibitor:   TrackerToInhibitorTrackerToPartition,
-		EndFromInhibitor:     EndFromInhibitorEndFromPartition,
-		EndToInhibitor:       EndToInhibitorEndToPartition,
-	}
 	s.Wg.Add(6)
 	*line = append(*line, S.Node(&i1), S.Node(&edn1), S.Node(&i2), S.Node(&edn2), S.Node(&i3), S.Node(&partition_node))
-
 }
 
 func (d *DistributeNode) Update(s *S.SafeWorker) {
