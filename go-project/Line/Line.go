@@ -11,7 +11,6 @@ import (
 type Line struct {
 	Line         []S.Node
 	TestInput    []int
-	InputNode    *IN.InhibitorNode
 	InputChannel chan<- int
 }
 
@@ -39,7 +38,6 @@ func (l *Line) Setup() {
 	i3.ToEdgeNode = FromInhibitor3ToEdgeNode2
 	edn2.FromNextInhibitor = FromInhibitor3ToEdgeNode2
 
-	l.InputNode = &i1
 	l.Line = []S.Node{&i1, &edn1, &i2, &edn2, &i3, &partition_node}
 }
 
