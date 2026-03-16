@@ -23,78 +23,85 @@
   <!-- Title -->
   <text x="350" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#222">Line Topology — After Settle</text>
 
+  <!-- Partition Node (now above) -->
+  <rect x="270" y="50" width="200" height="70" fill="#e8f5e9" stroke="#2e7d32" rx="6" stroke-width="2"/>
+  <text x="370" y="75" text-anchor="middle" font-weight="bold" fill="#2e7d32">p0 — Partition</text>
+  <text x="370" y="92" text-anchor="middle" font-size="10" fill="#1b5e20">1st contrast (1) → Growing</text>
+  <text x="370" y="108" text-anchor="middle" font-size="10" fill="#1b5e20">2nd contrast (1) → Stopped</text>
+
+  <!-- edn0 (now above chain) -->
+  <rect x="210" y="155" width="80" height="50" fill="#ffebee" stroke="#c62828" rx="20" stroke-width="2"/>
+  <text x="250" y="177" text-anchor="middle" font-weight="bold" fill="#c62828">edn0</text>
+  <text x="250" y="193" text-anchor="middle" font-size="10" fill="#c62828">XOR</text>
+
+  <!-- edn1 (now above chain) -->
+  <rect x="400" y="155" width="80" height="50" fill="#e3f2fd" stroke="#1565c0" rx="20" stroke-width="2"/>
+  <text x="440" y="177" text-anchor="middle" font-weight="bold" fill="#1565c0">edn1</text>
+  <text x="440" y="193" text-anchor="middle" font-size="10" fill="#0d47a1">XOR</text>
+
   <!-- InputNode -->
-  <rect x="20" y="80" width="80" height="60" fill="#e0e0e0" stroke="#666" rx="6" stroke-width="2"/>
-  <text x="60" y="105" text-anchor="middle" font-weight="bold" fill="#333">in0</text>
-  <text x="60" y="120" text-anchor="middle" font-size="10" fill="#555">Input</text>
-  <text x="60" y="132" text-anchor="middle" font-size="9" fill="#555">[0,1,1]→</text>
+  <rect x="20" y="250" width="80" height="60" fill="#e0e0e0" stroke="#666" rx="6" stroke-width="2"/>
+  <text x="60" y="275" text-anchor="middle" font-weight="bold" fill="#333">in0</text>
+  <text x="60" y="290" text-anchor="middle" font-size="10" fill="#555">Input</text>
+  <text x="60" y="302" text-anchor="middle" font-size="9" fill="#555">[0,1,1]→</text>
 
   <!-- i0 -->
-  <rect x="140" y="80" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
-  <text x="185" y="100" text-anchor="middle" font-weight="bold" fill="#e65100">i0</text>
-  <text x="185" y="115" text-anchor="middle" font-size="10" fill="#bf360c">holds: 0</text>
-  <text x="185" y="130" text-anchor="middle" font-size="9" fill="#999">after settle</text>
-
-  <!-- edn0 -->
-  <rect x="210" y="195" width="80" height="50" fill="#ffebee" stroke="#c62828" rx="20" stroke-width="2"/>
-  <text x="250" y="217" text-anchor="middle" font-weight="bold" fill="#c62828">edn0</text>
-  <text x="250" y="233" text-anchor="middle" font-size="10" fill="#c62828">XOR</text>
+  <rect x="140" y="250" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
+  <text x="185" y="270" text-anchor="middle" font-weight="bold" fill="#e65100">i0</text>
+  <text x="185" y="285" text-anchor="middle" font-size="10" fill="#bf360c">holds: 0</text>
+  <text x="185" y="300" text-anchor="middle" font-size="9" fill="#999">after settle</text>
 
   <!-- i1 -->
-  <rect x="310" y="80" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
-  <text x="355" y="100" text-anchor="middle" font-weight="bold" fill="#e65100">i1</text>
-  <text x="355" y="115" text-anchor="middle" font-size="10" fill="#bf360c">holds: 1</text>
-  <text x="355" y="130" text-anchor="middle" font-size="9" fill="#999">after settle</text>
-
-  <!-- edn1 -->
-  <rect x="400" y="195" width="80" height="50" fill="#e3f2fd" stroke="#1565c0" rx="20" stroke-width="2"/>
-  <text x="440" y="217" text-anchor="middle" font-weight="bold" fill="#1565c0">edn1</text>
-  <text x="440" y="233" text-anchor="middle" font-size="10" fill="#0d47a1">XOR</text>
+  <rect x="310" y="250" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
+  <text x="355" y="270" text-anchor="middle" font-weight="bold" fill="#e65100">i1</text>
+  <text x="355" y="285" text-anchor="middle" font-size="10" fill="#bf360c">holds: 1</text>
+  <text x="355" y="300" text-anchor="middle" font-size="9" fill="#999">after settle</text>
 
   <!-- i2 -->
-  <rect x="530" y="80" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
-  <text x="575" y="100" text-anchor="middle" font-weight="bold" fill="#e65100">i2</text>
-  <text x="575" y="115" text-anchor="middle" font-size="10" fill="#bf360c">holds: 1</text>
-  <text x="575" y="130" text-anchor="middle" font-size="9" fill="#999">after settle</text>
-
-  <!-- Partition Node -->
-  <rect x="270" y="320" width="200" height="70" fill="#e8f5e9" stroke="#2e7d32" rx="6" stroke-width="2"/>
-  <text x="370" y="345" text-anchor="middle" font-weight="bold" fill="#2e7d32">p0 — Partition</text>
-  <text x="370" y="362" text-anchor="middle" font-size="10" fill="#1b5e20">1st contrast (1) → Growing</text>
-  <text x="370" y="378" text-anchor="middle" font-size="10" fill="#1b5e20">2nd contrast (1) → Stopped</text>
+  <rect x="530" y="250" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
+  <text x="575" y="270" text-anchor="middle" font-weight="bold" fill="#e65100">i2</text>
+  <text x="575" y="285" text-anchor="middle" font-size="10" fill="#bf360c">holds: 1</text>
+  <text x="575" y="300" text-anchor="middle" font-size="9" fill="#999">after settle</text>
 
   <!-- === SHIFT CASCADE === -->
-  <line x1="100" y1="110" x2="138" y2="110" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="230" y1="105" x2="308" y2="105" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="400" y1="105" x2="528" y2="105" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="100" y1="280" x2="138" y2="280" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="230" y1="275" x2="308" y2="275" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="400" y1="275" x2="528" y2="275" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
 
-  <!-- === EDGE CONNECTIONS === -->
-  <line x1="175" y1="140" x2="230" y2="193" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <line x1="225" y1="195" x2="170" y2="142" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <line x1="330" y1="140" x2="270" y2="193" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <line x1="380" y1="140" x2="420" y2="193" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <line x1="415" y1="195" x2="375" y2="142" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <line x1="550" y1="140" x2="460" y2="193" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- === EDGE CONNECTIONS (flipped above) === -->
+  <!-- i0 -> edn0 -->
+  <line x1="175" y1="250" x2="230" y2="207" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- edn0 -> i0 -->
+  <line x1="225" y1="205" x2="170" y2="248" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- i1 -> edn0 -->
+  <line x1="330" y1="250" x2="270" y2="207" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- i1 -> edn1 -->
+  <line x1="380" y1="250" x2="420" y2="207" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- edn1 -> i1 -->
+  <line x1="415" y1="205" x2="375" y2="248" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- i2 -> edn1 -->
+  <line x1="550" y1="250" x2="460" y2="207" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
 
   <!-- === edn0 -> partition === -->
-  <path d="M 250 245 C 250 290, 290 300, 290 318" fill="none" stroke="#cc2222" stroke-width="2" marker-end="url(#arrow-red)"/>
-  <text x="250" y="285" text-anchor="middle" font-size="10" fill="#cc2222">0/1</text>
+  <path d="M 250 155 C 250 130, 290 125, 290 120" fill="none" stroke="#cc2222" stroke-width="2" marker-end="url(#arrow-red)"/>
+  <text x="250" y="140" text-anchor="middle" font-size="10" fill="#cc2222">0/1</text>
 
   <!-- === PARTITION -> i1 (Grow) === -->
-  <line x1="370" y1="320" x2="355" y2="142" stroke="#228844" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <text x="340" y="260" text-anchor="middle" font-size="9" fill="#228844">Grow</text>
-  <text x="340" y="272" text-anchor="middle" font-size="9" fill="#228844">(to i1)</text>
+  <line x1="370" y1="120" x2="355" y2="248" stroke="#228844" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <text x="340" y="190" text-anchor="middle" font-size="9" fill="#228844">Grow</text>
+  <text x="340" y="202" text-anchor="middle" font-size="9" fill="#228844">(to i1)</text>
 
   <!-- === i2 -> partition (EndToPartition, after transfer) === -->
-  <path d="M 570 140 C 570 240, 490 300, 470 318" fill="none" stroke="#e65100" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
-  <text x="550" y="250" text-anchor="middle" font-size="9" fill="#e65100">EndToPartition</text>
-  <text x="550" y="262" text-anchor="middle" font-size="9" fill="#e65100">(after transfer)</text>
+  <path d="M 570 250 C 570 170, 490 130, 470 120" fill="none" stroke="#e65100" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+  <text x="555" y="175" text-anchor="middle" font-size="9" fill="#e65100">EndToPartition</text>
+  <text x="555" y="187" text-anchor="middle" font-size="9" fill="#e65100">(after transfer)</text>
 
   <!-- Behavior note -->
-  <rect x="20" y="170" width="170" height="55" fill="#fff9c4" stroke="#f9a825" rx="4"/>
-  <text x="105" y="188" text-anchor="middle" font-size="10" fill="#f57f17">Shift register:</text>
-  <text x="105" y="202" text-anchor="middle" font-size="9" fill="#f57f17">On receive: push held</text>
-  <text x="105" y="214" text-anchor="middle" font-size="9" fill="#f57f17">→ next, store new value</text>
+  <rect x="20" y="340" width="170" height="55" fill="#fff9c4" stroke="#f9a825" rx="4"/>
+  <text x="105" y="358" text-anchor="middle" font-size="10" fill="#f57f17">Shift register:</text>
+  <text x="105" y="372" text-anchor="middle" font-size="9" fill="#f57f17">On receive: push held</text>
+  <text x="105" y="384" text-anchor="middle" font-size="9" fill="#f57f17">→ next, store new value</text>
 
   <!-- === LEGEND TABLE === -->
   <rect x="20" y="420" width="460" height="130" fill="#f0f0f0" rx="4" stroke="#ccc"/>
