@@ -7,12 +7,12 @@ import (
 )
 
 type ChainInhibitorNode struct {
-	Id                      int
-	HeldValue               int
-	FromPrev                <-chan int
-	ToCascadeAndGateValue   chan<- int
-	ToCascadeAndGateSignal  chan<- int
-	ToRecognitionAndGate    chan<- int
+	Id                     int
+	HeldValue              int
+	FromPrev               <-chan int
+	ToCascadeAndGateValue  chan<- int
+	ToCascadeAndGateSignal chan<- int
+	ToRecognitionAndGate   chan<- int
 }
 
 func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
@@ -29,8 +29,8 @@ func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 			fmt.Printf("%dCI: received %d from prev\n", in.Id, value)
 			S.Send(in.ToCascadeAndGateValue, in.HeldValue)
 			S.Send(in.ToCascadeAndGateSignal, 1)
-			in.HeldValue = value
 			S.Send(in.ToRecognitionAndGate, in.HeldValue)
+			in.HeldValue = value
 		default:
 		}
 	}
