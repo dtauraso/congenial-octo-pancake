@@ -7,11 +7,14 @@ import (
 
 type EdgeNode struct {
 	Id                   int
+	LeftValue            int
+	HasLeft              bool
+	RightValue           int
+	HasRight             bool
 	FromCurrentInhibitor <-chan int
 	ToCurrentInhibitor   chan<- int
 	FromNextInhibitor    <-chan int
 	ToPartition          chan<- int
-	EdgeFlag             int
 }
 
 func (en *EdgeNode) Update(s *S.SafeWorker) {
@@ -20,16 +23,32 @@ func (en *EdgeNode) Update(s *S.SafeWorker) {
 		select {
 		case <-s.Ctx.Done():
 			return
+		default:
+		}
+
+		select {
 		case value := <-en.FromCurrentInhibitor:
 			fmt.Printf("edn%d: received %d from current\n", en.Id, value)
-			en.EdgeFlag ^= value
+			en.LeftValue = value
+			en.HasLeft = true
+		default:
+		}
+
+		select {
 		case value := <-en.FromNextInhibitor:
 			fmt.Printf("edn%d: received %d from next\n", en.Id, value)
-			en.EdgeFlag ^= value
+			en.RightValue = value
+			en.HasRight = true
+		default:
 		}
-		fmt.Printf("edn%d: flag=%d\n", en.Id, en.EdgeFlag)
-		S.Send(en.ToCurrentInhibitor, en.EdgeFlag)
-		S.Send(en.ToPartition, en.EdgeFlag)
-		fmt.Printf("edn%d: sent flag to inhibitor and partition\n", en.Id)
+
+		if en.HasLeft && en.HasRight {
+			result := en.LeftValue ^ en.RightValue
+			fmt.Printf("edn%d: %d XOR %d = %d\n", en.Id, en.LeftValue, en.RightValue, result)
+			S.Send(en.ToCurrentInhibitor, result)
+			S.Send(en.ToPartition, result)
+			en.HasLeft = false
+			en.HasRight = false
+		}
 	}
 }
