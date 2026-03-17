@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 420" font-family="monospace" font-size="12">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#333"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#e65100"/>
+    </marker>
+    <marker id="arrow-indigo" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#283593"/>
+    </marker>
+    <marker id="arrow-purple" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#7b1fa2"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="700" height="420" fill="#fafafa" rx="8"/>
+
+  <!-- Title -->
+  <text x="350" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#222">Line Topology — ChainInhibitor + CascadeAndGate</text>
+
+  <!-- InputNode -->
+  <rect x="20" y="120" width="80" height="60" fill="#e0e0e0" stroke="#666" rx="6" stroke-width="2"/>
+  <text x="60" y="145" text-anchor="middle" font-weight="bold" fill="#333">in0</text>
+  <text x="60" y="160" text-anchor="middle" font-size="10" fill="#555">Input</text>
+  <text x="60" y="172" text-anchor="middle" font-size="9" fill="#555">[0,1,1]→</text>
+
+  <!-- i0 -->
+  <rect x="140" y="120" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
+  <text x="185" y="140" text-anchor="middle" font-weight="bold" fill="#e65100">i0</text>
+  <text x="185" y="155" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
+  <text x="185" y="170" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
+
+  <!-- cg0 -->
+  <rect x="260" y="105" width="70" height="50" fill="#f3e5f5" stroke="#7b1fa2" rx="6" stroke-width="2"/>
+  <text x="295" y="125" text-anchor="middle" font-weight="bold" font-size="10" fill="#7b1fa2">cg0</text>
+  <text x="295" y="140" text-anchor="middle" font-size="9" fill="#7b1fa2">Cascade</text>
+  <text x="295" y="150" text-anchor="middle" font-size="9" fill="#7b1fa2">AND</text>
+
+  <!-- i1 -->
+  <rect x="365" y="120" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
+  <text x="410" y="140" text-anchor="middle" font-weight="bold" fill="#e65100">i1</text>
+  <text x="410" y="155" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
+  <text x="410" y="170" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
+
+  <!-- cg1 -->
+  <rect x="485" y="105" width="70" height="50" fill="#f3e5f5" stroke="#7b1fa2" rx="6" stroke-width="2"/>
+  <text x="520" y="125" text-anchor="middle" font-weight="bold" font-size="10" fill="#7b1fa2">cg1</text>
+  <text x="520" y="140" text-anchor="middle" font-size="9" fill="#7b1fa2">Cascade</text>
+  <text x="520" y="150" text-anchor="middle" font-size="9" fill="#7b1fa2">AND</text>
+
+  <!-- i2 -->
+  <rect x="590" y="120" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
+  <text x="635" y="140" text-anchor="middle" font-weight="bold" fill="#e65100">i2</text>
+  <text x="635" y="155" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
+  <text x="635" y="170" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
+
+  <!-- a0 (recognition AND gate) -->
+  <rect x="490" y="230" width="70" height="40" fill="#e8eaf6" stroke="#283593" rx="6" stroke-width="2"/>
+  <text x="525" y="247" text-anchor="middle" font-weight="bold" fill="#283593">a0</text>
+  <text x="525" y="262" text-anchor="middle" font-size="10" fill="#283593">Recog AND</text>
+
+  <!-- === CONNECTIONS === -->
+
+  <!-- in0 -> i0 -->
+  <line x1="100" y1="150" x2="138" y2="150" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- i0 -> cg0 (value) -->
+  <line x1="230" y1="140" x2="258" y2="128" stroke="#e65100" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+  <text x="240" y="125" text-anchor="middle" font-size="8" fill="#e65100">val</text>
+
+  <!-- i0 -> cg0 (signal) -->
+  <line x1="230" y1="155" x2="258" y2="140" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
+  <text x="240" y="155" text-anchor="middle" font-size="8" fill="#7b1fa2">sig</text>
+
+  <!-- cg0 -> i1 -->
+  <line x1="330" y1="130" x2="363" y2="145" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- i1 -> cg1 (value) -->
+  <line x1="455" y1="140" x2="483" y2="128" stroke="#e65100" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+  <text x="465" y="125" text-anchor="middle" font-size="8" fill="#e65100">val</text>
+
+  <!-- i1 -> cg1 (signal) -->
+  <line x1="455" y1="155" x2="483" y2="140" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
+  <text x="465" y="155" text-anchor="middle" font-size="8" fill="#7b1fa2">sig</text>
+
+  <!-- cg1 -> i2 -->
+  <line x1="555" y1="130" x2="588" y2="145" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- i1 -> a0 (recognition) -->
+  <line x1="410" y1="180" x2="500" y2="228" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
+
+  <!-- i2 -> a0 (recognition) -->
+  <line x1="635" y1="180" x2="550" y2="228" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
+
+  <!-- Behavior note -->
+  <rect x="20" y="220" width="200" height="55" fill="#fff9c4" stroke="#f9a825" rx="4"/>
+  <text x="120" y="238" text-anchor="middle" font-size="10" fill="#f57f17">Chain inhibitor: hold + send</text>
+  <text x="120" y="252" text-anchor="middle" font-size="9" fill="#f57f17">Always sends HeldValue (cascade)</text>
+  <text x="120" y="266" text-anchor="middle" font-size="9" fill="#f57f17">and new value (recognition)</text>
+
+  <!-- === LEGEND === -->
+  <rect x="20" y="300" width="460" height="105" fill="#f0f0f0" rx="4" stroke="#ccc"/>
+
+  <!-- Column headers -->
+  <text x="85" y="318" text-anchor="start" font-weight="bold" fill="#333" font-size="11">Color</text>
+  <text x="210" y="318" text-anchor="start" font-weight="bold" fill="#333" font-size="11">Description</text>
+  <line x1="30" y1="323" x2="470" y2="323" stroke="#ccc" stroke-width="1"/>
+  <line x1="200" y1="305" x2="200" y2="400" stroke="#ccc" stroke-width="0.5"/>
+
+  <!-- Row 1 -->
+  <line x1="40" y1="338" x2="70" y2="338" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="85" y="342" text-anchor="start" fill="#333" font-size="10">Chain</text>
+  <text x="210" y="342" text-anchor="start" fill="#666" font-size="10">Data flow through cascade gate to next</text>
+
+  <!-- Row 2 -->
+  <line x1="40" y1="354" x2="70" y2="354" stroke="#e65100" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+  <text x="85" y="358" text-anchor="start" fill="#e65100" font-size="10">Value</text>
+  <text x="210" y="358" text-anchor="start" fill="#666" font-size="10">HeldValue sent to cascade AND gate</text>
+
+  <!-- Row 3 -->
+  <line x1="40" y1="370" x2="70" y2="370" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
+  <text x="85" y="374" text-anchor="start" fill="#7b1fa2" font-size="10">Signal</text>
+  <text x="210" y="374" text-anchor="start" fill="#666" font-size="10">Signal (1) to cascade AND gate</text>
+
+  <!-- Row 4 -->
+  <line x1="40" y1="386" x2="70" y2="386" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
+  <text x="85" y="390" text-anchor="start" fill="#283593" font-size="10">Recog</text>
+  <text x="210" y="390" text-anchor="start" fill="#666" font-size="10">New value to recognition AND gate</text>
+</svg>

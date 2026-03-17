@@ -14,7 +14,7 @@ type InhibitorNode struct {
 	ToNextInhibitor   chan<- int
 	ToEdgeNode        chan<- int
 	FromEdgeNode      <-chan int
-	ToAndGate         chan<- int
+	ToRecognitionAndGate         chan<- int
 	EndFromPartition  <-chan int
 	EndToPartition    chan<- int
 
@@ -57,7 +57,7 @@ func (in *InhibitorNode) Update(s *S.SafeWorker) {
 
 			in.HeldValue = value
 			in.HasValue = true
-			S.Send(in.ToAndGate, value)
+			S.Send(in.ToRecognitionAndGate, value)
 
 			if in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor != nil && in.EndToPartition != nil {
 				S.Send(in.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor, in.EndToPartition)
