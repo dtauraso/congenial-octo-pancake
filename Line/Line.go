@@ -15,18 +15,18 @@ type Line struct {
 
 func (l *Line) Setup() {
 	input := make(chan int, 4)
-	input <- 0
+	input <- -1
 	input <- 1
 	input <- 1
-	input <- 0
+	input <- -1
 
 	inputToChain := make(chan int, 1)
 	input_node := INN.InputNode{Id: 0, Input: input, ToNext: inputToChain}
 
 	// Chain: in0 -> i0 -> i1
 	i0ToI1 := make(chan int, 1)
-	i0 := CI.ChainInhibitorNode{Id: 0, FromPrev: inputToChain, ToNext: i0ToI1}
-	i1 := CI.ChainInhibitorNode{Id: 1, FromPrev: i0ToI1, ToNext: make(chan int, 3)}
+	i0 := CI.NewChainInhibitorNode(0, inputToChain, i0ToI1)
+	i1 := CI.NewChainInhibitorNode(1, i0ToI1, make(chan int, 3))
 
 	// sbd0: streak break detector between i0 and i1
 	i0ToSbd0 := make(chan int, 1)

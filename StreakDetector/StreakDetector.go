@@ -58,9 +58,9 @@ func (sd *StreakDetector) Update(s *S.SafeWorker) {
 		}
 
 		if sd.HasLeft && sd.HasRight {
-			// Detect streak: 00 or 11
+			// Detect streak: -1,-1 or 1,1
 			result := 0
-			if (sd.LeftValue == 1 && sd.RightValue == 1) || (sd.LeftValue == 0 && sd.RightValue == 0) {
+			if (sd.LeftValue == 1 && sd.RightValue == 1) || (sd.LeftValue == -1 && sd.RightValue == -1) {
 				result = 1
 			}
 			fmt.Printf("sd%d: streak(%d,%d) = %d (streak=%v)\n", sd.Id, sd.LeftValue, sd.RightValue, result, result == 1)
@@ -76,7 +76,8 @@ func (sd *StreakDetector) moveRight(s *S.SafeWorker) {
 	fmt.Printf("sd%d: moving right from i%d\n", sd.Id, i1.Id)
 
 	// Create new inhibitor
-	i2 := &CI.ChainInhibitorNode{Id: i1.Id + 1}
+	newNode := CI.NewChainInhibitorNode(i1.Id+1, nil, nil)
+	i2 := &newNode
 
 	// Create i1 -> i2 chain channel
 	i1ToI2 := make(chan int, 1)

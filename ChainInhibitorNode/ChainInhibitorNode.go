@@ -14,6 +14,10 @@ type ChainInhibitorNode struct {
 	ToEdge    []chan<- int
 }
 
+func NewChainInhibitorNode(id int, fromPrev <-chan int, toNext chan<- int) ChainInhibitorNode {
+	return ChainInhibitorNode{Id: id, HeldValue: 0, FromPrev: fromPrev, ToNext: toNext}
+}
+
 func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 	defer s.Wg.Done()
 	for {
