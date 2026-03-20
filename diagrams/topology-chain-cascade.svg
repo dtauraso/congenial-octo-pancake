@@ -33,12 +33,12 @@
   <!-- sbd0 (Streak Break Detector between i0 and i1) -->
   <rect x="120" y="100" width="110" height="40" fill="#ffebee" stroke="#c62828" rx="20" stroke-width="2"/>
   <text x="175" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#c62828">sbd0</text>
-  <text x="175" y="132" text-anchor="middle" font-size="8" fill="#c62828">Streak Break (10|01)</text>
+  <text x="175" y="132" text-anchor="middle" font-size="8" fill="#c62828">Streak Break (1,-1|-1,1)</text>
 
   <!-- sbd1 (Streak Break Detector on i1) -->
   <rect x="430" y="100" width="110" height="40" fill="#e3f2fd" stroke="#1565c0" rx="20" stroke-width="2"/>
   <text x="485" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#1565c0">sbd1</text>
-  <text x="485" y="132" text-anchor="middle" font-size="8" fill="#1565c0">Streak Break (10|01)</text>
+  <text x="485" y="132" text-anchor="middle" font-size="8" fill="#1565c0">Streak Break (1,-1|-1,1)</text>
 
   <!-- === INHIBITOR ROW (y=170) === -->
 
@@ -46,7 +46,7 @@
   <rect x="20" y="170" width="80" height="60" fill="#e0e0e0" stroke="#666" rx="6" stroke-width="2"/>
   <text x="60" y="195" text-anchor="middle" font-weight="bold" fill="#333">in0</text>
   <text x="60" y="210" text-anchor="middle" font-size="10" fill="#555">Input</text>
-  <text x="60" y="222" text-anchor="middle" font-size="9" fill="#555">[0,1,1,0]→</text>
+  <text x="60" y="222" text-anchor="middle" font-size="9" fill="#555">[-1,1,1,-1]→</text>
 
   <!-- i0 -->
   <rect x="140" y="170" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
@@ -65,12 +65,12 @@
   <!-- sd0 (Streak Detector between i0 and i1) -->
   <rect x="120" y="260" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
   <text x="170" y="275" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd0</text>
-  <text x="170" y="292" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (00|11)</text>
+  <text x="170" y="292" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
 
   <!-- sd1 (Streak Detector on i1) -->
   <rect x="430" y="260" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
   <text x="480" y="275" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd1</text>
-  <text x="480" y="292" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (00|11)</text>
+  <text x="480" y="292" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
 
   <!-- === CONNECTIONS === -->
 
@@ -152,7 +152,7 @@
   <!-- Row 4 -->
   <line x1="40" y1="486" x2="70" y2="486" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow-green)"/>
   <text x="85" y="490" text-anchor="start" fill="#2e7d32" font-size="10">Signal</text>
-  <text x="210" y="490" text-anchor="start" fill="#666" font-size="10">Streak detector (00|11) signal chain sd0 → sd1</text>
+  <text x="210" y="490" text-anchor="start" fill="#666" font-size="10">Streak detector (-1,-1|1,1) signal chain sd0 → sd1</text>
 
   <!-- Row 5 -->
   <line x1="40" y1="502" x2="70" y2="502" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
