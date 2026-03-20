@@ -2,6 +2,7 @@ package Line
 
 import (
 	AN "github.com/dtauraso/congenial-octo-pancake/AndGateNode"
+	CAN "github.com/dtauraso/congenial-octo-pancake/CascadeAndGateNode"
 	CI "github.com/dtauraso/congenial-octo-pancake/ChainInhibitorNode"
 	INN "github.com/dtauraso/congenial-octo-pancake/InputNode"
 	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
@@ -23,17 +24,21 @@ func (l *Line) Setup() {
 	inputToChain := make(chan int, 1)
 	input_node := INN.InputNode{Id: 0, Input: input, ToNext: inputToChain}
 
-	// Chain: in0 -> i0 -> i1
-	i0ToI1 := make(chan int, 1)
-	i0 := CI.NewChainInhibitorNode(0, inputToChain, i0ToI1)
-	i1 := CI.NewChainInhibitorNode(1, i0ToI1, make(chan int, 3))
+	// Chain: in0 -> i0 -> sync0 -> i1
+	i0ToSync0 := make(chan int, 1)
+	sync0ToI1 := make(chan int, 1)
+	sbd0DoneToSync0 := make(chan int, 1)
+	sd0DoneToSync0 := make(chan int, 1)
+	i0 := CI.NewChainInhibitorNode(0, inputToChain, i0ToSync0)
+	sync0 := CAN.CascadeAndGateNode{Id: 0, FromValue: i0ToSync0, FromLeft: sbd0DoneToSync0, FromRight: sd0DoneToSync0, ToNext: sync0ToI1}
+	i1 := CI.NewChainInhibitorNode(1, sync0ToI1, make(chan int, 3))
 
 	// sbd0: streak break detector between i0 and i1
 	i0ToSbd0 := make(chan int, 1)
 	i1ToSbd0 := make(chan int, 1)
 	sbd0ToI0 := make(chan int, 1)
 	sbd0ToPartition := make(chan int, 3)
-	sbd0 := SBD.StreakBreakDetector{Id: 0, FromCurrentInhibitor: i0ToSbd0, ToCurrentInhibitor: sbd0ToI0, FromNextInhibitor: i1ToSbd0, ToPartition: sbd0ToPartition}
+	sbd0 := SBD.StreakBreakDetector{Id: 0, FromCurrentInhibitor: i0ToSbd0, ToCurrentInhibitor: sbd0ToI0, FromNextInhibitor: i1ToSbd0, ToPartition: sbd0ToPartition, ToSync: sbd0DoneToSync0}
 
 	// sbd1: streak break detector on i1
 	i1ToSbd1Left := make(chan int, 1)
@@ -46,7 +51,7 @@ func (l *Line) Setup() {
 	i0ToSd0 := make(chan int, 1)
 	i1ToSd0 := make(chan int, 1)
 	sd0ToSd1 := make(chan int, 1)
-	sd0 := SD.StreakDetector{Id: 0, FromCurrentInhibitor: i0ToSd0, FromNextInhibitor: i1ToSd0, ToNextDetector: sd0ToSd1}
+	sd0 := SD.StreakDetector{Id: 0, FromCurrentInhibitor: i0ToSd0, FromNextInhibitor: i1ToSd0, ToNextDetector: sd0ToSd1, ToSync: sd0DoneToSync0}
 
 	// sd1: streak detector on i1
 	i1ToSd1Left := make(chan int, 1)
@@ -61,5 +66,5 @@ func (l *Line) Setup() {
 	andOut := make(chan int, 3)
 	a0 := AN.AndGateNode{Id: 0, FromLeft: sbd0ToPartition, FromRight: sbd1ToPartition, ToNext: andOut}
 
-	l.Line = []S.Node{&input_node, &i0, &i1, &sbd0, &sbd1, &sd0, &sd1, &a0}
+	l.Line = []S.Node{&input_node, &i0, &sync0, &i1, &sbd0, &sbd1, &sd0, &sd1, &a0}
 }

@@ -20,6 +20,10 @@ func NewChainInhibitorNode(id int, fromPrev <-chan int, toNext chan<- int) Chain
 
 func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 	defer s.Wg.Done()
+	// Send initial edge values to bootstrap detectors
+	for _, ch := range in.ToEdge {
+		S.Send(ch, in.HeldValue)
+	}
 	for {
 		select {
 		case <-s.Ctx.Done():

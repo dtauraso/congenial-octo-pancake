@@ -2,6 +2,7 @@ package StreakDetector
 
 import (
 	"fmt"
+	CAN "github.com/dtauraso/congenial-octo-pancake/CascadeAndGateNode"
 	CI "github.com/dtauraso/congenial-octo-pancake/ChainInhibitorNode"
 	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
 	SBD "github.com/dtauraso/congenial-octo-pancake/StreakBreakDetector"
@@ -21,6 +22,7 @@ type StreakDetector struct {
 	FromNextInhibitor    <-chan int
 	FromPrevDetector     <-chan int
 	ToNextDetector       chan<- int
+	ToSync               chan<- int
 }
 
 func (sd *StreakDetector) Update(s *S.SafeWorker) {
@@ -65,6 +67,7 @@ func (sd *StreakDetector) Update(s *S.SafeWorker) {
 			}
 			fmt.Printf("sd%d: streak(%d,%d) = %d (streak=%v)\n", sd.Id, sd.LeftValue, sd.RightValue, result, result == 1)
 			S.Send(sd.ToNextDetector, result)
+			S.Send(sd.ToSync, 1)
 			sd.HasLeft = false
 			sd.HasRight = false
 		}
@@ -79,11 +82,23 @@ func (sd *StreakDetector) moveRight(s *S.SafeWorker) {
 	newNode := CI.NewChainInhibitorNode(i1.Id+1, nil, nil)
 	i2 := &newNode
 
-	// Create i1 -> i2 chain channel
-	i1ToI2 := make(chan int, 1)
-	i1.ToNext = i1ToI2
-	i2.FromPrev = i1ToI2
+	// Create sync gate between i1 and i2
+	i1ToSync := make(chan int, 1)
+	syncToI2 := make(chan int, 1)
+	sbdDoneToSync := make(chan int, 1)
+	sdDoneToSync := make(chan int, 1)
+
+	syncId := i1.Id // sync1 sits after i1
+	sync1 := &CAN.CascadeAndGateNode{Id: syncId, FromValue: i1ToSync, FromLeft: sbdDoneToSync, FromRight: sdDoneToSync, ToNext: syncToI2}
+
+	// Wire i1 -> sync -> i2 chain
+	i1.ToNext = i1ToSync
+	i2.FromPrev = syncToI2
 	i2.ToNext = make(chan int, 3)
+
+	// Wire done signals from detectors to sync gate
+	sd.StreakBreakDetector.ToSync = sbdDoneToSync
+	sd.ToSync = sdDoneToSync
 
 	// Create new channels from i2 to detectors
 	i2ToSbd := make(chan int, 1)
@@ -114,9 +129,10 @@ func (sd *StreakDetector) moveRight(s *S.SafeWorker) {
 	// Update pointer to new current inhibitor
 	sd.CurrentInhibitor = i2
 
-	// Start i2's goroutine
-	s.Wg.Add(1)
+	// Start sync1 and i2 goroutines
+	s.Wg.Add(2)
+	go sync1.Update(s)
 	go i2.Update(s)
 
-	fmt.Printf("sd%d: created i%d, rewired sbd%d and sd%d\n", sd.Id, i2.Id, sd.StreakBreakDetector.Id, sd.Id)
+	fmt.Printf("sd%d: created sync%d and i%d, rewired sbd%d and sd%d\n", sd.Id, syncId, i2.Id, sd.StreakBreakDetector.Id, sd.Id)
 }
