@@ -1,9 +1,8 @@
 package Line
 
 import (
-	AN "github.com/dtauraso/congenial-octo-pancake/AndGateNode"
-	CAN "github.com/dtauraso/congenial-octo-pancake/CascadeAndGateNode"
 	CI "github.com/dtauraso/congenial-octo-pancake/ChainInhibitorNode"
+	EN "github.com/dtauraso/congenial-octo-pancake/EdgeNode"
 	INN "github.com/dtauraso/congenial-octo-pancake/InputNode"
 	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
 )
@@ -13,7 +12,8 @@ type Line struct {
 }
 
 func (l *Line) Setup() {
-	input := make(chan int, 3)
+	input := make(chan int, 4)
+	input <- 0
 	input <- 1
 	input <- 1
 	input <- 0
@@ -21,40 +21,28 @@ func (l *Line) Setup() {
 	inputToChain := make(chan int, 1)
 	input_node := INN.InputNode{Id: 0, Input: input, ToNext: inputToChain}
 
-	// Chain inhibitor nodes
-	i0 := CI.ChainInhibitorNode{Id: 0, FromPrev: inputToChain}
-	i1 := CI.ChainInhibitorNode{Id: 1}
-	i2 := CI.ChainInhibitorNode{Id: 2}
+	// Chain: in0 -> i0 -> i1
+	i0ToI1 := make(chan int, 1)
+	i0 := CI.ChainInhibitorNode{Id: 0, FromPrev: inputToChain, ToNext: i0ToI1}
+	i1 := CI.ChainInhibitorNode{Id: 1, FromPrev: i0ToI1, ToNext: make(chan int, 3)}
 
-	// Cascade AND gate 0: between i0 and i1
-	cascadeValue0 := make(chan int, 1)
-	cascadeSignal0 := make(chan int, 1)
-	cascadeOut0 := make(chan int, 1)
-	i0.ToCascadeAndGateValue = cascadeValue0
-	i0.ToCascadeAndGateSignal = cascadeSignal0
-	cg0 := CAN.CascadeAndGateNode{Id: 0, FromValue: cascadeValue0, FromLeft: cascadeSignal0, RightSignal: 1, HasRight: true, ToNext: cascadeOut0}
-	i1.FromPrev = cascadeOut0
+	// xor0: between i0 and i1
+	i0ToXor0 := make(chan int, 1)
+	i1ToXor0 := make(chan int, 1)
+	xor0ToI0 := make(chan int, 1)
+	xor0ToPartition := make(chan int, 3)
+	xor0 := EN.EdgeNode{Id: 0, FromCurrentInhibitor: i0ToXor0, ToCurrentInhibitor: xor0ToI0, FromNextInhibitor: i1ToXor0, ToPartition: xor0ToPartition}
 
-	// Cascade AND gate 1: between i1 and i2
-	cascadeValue1 := make(chan int, 1)
-	cascadeSignal1 := make(chan int, 1)
-	cascadeOut1 := make(chan int, 1)
-	i1.ToCascadeAndGateValue = cascadeValue1
-	i1.ToCascadeAndGateSignal = cascadeSignal1
-	cg1 := CAN.CascadeAndGateNode{Id: 1, FromValue: cascadeValue1, FromLeft: cascadeSignal1, RightSignal: 1, HasRight: true, ToNext: cascadeOut1}
-	i2.FromPrev = cascadeOut1
+	// xor1: both sides connected to i1
+	i1ToXor1Left := make(chan int, 1)
+	i1ToXor1Right := make(chan int, 1)
+	xor1ToI1 := make(chan int, 1)
+	xor1ToPartition := make(chan int, 3)
+	xor1 := EN.EdgeNode{Id: 1, FromCurrentInhibitor: i1ToXor1Left, ToCurrentInhibitor: xor1ToI1, FromNextInhibitor: i1ToXor1Right, ToPartition: xor1ToPartition}
 
-	// i2 cascade output (terminal)
-	i2.ToCascadeAndGateValue = make(chan int, 3)
-	i2.ToCascadeAndGateSignal = make(chan int, 3)
+	// Wire edge channels to inhibitors
+	i0.ToEdge = []chan<- int{i0ToXor0}
+	i1.ToEdge = []chan<- int{i1ToXor0, i1ToXor1Left, i1ToXor1Right}
 
-	// Recognition AND gate: compares i1 and i2
-	recLeft := make(chan int, 1)
-	recRight := make(chan int, 1)
-	recOut := make(chan int, 1)
-	i1.ToRecognitionAndGate = recLeft
-	i2.ToRecognitionAndGate = recRight
-	a0 := AN.AndGateNode{Id: 0, FromLeft: recLeft, FromRight: recRight, ToNext: recOut}
-
-	l.Line = []S.Node{&input_node, &i0, &cg0, &i1, &cg1, &i2, &a0}
+	l.Line = []S.Node{&input_node, &i0, &i1, &xor0, &xor1}
 }

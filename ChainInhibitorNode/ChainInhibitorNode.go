@@ -7,12 +7,11 @@ import (
 )
 
 type ChainInhibitorNode struct {
-	Id                     int
-	HeldValue              int
-	FromPrev               <-chan int
-	ToCascadeAndGateValue  chan<- int
-	ToCascadeAndGateSignal chan<- int
-	ToRecognitionAndGate   chan<- int
+	Id        int
+	HeldValue int
+	FromPrev  <-chan int
+	ToNext    chan<- int
+	ToEdge    []chan<- int
 }
 
 func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
@@ -27,9 +26,10 @@ func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 		select {
 		case value := <-in.FromPrev:
 			fmt.Printf("%dCI: received %d from prev\n", in.Id, value)
-			S.Send(in.ToCascadeAndGateValue, in.HeldValue)
-			S.Send(in.ToCascadeAndGateSignal, 1)
-			S.Send(in.ToRecognitionAndGate, in.HeldValue)
+			for _, ch := range in.ToEdge {
+				S.Send(ch, in.HeldValue)
+			}
+			S.Send(in.ToNext, in.HeldValue)
 			in.HeldValue = value
 		default:
 		}
