@@ -199,6 +199,14 @@
       values="450;450;635;635;450" keyTimes="0;0.3;0.5;0.8;1"/>
   </line>
 
+  <!-- sd1 -> sbd1 (struct pointer, dashed orange; both slide right together) -->
+  <line y1="260" y2="140" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)">
+    <animate attributeName="x1" dur="5s" repeatCount="indefinite"
+      values="500;500;610;610;500" keyTimes="0;0.3;0.5;0.8;1"/>
+    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
+      values="500;500;600;600;500" keyTimes="0;0.3;0.5;0.8;1"/>
+  </line>
+
   <!-- State label -->
   <text x="390" y="320" text-anchor="middle" font-size="11" fill="#666">
     <animate attributeName="opacity" dur="5s" repeatCount="indefinite"

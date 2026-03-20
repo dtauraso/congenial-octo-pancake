@@ -116,6 +116,9 @@
   <!-- sd1 -> i1 (struct pointer, dashed orange) -->
   <line x1="515" y1="260" x2="515" y2="232" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
 
+  <!-- sd1 -> sbd1 (struct pointer, dashed orange) -->
+  <line x1="500" y1="260" x2="500" y2="140" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
+
   <!-- Behavior note -->
   <rect x="20" y="325" width="200" height="55" fill="#fff9c4" stroke="#f9a825" rx="4"/>
   <text x="120" y="343" text-anchor="middle" font-size="10" fill="#f57f17">Chain inhibitor: hold + send</text>

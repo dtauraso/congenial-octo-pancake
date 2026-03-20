@@ -51,7 +51,7 @@ func (l *Line) Setup() {
 	// sd1: streak detector on i1
 	i1ToSd1Left := make(chan int, 1)
 	i1ToSd1Right := make(chan int, 1)
-	sd1 := SD.StreakDetector{Id: 1, CurrentInhibitor: &i1, FromCurrentInhibitor: i1ToSd1Left, FromNextInhibitor: i1ToSd1Right, FromPrevDetector: sd0ToSd1}
+	sd1 := SD.StreakDetector{Id: 1, CurrentInhibitor: &i1, StreakBreakDetector: &sbd1, SbdNextChan: i1ToSbd1Right, SdNextChan: i1ToSd1Right, FromCurrentInhibitor: i1ToSd1Left, FromNextInhibitor: i1ToSd1Right, FromPrevDetector: sd0ToSd1}
 
 	// Wire edge channels to inhibitors
 	i0.ToEdge = []chan<- int{i0ToSbd0, i0ToSd0}
