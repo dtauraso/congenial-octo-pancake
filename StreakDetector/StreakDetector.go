@@ -2,6 +2,7 @@ package StreakDetector
 
 import (
 	"fmt"
+	CI "github.com/dtauraso/congenial-octo-pancake/ChainInhibitorNode"
 	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
 )
 
@@ -11,6 +12,7 @@ type StreakDetector struct {
 	HasLeft              bool
 	RightValue           int
 	HasRight             bool
+	CurrentInhibitor     *CI.ChainInhibitorNode
 	FromCurrentInhibitor <-chan int
 	FromNextInhibitor    <-chan int
 	FromPrevDetector     <-chan int
