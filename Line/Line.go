@@ -1,6 +1,7 @@
 package Line
 
 import (
+	AN "github.com/dtauraso/congenial-octo-pancake/AndGateNode"
 	CI "github.com/dtauraso/congenial-octo-pancake/ChainInhibitorNode"
 	EN "github.com/dtauraso/congenial-octo-pancake/EdgeNode"
 	INN "github.com/dtauraso/congenial-octo-pancake/InputNode"
@@ -44,5 +45,9 @@ func (l *Line) Setup() {
 	i0.ToEdge = []chan<- int{i0ToXor0}
 	i1.ToEdge = []chan<- int{i1ToXor0, i1ToXor1Left, i1ToXor1Right}
 
-	l.Line = []S.Node{&input_node, &i0, &i1, &xor0, &xor1}
+	// a0: AND gate fed by xor0 and xor1
+	andOut := make(chan int, 3)
+	a0 := AN.AndGateNode{Id: 0, FromLeft: xor0ToPartition, FromRight: xor1ToPartition, ToNext: andOut}
+
+	l.Line = []S.Node{&input_node, &i0, &i1, &xor0, &xor1, &a0}
 }
