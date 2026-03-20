@@ -15,6 +15,8 @@ type EdgeNode struct {
 	ToCurrentInhibitor   chan<- int
 	FromNextInhibitor    <-chan int
 	ToPartition          chan<- int
+	FromPrevEdge         <-chan int
+	ToNextEdge           chan<- int
 }
 
 func (en *EdgeNode) Update(s *S.SafeWorker) {
@@ -42,11 +44,18 @@ func (en *EdgeNode) Update(s *S.SafeWorker) {
 		default:
 		}
 
+		select {
+		case value := <-en.FromPrevEdge:
+			fmt.Printf("edn%d: received %d from prev edge\n", en.Id, value)
+		default:
+		}
+
 		if en.HasLeft && en.HasRight {
 			result := en.LeftValue ^ en.RightValue
 			fmt.Printf("edn%d: %d XOR %d = %d\n", en.Id, en.LeftValue, en.RightValue, result)
 			S.Send(en.ToCurrentInhibitor, result)
 			S.Send(en.ToPartition, result)
+			S.Send(en.ToNextEdge, result)
 			en.HasLeft = false
 			en.HasRight = false
 		}

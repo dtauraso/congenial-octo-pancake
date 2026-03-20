@@ -32,14 +32,15 @@ func (l *Line) Setup() {
 	i1ToXor0 := make(chan int, 1)
 	xor0ToI0 := make(chan int, 1)
 	xor0ToPartition := make(chan int, 3)
-	xor0 := EN.EdgeNode{Id: 0, FromCurrentInhibitor: i0ToXor0, ToCurrentInhibitor: xor0ToI0, FromNextInhibitor: i1ToXor0, ToPartition: xor0ToPartition}
+	xor0ToXor1 := make(chan int, 1)
+	xor0 := EN.EdgeNode{Id: 0, FromCurrentInhibitor: i0ToXor0, ToCurrentInhibitor: xor0ToI0, FromNextInhibitor: i1ToXor0, ToPartition: xor0ToPartition, ToNextEdge: xor0ToXor1}
 
-	// xor1: both sides connected to i1
+	// xor1: both sides connected to i1, receives from xor0
 	i1ToXor1Left := make(chan int, 1)
 	i1ToXor1Right := make(chan int, 1)
 	xor1ToI1 := make(chan int, 1)
 	xor1ToPartition := make(chan int, 3)
-	xor1 := EN.EdgeNode{Id: 1, FromCurrentInhibitor: i1ToXor1Left, ToCurrentInhibitor: xor1ToI1, FromNextInhibitor: i1ToXor1Right, ToPartition: xor1ToPartition}
+	xor1 := EN.EdgeNode{Id: 1, FromCurrentInhibitor: i1ToXor1Left, ToCurrentInhibitor: xor1ToI1, FromNextInhibitor: i1ToXor1Right, ToPartition: xor1ToPartition, FromPrevEdge: xor0ToXor1}
 
 	// Wire edge channels to inhibitors
 	i0.ToEdge = []chan<- int{i0ToXor0}
