@@ -12,6 +12,9 @@
     <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
       <path d="M0,0 L8,3 L0,6" fill="#2e7d32"/>
     </marker>
+    <marker id="arrow-orange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#e65100"/>
+    </marker>
   </defs>
 
   <!-- Background -->
@@ -155,17 +158,17 @@
   <!-- i1 -> sd1 (left input): self-loop vertical → diagonal to moved sd1 -->
   <line stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)" y1="230" y2="260">
     <animate attributeName="x1" dur="5s" repeatCount="indefinite"
-      values="440;440;420;420;440" keyTimes="0;0.3;0.5;0.8;1"/>
+      values="410;410;420;420;410" keyTimes="0;0.3;0.5;0.8;1"/>
     <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="460;460;545;545;460" keyTimes="0;0.3;0.5;0.8;1"/>
+      values="445;445;545;545;445" keyTimes="0;0.3;0.5;0.8;1"/>
   </line>
 
   <!-- i1/i2 -> sd1 (right input): from i1 vertical → i2 diagonal to moved sd1 -->
   <line stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)" y1="230" y2="260">
     <animate attributeName="x1" dur="5s" repeatCount="indefinite"
-      values="450;450;625;625;450" keyTimes="0;0.3;0.5;0.8;1"/>
+      values="435;435;625;625;435" keyTimes="0;0.3;0.5;0.8;1"/>
     <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="510;510;615;615;510" keyTimes="0;0.3;0.5;0.8;1"/>
+      values="480;480;615;615;480" keyTimes="0;0.3;0.5;0.8;1"/>
   </line>
 
   <!-- sbd0 -> a0 (a0 moves, so x2 animates) -->
@@ -188,6 +191,14 @@
       values="428;428;528;528;428" keyTimes="0;0.3;0.5;0.8;1"/>
   </line>
 
+  <!-- sd1 -> i1 then i2 (struct pointer, dashed orange; starts at i1, moves to i2) -->
+  <line y1="260" y2="232" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)">
+    <animate attributeName="x1" dur="5s" repeatCount="indefinite"
+      values="515;515;625;625;515" keyTimes="0;0.3;0.5;0.8;1"/>
+    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
+      values="450;450;635;635;450" keyTimes="0;0.3;0.5;0.8;1"/>
+  </line>
+
   <!-- State label -->
   <text x="390" y="320" text-anchor="middle" font-size="11" fill="#666">
     <animate attributeName="opacity" dur="5s" repeatCount="indefinite"
@@ -199,12 +210,12 @@
   </text>
 
   <!-- === LEGEND === -->
-  <rect x="20" y="400" width="460" height="108" fill="#f0f0f0" rx="4" stroke="#ccc"/>
+  <rect x="20" y="400" width="460" height="124" fill="#f0f0f0" rx="4" stroke="#ccc"/>
 
   <text x="85" y="418" text-anchor="start" font-weight="bold" fill="#333" font-size="11">Color</text>
   <text x="210" y="418" text-anchor="start" font-weight="bold" fill="#333" font-size="11">Description</text>
   <line x1="30" y1="423" x2="470" y2="423" stroke="#ccc" stroke-width="1"/>
-  <line x1="200" y1="405" x2="200" y2="503" stroke="#ccc" stroke-width="0.5"/>
+  <line x1="200" y1="405" x2="200" y2="519" stroke="#ccc" stroke-width="0.5"/>
 
   <line x1="40" y1="438" x2="70" y2="438" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
   <text x="85" y="442" text-anchor="start" fill="#333" font-size="10">Chain</text>
@@ -221,4 +232,9 @@
   <line x1="40" y1="486" x2="70" y2="486" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow-green)"/>
   <text x="85" y="490" text-anchor="start" fill="#2e7d32" font-size="10">Signal</text>
   <text x="210" y="490" text-anchor="start" fill="#666" font-size="10">Streak detector (00|11) signal chain sd0 → sd1</text>
+
+  <!-- Row 5 -->
+  <line x1="40" y1="502" x2="70" y2="502" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
+  <text x="85" y="506" text-anchor="start" fill="#e65100" font-size="10">Pointer</text>
+  <text x="210" y="506" text-anchor="start" fill="#666" font-size="10">Struct pointer to inhibitor node</text>
 </svg>
