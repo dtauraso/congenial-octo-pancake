@@ -43,9 +43,12 @@ func (sbd *StreakBreakDetector) Update(s *S.SafeWorker) {
 		}
 
 		if sbd.HasLeft && sbd.HasRight {
-			// Detect streak break: 10 or 01 (XOR)
-			result := sbd.LeftValue ^ sbd.RightValue
-			fmt.Printf("sbd%d: %d XOR %d = %d (streak break=%v)\n", sbd.Id, sbd.LeftValue, sbd.RightValue, result, result == 1)
+			// Detect streak break: 10 or 01
+			result := 0
+			if (sbd.LeftValue == 1 && sbd.RightValue == 0) || (sbd.LeftValue == 0 && sbd.RightValue == 1) {
+				result = 1
+			}
+			fmt.Printf("sbd%d: streakBreak(%d,%d) = %d (streak break=%v)\n", sbd.Id, sbd.LeftValue, sbd.RightValue, result, result == 1)
 			S.Send(sbd.ToCurrentInhibitor, result)
 			S.Send(sbd.ToPartition, result)
 			sbd.HasLeft = false
