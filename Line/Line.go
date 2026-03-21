@@ -2,12 +2,15 @@ package Line
 
 import (
 	AN "github.com/dtauraso/congenial-octo-pancake/AndGateNode"
-	CAN "github.com/dtauraso/congenial-octo-pancake/CascadeAndGateNode"
 	CI "github.com/dtauraso/congenial-octo-pancake/ChainInhibitorNode"
 	INN "github.com/dtauraso/congenial-octo-pancake/InputNode"
+	RGN "github.com/dtauraso/congenial-octo-pancake/ReadGateNode"
+	RLN "github.com/dtauraso/congenial-octo-pancake/ReadLatchNode"
 	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
 	SBD "github.com/dtauraso/congenial-octo-pancake/StreakBreakDetector"
 	SD "github.com/dtauraso/congenial-octo-pancake/StreakDetector"
+	SGN "github.com/dtauraso/congenial-octo-pancake/SyncGateNode"
+	SLN "github.com/dtauraso/congenial-octo-pancake/SyncLatchNode"
 )
 
 type Line struct {
@@ -21,50 +24,69 @@ func (l *Line) Setup() {
 	input <- 1
 	input <- -1
 
-	inputToChain := make(chan int, 1)
-	input_node := INN.InputNode{Id: 0, Input: input, ToNext: inputToChain}
+	// Chain: in0 -> readLatch --(readGate release)--> i0 -> syncLatch --(syncGate release)--> i1
+	// readGate: AND(in0 ready, syncLatch ack) → releases readLatch
+	// syncGate: AND(sbd0 done, sd0 done) → releases syncLatch
+	// syncLatch acks readGate after releasing → backpressure
 
-	// Chain: in0 -> i0 -> sync0 -> i1
-	i0ToSync0 := make(chan int, 1)
-	sync0ToI1 := make(chan int, 1)
-	sbd0DoneToSync0 := make(chan int, 1)
-	sd0DoneToSync0 := make(chan int, 1)
-	i0 := CI.NewChainInhibitorNode(0, inputToChain, i0ToSync0)
-	sync0 := CAN.CascadeAndGateNode{Id: 0, FromValue: i0ToSync0, FromLeft: sbd0DoneToSync0, FromRight: sd0DoneToSync0, ToNext: sync0ToI1}
-	i1 := CI.NewChainInhibitorNode(1, sync0ToI1, make(chan int, 3))
+	inputToReadLatch := make(chan int, 1)
+	in0ReadyToReadGate := make(chan int, 1)
+	syncLatchAckToReadGate := make(chan int, 1)
+	readGateToReadLatch := make(chan int, 1)
+	readLatchToI0 := make(chan int, 1)
+	input_node := INN.InputNode{Id: 0, Input: input, ToNext: inputToReadLatch, ToReady: in0ReadyToReadGate}
 
-	// sbd0: streak break detector between i0 and i1
-	i0ToSbd0 := make(chan int, 1)
-	i1ToSbd0 := make(chan int, 1)
+	// Prime ack so first input flows through
+	syncLatchAckToReadGate <- 1
+
+	readLatch := RLN.ReadLatchNode{Id: 0, FromInput: inputToReadLatch, ToChain: readLatchToI0, Release: readGateToReadLatch}
+	readGate := RGN.ReadGateNode{Id: 0, FromReady: in0ReadyToReadGate, FromAck: syncLatchAckToReadGate, ToRelease: readGateToReadLatch}
+
+	i0ToSyncLatch := make(chan int, 1)
+	sbd0DoneToSyncGate := make(chan int, 1)
+	sd0DoneToSyncGate := make(chan int, 1)
+	syncGateToSyncLatch := make(chan int, 1)
+	syncLatchToI1 := make(chan int, 1)
+	i0 := CI.NewChainInhibitorNode(0, readLatchToI0, i0ToSyncLatch)
+
+	syncLatch := SLN.SyncLatchNode{Id: 0, FromChain: i0ToSyncLatch, ToChain: syncLatchToI1, Release: syncGateToSyncLatch, ToAck: syncLatchAckToReadGate}
+	syncGate := SGN.SyncGateNode{Id: 0, FromSbdDone: sbd0DoneToSyncGate, FromSdDone: sd0DoneToSyncGate, ToRelease: syncGateToSyncLatch}
+	i1 := CI.NewChainInhibitorNode(1, syncLatchToI1, make(chan int, 3))
+
+	// sbd0: streak break detector on i0 (old+new from i0)
+	i0OldToSbd0 := make(chan int, 1)
+	i0NewToSbd0 := make(chan int, 1)
 	sbd0ToI0 := make(chan int, 1)
 	sbd0ToPartition := make(chan int, 3)
-	sbd0 := SBD.StreakBreakDetector{Id: 0, FromCurrentInhibitor: i0ToSbd0, ToCurrentInhibitor: sbd0ToI0, FromNextInhibitor: i1ToSbd0, ToPartition: sbd0ToPartition, ToSync: sbd0DoneToSync0}
+	sbd0 := SBD.StreakBreakDetector{Id: 0, FromCurrentInhibitor: i0OldToSbd0, ToCurrentInhibitor: sbd0ToI0, FromNextInhibitor: i0NewToSbd0, ToPartition: sbd0ToPartition, ToSync: sbd0DoneToSyncGate}
 
-	// sbd1: streak break detector on i1
-	i1ToSbd1Left := make(chan int, 1)
-	i1ToSbd1Right := make(chan int, 1)
+	// sbd1: streak break detector on i1 (old+new from i1)
+	i1OldToSbd1 := make(chan int, 1)
+	i1NewToSbd1 := make(chan int, 1)
 	sbd1ToI1 := make(chan int, 1)
 	sbd1ToPartition := make(chan int, 3)
-	sbd1 := SBD.StreakBreakDetector{Id: 1, FromCurrentInhibitor: i1ToSbd1Left, ToCurrentInhibitor: sbd1ToI1, FromNextInhibitor: i1ToSbd1Right, ToPartition: sbd1ToPartition}
+	sbd1 := SBD.StreakBreakDetector{Id: 1, FromCurrentInhibitor: i1OldToSbd1, ToCurrentInhibitor: sbd1ToI1, FromNextInhibitor: i1NewToSbd1, ToPartition: sbd1ToPartition}
 
-	// sd0: streak detector between i0 and i1
-	i0ToSd0 := make(chan int, 1)
-	i1ToSd0 := make(chan int, 1)
+	// sd0: streak detector on i0 (old+new from i0)
+	i0OldToSd0 := make(chan int, 1)
+	i0NewToSd0 := make(chan int, 1)
 	sd0ToSd1 := make(chan int, 1)
-	sd0 := SD.StreakDetector{Id: 0, FromCurrentInhibitor: i0ToSd0, FromNextInhibitor: i1ToSd0, ToNextDetector: sd0ToSd1, ToSync: sd0DoneToSync0}
+	sd0 := SD.StreakDetector{Id: 0, FromCurrentInhibitor: i0OldToSd0, FromNextInhibitor: i0NewToSd0, ToNextDetector: sd0ToSd1, ToSync: sd0DoneToSyncGate}
 
-	// sd1: streak detector on i1
-	i1ToSd1Left := make(chan int, 1)
-	i1ToSd1Right := make(chan int, 1)
-	sd1 := SD.StreakDetector{Id: 1, CurrentInhibitor: &i1, StreakBreakDetector: &sbd1, SbdNextChan: i1ToSbd1Right, SdNextChan: i1ToSd1Right, FromCurrentInhibitor: i1ToSd1Left, FromNextInhibitor: i1ToSd1Right, FromPrevDetector: sd0ToSd1}
+	// sd1: streak detector on i1 (old+new from i1)
+	i1OldToSd1 := make(chan int, 1)
+	i1NewToSd1 := make(chan int, 1)
+	sd1 := SD.StreakDetector{Id: 1, CurrentInhibitor: &i1, StreakBreakDetector: &sbd1, SbdNextChan: i1NewToSbd1, SdNextChan: i1NewToSd1, FromCurrentInhibitor: i1OldToSd1, FromNextInhibitor: i1NewToSd1, FromPrevDetector: sd0ToSd1}
 
-	// Wire edge channels to inhibitors
-	i0.ToEdge = []chan<- int{i0ToSbd0, i0ToSd0}
-	i1.ToEdge = []chan<- int{i1ToSbd0, i1ToSbd1Left, i1ToSbd1Right, i1ToSd0, i1ToSd1Left, i1ToSd1Right}
+	// Wire edge channels to inhibitors (old + new)
+	i0.ToEdge = []chan<- int{i0OldToSbd0, i0OldToSd0}
+	i0.ToEdgeNew = []chan<- int{i0NewToSbd0, i0NewToSd0}
+	i1.ToEdge = []chan<- int{i1OldToSbd1, i1OldToSd1}
+	i1.ToEdgeNew = []chan<- int{i1NewToSbd1, i1NewToSd1}
 
 	// a0: AND gate fed by sbd0 and sbd1
 	andOut := make(chan int, 3)
 	a0 := AN.AndGateNode{Id: 0, FromLeft: sbd0ToPartition, FromRight: sbd1ToPartition, ToNext: andOut}
 
-	l.Line = []S.Node{&input_node, &i0, &sync0, &i1, &sbd0, &sbd1, &sd0, &sd1, &a0}
+	l.Line = []S.Node{&input_node, &readLatch, &readGate, &i0, &syncLatch, &syncGate, &i1, &sbd0, &sbd1, &sd0, &sd1, &a0}
 }

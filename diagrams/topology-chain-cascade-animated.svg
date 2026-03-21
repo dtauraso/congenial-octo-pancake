@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 600" font-family="monospace" font-size="12">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 580" font-family="monospace" font-size="12">
   <defs>
     <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
       <path d="M0,0 L8,3 L0,6" fill="#333"/>
@@ -18,51 +18,30 @@
     <marker id="arrow-magenta" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
       <path d="M0,0 L8,3 L0,6" fill="#7b1fa2"/>
     </marker>
-    <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#d32f2f"/>
-    </marker>
   </defs>
 
   <!-- Background -->
-  <rect width="780" height="600" fill="#fafafa" rx="8"/>
+  <rect width="780" height="580" fill="#fafafa" rx="8"/>
 
   <!-- Title -->
-  <text x="390" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#222">Line Topology — sbd1/sd1 Move Right</text>
+  <text x="390" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#222">Line Topology — Detect Contrast First (Move Right Animation)</text>
 
-  <!-- a0 (pattern AND gate) — slides right as sbd1 moves -->
-  <rect fill="#e8eaf6" stroke="#283593" rx="6" stroke-width="2" width="70" height="40" y="45">
-    <animate attributeName="x" dur="5s" repeatCount="indefinite"
-      values="295;295;340;340;295" keyTimes="0;0.3;0.5;0.8;1"/>
-  </rect>
-  <text y="62" text-anchor="middle" font-weight="bold" fill="#283593">
-    <animate attributeName="x" dur="5s" repeatCount="indefinite"
-      values="330;330;375;375;330" keyTimes="0;0.3;0.5;0.8;1"/>a0
-  </text>
-  <text y="77" text-anchor="middle" font-size="10" fill="#283593">
-    <animate attributeName="x" dur="5s" repeatCount="indefinite"
-      values="330;330;375;375;330" keyTimes="0;0.3;0.5;0.8;1"/>AND
-  </text>
+  <!-- a0 (pattern AND gate, stays put — sbd1 doesn't move) -->
+  <rect x="295" y="45" width="70" height="40" fill="#e8eaf6" stroke="#283593" rx="6" stroke-width="2"/>
+  <text x="330" y="62" text-anchor="middle" font-weight="bold" fill="#283593">a0</text>
+  <text x="330" y="77" text-anchor="middle" font-size="10" fill="#283593">AND</text>
 
   <!-- === STREAK BREAK DETECTORS === -->
 
-  <!-- sbd0 (stays put) -->
+  <!-- sbd0 (on i0, static) -->
   <rect x="120" y="100" width="110" height="40" fill="#ffebee" stroke="#c62828" rx="20" stroke-width="2"/>
   <text x="175" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#c62828">sbd0</text>
   <text x="175" y="132" text-anchor="middle" font-size="8" fill="#c62828">Streak Break (1,-1|-1,1)</text>
 
-  <!-- sbd1 — slides from above i1 to between i1 and i2 -->
-  <rect fill="#e3f2fd" stroke="#1565c0" rx="20" stroke-width="2" width="110" height="40" y="100">
-    <animate attributeName="x" dur="5s" repeatCount="indefinite"
-      values="430;430;530;530;430" keyTimes="0;0.3;0.5;0.8;1"/>
-  </rect>
-  <text y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#1565c0">
-    <animate attributeName="x" dur="5s" repeatCount="indefinite"
-      values="485;485;585;585;485" keyTimes="0;0.3;0.5;0.8;1"/>sbd1
-  </text>
-  <text y="132" text-anchor="middle" font-size="8" fill="#1565c0">
-    <animate attributeName="x" dur="5s" repeatCount="indefinite"
-      values="485;485;585;585;485" keyTimes="0;0.3;0.5;0.8;1"/>Streak Break (1,-1|-1,1)
-  </text>
+  <!-- sbd1 (on i1, stays put — detectors don't move in detect-contrast-first) -->
+  <rect x="380" y="100" width="110" height="40" fill="#e3f2fd" stroke="#1565c0" rx="20" stroke-width="2"/>
+  <text x="435" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#1565c0">sbd1</text>
+  <text x="435" y="132" text-anchor="middle" font-size="8" fill="#1565c0">Streak Break (1,-1|-1,1)</text>
 
   <!-- === INHIBITOR ROW === -->
 
@@ -89,7 +68,7 @@
   <text x="410" y="205" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
   <text x="410" y="220" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
 
-  <!-- sync1 (sync AND gate between i1 and i2, fades in) -->
+  <!-- sync1 (fades in) -->
   <g>
     <animate attributeName="opacity" dur="5s" repeatCount="indefinite"
       values="0;0;1;1;0" keyTimes="0;0.3;0.5;0.8;1"/>
@@ -98,7 +77,7 @@
     <text x="520" y="209" text-anchor="middle" font-size="8" fill="#7b1fa2">AND</text>
   </g>
 
-  <!-- i2 — fades in -->
+  <!-- i2 (fades in) -->
   <g>
     <animate attributeName="opacity" dur="5s" repeatCount="indefinite"
       values="0;0;1;1;0" keyTimes="0;0.3;0.5;0.8;1"/>
@@ -110,34 +89,25 @@
 
   <!-- === STREAK DETECTORS === -->
 
-  <!-- sd0 (stays put) -->
+  <!-- sd0 (on i0, static) -->
   <rect x="120" y="260" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
   <text x="170" y="275" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd0</text>
   <text x="170" y="292" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
 
-  <!-- sd1 — slides from below i1 to between i1 and i2 -->
-  <rect fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2" width="100" height="40" y="260">
-    <animate attributeName="x" dur="5s" repeatCount="indefinite"
-      values="430;430;530;530;430" keyTimes="0;0.3;0.5;0.8;1"/>
-  </rect>
-  <text y="275" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">
-    <animate attributeName="x" dur="5s" repeatCount="indefinite"
-      values="480;480;580;580;480" keyTimes="0;0.3;0.5;0.8;1"/>sd1
-  </text>
-  <text y="292" text-anchor="middle" font-size="8" fill="#2e7d32">
-    <animate attributeName="x" dur="5s" repeatCount="indefinite"
-      values="480;480;580;580;480" keyTimes="0;0.3;0.5;0.8;1"/>Streak (-1,-1|1,1)
-  </text>
+  <!-- sd1 (on i1, stays put) -->
+  <rect x="380" y="260" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
+  <text x="430" y="275" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd1</text>
+  <text x="430" y="292" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
 
   <!-- === STATIC CONNECTIONS === -->
 
   <!-- in0 -> i0 -->
   <line x1="100" y1="200" x2="138" y2="200" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
 
-  <!-- i0 -> sync0 (data to sync gate) -->
+  <!-- i0 -> sync0 (data) -->
   <line x1="230" y1="200" x2="263" y2="200" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
 
-  <!-- i0 -> sync0 (propagate signal, slightly below) -->
+  <!-- i0 -> sync0 (propagate signal) -->
   <line x1="230" y1="210" x2="263" y2="210" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
 
   <!-- sync0 -> i1 (data out) -->
@@ -149,23 +119,39 @@
   <!-- sd0 -> sync0 (done signal, magenta) -->
   <line x1="190" y1="260" x2="280" y2="215" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
 
-  <!-- === DEADLOCK HIGHLIGHT === -->
-  <!-- Cycle: sync0 waits for sbd0/sd0 done, sbd0/sd0 wait for i1 edge, i1 waits for sync0 -->
+  <!-- i0 -> sbd0 (old value, blue, up-left) -->
+  <line x1="160" y1="170" x2="150" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="140" y="155" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
-  <!-- sync0 -> i1 (blocked: i1 waiting for chain data) -->
-  <line x1="325" y1="200" x2="363" y2="200" stroke="#d32f2f" stroke-width="3" stroke-opacity="0.5" marker-end="url(#arrow-red)"/>
+  <!-- i0 -> sbd0 (new value, blue, up-right) -->
+  <line x1="210" y1="170" x2="215" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="225" y="155" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
-  <!-- i1 -> sbd0 (blocked: sbd0 waiting for i1 edge) -->
-  <line x1="395" y1="170" x2="215" y2="140" stroke="#d32f2f" stroke-width="3" stroke-opacity="0.5" marker-end="url(#arrow-red)"/>
+  <!-- i0 -> sd0 (old value, blue, down-left) -->
+  <line x1="160" y1="230" x2="150" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="140" y="248" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
-  <!-- i1 -> sd0 (blocked: sd0 waiting for i1 edge) -->
-  <line x1="395" y1="230" x2="205" y2="260" stroke="#d32f2f" stroke-width="3" stroke-opacity="0.5" marker-end="url(#arrow-red)"/>
+  <!-- i0 -> sd0 (new value, blue, down-right) -->
+  <line x1="210" y1="230" x2="205" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="222" y="248" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
-  <!-- sbd0 -> sync0 (blocked: sync0 waiting for done) -->
-  <line x1="190" y1="140" x2="280" y2="185" stroke="#d32f2f" stroke-width="3" stroke-opacity="0.5" marker-end="url(#arrow-red)"/>
+  <!-- i1 -> sbd1 (old value, blue, up-left) -->
+  <line x1="390" y1="170" x2="400" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="382" y="155" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
-  <!-- sd0 -> sync0 (blocked: sync0 waiting for done) -->
-  <line x1="190" y1="260" x2="280" y2="215" stroke="#d32f2f" stroke-width="3" stroke-opacity="0.5" marker-end="url(#arrow-red)"/>
+  <!-- i1 -> sbd1 (new value, blue, up-right) -->
+  <line x1="430" y1="170" x2="460" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="455" y="155" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+
+  <!-- i1 -> sd1 (old value, blue, down-left) -->
+  <line x1="390" y1="230" x2="400" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="382" y="248" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+
+  <!-- i1 -> sd1 (new value, blue, down-right) -->
+  <line x1="430" y1="230" x2="460" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="455" y="248" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+
+  <!-- === ANIMATED CONNECTIONS (fade in with sync1/i2) === -->
 
   <!-- i1 -> sync1 (data, fades in) -->
   <line x1="455" y1="200" x2="488" y2="200" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)">
@@ -185,131 +171,52 @@
       values="0;0;1;1;0" keyTimes="0;0.3;0.5;0.8;1"/>
   </line>
 
-  <!-- sbd1 -> sync1 (done signal, animated: from above i1 to above sync1 after move) -->
-  <line stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)" y2="185">
+  <!-- sbd1 -> sync1 (done signal, fades in) -->
+  <line x1="420" y1="140" x2="505" y2="185" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)">
     <animate attributeName="opacity" dur="5s" repeatCount="indefinite"
       values="0;0;1;1;0" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="x1" dur="5s" repeatCount="indefinite"
-      values="500;500;560;560;500" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="y1" dur="5s" repeatCount="indefinite"
-      values="140;140;140;140;140" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="510;510;510;510;510" keyTimes="0;0.3;0.5;0.8;1"/>
   </line>
 
-  <!-- sd1 -> sync1 (done signal, animated: from below i1 to below sync1 after move) -->
-  <line stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)" y2="215">
+  <!-- sd1 -> sync1 (done signal, fades in) -->
+  <line x1="420" y1="260" x2="505" y2="215" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)">
     <animate attributeName="opacity" dur="5s" repeatCount="indefinite"
       values="0;0;1;1;0" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="x1" dur="5s" repeatCount="indefinite"
-      values="490;490;560;560;490" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="y1" dur="5s" repeatCount="indefinite"
-      values="260;260;260;260;260" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="510;510;510;510;510" keyTimes="0;0.3;0.5;0.8;1"/>
   </line>
 
-  <!-- i0 -> sbd0 (static, blue, up) -->
-  <line x1="160" y1="170" x2="150" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- === STATIC REMAINING CONNECTIONS === -->
 
-  <!-- i1 -> sbd0 (static, blue, up-left) -->
-  <line x1="395" y1="170" x2="215" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- sbd0 -> a0 (indigo) -->
+  <line x1="210" y1="100" x2="300" y2="85" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
 
-  <!-- i0 -> sd0 (static, blue, down) -->
-  <line x1="160" y1="230" x2="150" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- sbd1 -> a0 (indigo) -->
+  <line x1="470" y1="100" x2="360" y2="85" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
 
-  <!-- i1 -> sd0 (static, blue, down-left) -->
-  <line x1="395" y1="230" x2="205" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- sd0 -> sd1 (green signal chain) -->
+  <line x1="220" y1="280" x2="378" y2="280" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow-green)"/>
 
-  <!-- === ANIMATED sbd1 CONNECTIONS === -->
+  <!-- sd1 -> i1 (struct pointer, dashed orange) -->
+  <line x1="465" y1="260" x2="450" y2="232" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
 
-  <!-- i1 -> sbd1 (left input): self-loop vertical to diagonal to moved sbd1 -->
-  <line stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)" y1="170" y2="140">
-    <animate attributeName="x1" dur="5s" repeatCount="indefinite"
-      values="440;440;420;420;440" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="465;465;545;545;465" keyTimes="0;0.3;0.5;0.8;1"/>
-  </line>
-
-  <!-- i1/i2 -> sbd1 (right input): from i1 vertical to i2 diagonal to moved sbd1 -->
-  <line stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)" y1="170" y2="140">
-    <animate attributeName="x1" dur="5s" repeatCount="indefinite"
-      values="450;450;625;625;450" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="520;520;625;625;520" keyTimes="0;0.3;0.5;0.8;1"/>
-  </line>
-
-  <!-- === ANIMATED sd1 CONNECTIONS === -->
-
-  <!-- i1 -> sd1 (left input): self-loop vertical to diagonal to moved sd1 -->
-  <line stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)" y1="230" y2="260">
-    <animate attributeName="x1" dur="5s" repeatCount="indefinite"
-      values="410;410;420;420;410" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="445;445;545;545;445" keyTimes="0;0.3;0.5;0.8;1"/>
-  </line>
-
-  <!-- i1/i2 -> sd1 (right input): from i1 vertical to i2 diagonal to moved sd1 -->
-  <line stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)" y1="230" y2="260">
-    <animate attributeName="x1" dur="5s" repeatCount="indefinite"
-      values="435;435;625;625;435" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="480;480;615;615;480" keyTimes="0;0.3;0.5;0.8;1"/>
-  </line>
-
-  <!-- sbd0 -> a0 (a0 moves, so x2 animates) -->
-  <line y1="100" y2="85" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)" x1="210">
-    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="300;300;345;345;300" keyTimes="0;0.3;0.5;0.8;1"/>
-  </line>
-
-  <!-- sbd1 -> a0 (both sbd1 and a0 move) -->
-  <line y1="100" y2="85" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)">
-    <animate attributeName="x1" dur="5s" repeatCount="indefinite"
-      values="455;455;555;555;455" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="360;360;405;405;360" keyTimes="0;0.3;0.5;0.8;1"/>
-  </line>
-
-  <!-- sd0 -> sd1 (green signal chain, x2 animates as sd1 moves) -->
-  <line y1="280" y2="280" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow-green)" x1="220">
-    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="428;428;528;528;428" keyTimes="0;0.3;0.5;0.8;1"/>
-  </line>
-
-  <!-- sd1 -> i1 then i2 (struct pointer, dashed orange; starts at i1, moves to i2) -->
-  <line y1="260" y2="232" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)">
-    <animate attributeName="x1" dur="5s" repeatCount="indefinite"
-      values="515;515;625;625;515" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="450;450;635;635;450" keyTimes="0;0.3;0.5;0.8;1"/>
-  </line>
-
-  <!-- sd1 -> sbd1 (struct pointer, dashed orange; both slide right together) -->
-  <line y1="260" y2="140" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)">
-    <animate attributeName="x1" dur="5s" repeatCount="indefinite"
-      values="500;500;610;610;500" keyTimes="0;0.3;0.5;0.8;1"/>
-    <animate attributeName="x2" dur="5s" repeatCount="indefinite"
-      values="500;500;600;600;500" keyTimes="0;0.3;0.5;0.8;1"/>
-  </line>
+  <!-- sd1 -> sbd1 (struct pointer, dashed orange) -->
+  <line x1="450" y1="260" x2="450" y2="140" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
 
   <!-- State label -->
   <text x="390" y="320" text-anchor="middle" font-size="11" fill="#666">
     <animate attributeName="opacity" dur="5s" repeatCount="indefinite"
-      values="1;1;0;0;1" keyTimes="0;0.25;0.35;0.95;1"/>Base case: sbd1/sd1 self-loop on i1
+      values="1;1;0;0;1" keyTimes="0;0.25;0.35;0.95;1"/>Base case: sbd1/sd1 on i1 (old+new)
   </text>
   <text x="390" y="320" text-anchor="middle" font-size="11" fill="#666">
     <animate attributeName="opacity" dur="5s" repeatCount="indefinite"
-      values="0;0;1;1;0" keyTimes="0;0.35;0.5;0.75;0.85"/>After move: sbd1/sd1 between i1 and i2
+      values="0;0;1;1;0" keyTimes="0;0.35;0.5;0.75;0.85"/>After move: sync1/i2 created, sbd1/sd1 gate sync1
   </text>
 
   <!-- === LEGEND === -->
-  <rect x="20" y="340" width="520" height="156" fill="#f0f0f0" rx="4" stroke="#ccc"/>
+  <rect x="20" y="340" width="520" height="140" fill="#f0f0f0" rx="4" stroke="#ccc"/>
 
   <text x="85" y="358" text-anchor="start" font-weight="bold" fill="#333" font-size="11">Color</text>
   <text x="210" y="358" text-anchor="start" font-weight="bold" fill="#333" font-size="11">Description</text>
   <line x1="30" y1="363" x2="530" y2="363" stroke="#ccc" stroke-width="1"/>
-  <line x1="200" y1="345" x2="200" y2="491" stroke="#ccc" stroke-width="0.5"/>
+  <line x1="200" y1="345" x2="200" y2="475" stroke="#ccc" stroke-width="0.5"/>
 
   <!-- Row 1 -->
   <line x1="40" y1="378" x2="70" y2="378" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
@@ -319,7 +226,7 @@
   <!-- Row 2 -->
   <line x1="40" y1="394" x2="70" y2="394" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
   <text x="85" y="398" text-anchor="start" fill="#2266aa" font-size="10">Edge</text>
-  <text x="210" y="398" text-anchor="start" fill="#666" font-size="10">Inhibitor values to detectors</text>
+  <text x="210" y="398" text-anchor="start" fill="#666" font-size="10">Old + new values from inhibitor to detectors</text>
 
   <!-- Row 3 -->
   <line x1="40" y1="410" x2="70" y2="410" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
@@ -340,9 +247,4 @@
   <line x1="40" y1="458" x2="70" y2="458" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
   <text x="85" y="462" text-anchor="start" fill="#7b1fa2" font-size="10">Sync</text>
   <text x="210" y="462" text-anchor="start" fill="#666" font-size="10">Propagate/done signals to sync AND gate</text>
-
-  <!-- Row 7 -->
-  <line x1="40" y1="478" x2="70" y2="478" stroke="#d32f2f" stroke-width="3" stroke-opacity="0.5" marker-end="url(#arrow-red)"/>
-  <text x="85" y="482" text-anchor="start" fill="#d32f2f" font-size="10">Deadlock</text>
-  <text x="210" y="482" text-anchor="start" fill="#666" font-size="10">sync0 ↔ sbd0/sd0 ↔ i1 circular wait</text>
 </svg>

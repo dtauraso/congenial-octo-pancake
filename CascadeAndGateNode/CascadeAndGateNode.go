@@ -16,6 +16,7 @@ type CascadeAndGateNode struct {
 	FromLeft    <-chan int
 	FromRight   <-chan int
 	ToNext      chan<- int
+	ToAck       chan<- int
 }
 
 func (a *CascadeAndGateNode) Update(s *S.SafeWorker) {
@@ -54,6 +55,7 @@ func (a *CascadeAndGateNode) Update(s *S.SafeWorker) {
 			if result == 1 {
 				fmt.Printf("ca%d: forwarding value %d\n", a.Id, a.HeldValue)
 				S.Send(a.ToNext, a.HeldValue)
+				S.Send(a.ToAck, 1)
 			}
 			if a.FromLeft != nil {
 				a.HasLeft = false

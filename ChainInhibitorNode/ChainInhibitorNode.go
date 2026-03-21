@@ -7,11 +7,12 @@ import (
 )
 
 type ChainInhibitorNode struct {
-	Id        int
-	HeldValue int
-	FromPrev  <-chan int
-	ToNext    chan<- int
-	ToEdge    []chan<- int
+	Id         int
+	HeldValue  int
+	FromPrev   <-chan int
+	ToNext     chan<- int
+	ToEdge     []chan<- int
+	ToEdgeNew  []chan<- int
 }
 
 func NewChainInhibitorNode(id int, fromPrev <-chan int, toNext chan<- int) ChainInhibitorNode {
@@ -20,10 +21,6 @@ func NewChainInhibitorNode(id int, fromPrev <-chan int, toNext chan<- int) Chain
 
 func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 	defer s.Wg.Done()
-	// Send initial edge values to bootstrap detectors
-	for _, ch := range in.ToEdge {
-		S.Send(ch, in.HeldValue)
-	}
 	for {
 		select {
 		case <-s.Ctx.Done():
@@ -33,9 +30,12 @@ func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 
 		select {
 		case value := <-in.FromPrev:
-			fmt.Printf("%dCI: received %d from prev\n", in.Id, value)
+			fmt.Printf("%dCI: received %d (old=%d)\n", in.Id, value, in.HeldValue)
 			for _, ch := range in.ToEdge {
 				S.Send(ch, in.HeldValue)
+			}
+			for _, ch := range in.ToEdgeNew {
+				S.Send(ch, value)
 			}
 			S.Send(in.ToNext, in.HeldValue)
 			in.HeldValue = value

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 600" font-family="monospace" font-size="12">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 580" font-family="monospace" font-size="12">
   <defs>
     <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
       <path d="M0,0 L8,3 L0,6" fill="#333"/>
@@ -18,35 +18,32 @@
     <marker id="arrow-magenta" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
       <path d="M0,0 L8,3 L0,6" fill="#7b1fa2"/>
     </marker>
-    <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#d32f2f"/>
-    </marker>
   </defs>
 
   <!-- Background -->
-  <rect width="780" height="600" fill="#fafafa" rx="8"/>
+  <rect width="780" height="580" fill="#fafafa" rx="8"/>
 
   <!-- Title -->
-  <text x="390" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#222">Line Topology — After sbd1/sd1 Move Right</text>
+  <text x="390" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#222">Line Topology — After Move Right (Detect Contrast First)</text>
 
   <!-- a0 (AND gate) -->
   <rect x="340" y="45" width="70" height="40" fill="#e8eaf6" stroke="#283593" rx="6" stroke-width="2"/>
   <text x="375" y="62" text-anchor="middle" font-weight="bold" fill="#283593">a0</text>
   <text x="375" y="77" text-anchor="middle" font-size="10" fill="#283593">AND</text>
 
-  <!-- === STREAK BREAK DETECTORS (upper row, y=100) === -->
+  <!-- === STREAK BREAK DETECTORS === -->
 
-  <!-- sbd0 (Streak Break Detector between i0 and i1) — stays -->
+  <!-- sbd0 (on i0) -->
   <rect x="120" y="100" width="110" height="40" fill="#ffebee" stroke="#c62828" rx="20" stroke-width="2"/>
   <text x="175" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#c62828">sbd0</text>
   <text x="175" y="132" text-anchor="middle" font-size="8" fill="#c62828">Streak Break (1,-1|-1,1)</text>
 
-  <!-- sbd1 (Streak Break Detector between i1 and i2 — moved right) -->
-  <rect x="530" y="100" width="110" height="40" fill="#e3f2fd" stroke="#1565c0" rx="20" stroke-width="2"/>
-  <text x="585" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#1565c0">sbd1</text>
-  <text x="585" y="132" text-anchor="middle" font-size="8" fill="#1565c0">Streak Break (1,-1|-1,1)</text>
+  <!-- sbd1 (on i1, moved from self-loop) -->
+  <rect x="380" y="100" width="110" height="40" fill="#e3f2fd" stroke="#1565c0" rx="20" stroke-width="2"/>
+  <text x="435" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#1565c0">sbd1</text>
+  <text x="435" y="132" text-anchor="middle" font-size="8" fill="#1565c0">Streak Break (1,-1|-1,1)</text>
 
-  <!-- === INHIBITOR ROW (y=170) === -->
+  <!-- === INHIBITOR ROW === -->
 
   <!-- InputNode -->
   <rect x="20" y="170" width="80" height="60" fill="#e0e0e0" stroke="#666" rx="6" stroke-width="2"/>
@@ -82,17 +79,17 @@
   <text x="635" y="205" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
   <text x="635" y="220" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
 
-  <!-- === STREAK DETECTORS (below inhibitors, y=260) === -->
+  <!-- === STREAK DETECTORS === -->
 
-  <!-- sd0 (Streak Detector between i0 and i1) — stays -->
+  <!-- sd0 (on i0) -->
   <rect x="120" y="260" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
   <text x="170" y="275" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd0</text>
   <text x="170" y="292" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
 
-  <!-- sd1 (Streak Detector between i1 and i2 — moved right) -->
-  <rect x="530" y="260" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
-  <text x="580" y="275" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd1</text>
-  <text x="580" y="292" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
+  <!-- sd1 (on i1, moved from self-loop) -->
+  <rect x="380" y="260" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
+  <text x="430" y="275" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd1</text>
+  <text x="430" y="292" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
 
   <!-- === CONNECTIONS === -->
 
@@ -124,82 +121,72 @@
   <line x1="550" y1="200" x2="588" y2="200" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
 
   <!-- sbd1 -> sync1 (done signal, magenta) -->
-  <line x1="560" y1="140" x2="510" y2="185" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
+  <line x1="420" y1="140" x2="505" y2="185" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
 
   <!-- sd1 -> sync1 (done signal, magenta) -->
-  <line x1="560" y1="260" x2="510" y2="215" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
+  <line x1="420" y1="260" x2="505" y2="215" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
 
-  <!-- i0 -> sbd0 (blue, up) -->
+  <!-- i0 -> sbd0 (old value, blue, up-left) -->
   <line x1="160" y1="170" x2="150" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="140" y="155" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
-  <!-- i1 -> sbd0 (blue, up-left) -->
-  <line x1="395" y1="170" x2="215" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- i0 -> sbd0 (new value, blue, up-right) -->
+  <line x1="210" y1="170" x2="215" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="225" y="155" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
-  <!-- i0 -> sd0 (blue, down) -->
+  <!-- i0 -> sd0 (old value, blue, down-left) -->
   <line x1="160" y1="230" x2="150" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="140" y="248" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
-  <!-- i1 -> sd0 (blue, down-left) -->
-  <line x1="395" y1="230" x2="205" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- i0 -> sd0 (new value, blue, down-right) -->
+  <line x1="210" y1="230" x2="205" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="222" y="248" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
-  <!-- i1 -> sbd1 (blue, up-right) -->
-  <line x1="420" y1="170" x2="545" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- i1 -> sbd1 (old value, blue, up-left) -->
+  <line x1="390" y1="170" x2="400" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="382" y="155" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
-  <!-- i2 -> sbd1 (blue, up-left) -->
-  <line x1="625" y1="170" x2="625" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- i1 -> sbd1 (new value, blue, up-right) -->
+  <line x1="430" y1="170" x2="460" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="455" y="155" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
-  <!-- i1 -> sd1 (blue, down-right) -->
-  <line x1="420" y1="230" x2="545" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- i1 -> sd1 (old value, blue, down-left) -->
+  <line x1="390" y1="230" x2="400" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="382" y="248" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
-  <!-- i2 -> sd1 (blue, down-left) -->
-  <line x1="625" y1="230" x2="615" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <!-- i1 -> sd1 (new value, blue, down-right) -->
+  <line x1="430" y1="230" x2="460" y2="260" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="455" y="248" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
   <!-- sbd0 -> a0 (indigo, up) -->
   <line x1="210" y1="100" x2="345" y2="85" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
 
   <!-- sbd1 -> a0 (indigo, up) -->
-  <line x1="555" y1="100" x2="405" y2="85" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
+  <line x1="470" y1="100" x2="405" y2="85" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
 
   <!-- sd0 -> sd1 (green signal chain) -->
-  <line x1="220" y1="280" x2="528" y2="280" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <line x1="220" y1="280" x2="378" y2="280" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow-green)"/>
 
-  <!-- sd1 -> i2 (struct pointer, dashed orange) -->
-  <line x1="625" y1="260" x2="635" y2="232" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
+  <!-- sd1 -> i1 (struct pointer, dashed orange) -->
+  <line x1="465" y1="260" x2="450" y2="232" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
 
   <!-- sd1 -> sbd1 (struct pointer, dashed orange) -->
-  <line x1="610" y1="260" x2="600" y2="140" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
-
-  <!-- === DEADLOCK HIGHLIGHT === -->
-  <!-- Cycle: sync0 waits for sbd0/sd0 done, sbd0/sd0 wait for i1 edge, i1 waits for sync0 -->
-
-  <!-- sync0 -> i1 (blocked: i1 waiting for chain data) -->
-  <line x1="325" y1="200" x2="363" y2="200" stroke="#d32f2f" stroke-width="3" stroke-opacity="0.5" marker-end="url(#arrow-red)"/>
-
-  <!-- i1 -> sbd0 (blocked: sbd0 waiting for i1 edge) -->
-  <line x1="395" y1="170" x2="215" y2="140" stroke="#d32f2f" stroke-width="3" stroke-opacity="0.5" marker-end="url(#arrow-red)"/>
-
-  <!-- i1 -> sd0 (blocked: sd0 waiting for i1 edge) -->
-  <line x1="395" y1="230" x2="205" y2="260" stroke="#d32f2f" stroke-width="3" stroke-opacity="0.5" marker-end="url(#arrow-red)"/>
-
-  <!-- sbd0 -> sync0 (blocked: sync0 waiting for done) -->
-  <line x1="190" y1="140" x2="280" y2="185" stroke="#d32f2f" stroke-width="3" stroke-opacity="0.5" marker-end="url(#arrow-red)"/>
-
-  <!-- sd0 -> sync0 (blocked: sync0 waiting for done) -->
-  <line x1="190" y1="260" x2="280" y2="215" stroke="#d32f2f" stroke-width="3" stroke-opacity="0.5" marker-end="url(#arrow-red)"/>
+  <line x1="450" y1="260" x2="450" y2="140" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
 
   <!-- Behavior note -->
-  <rect x="20" y="325" width="240" height="55" fill="#fff9c4" stroke="#f9a825" rx="4"/>
-  <text x="140" y="343" text-anchor="middle" font-size="10" fill="#f57f17">sbd1/sd1 moved right: no longer</text>
-  <text x="140" y="357" text-anchor="middle" font-size="9" fill="#f57f17">self-loop on i1. Now connects</text>
-  <text x="140" y="371" text-anchor="middle" font-size="9" fill="#f57f17">i1 ↔ sbd1/sd1 ↔ i2</text>
+  <rect x="20" y="325" width="280" height="55" fill="#fff9c4" stroke="#f9a825" rx="4"/>
+  <text x="160" y="343" text-anchor="middle" font-size="10" fill="#f57f17">Detect contrast first, then propagate.</text>
+  <text x="160" y="357" text-anchor="middle" font-size="9" fill="#f57f17">sbd1/sd1 now on i1 (old+new from i1).</text>
+  <text x="160" y="371" text-anchor="middle" font-size="9" fill="#f57f17">Done signals gate sync1 → i2.</text>
 
   <!-- === LEGEND === -->
-  <rect x="20" y="400" width="520" height="156" fill="#f0f0f0" rx="4" stroke="#ccc"/>
+  <rect x="20" y="400" width="520" height="140" fill="#f0f0f0" rx="4" stroke="#ccc"/>
 
   <!-- Column headers -->
   <text x="85" y="418" text-anchor="start" font-weight="bold" fill="#333" font-size="11">Color</text>
   <text x="210" y="418" text-anchor="start" font-weight="bold" fill="#333" font-size="11">Description</text>
   <line x1="30" y1="423" x2="530" y2="423" stroke="#ccc" stroke-width="1"/>
-  <line x1="200" y1="405" x2="200" y2="551" stroke="#ccc" stroke-width="0.5"/>
+  <line x1="200" y1="405" x2="200" y2="535" stroke="#ccc" stroke-width="0.5"/>
 
   <!-- Row 1 -->
   <line x1="40" y1="438" x2="70" y2="438" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
@@ -209,7 +196,7 @@
   <!-- Row 2 -->
   <line x1="40" y1="454" x2="70" y2="454" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
   <text x="85" y="458" text-anchor="start" fill="#2266aa" font-size="10">Edge</text>
-  <text x="210" y="458" text-anchor="start" fill="#666" font-size="10">Inhibitor values to detectors</text>
+  <text x="210" y="458" text-anchor="start" fill="#666" font-size="10">Old + new values from inhibitor to detectors</text>
 
   <!-- Row 3 -->
   <line x1="40" y1="470" x2="70" y2="470" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
@@ -230,9 +217,4 @@
   <line x1="40" y1="518" x2="70" y2="518" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
   <text x="85" y="522" text-anchor="start" fill="#7b1fa2" font-size="10">Sync</text>
   <text x="210" y="522" text-anchor="start" fill="#666" font-size="10">Propagate/done signals to sync AND gate</text>
-
-  <!-- Row 7 -->
-  <line x1="40" y1="534" x2="70" y2="534" stroke="#d32f2f" stroke-width="3" stroke-opacity="0.5" marker-end="url(#arrow-red)"/>
-  <text x="85" y="538" text-anchor="start" fill="#d32f2f" font-size="10">Deadlock</text>
-  <text x="210" y="538" text-anchor="start" fill="#666" font-size="10">sync0 ↔ sbd0/sd0 ↔ i1 circular wait</text>
 </svg>

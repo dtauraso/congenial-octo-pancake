@@ -83,15 +83,16 @@ func (sd *StreakDetector) moveRight(s *S.SafeWorker) {
 	i2 := &newNode
 
 	// Create sync gate between i1 and i2
+	// Detectors stay on i1 (old+new), done signals gate sync1
 	i1ToSync := make(chan int, 1)
 	syncToI2 := make(chan int, 1)
 	sbdDoneToSync := make(chan int, 1)
 	sdDoneToSync := make(chan int, 1)
 
-	syncId := i1.Id // sync1 sits after i1
+	syncId := i1.Id
 	sync1 := &CAN.CascadeAndGateNode{Id: syncId, FromValue: i1ToSync, FromLeft: sbdDoneToSync, FromRight: sdDoneToSync, ToNext: syncToI2}
 
-	// Wire i1 -> sync -> i2 chain
+	// Wire i1 -> sync1 -> i2 chain
 	i1.ToNext = i1ToSync
 	i2.FromPrev = syncToI2
 	i2.ToNext = make(chan int, 3)
@@ -99,32 +100,6 @@ func (sd *StreakDetector) moveRight(s *S.SafeWorker) {
 	// Wire done signals from detectors to sync gate
 	sd.StreakBreakDetector.ToSync = sbdDoneToSync
 	sd.ToSync = sdDoneToSync
-
-	// Create new channels from i2 to detectors
-	i2ToSbd := make(chan int, 1)
-	i2ToSd := make(chan int, 1)
-
-	// Rewire sbd1's right input from i1 to i2
-	sd.StreakBreakDetector.FromNextInhibitor = i2ToSbd
-
-	// Rewire sd1's right input from i1 to i2
-	sd.FromNextInhibitor = i2ToSd
-
-	// Remove old send-end channels from i1.ToEdge
-	newToEdge := make([]chan<- int, 0, len(i1.ToEdge))
-	for _, ch := range i1.ToEdge {
-		if ch != sd.SbdNextChan && ch != sd.SdNextChan {
-			newToEdge = append(newToEdge, ch)
-		}
-	}
-	i1.ToEdge = newToEdge
-
-	// Set i2's edge channels
-	i2.ToEdge = []chan<- int{i2ToSbd, i2ToSd}
-
-	// Update send-end references for future moves
-	sd.SbdNextChan = i2ToSbd
-	sd.SdNextChan = i2ToSd
 
 	// Update pointer to new current inhibitor
 	sd.CurrentInhibitor = i2
@@ -134,5 +109,5 @@ func (sd *StreakDetector) moveRight(s *S.SafeWorker) {
 	go sync1.Update(s)
 	go i2.Update(s)
 
-	fmt.Printf("sd%d: created sync%d and i%d, rewired sbd%d and sd%d\n", sd.Id, syncId, i2.Id, sd.StreakBreakDetector.Id, sd.Id)
+	fmt.Printf("sd%d: created sync%d and i%d\n", sd.Id, syncId, i2.Id)
 }

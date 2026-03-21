@@ -20,7 +20,7 @@ func RunTest() {
 	for _, node := range l.Line {
 		go node.Update(&s)
 	}
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	cancel()
 	wg.Wait()
 }
