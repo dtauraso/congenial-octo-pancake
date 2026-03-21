@@ -65,9 +65,9 @@
   <text x="340" y="210" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
   <text x="340" y="225" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
 
-  <!-- syncLatch -->
+  <!-- detectorLatch -->
   <rect x="450" y="185" width="70" height="36" fill="#e0f7fa" stroke="#00838f" rx="6" stroke-width="2"/>
-  <text x="485" y="200" text-anchor="middle" font-weight="bold" font-size="9" fill="#00838f">syncLatch</text>
+  <text x="485" y="200" text-anchor="middle" font-weight="bold" font-size="9" fill="#00838f">detectorLatch</text>
   <text x="485" y="214" text-anchor="middle" font-size="8" fill="#00838f">LATCH</text>
 
   <!-- i1 -->
@@ -110,13 +110,13 @@
   <line x1="230" y1="203" x2="293" y2="203" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
   <text x="262" y="196" text-anchor="middle" font-size="7" fill="#333">readLatchToI0</text>
 
-  <!-- i0ToSyncLatch -->
+  <!-- i0ToDetectorLatch -->
   <line x1="385" y1="203" x2="448" y2="203" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="417" y="196" text-anchor="middle" font-size="7" fill="#333">i0ToSyncLatch</text>
+  <text x="417" y="196" text-anchor="middle" font-size="7" fill="#333">i0ToDetectorLatch</text>
 
-  <!-- syncLatchToI1 -->
+  <!-- detectorLatchToI1 -->
   <line x1="520" y1="203" x2="583" y2="203" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="552" y="196" text-anchor="middle" font-size="7" fill="#333">syncLatchToI1</text>
+  <text x="552" y="196" text-anchor="middle" font-size="7" fill="#333">detectorLatchToI1</text>
 
   <!-- === CONTROL CONNECTIONS === -->
 
@@ -131,14 +131,14 @@
   <text x="195" y="253" text-anchor="middle" font-size="7" fill="#00838f">readGateTo</text>
   <text x="195" y="263" text-anchor="middle" font-size="7" fill="#00838f">ReadLatch</text>
 
-  <!-- syncGateToSyncLatch -->
+  <!-- syncGateToDetectorLatch -->
   <line x1="485" y1="285" x2="485" y2="223" stroke="#00838f" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
   <text x="485" y="258" text-anchor="middle" font-size="7" fill="#00838f">syncGateTo</text>
-  <text x="485" y="268" text-anchor="middle" font-size="7" fill="#00838f">SyncLatch</text>
+  <text x="485" y="268" text-anchor="middle" font-size="7" fill="#00838f">DetectorLatch</text>
 
-  <!-- syncLatchAckToReadGate -->
+  <!-- detectorLatchAckToReadGate -->
   <path d="M465,221 L465,265 L175,265 L175,283" fill="none" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
-  <text x="320" y="260" text-anchor="middle" font-size="7" fill="#7b1fa2">syncLatchAckToReadGate</text>
+  <text x="320" y="260" text-anchor="middle" font-size="7" fill="#7b1fa2">detectorLatchAckToReadGate</text>
 
   <!-- sbd0DoneToSyncGate -->
   <line x1="315" y1="140" x2="315" y2="300" stroke="#7b1fa2" stroke-width="1.5"/>
@@ -205,7 +205,7 @@
   <!-- Behavior note -->
   <rect x="20" y="410" width="310" height="55" fill="#fff9c4" stroke="#f9a825" rx="4"/>
   <text x="175" y="428" text-anchor="middle" font-size="10" fill="#f57f17">Latches hold values. AND gates control release.</text>
-  <text x="175" y="442" text-anchor="middle" font-size="9" fill="#f57f17">syncLatch acks readGate after releasing →</text>
+  <text x="175" y="442" text-anchor="middle" font-size="9" fill="#f57f17">detectorLatch acks readGate after releasing →</text>
   <text x="175" y="456" text-anchor="middle" font-size="9" fill="#f57f17">backpressure: one value per pipeline cycle.</text>
 
   <!-- === LEGEND === -->

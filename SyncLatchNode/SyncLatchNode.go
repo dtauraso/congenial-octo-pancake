@@ -29,7 +29,7 @@ func (l *SyncLatchNode) Update(s *S.SafeWorker) {
 			case v := <-l.FromChain:
 				l.Value = v
 				l.HasVal = true
-				fmt.Printf("syncLatch%d: latched %d\n", l.Id, l.Value)
+				fmt.Printf("detectorLatch%d: latched %d\n", l.Id, l.Value)
 			default:
 			}
 		}
@@ -37,7 +37,7 @@ func (l *SyncLatchNode) Update(s *S.SafeWorker) {
 		if l.HasVal {
 			select {
 			case <-l.Release:
-				fmt.Printf("syncLatch%d: releasing %d\n", l.Id, l.Value)
+				fmt.Printf("detectorLatch%d: releasing %d\n", l.Id, l.Value)
 				S.Send(l.ToChain, l.Value)
 				S.Send(l.ToAck, 1)
 				l.HasVal = false
