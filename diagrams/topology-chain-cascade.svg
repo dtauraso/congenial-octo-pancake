@@ -60,10 +60,10 @@
   <text x="195" y="214" text-anchor="middle" font-size="8" fill="#00838f">LATCH</text>
 
   <!-- i0 -->
-  <rect x="325" y="175" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
-  <text x="370" y="195" text-anchor="middle" font-weight="bold" fill="#e65100">i0</text>
-  <text x="370" y="210" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
-  <text x="370" y="225" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
+  <rect x="350" y="175" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
+  <text x="395" y="195" text-anchor="middle" font-weight="bold" fill="#e65100">i0</text>
+  <text x="395" y="210" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
+  <text x="395" y="225" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
 
   <!-- detectorLatch -->
   <rect x="510" y="185" width="70" height="36" fill="#e0f7fa" stroke="#00838f" rx="6" stroke-width="2"/>
@@ -107,12 +107,12 @@
   <text x="129" y="196" text-anchor="middle" font-size="7" fill="#555">inputToReadLatch</text>
 
   <!-- readLatchToI0 -->
-  <line x1="230" y1="203" x2="323" y2="203" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="277" y="196" text-anchor="middle" font-size="7" fill="#333">readLatchToI0</text>
+  <line x1="230" y1="203" x2="348" y2="203" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="289" y="196" text-anchor="middle" font-size="7" fill="#333">readLatchToI0</text>
 
   <!-- i0ToDetectorLatch -->
-  <line x1="415" y1="203" x2="508" y2="203" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="462" y="196" text-anchor="middle" font-size="7" fill="#333">i0ToDetectorLatch</text>
+  <line x1="440" y1="203" x2="508" y2="203" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="474" y="196" text-anchor="middle" font-size="7" fill="#333">i0ToDetectorLatch</text>
 
   <!-- detectorLatchToI1 -->
   <line x1="580" y1="203" x2="673" y2="203" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
@@ -153,20 +153,20 @@
   <!-- === EDGE CONNECTIONS === -->
 
   <!-- i0 -> sbd0 (old value, blue) -->
-  <line x1="345" y1="175" x2="320" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="320" y="158" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <line x1="370" y1="175" x2="320" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="332" y="158" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
   <!-- i0 -> sbd0 (new value, blue) -->
-  <line x1="395" y1="175" x2="385" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="402" y="158" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <line x1="420" y1="175" x2="385" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="415" y="158" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
   <!-- i0 -> sd0 (old value, blue) -->
-  <line x1="345" y1="235" x2="320" y2="345" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="320" y="295" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <line x1="370" y1="235" x2="320" y2="345" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="332" y="295" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
   <!-- i0 -> sd0 (new value, blue) -->
-  <line x1="395" y1="235" x2="375" y2="345" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="373" y="295" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <line x1="420" y1="235" x2="375" y2="345" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="385" y="295" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
   <!-- i1 -> sbd1 (old value, blue) -->
   <line x1="700" y1="175" x2="745" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
