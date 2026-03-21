@@ -12,7 +12,6 @@ type StreakBreakDetector struct {
 	RightValue           int
 	HasRight             bool
 	FromCurrentInhibitor <-chan int
-	ToCurrentInhibitor   chan<- int
 	FromNextInhibitor    <-chan int
 	ToPartition          chan<- int
 	ToSync               chan<- int
@@ -50,7 +49,6 @@ func (sbd *StreakBreakDetector) Update(s *S.SafeWorker) {
 				result = 1
 			}
 			fmt.Printf("sbd%d: streakBreak(%d,%d) = %d (streak break=%v)\n", sbd.Id, sbd.LeftValue, sbd.RightValue, result, result == 1)
-			S.Send(sbd.ToCurrentInhibitor, result)
 			S.Send(sbd.ToPartition, result)
 			S.Send(sbd.ToSync, 1)
 			sbd.HasLeft = false

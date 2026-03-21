@@ -56,16 +56,14 @@ func (l *Line) Setup() {
 	// sbd0: streak break detector on i0 (old+new from i0)
 	i0OldToSbd0 := make(chan int, 1)
 	i0NewToSbd0 := make(chan int, 1)
-	sbd0ToI0 := make(chan int, 1)
 	sbd0ToPartition := make(chan int, 3)
-	sbd0 := SBD.StreakBreakDetector{Id: 0, FromCurrentInhibitor: i0OldToSbd0, ToCurrentInhibitor: sbd0ToI0, FromNextInhibitor: i0NewToSbd0, ToPartition: sbd0ToPartition, ToSync: sbd0DoneToSyncGate}
+	sbd0 := SBD.StreakBreakDetector{Id: 0, FromCurrentInhibitor: i0OldToSbd0, FromNextInhibitor: i0NewToSbd0, ToPartition: sbd0ToPartition, ToSync: sbd0DoneToSyncGate}
 
 	// sbd1: streak break detector on i1 (old+new from i1)
 	i1OldToSbd1 := make(chan int, 1)
 	i1NewToSbd1 := make(chan int, 1)
-	sbd1ToI1 := make(chan int, 1)
 	sbd1ToPartition := make(chan int, 3)
-	sbd1 := SBD.StreakBreakDetector{Id: 1, FromCurrentInhibitor: i1OldToSbd1, ToCurrentInhibitor: sbd1ToI1, FromNextInhibitor: i1NewToSbd1, ToPartition: sbd1ToPartition}
+	sbd1 := SBD.StreakBreakDetector{Id: 1, FromCurrentInhibitor: i1OldToSbd1, FromNextInhibitor: i1NewToSbd1, ToPartition: sbd1ToPartition}
 
 	// sd0: streak detector on i0 (old+new from i0)
 	i0OldToSd0 := make(chan int, 1)
