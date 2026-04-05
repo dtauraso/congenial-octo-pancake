@@ -37,170 +37,169 @@
   <!-- === STREAK BREAK DETECTORS === -->
 
   <!-- sbd0 -->
-  <rect x="290" y="100" width="110" height="40" fill="#ffebee" stroke="#c62828" rx="20" stroke-width="2"/>
-  <text x="345" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#c62828">sbd0</text>
-  <text x="345" y="132" text-anchor="middle" font-size="8" fill="#c62828">Streak Break (1,-1|-1,1)</text>
+  <rect x="290" y="55" width="110" height="40" fill="#ffebee" stroke="#c62828" rx="20" stroke-width="2"/>
+  <text x="345" y="70" text-anchor="middle" font-weight="bold" font-size="10" fill="#c62828">sbd0</text>
+  <text x="345" y="87" text-anchor="middle" font-size="8" fill="#c62828">Streak Break (1,-1|-1,1)</text>
 
   <!-- sbd1 -->
-  <rect x="720" y="100" width="110" height="40" fill="#e3f2fd" stroke="#1565c0" rx="20" stroke-width="2"/>
-  <text x="775" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#1565c0">sbd1</text>
-  <text x="775" y="132" text-anchor="middle" font-size="8" fill="#1565c0">Streak Break (1,-1|-1,1)</text>
+  <rect x="720" y="55" width="110" height="40" fill="#e3f2fd" stroke="#1565c0" rx="20" stroke-width="2"/>
+  <text x="775" y="70" text-anchor="middle" font-weight="bold" font-size="10" fill="#1565c0">sbd1</text>
+  <text x="775" y="87" text-anchor="middle" font-size="8" fill="#1565c0">Streak Break (1,-1|-1,1)</text>
 
   <!-- === MAIN CHAIN ROW (y=185) === -->
 
   <!-- InputNode -->
-  <rect x="20" y="175" width="80" height="60" fill="#e0e0e0" stroke="#666" rx="6" stroke-width="2"/>
-  <text x="60" y="200" text-anchor="middle" font-weight="bold" fill="#333">in0</text>
-  <text x="60" y="215" text-anchor="middle" font-size="10" fill="#555">Input</text>
-  <text x="60" y="227" text-anchor="middle" font-size="9" fill="#555">[-1,1,1,-1]→</text>
+  <rect x="20" y="195" width="80" height="60" fill="#e0e0e0" stroke="#666" rx="6" stroke-width="2"/>
+  <text x="60" y="220" text-anchor="middle" font-weight="bold" fill="#333">in0</text>
+  <text x="60" y="235" text-anchor="middle" font-size="10" fill="#555">Input</text>
+  <text x="60" y="247" text-anchor="middle" font-size="9" fill="#555">[-1,1,1,-1]→</text>
 
   <!-- readLatch -->
-  <rect x="160" y="185" width="70" height="36" fill="#e0f7fa" stroke="#00838f" rx="6" stroke-width="2"/>
-  <text x="195" y="200" text-anchor="middle" font-weight="bold" font-size="9" fill="#00838f">readLatch</text>
-  <text x="195" y="214" text-anchor="middle" font-size="8" fill="#00838f">LATCH</text>
+  <rect x="160" y="205" width="70" height="36" fill="#e0f7fa" stroke="#00838f" rx="6" stroke-width="2"/>
+  <text x="195" y="220" text-anchor="middle" font-weight="bold" font-size="9" fill="#00838f">readLatch</text>
+  <text x="195" y="234" text-anchor="middle" font-size="8" fill="#00838f">LATCH</text>
 
   <!-- i0 -->
-  <rect x="350" y="175" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
-  <text x="395" y="195" text-anchor="middle" font-weight="bold" fill="#e65100">i0</text>
-  <text x="395" y="210" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
-  <text x="395" y="225" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
+  <rect x="350" y="195" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
+  <text x="395" y="215" text-anchor="middle" font-weight="bold" fill="#e65100">i0</text>
+  <text x="395" y="230" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
+  <text x="395" y="245" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
 
   <!-- detectorLatch -->
-  <rect x="510" y="185" width="70" height="36" fill="#e0f7fa" stroke="#00838f" rx="6" stroke-width="2"/>
-  <text x="545" y="200" text-anchor="middle" font-weight="bold" font-size="9" fill="#00838f">detectorLatch</text>
-  <text x="545" y="214" text-anchor="middle" font-size="8" fill="#00838f">LATCH</text>
+  <rect x="600" y="145" width="70" height="36" fill="#e0f7fa" stroke="#00838f" rx="6" stroke-width="2"/>
+  <text x="635" y="160" text-anchor="middle" font-weight="bold" font-size="9" fill="#00838f">detectorLatch</text>
+  <text x="635" y="174" text-anchor="middle" font-size="8" fill="#00838f">LATCH</text>
 
   <!-- i1 -->
-  <rect x="675" y="175" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
-  <text x="720" y="195" text-anchor="middle" font-weight="bold" fill="#e65100">i1</text>
-  <text x="720" y="210" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
-  <text x="720" y="225" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
+  <rect x="675" y="195" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
+  <text x="720" y="215" text-anchor="middle" font-weight="bold" fill="#e65100">i1</text>
+  <text x="720" y="230" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
+  <text x="720" y="245" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
 
   <!-- === AND GATES (control row, y=285) === -->
 
   <!-- readGate -->
-  <rect x="160" y="285" width="70" height="36" fill="#f3e5f5" stroke="#7b1fa2" rx="6" stroke-width="2"/>
-  <text x="195" y="300" text-anchor="middle" font-weight="bold" font-size="9" fill="#7b1fa2">readGate</text>
-  <text x="195" y="314" text-anchor="middle" font-size="8" fill="#7b1fa2">AND</text>
+  <rect x="160" y="305" width="70" height="36" fill="#f3e5f5" stroke="#7b1fa2" rx="6" stroke-width="2"/>
+  <text x="195" y="320" text-anchor="middle" font-weight="bold" font-size="9" fill="#7b1fa2">readGate</text>
+  <text x="195" y="334" text-anchor="middle" font-size="8" fill="#7b1fa2">AND</text>
 
   <!-- syncGate -->
-  <rect x="510" y="285" width="70" height="36" fill="#f3e5f5" stroke="#7b1fa2" rx="6" stroke-width="2"/>
-  <text x="545" y="300" text-anchor="middle" font-weight="bold" font-size="9" fill="#7b1fa2">syncGate</text>
-  <text x="545" y="314" text-anchor="middle" font-size="8" fill="#7b1fa2">AND</text>
+  <rect x="435" y="145" width="70" height="36" fill="#f3e5f5" stroke="#7b1fa2" rx="6" stroke-width="2"/>
+  <text x="470" y="160" text-anchor="middle" font-weight="bold" font-size="9" fill="#7b1fa2">syncGate</text>
+  <text x="470" y="174" text-anchor="middle" font-size="8" fill="#7b1fa2">AND</text>
 
   <!-- === STREAK DETECTORS === -->
 
   <!-- sd0 -->
-  <rect x="290" y="345" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
-  <text x="340" y="360" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd0</text>
-  <text x="340" y="377" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
+  <rect x="155" y="100" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
+  <text x="205" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd0</text>
+  <text x="205" y="132" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
 
   <!-- sd1 -->
-  <rect x="720" y="345" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
-  <text x="770" y="360" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd1</text>
-  <text x="770" y="377" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
+  <rect x="870" y="100" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
+  <text x="920" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd1</text>
+  <text x="920" y="132" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
 
   <!-- === CHAIN CONNECTIONS === -->
 
   <!-- inputToReadLatch -->
-  <line x1="100" y1="203" x2="158" y2="203" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="129" y="196" text-anchor="middle" font-size="7" fill="#555">inputToReadLatch</text>
+  <line x1="100" y1="223" x2="158" y2="223" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="129" y="216" text-anchor="middle" font-size="7" fill="#555">inputToReadLatch</text>
 
   <!-- readLatchToI0 -->
-  <line x1="230" y1="203" x2="348" y2="203" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="289" y="196" text-anchor="middle" font-size="7" fill="#333">readLatchToI0</text>
+  <line x1="230" y1="223" x2="348" y2="223" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="289" y="216" text-anchor="middle" font-size="7" fill="#333">readLatchToI0</text>
 
   <!-- i0ToDetectorLatch -->
-  <line x1="440" y1="203" x2="508" y2="203" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="474" y="196" text-anchor="middle" font-size="7" fill="#333">i0ToDetectorLatch</text>
+  <line x1="440" y1="223" x2="635" y2="181" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="538" y="200" text-anchor="middle" font-size="7" fill="#333">i0ToDetectorLatch</text>
 
   <!-- detectorLatchToI1 -->
-  <line x1="580" y1="203" x2="673" y2="203" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="627" y="196" text-anchor="middle" font-size="7" fill="#333">detectorLatchToI1</text>
+  <line x1="670" y1="181" x2="675" y2="195" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="686" y="186" text-anchor="middle" font-size="7" fill="#333">detectorLatchToI1</text>
 
   <!-- === CONTROL CONNECTIONS === -->
 
   <!-- in0ReadyToReadGate -->
-  <line x1="100" y1="225" x2="100" y2="300" stroke="#7b1fa2" stroke-width="1.5"/>
-  <line x1="100" y1="300" x2="158" y2="300" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
-  <text x="75" y="268" text-anchor="middle" font-size="7" fill="#7b1fa2">in0Ready</text>
-  <text x="75" y="278" text-anchor="middle" font-size="7" fill="#7b1fa2">ToReadGate</text>
+  <line x1="100" y1="245" x2="100" y2="320" stroke="#7b1fa2" stroke-width="1.5"/>
+  <line x1="100" y1="320" x2="158" y2="320" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
+  <text x="75" y="288" text-anchor="middle" font-size="7" fill="#7b1fa2">in0Ready</text>
+  <text x="75" y="298" text-anchor="middle" font-size="7" fill="#7b1fa2">ToReadGate</text>
 
   <!-- readGateToReadLatch -->
-  <line x1="195" y1="285" x2="195" y2="223" stroke="#00838f" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
-  <text x="195" y="253" text-anchor="middle" font-size="7" fill="#00838f">readGateTo</text>
-  <text x="195" y="263" text-anchor="middle" font-size="7" fill="#00838f">ReadLatch</text>
+  <line x1="195" y1="305" x2="195" y2="243" stroke="#00838f" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
+  <text x="195" y="273" text-anchor="middle" font-size="7" fill="#00838f">readGateTo</text>
+  <text x="195" y="283" text-anchor="middle" font-size="7" fill="#00838f">ReadLatch</text>
 
   <!-- syncGateToDetectorLatch -->
-  <line x1="545" y1="285" x2="545" y2="223" stroke="#00838f" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
-  <text x="545" y="258" text-anchor="middle" font-size="7" fill="#00838f">syncGateTo</text>
-  <text x="545" y="268" text-anchor="middle" font-size="7" fill="#00838f">DetectorLatch</text>
+  <line x1="507" y1="163" x2="598" y2="163" stroke="#00838f" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
+  <text x="553" y="157" text-anchor="middle" font-size="7" fill="#00838f">syncGateTo</text>
+  <text x="553" y="169" text-anchor="middle" font-size="7" fill="#00838f">DetectorLatch</text>
 
   <!-- detectorLatchAckToReadGate -->
-  <path d="M525,221 L525,265 L175,265 L175,283" fill="none" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
-  <text x="350" y="260" text-anchor="middle" font-size="7" fill="#7b1fa2">detectorLatchAckToReadGate</text>
+  <path d="M600,181 L600,285 L175,285 L175,303" fill="none" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
+  <text x="390" y="280" text-anchor="middle" font-size="7" fill="#7b1fa2">detectorLatchAckToReadGate</text>
 
   <!-- sbd0DoneToSyncGate -->
-  <line x1="345" y1="140" x2="345" y2="300" stroke="#7b1fa2" stroke-width="1.5"/>
-  <line x1="345" y1="300" x2="508" y2="300" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
-  <text x="440" y="291" text-anchor="middle" font-size="7" fill="#7b1fa2">sbd0DoneToSyncGate</text>
+  <path d="M400,75 L400,142 L470,142 L470,145" fill="none" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
+  <text x="385" y="108" text-anchor="middle" font-size="7" fill="#7b1fa2">sbd0Done</text>
+  <text x="385" y="118" text-anchor="middle" font-size="7" fill="#7b1fa2">ToSyncGate</text>
 
   <!-- sd0DoneToSyncGate -->
-  <line x1="340" y1="345" x2="340" y2="310" stroke="#7b1fa2" stroke-width="1.5"/>
-  <line x1="340" y1="310" x2="508" y2="310" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
-  <text x="420" y="320" text-anchor="middle" font-size="7" fill="#7b1fa2">sd0DoneToSyncGate</text>
+  <path d="M205,140 L205,163 L435,163" fill="none" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
+  <text x="320" y="158" text-anchor="middle" font-size="7" fill="#7b1fa2">sd0DoneToSyncGate</text>
 
   <!-- === EDGE CONNECTIONS === -->
 
   <!-- i0 -> sbd0 (old value, blue) -->
-  <line x1="370" y1="175" x2="320" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="332" y="158" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <line x1="370" y1="195" x2="320" y2="95" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="332" y="143" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
   <!-- i0 -> sbd0 (new value, blue) -->
-  <line x1="420" y1="175" x2="385" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="415" y="158" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <line x1="420" y1="195" x2="385" y2="95" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="415" y="143" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
   <!-- i0 -> sd0 (old value, blue) -->
-  <line x1="370" y1="235" x2="320" y2="345" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="332" y="295" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <line x1="350" y1="195" x2="230" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="285" y="168" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
   <!-- i0 -> sd0 (new value, blue) -->
-  <line x1="420" y1="235" x2="375" y2="345" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="385" y="295" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <line x1="350" y1="195" x2="255" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="298" y="168" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
   <!-- i1 -> sbd1 (old value, blue) -->
-  <line x1="700" y1="175" x2="745" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="712" y="153" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <line x1="700" y1="195" x2="745" y2="95" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="712" y="143" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
   <!-- i1 -> sbd1 (new value, blue) -->
-  <line x1="740" y1="175" x2="810" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="787" y="153" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <line x1="740" y1="195" x2="810" y2="95" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="787" y="143" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
   <!-- i1 -> sd1 (old value, blue) -->
-  <line x1="700" y1="235" x2="745" y2="345" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="712" y="295" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <line x1="765" y1="195" x2="880" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="827" y="168" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
   <!-- i1 -> sd1 (new value, blue) -->
-  <line x1="740" y1="235" x2="800" y2="345" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="782" y="295" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <line x1="765" y1="195" x2="905" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="840" y="168" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
   <!-- sbd0 -> a0 (indigo) -->
-  <line x1="375" y1="100" x2="525" y2="85" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
+  <line x1="375" y1="95" x2="525" y2="85" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
   <text x="450" y="88" text-anchor="middle" font-size="8" fill="#283593">0|1</text>
 
   <!-- sbd1 -> a0 (indigo) -->
-  <line x1="745" y1="100" x2="585" y2="85" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
+  <line x1="745" y1="95" x2="585" y2="85" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
   <text x="665" y="88" text-anchor="middle" font-size="8" fill="#283593">0|1</text>
 
   <!-- sd0 -> sd1 (green signal) -->
-  <line x1="390" y1="365" x2="718" y2="365" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <text x="554" y="361" text-anchor="middle" font-size="8" fill="#2e7d32">0|1</text>
+  <path d="M255,120 L255,97 L870,97 L870,120" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <text x="562" y="93" text-anchor="middle" font-size="8" fill="#2e7d32">0|1</text>
 
   <!-- sd1 -> i1 (struct pointer, dashed orange) -->
-  <line x1="805" y1="345" x2="760" y2="237" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
+  <line x1="870" y1="140" x2="765" y2="195" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
 
   <!-- sd1 -> sbd1 (struct pointer, dashed orange) -->
-  <line x1="790" y1="345" x2="790" y2="140" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
+  <line x1="870" y1="120" x2="830" y2="75" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
 
   <!-- Behavior note -->
   <rect x="20" y="410" width="310" height="55" fill="#fff9c4" stroke="#f9a825" rx="4"/>
