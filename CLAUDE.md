@@ -98,7 +98,7 @@ Every SVG you generate or modify must follow these rules. They exist to keep dia
 
 10. **When modifying an existing SVG**, preserve all of the above. Do not strip metadata, flatten groups, inline styles, or reorder sections. If the existing file violates these rules, fix the violations as part of the modification.
 
-**Cage rule:** if any of these conventions would make the diagram incorrect or unclear, stop and report the conflict instead of silently breaking the rule. The conventions serve the diagram; the diagram does not serve the conventions.
+**Strong harness rule:** if any of these conventions would make the diagram incorrect or unclear, stop and report the conflict instead of silently breaking the rule. The conventions serve the diagram; the diagram does not serve the conventions.
 
 ### Known renderer exceptions
 
