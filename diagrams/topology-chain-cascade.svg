@@ -55,9 +55,9 @@
   <text x="60" y="247" text-anchor="middle" font-size="9" fill="#555">[-1,1,1,-1]→</text>
 
   <!-- readLatch -->
-  <rect x="160" y="205" width="70" height="36" fill="#e0f7fa" stroke="#00838f" rx="6" stroke-width="2"/>
-  <text x="195" y="220" text-anchor="middle" font-weight="bold" font-size="9" fill="#00838f">readLatch</text>
-  <text x="195" y="234" text-anchor="middle" font-size="8" fill="#00838f">LATCH</text>
+  <rect x="200" y="205" width="70" height="36" fill="#e0f7fa" stroke="#00838f" rx="6" stroke-width="2"/>
+  <text x="235" y="220" text-anchor="middle" font-weight="bold" font-size="9" fill="#00838f">readLatch</text>
+  <text x="235" y="234" text-anchor="middle" font-size="8" fill="#00838f">LATCH</text>
 
   <!-- i0 -->
   <rect x="350" y="195" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
@@ -79,9 +79,9 @@
   <!-- === AND GATES (control row, y=285) === -->
 
   <!-- readGate -->
-  <rect x="160" y="305" width="70" height="36" fill="#f3e5f5" stroke="#7b1fa2" rx="6" stroke-width="2"/>
-  <text x="195" y="320" text-anchor="middle" font-weight="bold" font-size="9" fill="#7b1fa2">readGate</text>
-  <text x="195" y="334" text-anchor="middle" font-size="8" fill="#7b1fa2">AND</text>
+  <rect x="200" y="305" width="70" height="36" fill="#f3e5f5" stroke="#7b1fa2" rx="6" stroke-width="2"/>
+  <text x="235" y="320" text-anchor="middle" font-weight="bold" font-size="9" fill="#7b1fa2">readGate</text>
+  <text x="235" y="334" text-anchor="middle" font-size="8" fill="#7b1fa2">AND</text>
 
   <!-- syncGate -->
   <rect x="435" y="145" width="70" height="36" fill="#f3e5f5" stroke="#7b1fa2" rx="6" stroke-width="2"/>
@@ -103,12 +103,12 @@
   <!-- === CHAIN CONNECTIONS === -->
 
   <!-- inputToReadLatch -->
-  <line x1="100" y1="223" x2="158" y2="223" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="129" y="188" text-anchor="middle" font-size="7" fill="#555">inputToReadLatch</text>
+  <line x1="100" y1="223" x2="198" y2="223" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="149" y="216" text-anchor="middle" font-size="7" fill="#555">inputToReadLatch</text>
 
   <!-- readLatchToI0 -->
-  <line x1="230" y1="223" x2="348" y2="223" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="289" y="216" text-anchor="middle" font-size="7" fill="#333">readLatchToI0</text>
+  <line x1="270" y1="223" x2="348" y2="223" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="309" y="216" text-anchor="middle" font-size="7" fill="#333">readLatchToI0</text>
 
   <!-- i0ToDetectorLatch -->
   <line x1="440" y1="213" x2="528" y2="213" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
@@ -122,14 +122,14 @@
 
   <!-- in0ReadyToReadGate -->
   <line x1="100" y1="245" x2="100" y2="320" stroke="#7b1fa2" stroke-width="1.5"/>
-  <line x1="100" y1="320" x2="158" y2="320" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
+  <line x1="100" y1="320" x2="198" y2="320" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
   <text x="75" y="288" text-anchor="middle" font-size="7" fill="#7b1fa2">in0Ready</text>
   <text x="75" y="298" text-anchor="middle" font-size="7" fill="#7b1fa2">ToReadGate</text>
 
   <!-- readGateToReadLatch -->
-  <line x1="195" y1="305" x2="195" y2="243" stroke="#00838f" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
-  <text x="200" y="265" text-anchor="start" font-size="7" fill="#00838f">readGateTo</text>
-  <text x="200" y="275" text-anchor="start" font-size="7" fill="#00838f">ReadLatch</text>
+  <line x1="235" y1="305" x2="235" y2="243" stroke="#00838f" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
+  <text x="240" y="265" text-anchor="start" font-size="7" fill="#00838f">readGateTo</text>
+  <text x="240" y="275" text-anchor="start" font-size="7" fill="#00838f">ReadLatch</text>
 
   <!-- syncGateToDetectorLatch -->
   <path d="M507,163 L565,163 L565,193" fill="none" stroke="#00838f" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
@@ -137,7 +137,7 @@
   <text x="510" y="156" text-anchor="start" font-size="7" fill="#00838f">DetectorLatch</text>
 
   <!-- detectorLatchAckToReadGate -->
-  <path d="M565,231 L565,285 L175,285 L175,303" fill="none" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
+  <path d="M565,231 L565,285 L215,285 L215,303" fill="none" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
   <text x="390" y="280" text-anchor="middle" font-size="7" fill="#7b1fa2">detectorLatchAckToReadGate</text>
 
   <!-- sbd0DoneToSyncGate -->
