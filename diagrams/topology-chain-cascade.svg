@@ -150,54 +150,54 @@
   <!-- === EDGE CONNECTIONS === -->
 
   <!-- i0 -> sbd0 (old value, blue) -->
-  <line x1="510" y1="195" x2="400" y2="95" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="438" y="153" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <path d="M510,195 L510,95 L412,95" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="461" y="89" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
   <!-- i0 -> sbd0 (new value, blue) -->
-  <line x1="560" y1="195" x2="490" y2="95" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="500" y="78" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <path d="M540,195 L540,95 L492,95" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="516" y="89" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
   <!-- i0 -> sd0 (old value, blue) -->
-  <line x1="500" y1="195" x2="170" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="310" y="173" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <path d="M500,195 L500,140 L222,140" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="361" y="134" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
   <!-- i0 -> sd0 (new value, blue) -->
-  <line x1="500" y1="195" x2="205" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="460" y="185" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <path d="M508,195 L508,120 L222,120" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="365" y="114" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
   <!-- i1 -> sbd1 (old value, blue) -->
-  <line x1="1070" y1="195" x2="1000" y2="95" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="1026" y="152" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <path d="M1075,195 L1075,95 L1002,95" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="1038" y="89" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
   <!-- i1 -> sbd1 (new value, blue) -->
-  <line x1="1130" y1="195" x2="1075" y2="95" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="1118" y="140" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <path d="M1105,195 L1105,95 L1077,95" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="1091" y="89" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
   <!-- i1 -> sd1 (old value, blue) -->
-  <line x1="1150" y1="195" x2="1255" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="1188" y="178" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <path d="M1140,195 L1140,140 L1228,140" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="1184" y="134" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
 
   <!-- i1 -> sd1 (new value, blue) -->
-  <line x1="1150" y1="195" x2="1295" y2="140" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="1232" y="178" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <path d="M1148,195 L1148,140 L1293,140" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="1220" y="148" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
 
   <!-- sbd0 -> a0 (indigo) -->
-  <line x1="490" y1="75" x2="638" y2="65" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
-  <text x="564" y="68" text-anchor="middle" font-size="8" fill="#283593">0|1</text>
+  <path d="M490,75 L490,62 L638,62" fill="none" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
+  <text x="564" y="56" text-anchor="middle" font-size="8" fill="#283593">0|1</text>
 
   <!-- sbd1 -> a0 (indigo) -->
-  <line x1="970" y1="75" x2="712" y2="65" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
-  <text x="841" y="68" text-anchor="middle" font-size="8" fill="#283593">0|1</text>
+  <path d="M970,75 L970,62 L712,62" fill="none" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
+  <text x="841" y="56" text-anchor="middle" font-size="8" fill="#283593">0|1</text>
 
   <!-- sd0 -> sd1 (green signal) -->
   <line x1="220" y1="120" x2="1228" y2="120" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow-green)"/>
   <text x="724" y="114" text-anchor="middle" font-size="8" fill="#2e7d32">0|1</text>
 
   <!-- sd1 -> i1 (struct pointer, dashed orange) -->
-  <line x1="1230" y1="140" x2="1152" y2="193" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
+  <path d="M1230,140 L1148,140 L1148,195" fill="none" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
 
   <!-- sd1 -> sbd1 (struct pointer, dashed orange) -->
-  <line x1="1230" y1="120" x2="1082" y2="77" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
+  <path d="M1230,120 L1078,120 L1078,95" fill="none" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
 
   <!-- Behavior note -->
   <rect x="20" y="410" width="310" height="55" fill="#fff9c4" stroke="#f9a825" rx="4"/>
