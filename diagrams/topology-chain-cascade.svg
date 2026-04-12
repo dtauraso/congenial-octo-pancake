@@ -279,8 +279,8 @@ a0                     — pattern AND gate reducing sbd outputs to one signal
   </g>
 
   <g id="edge-i0-sbd0-new" data-role="edge" class="edge-connection">
-    <path d="M540,195 L540,95 L492,95"/>
-    <text x="516" y="89" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
+    <path d="M540,195 L540,85 L490,85"/>
+    <text x="516" y="79" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
   </g>
 
   <g id="edge-i0-sd0-old" data-role="edge" class="edge-connection">
@@ -289,8 +289,8 @@ a0                     — pattern AND gate reducing sbd outputs to one signal
   </g>
 
   <g id="edge-i0-sd0-new" data-role="edge" class="edge-connection">
-    <path d="M508,195 L508,120 L222,120"/>
-    <text x="365" y="114" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
+    <path d="M508,195 L508,108 L220,108"/>
+    <text x="365" y="102" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
   </g>
 
   <g id="edge-i1-sbd1-old" data-role="edge" class="edge-connection">
@@ -304,13 +304,13 @@ a0                     — pattern AND gate reducing sbd outputs to one signal
   </g>
 
   <g id="edge-i1-sd1-old" data-role="edge" class="edge-connection">
-    <path d="M1140,195 L1140,140 L1228,140"/>
-    <text x="1184" y="134" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
+    <path d="M1140,195 L1140,132 L1228,132"/>
+    <text x="1184" y="126" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
   </g>
 
   <g id="edge-i1-sd1-new" data-role="edge" class="edge-connection">
-    <path d="M1148,195 L1148,120 L1228,120"/>
-    <text x="1188" y="114" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
+    <path d="M1148,195 L1148,108 L1230,108"/>
+    <text x="1189" y="102" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -337,7 +337,7 @@ a0                     — pattern AND gate reducing sbd outputs to one signal
   </g>
 
   <g id="edge-sd1-sbd1-ptr" data-role="edge" class="pointer">
-    <path d="M1230,120 L1078,120 L1078,95"/>
+    <path d="M1230,130 L1080,130 L1080,95"/>
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
