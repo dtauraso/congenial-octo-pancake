@@ -1,250 +1,394 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 640" font-family="monospace" font-size="12">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 640" font-weight="400" font-family="ui-sans-serif, system-ui, sans-serif">
+
+  <metadata>
+  {
+    "diagram": "topology-chain-cascade",
+    "title": "Line Topology — Latch + AND Gate Backpressure",
+    "nodes": [
+      {"id": "in0",          "role": "input"},
+      {"id": "readLatch",    "role": "latch"},
+      {"id": "readGate",     "role": "and-gate"},
+      {"id": "i0",           "role": "inhibitor",             "index": 0},
+      {"id": "sbd0",         "role": "streak-break-detector", "index": 0},
+      {"id": "sd0",          "role": "streak-detector",       "index": 0},
+      {"id": "syncGate",     "role": "and-gate"},
+      {"id": "detectorLatch","role": "latch"},
+      {"id": "i1",           "role": "inhibitor",             "index": 1},
+      {"id": "sbd1",         "role": "streak-break-detector", "index": 1},
+      {"id": "sd1",          "role": "streak-detector",       "index": 1},
+      {"id": "a0",           "role": "pattern-and-gate"}
+    ],
+    "edges": [
+      {"id": "inputToReadLatch",           "source": "in0",          "target": "readLatch",    "kind": "chain"},
+      {"id": "readLatchToI0",              "source": "readLatch",    "target": "i0",           "kind": "chain"},
+      {"id": "i0ToDetectorLatch",          "source": "i0",           "target": "detectorLatch","kind": "chain"},
+      {"id": "detectorLatchToI1",          "source": "detectorLatch","target": "i1",           "kind": "chain"},
+      {"id": "i0-sbd0-old",               "source": "i0",           "target": "sbd0",         "kind": "edge-old"},
+      {"id": "i0-sbd0-new",               "source": "i0",           "target": "sbd0",         "kind": "edge-new"},
+      {"id": "i0-sd0-old",                "source": "i0",           "target": "sd0",          "kind": "edge-old"},
+      {"id": "i0-sd0-new",                "source": "i0",           "target": "sd0",          "kind": "edge-new"},
+      {"id": "i1-sbd1-old",               "source": "i1",           "target": "sbd1",         "kind": "edge-old"},
+      {"id": "i1-sbd1-new",               "source": "i1",           "target": "sbd1",         "kind": "edge-new"},
+      {"id": "i1-sd1-old",                "source": "i1",           "target": "sd1",          "kind": "edge-old"},
+      {"id": "i1-sd1-new",                "source": "i1",           "target": "sd1",          "kind": "edge-new"},
+      {"id": "sbd0-a0",                   "source": "sbd0",         "target": "a0",           "kind": "and-out"},
+      {"id": "sbd1-a0",                   "source": "sbd1",         "target": "a0",           "kind": "and-out"},
+      {"id": "sd0-sd1",                   "source": "sd0",          "target": "sd1",          "kind": "streak"},
+      {"id": "sbd0DoneToSyncGate",        "source": "sbd0",         "target": "syncGate",     "kind": "signal"},
+      {"id": "sd0DoneToSyncGate",         "source": "sd0",          "target": "syncGate",     "kind": "signal"},
+      {"id": "syncGateToDetectorLatch",   "source": "syncGate",     "target": "detectorLatch","kind": "release"},
+      {"id": "detectorLatchAckToReadGate","source": "detectorLatch","target": "readGate",     "kind": "signal"},
+      {"id": "in0ReadyToReadGate",        "source": "in0",          "target": "readGate",     "kind": "signal"},
+      {"id": "readGateToReadLatch",       "source": "readGate",     "target": "readLatch",    "kind": "release"},
+      {"id": "sd1-i1-ptr",               "source": "sd1",          "target": "i1",           "kind": "pointer"},
+      {"id": "sd1-sbd1-ptr",             "source": "sd1",          "target": "sbd1",         "kind": "pointer"}
+    ]
+  }
+  </metadata>
+
+  <desc>
+in0                    — input node feeding values into the chain
+readLatch, detectorLatch — latches holding one value until their AND gate fires
+readGate, syncGate     — AND gates controlling latch release (backpressure)
+i0, i1                 — chain inhibitor stages (shift register cells)
+sbd0, sbd1             — streak-break detectors: fire on sign change (1,-1 or -1,1)
+sd0, sd1               — streak detectors: fire on same-sign run (-1,-1 or 1,1)
+a0                     — pattern AND gate reducing sbd outputs to one signal
+  </desc>
+
+  <style>
+    svg { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 400; }
+
+    /* ── Background ─────────────────────────────────────────── */
+    .diagram-bg { fill: #fafafa; }
+
+    /* ── Node shapes ─────────────────────────────────────────── */
+    .shape-input    { fill: #e0e0e0; stroke: #666;    stroke-width: 2; }
+    .shape-inhibitor{ fill: #fff3e0; stroke: #e65100; stroke-width: 2; }
+    .shape-latch    { fill: #e0f7fa; stroke: #00838f; stroke-width: 2; }
+    .shape-and-gate { fill: #f3e5f5; stroke: #7b1fa2; stroke-width: 2; }
+    .shape-pattern-and { fill: #e8eaf6; stroke: #283593; stroke-width: 2; }
+    .shape-sbd0     { fill: #ffebee; stroke: #c62828; stroke-width: 2; }
+    .shape-sbd1     { fill: #e3f2fd; stroke: #1565c0; stroke-width: 2; }
+    .shape-sd       { fill: #e8f5e9; stroke: #2e7d32; stroke-width: 2; }
+
+    /* ── Node text ───────────────────────────────────────────── */
+    .node-title    { text-anchor: middle; font-weight: normal; font-size: 11px; }
+    .node-sublabel { text-anchor: middle; font-weight: normal; font-size: 10px; }
+    .node-type     { text-anchor: middle; font-weight: normal; font-size: 8px; }
+
+    .text-input    { fill: #333; }
+    .text-sublabel { fill: #555; }
+    .text-inhibitor{ fill: #e65100; }
+    .text-inhibitor-sub { fill: #bf360c; }
+    .text-latch    { fill: #00838f; }
+    .text-and-gate { fill: #7b1fa2; }
+    .text-pattern-and { fill: #283593; }
+    .text-sbd0     { fill: #c62828; }
+    .text-sbd1     { fill: #1565c0; }
+    .text-sd       { fill: #2e7d32; }
+
+    /* ── Edge lines ──────────────────────────────────────────── */
+    .chain           { stroke: #333;    stroke-width: 1.5px; fill: none; marker-end: url(#arrow); }
+    .edge-connection { stroke: #2266aa; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-blue); }
+    .and-out         { stroke: #283593; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-indigo); }
+    .signal          { stroke: #7b1fa2; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-magenta); }
+    .release         { stroke: #00838f; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-teal); }
+    .streak          { stroke: #2e7d32; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-green); }
+    .pointer         { stroke: #e65100; stroke-width: 1.5px; fill: none; stroke-dasharray: 4 3; marker-end: url(#arrow-orange); }
+
+    /* ── Edge labels ─────────────────────────────────────────── */
+    .edge-label  { font-size: 10px; text-anchor: middle; }
+    .value-label { font-size: 10px; text-anchor: middle; }
+
+    /* ── Annotation / legend ─────────────────────────────────── */
+    .behavior-note-bg  { fill: #fff9c4; stroke: #f9a825; }
+    .behavior-note-text { fill: #f57f17; text-anchor: middle; }
+    .legend-bg         { fill: #f0f0f0; stroke: #ccc; }
+    .legend-heading    { font-weight: bold; font-size: 11px; fill: #333; }
+    .legend-name       { font-size: 10px; }
+    .legend-desc       { font-size: 10px; fill: #666; }
+    .legend-divider    { stroke: #ccc; }
+    .title-text        { font-size: 16px; font-weight: bold; fill: #222; text-anchor: middle; }
+  </style>
+
   <defs>
-    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#333"/>
-    </marker>
-    <marker id="arrow-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#2266aa"/>
-    </marker>
-    <marker id="arrow-indigo" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#283593"/>
-    </marker>
-    <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#2e7d32"/>
-    </marker>
-    <marker id="arrow-orange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#e65100"/>
-    </marker>
-    <marker id="arrow-magenta" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#7b1fa2"/>
-    </marker>
-    <marker id="arrow-teal" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#00838f"/>
-    </marker>
+    <!-- Arrow markers -->
+    <marker id="arrow"         markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#333"/></marker>
+    <marker id="arrow-blue"    markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2266aa"/></marker>
+    <marker id="arrow-indigo"  markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#283593"/></marker>
+    <marker id="arrow-green"   markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2e7d32"/></marker>
+    <marker id="arrow-orange"  markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#e65100"/></marker>
+    <marker id="arrow-magenta" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#7b1fa2"/></marker>
+    <marker id="arrow-teal"    markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#00838f"/></marker>
+
   </defs>
 
   <!-- Background -->
-  <rect width="1380" height="640" fill="#fafafa" rx="8"/>
+  <rect width="1380" height="640" rx="8" class="diagram-bg"/>
 
   <!-- Title -->
-  <text x="690" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#222">Line Topology — Latch + AND Gate Backpressure</text>
+  <text x="690" y="30" class="title-text">Line Topology — Latch + AND Gate Backpressure</text>
 
-  <!-- a0 (pattern AND gate) -->
-  <rect x="640" y="45" width="70" height="40" fill="#e8eaf6" stroke="#283593" rx="6" stroke-width="2"/>
-  <text x="675" y="62" text-anchor="middle" font-weight="bold" fill="#283593">a0</text>
-  <text x="675" y="77" text-anchor="middle" font-size="10" fill="#283593">AND</text>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- NODES                                                       -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
 
-  <!-- === STREAK BREAK DETECTORS === -->
+  <g id="node-a0" data-role="pattern-and-gate">
+    <rect x="640" y="45" width="70" height="40" rx="6" class="shape-pattern-and"/>
+    <text x="675" y="62" font-weight="100" class="node-title text-pattern-and">a0</text>
+    <text x="675" y="77" font-weight="100" class="node-type text-pattern-and">AND</text>
+  </g>
 
-  <!-- sbd0 -->
-  <rect x="380" y="55" width="110" height="40" fill="#ffebee" stroke="#c62828" rx="20" stroke-width="2"/>
-  <text x="435" y="70" text-anchor="middle" font-weight="bold" font-size="10" fill="#c62828">sbd0</text>
-  <text x="435" y="87" text-anchor="middle" font-size="8" fill="#c62828">Streak Break (1,-1|-1,1)</text>
+  <g id="node-sbd0" data-role="streak-break-detector" data-index="0">
+    <rect x="380" y="55" width="110" height="40" rx="20" class="shape-sbd0"/>
+    <text x="435" y="70" font-weight="100" class="node-title text-sbd0">sbd0</text>
+    <text x="435" y="84" font-weight="100" class="node-type text-sbd0">Streak Break (1,-1|-1,1)</text>
+  </g>
 
-  <!-- sbd1 -->
-  <rect x="970" y="55" width="110" height="40" fill="#e3f2fd" stroke="#1565c0" rx="20" stroke-width="2"/>
-  <text x="1025" y="70" text-anchor="middle" font-weight="bold" font-size="10" fill="#1565c0">sbd1</text>
-  <text x="1025" y="87" text-anchor="middle" font-size="8" fill="#1565c0">Streak Break (1,-1|-1,1)</text>
+  <g id="node-sbd1" data-role="streak-break-detector" data-index="1">
+    <rect x="970" y="55" width="110" height="40" rx="20" class="shape-sbd1"/>
+    <text x="1025" y="70" font-weight="100" class="node-title text-sbd1">sbd1</text>
+    <text x="1025" y="84" font-weight="100" class="node-type text-sbd1">Streak Break (1,-1|-1,1)</text>
+  </g>
 
-  <!-- === MAIN CHAIN ROW (y=195) === -->
+  <g id="node-in0" data-role="input">
+    <rect x="20" y="195" width="80" height="60" rx="6" class="shape-input"/>
+    <text x="60" y="218" font-weight="100" class="node-title text-input">in0</text>
+    <text x="60" y="232" font-weight="100" class="node-sublabel text-sublabel">Input</text>
+    <text x="60" y="246" font-weight="100" class="node-type text-sublabel">[-1,1,1,-1]→</text>
+  </g>
 
-  <!-- InputNode -->
-  <rect x="20" y="195" width="80" height="60" fill="#e0e0e0" stroke="#666" rx="6" stroke-width="2"/>
-  <text x="60" y="220" text-anchor="middle" font-weight="bold" fill="#333">in0</text>
-  <text x="60" y="235" text-anchor="middle" font-size="10" fill="#555">Input</text>
-  <text x="60" y="247" text-anchor="middle" font-size="9" fill="#555">[-1,1,1,-1]→</text>
+  <g id="node-readLatch" data-role="latch">
+    <rect x="250" y="205" width="70" height="36" rx="6" class="shape-latch"/>
+    <text x="285" y="220" font-weight="100" class="node-title text-latch">readLatch</text>
+    <text x="285" y="234" font-weight="100" class="node-type text-latch">LATCH</text>
+  </g>
 
-  <!-- readLatch -->
-  <rect x="250" y="205" width="70" height="36" fill="#e0f7fa" stroke="#00838f" rx="6" stroke-width="2"/>
-  <text x="285" y="220" text-anchor="middle" font-weight="bold" font-size="9" fill="#00838f">readLatch</text>
-  <text x="285" y="234" text-anchor="middle" font-size="8" fill="#00838f">LATCH</text>
+  <g id="node-i0" data-role="inhibitor" data-index="0">
+    <rect x="500" y="195" width="90" height="60" rx="6" class="shape-inhibitor"/>
+    <text x="545" y="215" font-weight="100" class="node-title text-inhibitor">i0</text>
+    <text x="545" y="230" font-weight="100" class="node-sublabel text-inhibitor-sub">Chain</text>
+    <text x="545" y="245" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
+  </g>
 
-  <!-- i0 -->
-  <rect x="500" y="195" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
-  <text x="545" y="215" text-anchor="middle" font-weight="bold" fill="#e65100">i0</text>
-  <text x="545" y="230" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
-  <text x="545" y="245" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
+  <g id="node-detectorLatch" data-role="latch">
+    <rect x="780" y="195" width="70" height="36" rx="6" class="shape-latch"/>
+    <text x="815" y="210" font-weight="100" class="node-title text-latch">detectorLatch</text>
+    <text x="815" y="224" font-weight="100" class="node-type text-latch">LATCH</text>
+  </g>
 
-  <!-- detectorLatch -->
-  <rect x="780" y="195" width="70" height="36" fill="#e0f7fa" stroke="#00838f" rx="6" stroke-width="2"/>
-  <text x="815" y="210" text-anchor="middle" font-weight="bold" font-size="9" fill="#00838f">detectorLatch</text>
-  <text x="815" y="224" text-anchor="middle" font-size="8" fill="#00838f">LATCH</text>
+  <g id="node-i1" data-role="inhibitor" data-index="1">
+    <rect x="1060" y="195" width="90" height="60" rx="6" class="shape-inhibitor"/>
+    <text x="1105" y="215" font-weight="100" class="node-title text-inhibitor">i1</text>
+    <text x="1105" y="230" font-weight="100" class="node-sublabel text-inhibitor-sub">Chain</text>
+    <text x="1105" y="245" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
+  </g>
 
-  <!-- i1 -->
-  <rect x="1060" y="195" width="90" height="60" fill="#fff3e0" stroke="#e65100" rx="6" stroke-width="2"/>
-  <text x="1105" y="215" text-anchor="middle" font-weight="bold" fill="#e65100">i1</text>
-  <text x="1105" y="230" text-anchor="middle" font-size="10" fill="#bf360c">Chain</text>
-  <text x="1105" y="245" text-anchor="middle" font-size="10" fill="#bf360c">Inhibitor</text>
+  <g id="node-readGate" data-role="and-gate">
+    <rect x="250" y="305" width="70" height="36" rx="6" class="shape-and-gate"/>
+    <text x="285" y="320" font-weight="100" class="node-title text-and-gate">readGate</text>
+    <text x="285" y="334" font-weight="100" class="node-type text-and-gate">AND</text>
+  </g>
 
-  <!-- === AND GATES === -->
+  <g id="node-syncGate" data-role="and-gate">
+    <rect x="600" y="145" width="70" height="36" rx="6" class="shape-and-gate"/>
+    <text x="635" y="160" font-weight="100" class="node-title text-and-gate">syncGate</text>
+    <text x="635" y="174" font-weight="100" class="node-type text-and-gate">AND</text>
+  </g>
 
-  <!-- readGate -->
-  <rect x="250" y="305" width="70" height="36" fill="#f3e5f5" stroke="#7b1fa2" rx="6" stroke-width="2"/>
-  <text x="285" y="320" text-anchor="middle" font-weight="bold" font-size="9" fill="#7b1fa2">readGate</text>
-  <text x="285" y="334" text-anchor="middle" font-size="8" fill="#7b1fa2">AND</text>
+  <g id="node-sd0" data-role="streak-detector" data-index="0">
+    <rect x="120" y="100" width="100" height="40" rx="20" class="shape-sd"/>
+    <text x="170" y="115" font-weight="100" class="node-title text-sd">sd0</text>
+    <text x="170" y="129" font-weight="100" class="node-type text-sd">Streak (-1,-1|1,1)</text>
+  </g>
 
-  <!-- syncGate -->
-  <rect x="600" y="145" width="70" height="36" fill="#f3e5f5" stroke="#7b1fa2" rx="6" stroke-width="2"/>
-  <text x="635" y="160" text-anchor="middle" font-weight="bold" font-size="9" fill="#7b1fa2">syncGate</text>
-  <text x="635" y="174" text-anchor="middle" font-size="8" fill="#7b1fa2">AND</text>
+  <g id="node-sd1" data-role="streak-detector" data-index="1">
+    <rect x="1230" y="100" width="100" height="40" rx="20" class="shape-sd"/>
+    <text x="1280" y="115" font-weight="100" class="node-title text-sd">sd1</text>
+    <text x="1280" y="129" font-weight="100" class="node-type text-sd">Streak (-1,-1|1,1)</text>
+  </g>
 
-  <!-- === STREAK DETECTORS === -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- EDGES — Chain                                               -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
 
-  <!-- sd0 -->
-  <rect x="120" y="100" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
-  <text x="170" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd0</text>
-  <text x="170" y="132" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
+  <g id="edge-inputToReadLatch" data-role="edge" class="chain">
+    <line x1="100" y1="223" x2="248" y2="223"/>
+    <text x="174" y="216" font-weight="300" fill="#111" stroke="none" class="edge-label">inputToReadLatch</text>
+  </g>
 
-  <!-- sd1 -->
-  <rect x="1230" y="100" width="100" height="40" fill="#e8f5e9" stroke="#2e7d32" rx="20" stroke-width="2"/>
-  <text x="1280" y="115" text-anchor="middle" font-weight="bold" font-size="10" fill="#2e7d32">sd1</text>
-  <text x="1280" y="132" text-anchor="middle" font-size="8" fill="#2e7d32">Streak (-1,-1|1,1)</text>
+  <g id="edge-readLatchToI0" data-role="edge" class="chain">
+    <line x1="320" y1="223" x2="498" y2="223"/>
+    <text x="409" y="216" font-weight="300" fill="#111" stroke="none" class="edge-label">readLatchToI0</text>
+  </g>
 
-  <!-- === CHAIN CONNECTIONS === -->
+  <g id="edge-i0ToDetectorLatch" data-role="edge" class="chain">
+    <line x1="590" y1="213" x2="778" y2="213"/>
+    <text x="684" y="207" font-weight="300" fill="#111" stroke="none" class="edge-label">i0ToDetectorLatch</text>
+  </g>
 
-  <!-- inputToReadLatch -->
-  <line x1="100" y1="223" x2="248" y2="223" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="174" y="216" text-anchor="middle" font-size="7" fill="#555">inputToReadLatch</text>
+  <g id="edge-detectorLatchToI1" data-role="edge" class="chain">
+    <line x1="852" y1="213" x2="1058" y2="213"/>
+    <text x="955" y="207" font-weight="300" fill="#111" stroke="none" class="edge-label">detectorLatchToI1</text>
+  </g>
 
-  <!-- readLatchToI0 -->
-  <line x1="320" y1="223" x2="498" y2="223" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="409" y="216" text-anchor="middle" font-size="7" fill="#333">readLatchToI0</text>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- EDGES — Control signals                                     -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
 
-  <!-- i0ToDetectorLatch -->
-  <line x1="590" y1="213" x2="778" y2="213" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="684" y="207" text-anchor="middle" font-size="7" fill="#333">i0ToDetectorLatch</text>
+  <g id="edge-in0ReadyToReadGate" data-role="edge" class="signal">
+    <path d="M60,255 L60,320 L248,320"/>
+    <text x="40" y="285" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">in0Ready</text>
+    <text x="40" y="295" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">ToReadGate</text>
+  </g>
 
-  <!-- detectorLatchToI1 -->
-  <line x1="852" y1="213" x2="1058" y2="213" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="955" y="207" text-anchor="middle" font-size="7" fill="#333">detectorLatchToI1</text>
+  <g id="edge-readGateToReadLatch" data-role="edge" class="release">
+    <line x1="285" y1="305" x2="285" y2="243"/>
+    <text x="290" y="268" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="start">readGateTo</text>
+    <text x="290" y="278" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="start">ReadLatch</text>
+  </g>
 
-  <!-- === CONTROL CONNECTIONS === -->
+  <g id="edge-syncGateToDetectorLatch" data-role="edge" class="release">
+    <path d="M670,163 L815,163 L815,193"/>
+    <text x="742" y="156" font-weight="300" fill="#111" stroke="none" class="edge-label">syncGateToDetectorLatch</text>
+  </g>
 
-  <!-- in0ReadyToReadGate -->
-  <line x1="60" y1="255" x2="60" y2="320" stroke="#7b1fa2" stroke-width="1.5"/>
-  <line x1="60" y1="320" x2="248" y2="320" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
-  <text x="40" y="285" text-anchor="middle" font-size="7" fill="#7b1fa2">in0Ready</text>
-  <text x="40" y="295" text-anchor="middle" font-size="7" fill="#7b1fa2">ToReadGate</text>
+  <g id="edge-detectorLatchAckToReadGate" data-role="edge" class="signal">
+    <path d="M780,231 L780,290 L265,290 L265,303"/>
+    <text x="522" y="284" font-weight="300" fill="#111" stroke="none" class="edge-label">detectorLatchAckToReadGate</text>
+  </g>
 
-  <!-- readGateToReadLatch -->
-  <line x1="285" y1="305" x2="285" y2="243" stroke="#00838f" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
-  <text x="290" y="268" text-anchor="start" font-size="7" fill="#00838f">readGateTo</text>
-  <text x="290" y="278" text-anchor="start" font-size="7" fill="#00838f">ReadLatch</text>
+  <g id="edge-sbd0DoneToSyncGate" data-role="edge" class="signal">
+    <path d="M435,95 L435,135 L635,135 L635,145"/>
+    <text x="535" y="129" font-weight="300" fill="#111" stroke="none" class="edge-label">sbd0DoneToSyncGate</text>
+  </g>
 
-  <!-- syncGateToDetectorLatch -->
-  <path d="M670,163 L815,163 L815,193" fill="none" stroke="#00838f" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
-  <text x="742" y="156" text-anchor="middle" font-size="7" fill="#00838f">syncGateToDetectorLatch</text>
+  <g id="edge-sd0DoneToSyncGate" data-role="edge" class="signal">
+    <path d="M220,120 L220,163 L600,163"/>
+    <text x="410" y="157" font-weight="300" fill="#111" stroke="none" class="edge-label">sd0DoneToSyncGate</text>
+  </g>
 
-  <!-- detectorLatchAckToReadGate -->
-  <path d="M780,231 L780,290 L265,290 L265,303" fill="none" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
-  <text x="522" y="284" text-anchor="middle" font-size="7" fill="#7b1fa2">detectorLatchAckToReadGate</text>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- EDGES — Old/new values from inhibitors to detectors         -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
 
-  <!-- sbd0DoneToSyncGate -->
-  <path d="M435,95 L435,135 L635,135 L635,145" fill="none" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
-  <text x="535" y="129" text-anchor="middle" font-size="7" fill="#7b1fa2">sbd0DoneToSyncGate</text>
+  <g id="edge-i0-sbd0-old" data-role="edge" class="edge-connection">
+    <path d="M510,195 L510,95 L412,95"/>
+    <text x="461" y="89" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
+  </g>
 
-  <!-- sd0DoneToSyncGate -->
-  <path d="M220,120 L220,163 L600,163" fill="none" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
-  <text x="410" y="157" text-anchor="middle" font-size="7" fill="#7b1fa2">sd0DoneToSyncGate</text>
+  <g id="edge-i0-sbd0-new" data-role="edge" class="edge-connection">
+    <path d="M540,195 L540,95 L492,95"/>
+    <text x="516" y="89" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
+  </g>
 
-  <!-- === EDGE CONNECTIONS === -->
+  <g id="edge-i0-sd0-old" data-role="edge" class="edge-connection">
+    <path d="M500,195 L500,140 L222,140"/>
+    <text x="361" y="134" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
+  </g>
 
-  <!-- i0 -> sbd0 (old value, blue) -->
-  <path d="M510,195 L510,95 L412,95" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="461" y="89" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <g id="edge-i0-sd0-new" data-role="edge" class="edge-connection">
+    <path d="M508,195 L508,120 L222,120"/>
+    <text x="365" y="114" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
+  </g>
 
-  <!-- i0 -> sbd0 (new value, blue) -->
-  <path d="M540,195 L540,95 L492,95" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="516" y="89" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <g id="edge-i1-sbd1-old" data-role="edge" class="edge-connection">
+    <path d="M1075,195 L1075,95 L1002,95"/>
+    <text x="1038" y="89" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
+  </g>
 
-  <!-- i0 -> sd0 (old value, blue) -->
-  <path d="M500,195 L500,140 L222,140" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="361" y="134" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <g id="edge-i1-sbd1-new" data-role="edge" class="edge-connection">
+    <path d="M1105,195 L1105,95 L1077,95"/>
+    <text x="1091" y="89" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
+  </g>
 
-  <!-- i0 -> sd0 (new value, blue) -->
-  <path d="M508,195 L508,120 L222,120" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="365" y="114" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <g id="edge-i1-sd1-old" data-role="edge" class="edge-connection">
+    <path d="M1140,195 L1140,140 L1228,140"/>
+    <text x="1184" y="134" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
+  </g>
 
-  <!-- i1 -> sbd1 (old value, blue) -->
-  <path d="M1075,195 L1075,95 L1002,95" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="1038" y="89" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <g id="edge-i1-sd1-new" data-role="edge" class="edge-connection">
+    <path d="M1148,195 L1148,120 L1228,120"/>
+    <text x="1188" y="114" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
+  </g>
 
-  <!-- i1 -> sbd1 (new value, blue) -->
-  <path d="M1105,195 L1105,95 L1077,95" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="1091" y="89" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- EDGES — AND outputs, streak signal, struct pointers         -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
 
-  <!-- i1 -> sd1 (old value, blue) -->
-  <path d="M1140,195 L1140,140 L1228,140" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="1184" y="134" text-anchor="middle" font-size="8" fill="#2266aa">old</text>
+  <g id="edge-sbd0-a0" data-role="edge" class="and-out">
+    <path d="M490,75 L490,62 L638,62"/>
+    <text x="564" y="56" font-weight="300" fill="#283593" stroke="none" class="value-label">0|1</text>
+  </g>
 
-  <!-- i1 -> sd1 (new value, blue) -->
-  <path d="M1148,195 L1148,140 L1293,140" fill="none" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="1220" y="148" text-anchor="middle" font-size="8" fill="#2266aa">new</text>
+  <g id="edge-sbd1-a0" data-role="edge" class="and-out">
+    <path d="M970,75 L970,62 L712,62"/>
+    <text x="841" y="56" font-weight="300" fill="#283593" stroke="none" class="value-label">0|1</text>
+  </g>
 
-  <!-- sbd0 -> a0 (indigo) -->
-  <path d="M490,75 L490,62 L638,62" fill="none" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
-  <text x="564" y="56" text-anchor="middle" font-size="8" fill="#283593">0|1</text>
+  <g id="edge-sd0-sd1" data-role="edge" class="streak">
+    <line x1="220" y1="120" x2="1228" y2="120"/>
+    <text x="724" y="114" font-weight="300" fill="#2e7d32" stroke="none" class="value-label">0|1</text>
+  </g>
 
-  <!-- sbd1 -> a0 (indigo) -->
-  <path d="M970,75 L970,62 L712,62" fill="none" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
-  <text x="841" y="56" text-anchor="middle" font-size="8" fill="#283593">0|1</text>
+  <g id="edge-sd1-i1-ptr" data-role="edge" class="pointer">
+    <path d="M1230,140 L1148,140 L1148,195"/>
+  </g>
 
-  <!-- sd0 -> sd1 (green signal) -->
-  <line x1="220" y1="120" x2="1228" y2="120" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <text x="724" y="114" text-anchor="middle" font-size="8" fill="#2e7d32">0|1</text>
+  <g id="edge-sd1-sbd1-ptr" data-role="edge" class="pointer">
+    <path d="M1230,120 L1078,120 L1078,95"/>
+  </g>
 
-  <!-- sd1 -> i1 (struct pointer, dashed orange) -->
-  <path d="M1230,140 L1148,140 L1148,195" fill="none" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- ANNOTATION                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
 
-  <!-- sd1 -> sbd1 (struct pointer, dashed orange) -->
-  <path d="M1230,120 L1078,120 L1078,95" fill="none" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
+  <g id="annotation-backpressure" data-role="annotation">
+    <rect x="20" y="410" width="310" height="55" rx="4" class="behavior-note-bg"/>
+    <text x="175" y="428" font-size="10" class="behavior-note-text">Latches hold values. AND gates control release.</text>
+    <text x="175" y="442" font-size="9"  class="behavior-note-text">detectorLatch acks readGate after releasing →</text>
+    <text x="175" y="456" font-size="9"  class="behavior-note-text">backpressure: one value per pipeline cycle.</text>
+  </g>
 
-  <!-- Behavior note -->
-  <rect x="20" y="410" width="310" height="55" fill="#fff9c4" stroke="#f9a825" rx="4"/>
-  <text x="175" y="428" text-anchor="middle" font-size="10" fill="#f57f17">Latches hold values. AND gates control release.</text>
-  <text x="175" y="442" text-anchor="middle" font-size="9" fill="#f57f17">detectorLatch acks readGate after releasing →</text>
-  <text x="175" y="456" text-anchor="middle" font-size="9" fill="#f57f17">backpressure: one value per pipeline cycle.</text>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- LEGEND                                                      -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
 
-  <!-- === LEGEND === -->
-  <rect x="20" y="480" width="560" height="156" fill="#f0f0f0" rx="4" stroke="#ccc"/>
+  <g id="legend" data-role="legend">
+    <rect x="20" y="480" width="560" height="156" rx="4" class="legend-bg"/>
+    <text x="85"  y="498" text-anchor="start" class="legend-heading">Color</text>
+    <text x="210" y="498" text-anchor="start" class="legend-heading">Description</text>
+    <line x1="30"  y1="503" x2="570" y2="503" class="legend-divider" stroke-width="1"/>
+    <line x1="200" y1="485" x2="200" y2="631" class="legend-divider" stroke-width="0.5"/>
 
-  <text x="85" y="498" text-anchor="start" font-weight="bold" fill="#333" font-size="11">Color</text>
-  <text x="210" y="498" text-anchor="start" font-weight="bold" fill="#333" font-size="11">Description</text>
-  <line x1="30" y1="503" x2="570" y2="503" stroke="#ccc" stroke-width="1"/>
-  <line x1="200" y1="485" x2="200" y2="631" stroke="#ccc" stroke-width="0.5"/>
+    <g class="chain">        <line x1="40" y1="518" x2="70" y2="518"/></g>
+    <text x="85"  y="522" text-anchor="start" class="legend-name" fill="#333">Chain</text>
+    <text x="210" y="522" text-anchor="start" class="legend-desc">Data flow along inhibitor chain</text>
 
-  <!-- Row 1 -->
-  <line x1="40" y1="518" x2="70" y2="518" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="85" y="522" text-anchor="start" fill="#333" font-size="10">Chain</text>
-  <text x="210" y="522" text-anchor="start" fill="#666" font-size="10">Data flow along inhibitor chain</text>
+    <g class="edge-connection"><line x1="40" y1="534" x2="70" y2="534"/></g>
+    <text x="85"  y="538" text-anchor="start" class="legend-name" fill="#2266aa">Edge</text>
+    <text x="210" y="538" text-anchor="start" class="legend-desc">Old + new values from inhibitor to detectors</text>
 
-  <!-- Row 2 -->
-  <line x1="40" y1="534" x2="70" y2="534" stroke="#2266aa" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
-  <text x="85" y="538" text-anchor="start" fill="#2266aa" font-size="10">Edge</text>
-  <text x="210" y="538" text-anchor="start" fill="#666" font-size="10">Old + new values from inhibitor to detectors</text>
+    <g class="and-out">      <line x1="40" y1="550" x2="70" y2="550"/></g>
+    <text x="85"  y="554" text-anchor="start" class="legend-name" fill="#283593">AND out</text>
+    <text x="210" y="554" text-anchor="start" class="legend-desc">Streak break outputs to pattern AND gate</text>
 
-  <!-- Row 3 -->
-  <line x1="40" y1="550" x2="70" y2="550" stroke="#283593" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
-  <text x="85" y="554" text-anchor="start" fill="#283593" font-size="10">AND out</text>
-  <text x="210" y="554" text-anchor="start" fill="#666" font-size="10">Streak break outputs to pattern AND gate</text>
+    <g class="signal">       <line x1="40" y1="566" x2="70" y2="566"/></g>
+    <text x="85"  y="570" text-anchor="start" class="legend-name" fill="#7b1fa2">Signal</text>
+    <text x="210" y="570" text-anchor="start" class="legend-desc">Ready/done/ack signals to AND gates</text>
 
-  <!-- Row 4 -->
-  <line x1="40" y1="566" x2="70" y2="566" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow-magenta)"/>
-  <text x="85" y="570" text-anchor="start" fill="#7b1fa2" font-size="10">Signal</text>
-  <text x="210" y="570" text-anchor="start" fill="#666" font-size="10">Ready/done/ack signals to AND gates</text>
+    <g class="release">      <line x1="40" y1="582" x2="70" y2="582"/></g>
+    <text x="85"  y="586" text-anchor="start" class="legend-name" fill="#00838f">Release</text>
+    <text x="210" y="586" text-anchor="start" class="legend-desc">AND gate output triggers latch to release value</text>
 
-  <!-- Row 5 -->
-  <line x1="40" y1="582" x2="70" y2="582" stroke="#00838f" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
-  <text x="85" y="586" text-anchor="start" fill="#00838f" font-size="10">Release</text>
-  <text x="210" y="586" text-anchor="start" fill="#666" font-size="10">AND gate output triggers latch to release value</text>
+    <g class="streak">       <line x1="40" y1="598" x2="70" y2="598"/></g>
+    <text x="85"  y="602" text-anchor="start" class="legend-name" fill="#2e7d32">Streak</text>
+    <text x="210" y="602" text-anchor="start" class="legend-desc">Streak detector signal chain sd0 to sd1</text>
 
-  <!-- Row 6 -->
-  <line x1="40" y1="598" x2="70" y2="598" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-  <text x="85" y="602" text-anchor="start" fill="#2e7d32" font-size="10">Streak</text>
-  <text x="210" y="602" text-anchor="start" fill="#666" font-size="10">Streak detector signal chain sd0 to sd1</text>
+    <g class="pointer">      <line x1="40" y1="614" x2="70" y2="614"/></g>
+    <text x="85"  y="618" text-anchor="start" class="legend-name" fill="#e65100">Pointer</text>
+    <text x="210" y="618" text-anchor="start" class="legend-desc">Struct pointer to inhibitor/detector node</text>
+  </g>
 
-  <!-- Row 7 -->
-  <line x1="40" y1="614" x2="70" y2="614" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-orange)"/>
-  <text x="85" y="618" text-anchor="start" fill="#e65100" font-size="10">Pointer</text>
-  <text x="210" y="618" text-anchor="start" fill="#666" font-size="10">Struct pointer to inhibitor/detector node</text>
 </svg>
