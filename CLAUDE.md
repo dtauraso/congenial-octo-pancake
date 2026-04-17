@@ -131,6 +131,7 @@ Project memory lives in `memory/` at the repo root. Files:
 
 - One logical change per commit
 - Build and run before committing; verify output matches previous run
+- For SVG changes, show the result in preview and get explicit sign-off before committing
 - Push each commit to the current feature branch
 - Channel names encode which two nodes are connected — preserve this convention
 
