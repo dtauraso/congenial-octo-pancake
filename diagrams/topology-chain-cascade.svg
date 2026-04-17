@@ -274,22 +274,22 @@ a0                     — pattern AND gate reducing sbd outputs to one signal
   <!-- ═══════════════════════════════════════════════════════════ -->
 
   <g id="edge-i0-sbd0-old" data-role="edge" class="edge-connection">
-    <path d="M510,195 L510,145 L412,145 L412,95"/>
+    <path d="M554,195 L554,145 L412,145 L412,95"/>
     <text x="461" y="139" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
   </g>
 
   <g id="edge-i0-sbd0-new" data-role="edge" class="edge-connection">
-    <path d="M540,195 L540,140 L490,140 L490,85"/>
+    <path d="M572,195 L572,140 L490,140 L490,85"/>
     <text x="515" y="134" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
   </g>
 
   <g id="edge-i0-sd0-old" data-role="edge" class="edge-connection">
-    <path d="M500,195 L500,167 L222,167 L222,140"/>
+    <path d="M518,195 L518,167 L222,167 L222,140"/>
     <text x="361" y="161" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
   </g>
 
   <g id="edge-i0-sd0-new" data-role="edge" class="edge-connection">
-    <path d="M508,195 L508,151 L220,151 L220,108"/>
+    <path d="M536,195 L536,151 L220,151 L220,108"/>
     <text x="364" y="145" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
   </g>
 
@@ -533,62 +533,62 @@ a0                     — pattern AND gate reducing sbd outputs to one signal
   </line>
 
   <!-- Step 6b: i0-sbd0-old, t=2880ms–3680ms (blue edge-connection), path=198px -->
-  <path d="M510,195 L510,145 L412,145 L412,95"
+  <path d="M554,195 L554,145 L412,145 L412,95"
         stroke="#2266aa" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
-             values="0;0;-198;-198"
-             keyTimes="0;0.36;0.459;1"
+             values="0;0;-242;-242"
+             keyTimes="0;0.36;0.481;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.355;0.36;0.459;0.464;1"
+             keyTimes="0;0.355;0.36;0.481;0.486;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
   <!-- Step 6c: i0-sbd0-new, t=2880ms–3680ms (blue edge-connection), path=160px -->
-  <path d="M540,195 L540,140 L490,140 L490,85"
+  <path d="M572,195 L572,140 L490,140 L490,85"
         stroke="#2266aa" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
-             values="0;0;-160;-160"
-             keyTimes="0;0.36;0.44;1"
+             values="0;0;-192;-192"
+             keyTimes="0;0.36;0.456;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.355;0.36;0.44;0.445;1"
+             keyTimes="0;0.355;0.36;0.456;0.461;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
   <!-- Step 6d: i0-sd0-old, t=2880ms–3680ms (blue edge-connection), path=333px -->
-  <path d="M500,195 L500,167 L222,167 L222,140"
+  <path d="M518,195 L518,167 L222,167 L222,140"
         stroke="#2266aa" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
-             values="0;0;-333;-333"
-             keyTimes="0;0.36;0.527;1"
+             values="0;0;-351;-351"
+             keyTimes="0;0.36;0.535;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.355;0.36;0.527;0.532;1"
+             keyTimes="0;0.355;0.36;0.535;0.540;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
   <!-- Step 6e: i0-sd0-new, t=2880ms–3680ms (blue edge-connection), path=375px -->
-  <path d="M508,195 L508,151 L220,151 L220,108"
+  <path d="M536,195 L536,151 L220,151 L220,108"
         stroke="#2266aa" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
-             values="0;0;-375;-375"
-             keyTimes="0;0.36;0.548;1"
+             values="0;0;-403;-403"
+             keyTimes="0;0.36;0.561;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.355;0.36;0.548;0.553;1"
+             keyTimes="0;0.355;0.36;0.561;0.566;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
