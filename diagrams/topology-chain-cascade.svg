@@ -466,66 +466,66 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- Step 6: i0 fires at t=720ms -->
+  <!-- Step 6: i0 fires after readLatchToI0 arrives (0.389) -->
   <rect x="500" y="280" width="90" height="60" rx="6"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.36;0.4225;0.485;1"
+             keyTimes="0;0.40;0.46;0.52;1"
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- Step 7: sbd0 fires at t=840ms -->
+  <!-- Step 7: sbd0 fires after i0-sbd0-new arrives (0.56) -->
   <rect x="230" y="60" width="110" height="40" rx="20"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.42;0.4825;0.545;1"
+             keyTimes="0;0.57;0.60;0.64;1"
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- Step 7: sd0 fires at t=840ms -->
+  <!-- Step 7: sd0 fires after i0-sd0-new arrives (0.56) -->
   <rect x="235" y="110" width="100" height="40" rx="20"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.42;0.4825;0.545;1"
+             keyTimes="0;0.57;0.60;0.64;1"
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- Step 9: syncGate fires at t=1080ms -->
+  <!-- Step 9: syncGate fires after sync inputs arrive (0.70) -->
   <rect x="680" y="240" width="70" height="36" rx="6"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.54;0.6025;0.665;1"
+             keyTimes="0;0.70;0.72;0.76;1"
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- Step 11: detectorLatch fires at t=1320ms -->
+  <!-- Step 11: detectorLatch fires after release arrives (0.81) -->
   <rect x="780" y="292" width="70" height="36" rx="6"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.66;0.7225;0.785;1"
+             keyTimes="0;0.81;0.83;0.87;1"
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- Step 12: i1 fires at t=1560ms -->
+  <!-- Step 12: i1 fires after detectorLatchToI1 arrives (0.93) -->
   <rect x="1060" y="280" width="90" height="60" rx="6"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.78;0.8425;0.905;1"
+             keyTimes="0;0.93;0.95;0.98;1"
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- Step 8b: a0 (pattern AND gate) fires after sbd-a0 pulses arrive, keyTime ~0.56 -->
+  <!-- Step 8b: a0 fires after sbd-a0 pulses arrive (0.66) -->
   <rect x="786" y="50" width="70" height="40" rx="6"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.54;0.56;0.585;1"
+             keyTimes="0;0.66;0.68;0.70;1"
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
@@ -538,11 +538,11 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;0;-248;-248"
-             keyTimes="0;0.06;0.187;1"
+             keyTimes="0;0.06;0.175;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.055;0.06;0.187;0.192;1"
+             keyTimes="0;0.055;0.06;0.175;0.18;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
@@ -584,11 +584,11 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <title>i0 → sbd0 (old value read)</title>
     <animate attributeName="stroke-dashoffset"
              values="0;0;-530;-530"
-             keyTimes="0;0.36;0.48;1"
+             keyTimes="0;0.40;0.52;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.355;0.36;0.48;0.485;1"
+             keyTimes="0;0.395;0.40;0.52;0.525;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
@@ -600,11 +600,11 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <title>i0 → sbd0 (new value read)</title>
     <animate attributeName="stroke-dashoffset"
              values="0;0;-518;-518"
-             keyTimes="0;0.40;0.52;1"
+             keyTimes="0;0.44;0.56;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.395;0.40;0.52;0.525;1"
+             keyTimes="0;0.435;0.44;0.56;0.565;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
@@ -616,11 +616,11 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <title>i0 → sd0 (old value read)</title>
     <animate attributeName="stroke-dashoffset"
              values="0;0;-480;-480"
-             keyTimes="0;0.36;0.48;1"
+             keyTimes="0;0.40;0.52;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.355;0.36;0.48;0.485;1"
+             keyTimes="0;0.395;0.40;0.52;0.525;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
@@ -632,11 +632,11 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <title>i0 → sd0 (new value read)</title>
     <animate attributeName="stroke-dashoffset"
              values="0;0;-473;-473"
-             keyTimes="0;0.40;0.52;1"
+             keyTimes="0;0.44;0.56;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.395;0.40;0.52;0.525;1"
+             keyTimes="0;0.435;0.44;0.56;0.565;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
@@ -647,11 +647,11 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;0;-545;-545"
-             keyTimes="0;0.48;0.605;1"
+             keyTimes="0;0.60;0.70;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.475;0.48;0.605;0.61;1"
+             keyTimes="0;0.595;0.60;0.70;0.705;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
@@ -662,60 +662,60 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;0;-442;-442"
-             keyTimes="0;0.48;0.692;1"
+             keyTimes="0;0.60;0.70;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.475;0.48;0.692;0.697;1"
+             keyTimes="0;0.595;0.60;0.70;0.705;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Step 8c: sbd0-a0 pulse, keyTime 0.495–0.555 (indigo and-out), path=446px -->
+  <!-- Step 8c: sbd0-a0 pulse (starts after sbd0 incoming arrives, 0.56) -->
   <path d="M340,75 L786,75"
         stroke="#283593" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;0;-446;-446"
-             keyTimes="0;0.495;0.555;1"
+             keyTimes="0;0.60;0.66;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.49;0.495;0.555;0.56;1"
+             keyTimes="0;0.595;0.60;0.66;0.665;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Step 8d: sbd1-a0 pulse, keyTime 0.495–0.555 (indigo and-out), path=242px -->
+  <!-- Step 8d: sbd1-a0 pulse (coincident with sbd0-a0) -->
   <path d="M1045,110 L1045,90 L823,90"
         stroke="#283593" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;0;-242;-242"
-             keyTimes="0;0.495;0.555;1"
+             keyTimes="0;0.60;0.66;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.49;0.495;0.555;0.56;1"
+             keyTimes="0;0.595;0.60;0.66;0.665;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Step 10: syncGateToDetectorLatch, t=4800ms–5600ms (teal release), path=347px -->
+  <!-- Step 10: syncGateToDetectorLatch (after syncGate inputs arrive, 0.70) -->
   <path d="M750,258 L940,258 L940,270 L815,270 L815,290"
         stroke="#00838f" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;0;-347;-347"
-             keyTimes="0;0.6;0.688;1"
+             keyTimes="0;0.72;0.81;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.595;0.6;0.688;0.693;1"
+             keyTimes="0;0.715;0.72;0.81;0.815;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Step 11b: detectorLatchAckToReadGate — THE CYCLE-CLOSING FEEDBACK. Thicker stroke, faster sweep, afterglow. -->
+  <!-- Step 11b: detectorLatchAckToReadGate — cross-cycle feedback; starts after release arrives (0.81) -->
   <path d="M815,328 L815,360 L232,360 L232,400 L250,400"
         stroke="#7b1fa2" stroke-width="4" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
@@ -723,37 +723,37 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <title>Feedback ack: detectorLatch → readGate (closes the backpressure cycle)</title>
     <animate attributeName="stroke-dashoffset"
              values="0;0;-673;-673;-673"
-             keyTimes="0;0.66;0.90;0.96;1"
+             keyTimes="0;0.83;0.97;0.99;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0.4;0;0"
-             keyTimes="0;0.655;0.66;0.90;0.93;0.96;1"
+             keyTimes="0;0.825;0.83;0.97;0.98;0.99;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Step 11c: pre-flash at detectorLatch end (origin of ack) — announces the feedback start -->
+  <!-- Step 11c: pre-flash at detectorLatch end (origin of ack) -->
   <circle cx="815" cy="328" r="10"
           fill="#7b1fa2" stroke="none"
           opacity="0" pointer-events="none">
     <title>Feedback ack origin (detectorLatch)</title>
     <animate attributeName="opacity"
              values="0;0;0.6;0;0"
-             keyTimes="0;0.645;0.655;0.67;1"
+             keyTimes="0;0.815;0.825;0.84;1"
              dur="27s" repeatCount="indefinite"/>
   </circle>
 
-  <!-- Step 12: detectorLatchToI1, t=5760ms–6560ms (chain), path=208px -->
+  <!-- Step 12: detectorLatchToI1 (after release arrives, 0.81) -->
   <line x1="850" y1="310" x2="1058" y2="310"
         stroke="#333" stroke-width="3"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;0;-208;-208"
-             keyTimes="0;0.72;0.823;1"
+             keyTimes="0;0.83;0.93;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.715;0.72;0.823;0.828;1"
+             keyTimes="0;0.825;0.83;0.93;0.935;1"
              dur="27s" repeatCount="indefinite"/>
   </line>
 
