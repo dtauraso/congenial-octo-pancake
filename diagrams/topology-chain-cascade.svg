@@ -289,8 +289,8 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   </g>
 
   <g id="edge-sd0DoneToSyncGate" data-role="edge" class="signal">
-    <path d="M285,150 L285,225 L682,225 L682,240"/>
-    <text x="483" y="219" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">sd0DoneToSyncGate</text>
+    <path d="M335,145 L420,145 L420,225 L682,225 L682,240"/>
+    <text x="551" y="219" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">sd0DoneToSyncGate</text>
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -655,13 +655,13 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Step 8b: sd0DoneToSyncGate, path=487px after sd0 move (start x=285) -->
-  <path d="M285,150 L285,225 L682,225 L682,240"
+  <!-- Step 8b: sd0DoneToSyncGate, path=442px (exits sd0 right side) -->
+  <path d="M335,145 L420,145 L420,225 L682,225 L682,240"
         stroke="#7b1fa2" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
-             values="0;0;-487;-487"
+             values="0;0;-442;-442"
              keyTimes="0;0.48;0.692;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
