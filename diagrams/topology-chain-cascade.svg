@@ -715,12 +715,28 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Step 11b: detectorLatchAckToReadGate — cross-cycle feedback; starts after release arrives (0.81) -->
+  <!-- Step 11b: detectorLatchAckToReadGate — arrival sweep at readGate (0.00 → 0.14); completes before readGate fires at 0.18 -->
   <path d="M815,328 L815,360 L232,360 L232,400 L250,400"
         stroke="#7b1fa2" stroke-width="4" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
-    <title>Feedback ack: detectorLatch → readGate (closes the backpressure cycle)</title>
+    <title>Feedback ack: arriving at readGate (from previous cycle)</title>
+    <animate attributeName="stroke-dashoffset"
+             values="0;-673;-673"
+             keyTimes="0;0.14;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;1;1;0.4;0;0"
+             keyTimes="0;0.005;0.14;0.15;0.16;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 11b-departure: detectorLatch emits ack (0.83 → 0.97) — starts after incoming release arrives at 0.81 -->
+  <path d="M815,328 L815,360 L232,360 L232,400 L250,400"
+        stroke="#7b1fa2" stroke-width="4" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <title>Feedback ack: detectorLatch emits ack (closes the backpressure cycle)</title>
     <animate attributeName="stroke-dashoffset"
              values="0;0;-673;-673;-673"
              keyTimes="0;0.83;0.97;0.99;1"
