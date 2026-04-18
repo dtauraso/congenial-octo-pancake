@@ -117,6 +117,12 @@ The renderer does not inherit CSS `font-weight` or `fill` onto `<text>` elements
 **Exception to rule 3 — CSS is unreliable for text color via class inheritance:**
 Do not rely on `.class text { fill: ... }` descendant selectors — they are ignored. Set `fill` directly on each `<text>` element as a presentation attribute.
 
+### House style reference
+
+For the observed style vocabulary (shapes, colors, edge classes, routing patterns, animation conventions) used in the reference diagram, see:
+
+@docs/svg-style-guide.md
+
 ## Memory
 
 Project memory lives in `memory/` at the repo root. Files:
