@@ -600,11 +600,11 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <title>i0 → sbd0 (new value read)</title>
     <animate attributeName="stroke-dashoffset"
              values="0;0;-518;-518"
-             keyTimes="0;0.44;0.56;1"
+             keyTimes="0;0.40;0.52;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.435;0.44;0.56;0.565;1"
+             keyTimes="0;0.395;0.40;0.52;0.525;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
@@ -632,11 +632,11 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <title>i0 → sd0 (new value read)</title>
     <animate attributeName="stroke-dashoffset"
              values="0;0;-473;-473"
-             keyTimes="0;0.44;0.56;1"
+             keyTimes="0;0.40;0.52;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.435;0.44;0.56;0.565;1"
+             keyTimes="0;0.395;0.40;0.52;0.525;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
