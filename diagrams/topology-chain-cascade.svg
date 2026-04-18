@@ -284,13 +284,13 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   </g>
 
   <g id="edge-sbd0DoneToSyncGate" data-role="edge" class="signal">
-    <path d="M340,95 L500,95 L500,215 L740,215 L740,240"/>
-    <text x="620" y="209" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">sbd0DoneToSyncGate</text>
+    <path d="M340,95 L740,95 L740,240"/>
+    <text x="540" y="89" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">sbd0DoneToSyncGate</text>
   </g>
 
   <g id="edge-sd0DoneToSyncGate" data-role="edge" class="signal">
-    <path d="M335,145 L420,145 L420,225 L682,225 L682,240"/>
-    <text x="551" y="219" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">sd0DoneToSyncGate</text>
+    <path d="M335,145 L682,145 L682,240"/>
+    <text x="500" y="143" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">sd0DoneToSyncGate</text>
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -641,7 +641,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   </path>
 
   <!-- Step 8: sbd0DoneToSyncGate, t=3840ms–4640ms (magenta signal), path=545px -->
-  <path d="M340,95 L500,95 L500,215 L740,215 L740,240"
+  <path d="M340,95 L740,95 L740,240"
         stroke="#7b1fa2" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
@@ -656,7 +656,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   </path>
 
   <!-- Step 8b: sd0DoneToSyncGate, path=442px (exits sd0 right side) -->
-  <path d="M335,145 L420,145 L420,225 L682,225 L682,240"
+  <path d="M335,145 L682,145 L682,240"
         stroke="#7b1fa2" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
