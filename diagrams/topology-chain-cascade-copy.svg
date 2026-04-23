@@ -298,23 +298,23 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   <!-- ═══════════════════════════════════════════════════════════ -->
 
   <g id="edge-i0-sd0-old" data-role="edge" class="edge-connection">
-    <path d="M551,280 L551,195 L224,195 L224,138 L235,138"/>
+    <path d="M551,270 L551,195 L224,195 L224,138 L235,138"/>
     <text x="390" y="189" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
   </g>
 
   <g id="edge-i0-sd0-new" data-role="edge" class="edge-connection">
-    <path d="M563,280 L563,175 L230,175 L230,145 L235,145"/>
+    <path d="M563,270 L563,175 L230,175 L230,145 L235,145"/>
     <text x="393" y="169" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
   </g>
 
   <g id="edge-i0-sbd0-old" data-role="edge" class="edge-connection">
-    <path d="M521,280 L521,235 L213,235 L213,75 L230,75"/>
+    <path d="M521,270 L521,235 L213,235 L213,75 L230,75"/>
     <text x="370" y="229" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
     <text x="495" y="268" font-weight="600" fill="#2266aa" stroke="none" font-size="11" text-anchor="end">sbd read i0 ↑</text>
   </g>
 
   <g id="edge-i0-sbd0-new" data-role="edge" class="edge-connection">
-    <path d="M533,280 L533,215 L220,215 L220,85 L230,85"/>
+    <path d="M533,270 L533,215 L220,215 L220,85 L230,85"/>
     <text x="373" y="209" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
   </g>
 
@@ -561,6 +561,21 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </line>
 
+  <!-- Step 4b: inputToReadLatch, chain pulse arriving just before readLatch fires, path=148px -->
+  <line x1="100" y1="310" x2="248" y2="310"
+        stroke="#333" stroke-width="3"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-148;-148"
+             keyTimes="0;0.22;0.294;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.215;0.22;0.294;0.299;1"
+             dur="27s" repeatCount="indefinite"/>
+  </line>
+
   <!-- Step 5b: readLatchToI0, t=2400ms–3200ms (chain), path=178px -->
   <line x1="320" y1="310" x2="498" y2="310"
         stroke="#333" stroke-width="3"
@@ -577,13 +592,14 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   </line>
 
   <!-- Step 6b: i0-sbd0-old, keyTime 0.36–0.48 (first beat of old→new pair) -->
-  <path d="M521,280 L521,235 L213,235 L213,75 L230,75"
+  <!-- DISABLED: edge disconnected from i0
+  <path d="M521,270 L521,235 L213,235 L213,75 L230,75"
         stroke="#2266aa" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <title>i0 → sbd0 (old value read)</title>
     <animate attributeName="stroke-dashoffset"
-             values="0;0;-530;-530"
+             values="0;0;-520;-520"
              keyTimes="0;0.40;0.52;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
@@ -591,15 +607,17 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              keyTimes="0;0.395;0.40;0.52;0.525;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
+  -->
 
   <!-- Step 6c: i0-sbd0-new, staggered to keyTime 0.40–0.52 (second beat of old→new pair) -->
-  <path d="M533,280 L533,215 L220,215 L220,85 L230,85"
+  <!-- DISABLED: edge disconnected from i0
+  <path d="M533,270 L533,215 L220,215 L220,85 L230,85"
         stroke="#2266aa" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <title>i0 → sbd0 (new value read)</title>
     <animate attributeName="stroke-dashoffset"
-             values="0;0;-518;-518"
+             values="0;0;-508;-508"
              keyTimes="0;0.40;0.52;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
@@ -607,15 +625,17 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              keyTimes="0;0.395;0.40;0.52;0.525;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
+  -->
 
   <!-- Step 6d: i0-sd0-old, keyTime 0.36–0.48 (first beat of old→new pair) -->
-  <path d="M551,280 L551,195 L224,195 L224,138 L235,138"
+  <!-- DISABLED: edge disconnected from i0
+  <path d="M551,270 L551,195 L224,195 L224,138 L235,138"
         stroke="#2266aa" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <title>i0 → sd0 (old value read)</title>
     <animate attributeName="stroke-dashoffset"
-             values="0;0;-480;-480"
+             values="0;0;-470;-470"
              keyTimes="0;0.40;0.52;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
@@ -623,15 +643,17 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              keyTimes="0;0.395;0.40;0.52;0.525;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
+  -->
 
   <!-- Step 6e: i0-sd0-new, staggered to keyTime 0.40–0.52 (second beat of old→new pair) -->
-  <path d="M563,280 L563,175 L230,175 L230,145 L235,145"
+  <!-- DISABLED: edge disconnected from i0
+  <path d="M563,270 L563,175 L230,175 L230,145 L235,145"
         stroke="#2266aa" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <title>i0 → sd0 (new value read)</title>
     <animate attributeName="stroke-dashoffset"
-             values="0;0;-473;-473"
+             values="0;0;-463;-463"
              keyTimes="0;0.40;0.52;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
@@ -639,8 +661,11 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              keyTimes="0;0.395;0.40;0.52;0.525;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
+  -->
+
 
   <!-- Step 8: sbd0DoneToSyncGate, t=3840ms–4640ms (magenta signal), path=545px -->
+  <!-- DISABLED: edge originates from sbd0 (disconnected from i0)
   <path d="M340,95 L740,95 L740,240"
         stroke="#7b1fa2" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
@@ -654,8 +679,10 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              keyTimes="0;0.595;0.60;0.70;0.705;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
+  -->
 
   <!-- Step 8b: sd0DoneToSyncGate, path=442px (exits sd0 right side) -->
+  <!-- DISABLED: edge originates from sd0 (disconnected from i0)
   <path d="M335,145 L682,145 L682,240"
         stroke="#7b1fa2" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
@@ -669,8 +696,10 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              keyTimes="0;0.595;0.60;0.70;0.705;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
+  -->
 
   <!-- Step 8c: sbd0-a0 pulse (starts after sbd0 incoming arrives, 0.56) -->
+  <!-- DISABLED: edge originates from sbd0 (disconnected from i0)
   <path d="M340,75 L786,75"
         stroke="#283593" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
@@ -684,6 +713,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              keyTimes="0;0.595;0.60;0.66;0.665;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
+  -->
 
   <!-- Step 8d: sbd1-a0 pulse (coincident with sbd0-a0) -->
   <path d="M1045,110 L1045,90 L823,90"
