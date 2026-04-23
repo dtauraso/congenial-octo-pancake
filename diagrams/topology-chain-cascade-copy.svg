@@ -1,0 +1,776 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 740" font-weight="400" font-family="ui-sans-serif, system-ui, sans-serif">
+
+  <metadata>
+  {
+    "diagram": "topology-chain-cascade",
+    "title": "Line Topology — Latch + AND Gate Backpressure",
+    "nodes": [
+      {"id": "in0",          "role": "input"},
+      {"id": "readLatch",    "role": "latch"},
+      {"id": "readGate",     "role": "and-gate"},
+      {"id": "i0",           "role": "inhibitor",             "index": 0},
+      {"id": "sbd0",         "role": "streak-break-detector", "index": 0},
+      {"id": "sd0",          "role": "streak-detector",       "index": 0},
+      {"id": "syncGate",     "role": "and-gate"},
+      {"id": "detectorLatch","role": "latch"},
+      {"id": "i1",           "role": "inhibitor",             "index": 1},
+      {"id": "sbd1",         "role": "streak-break-detector", "index": 1},
+      {"id": "sd1",          "role": "streak-detector",       "index": 1},
+      {"id": "a0",           "role": "pattern-and-gate"}
+    ],
+    "edges": [
+      {"id": "inputToReadLatch",           "source": "in0",          "target": "readLatch",    "kind": "chain"},
+      {"id": "readLatchToI0",              "source": "readLatch",    "target": "i0",           "kind": "chain"},
+      {"id": "i0ToDetectorLatch",          "source": "i0",           "target": "detectorLatch","kind": "chain"},
+      {"id": "detectorLatchToI1",          "source": "detectorLatch","target": "i1",           "kind": "chain"},
+      {"id": "i0-sbd0-old",               "source": "i0",           "target": "sbd0",         "kind": "edge-old"},
+      {"id": "i0-sbd0-new",               "source": "i0",           "target": "sbd0",         "kind": "edge-new"},
+      {"id": "i0-sd0-old",                "source": "i0",           "target": "sd0",          "kind": "edge-old"},
+      {"id": "i0-sd0-new",                "source": "i0",           "target": "sd0",          "kind": "edge-new"},
+      {"id": "i1-sbd1-old",               "source": "i1",           "target": "sbd1",         "kind": "edge-old"},
+      {"id": "i1-sbd1-new",               "source": "i1",           "target": "sbd1",         "kind": "edge-new"},
+      {"id": "i1-sd1-old",                "source": "i1",           "target": "sd1",          "kind": "edge-old"},
+      {"id": "i1-sd1-new",                "source": "i1",           "target": "sd1",          "kind": "edge-new"},
+      {"id": "sbd0-a0",                   "source": "sbd0",         "target": "a0",           "kind": "and-out"},
+      {"id": "sbd1-a0",                   "source": "sbd1",         "target": "a0",           "kind": "and-out"},
+      {"id": "sd0-sd1",                   "source": "sd0",          "target": "sd1",          "kind": "streak"},
+      {"id": "sbd0DoneToSyncGate",        "source": "sbd0",         "target": "syncGate",     "kind": "signal"},
+      {"id": "sd0DoneToSyncGate",         "source": "sd0",          "target": "syncGate",     "kind": "signal"},
+      {"id": "syncGateToDetectorLatch",   "source": "syncGate",     "target": "detectorLatch","kind": "release"},
+      {"id": "detectorLatchAckToReadGate","source": "detectorLatch","target": "readGate",     "kind": "signal"},
+      {"id": "in0ReadyToReadGate",        "source": "in0",          "target": "readGate",     "kind": "signal"},
+      {"id": "readGateToReadLatch",       "source": "readGate",     "target": "readLatch",    "kind": "release"},
+      {"id": "sd1-i1-ptr",               "source": "sd1",          "target": "i1",           "kind": "pointer"},
+      {"id": "sd1-sbd1-ptr",             "source": "sd1",          "target": "sbd1",         "kind": "pointer"},
+      {"id": "a0-future-out",            "source": "a0",           "target": "downstream",   "kind": "future-out"}
+    ],
+    "timing": {
+      "cycleSeconds": 27,
+      "steps": [
+        {"t": 0.06, "event": "in0 fires"},
+        {"t": 0.19, "event": "readGate fires"},
+        {"t": 0.30, "event": "readLatch releases"},
+        {"t": 0.42, "event": "i0 fires"},
+        {"t": 0.48, "event": "sbd0/sd0 fire; old-value reads complete (first beat)"},
+        {"t": 0.52, "event": "new-value reads complete (second beat)"},
+        {"t": 0.56, "event": "a0 fires (pattern reduction)"},
+        {"t": 0.60, "event": "syncGate fires"},
+        {"t": 0.66, "event": "feedback ack starts from detectorLatch"},
+        {"t": 0.72, "event": "detectorLatch releases"},
+        {"t": 0.84, "event": "i1 fires"},
+        {"t": 0.90, "event": "feedback ack arrives at readGate — cycle closes"}
+      ]
+    }
+  }
+  </metadata>
+
+  <desc>
+in0                    — input node feeding values into the chain
+readLatch, detectorLatch — latches holding one value until their AND gate fires
+readGate, syncGate     — AND gates controlling latch release (backpressure)
+i0, i1                 — chain inhibitor stages (shift register cells)
+sbd0, sbd1             — streak-break detectors: fire on sign change (1,-1 or -1,1)
+sd0, sd1               — streak detectors: fire on same-sign run (-1,-1 or 1,1)
+a0                     — pattern AND gate reducing sbd outputs to one signal
+old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = read, not write)
+  </desc>
+
+  <style>
+    svg { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 400; }
+
+    /* ── Background ─────────────────────────────────────────── */
+    .diagram-bg { fill: #fafafa; }
+
+    /* ── Node shapes ─────────────────────────────────────────── */
+    .shape-input    { fill: #e0e0e0; stroke: #666;    stroke-width: 2; }
+    .shape-inhibitor{ fill: #fff3e0; stroke: #e65100; stroke-width: 2; }
+    .shape-latch    { fill: #e0f7fa; stroke: #00838f; stroke-width: 2; }
+    .shape-and-gate { fill: #f3e5f5; stroke: #7b1fa2; stroke-width: 2; }
+    .shape-pattern-and { fill: #e8eaf6; stroke: #283593; stroke-width: 2; }
+    .shape-sbd0     { fill: #ffebee; stroke: #c62828; stroke-width: 2; }
+    .shape-sbd1     { fill: #e3f2fd; stroke: #1565c0; stroke-width: 2; }
+    .shape-sd       { fill: #e8f5e9; stroke: #2e7d32; stroke-width: 2; }
+
+    /* ── Node text ───────────────────────────────────────────── */
+    .node-title    { text-anchor: middle; font-weight: normal; font-size: 12px; }
+    .node-sublabel { text-anchor: middle; font-weight: normal; font-size: 11px; }
+    .node-type     { text-anchor: middle; font-weight: normal; font-size: 11px; }
+
+    .text-input    { fill: #333; }
+    .text-sublabel { fill: #555; }
+    .text-inhibitor{ fill: #e65100; }
+    .text-inhibitor-sub { fill: #bf360c; }
+    .text-latch    { fill: #00838f; }
+    .text-and-gate { fill: #7b1fa2; }
+    .text-pattern-and { fill: #283593; }
+    .text-sbd0     { fill: #c62828; }
+    .text-sbd1     { fill: #1565c0; }
+    .text-sd       { fill: #2e7d32; }
+
+    /* ── Edge lines ──────────────────────────────────────────── */
+    .chain           { stroke: #333;    stroke-width: 1.5px; fill: none; marker-end: url(#arrow); }
+    .edge-connection { stroke: #2266aa; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-blue-open); }
+    .and-out         { stroke: #283593; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-indigo); }
+    .signal          { stroke: #7b1fa2; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-magenta); }
+    .feedback-ack    { stroke: #7b1fa2; stroke-width: 2.5px; fill: none; stroke-dasharray: 6 3; marker-end: url(#arrow-magenta); }
+    .release         { stroke: #00838f; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-teal); }
+    .streak          { stroke: #2e7d32; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-green); }
+    .pointer         { stroke: #e65100; stroke-width: 1.5px; fill: none; stroke-dasharray: 4 3; marker-end: url(#arrow-orange); }
+    .future-out      { stroke: #283593; stroke-width: 1.5px; fill: none; stroke-dasharray: 4 3; opacity: 0.5; marker-end: url(#arrow-indigo); }
+
+    /* ── Edge labels ─────────────────────────────────────────── */
+    .edge-label  { font-size: 12px; text-anchor: middle; }
+    .value-label { font-size: 12px; text-anchor: middle; }
+
+    /* ── Annotation / legend ─────────────────────────────────── */
+    .behavior-note-bg  { fill: #fff9c4; stroke: #f9a825; }
+    .behavior-note-text { fill: #f57f17; text-anchor: middle; }
+    .legend-bg         { fill: #f0f0f0; stroke: #ccc; }
+    .legend-heading    { font-weight: bold; font-size: 12px; fill: #333; }
+    .legend-name       { font-size: 11px; }
+    .legend-desc       { font-size: 11px; fill: #666; }
+    .legend-divider    { stroke: #ccc; }
+    .title-text        { font-size: 16px; font-weight: bold; fill: #222; text-anchor: middle; }
+  </style>
+
+  <defs>
+    <!-- Arrow markers -->
+    <marker id="arrow"         markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#333"/></marker>
+    <marker id="arrow-blue"    markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2266aa"/></marker>
+    <marker id="arrow-blue-open" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8" fill="none" stroke="#2266aa" stroke-width="1.2"/></marker>
+    <marker id="arrow-indigo"  markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#283593"/></marker>
+    <marker id="arrow-green"   markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2e7d32"/></marker>
+    <marker id="arrow-orange"  markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#e65100"/></marker>
+    <marker id="arrow-magenta" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#7b1fa2"/></marker>
+    <marker id="arrow-teal"    markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#00838f"/></marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1380" height="740" rx="8" class="diagram-bg"/>
+
+  <!-- Title -->
+  <text x="690" y="30" class="title-text">Line Topology — Latch + AND Gate Backpressure</text>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- NODES                                                       -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <!-- ── a0: pattern AND gate (top center, between the two sbd nodes) ── -->
+  <g id="node-a0" data-role="pattern-and-gate">
+    <rect x="786" y="50" width="70" height="40" rx="6" class="shape-pattern-and"/>
+    <text x="821" y="67" font-weight="100" class="node-title text-pattern-and">a0</text>
+    <text x="821" y="81" font-weight="100" class="node-type text-pattern-and">AND</text>
+  </g>
+
+  <!-- ── Detector row: sd0 and sbd0 above i0; sbd1 and sd1 above i1 ── -->
+  <g id="node-sd0" data-role="streak-detector" data-index="0">
+    <rect x="235" y="110" width="100" height="40" rx="20" class="shape-sd"/>
+    <text x="285" y="126" font-weight="100" class="node-title text-sd">sd0</text>
+    <text x="285" y="140" font-weight="100" class="node-type text-sd">Streak (-1,-1|1,1)</text>
+  </g>
+
+  <g id="node-sbd0" data-role="streak-break-detector" data-index="0">
+    <rect x="230" y="60" width="110" height="40" rx="20" class="shape-sbd0"/>
+    <text x="285" y="76" font-weight="100" class="node-title text-sbd0">sbd0</text>
+    <text x="285" y="90" font-weight="100" class="node-type text-sbd0">Streak Break (1,-1|-1,1)</text>
+  </g>
+
+  <g id="node-sbd1" data-role="streak-break-detector" data-index="1">
+    <rect x="990" y="110" width="110" height="40" rx="20" class="shape-sbd1"/>
+    <text x="1045" y="126" font-weight="100" class="node-title text-sbd1">sbd1</text>
+    <text x="1045" y="140" font-weight="100" class="node-type text-sbd1">Streak Break (1,-1|-1,1)</text>
+  </g>
+
+  <g id="node-sd1" data-role="streak-detector" data-index="1">
+    <rect x="1120" y="110" width="100" height="40" rx="20" class="shape-sd"/>
+    <text x="1170" y="126" font-weight="100" class="node-title text-sd">sd1</text>
+    <text x="1170" y="140" font-weight="100" class="node-type text-sd">Streak (-1,-1|1,1)</text>
+  </g>
+
+  <!-- ── syncGate: between detector row and pipeline row ── -->
+  <g id="node-syncGate" data-role="and-gate">
+    <rect x="680" y="240" width="70" height="36" rx="6" class="shape-and-gate"/>
+    <text x="715" y="255" font-weight="100" class="node-title text-and-gate">syncGate</text>
+    <text x="715" y="269" font-weight="100" class="node-type text-and-gate">AND</text>
+  </g>
+
+  <!-- ── Pipeline row: in0, readLatch, i0, detectorLatch, i1 ── -->
+  <g id="node-in0" data-role="input">
+    <rect x="20" y="280" width="80" height="60" rx="6" class="shape-input"/>
+    <text x="60" y="301" font-weight="100" class="node-title text-input">in0</text>
+    <text x="60" y="315" font-weight="100" class="node-sublabel text-sublabel">Input</text>
+    <text x="60" y="329" font-weight="100" class="node-type text-sublabel">[-1,1,1,-1]→</text>
+  </g>
+
+  <g id="node-readLatch" data-role="latch">
+    <rect x="250" y="292" width="70" height="36" rx="6" class="shape-latch"/>
+    <text x="285" y="307" font-weight="100" class="node-title text-latch">readLatch</text>
+    <text x="285" y="321" font-weight="100" class="node-type text-latch">LATCH</text>
+  </g>
+
+  <g id="node-i0" data-role="inhibitor" data-index="0">
+    <rect x="500" y="280" width="90" height="60" rx="6" class="shape-inhibitor"/>
+    <text x="545" y="300" font-weight="100" class="node-title text-inhibitor">i0</text>
+    <text x="545" y="315" font-weight="100" class="node-sublabel text-inhibitor-sub">Chain</text>
+    <text x="545" y="330" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
+  </g>
+
+  <g id="node-detectorLatch" data-role="latch">
+    <rect x="780" y="292" width="70" height="36" rx="6" class="shape-latch"/>
+    <text x="815" y="307" font-weight="100" class="node-title text-latch">detectorLatch</text>
+    <text x="815" y="321" font-weight="100" class="node-type text-latch">LATCH</text>
+  </g>
+
+  <g id="node-i1" data-role="inhibitor" data-index="1">
+    <rect x="1060" y="280" width="90" height="60" rx="6" class="shape-inhibitor"/>
+    <text x="1105" y="300" font-weight="100" class="node-title text-inhibitor">i1</text>
+    <text x="1105" y="315" font-weight="100" class="node-sublabel text-inhibitor-sub">Chain</text>
+    <text x="1105" y="330" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
+  </g>
+
+  <!-- ── Gate row: readGate below readLatch ── -->
+  <g id="node-readGate" data-role="and-gate">
+    <rect x="250" y="400" width="70" height="36" rx="6" class="shape-and-gate"/>
+    <text x="285" y="415" font-weight="100" class="node-title text-and-gate">readGate</text>
+    <text x="285" y="429" font-weight="100" class="node-type text-and-gate">AND</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- EDGES — Chain                                               -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <g id="edge-inputToReadLatch" data-role="edge" class="chain">
+    <line x1="100" y1="310" x2="248" y2="310"/>
+    <text x="174" y="304" font-weight="300" fill="#111" stroke="none" class="edge-label">inputToReadLatch</text>
+  </g>
+
+  <g id="edge-readLatchToI0" data-role="edge" class="chain">
+    <line x1="320" y1="310" x2="498" y2="310"/>
+    <text x="409" y="304" font-weight="300" fill="#111" stroke="none" class="edge-label">readLatchToI0</text>
+  </g>
+
+  <g id="edge-i0ToDetectorLatch" data-role="edge" class="chain">
+    <line x1="590" y1="310" x2="778" y2="310"/>
+    <text x="684" y="304" font-weight="300" fill="#111" stroke="none" class="edge-label">i0ToDetectorLatch</text>
+  </g>
+
+  <g id="edge-detectorLatchToI1" data-role="edge" class="chain">
+    <line x1="850" y1="310" x2="1058" y2="310"/>
+    <text x="954" y="304" font-weight="300" fill="#111" stroke="none" class="edge-label">detectorLatchToI1</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- EDGES — Control signals                                     -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <g id="edge-in0ReadyToReadGate" data-role="edge" class="signal">
+    <path d="M60,340 L60,418 L250,418"/>
+    <text x="155" y="412" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">in0ReadyToReadGate</text>
+  </g>
+
+  <g id="edge-readGateToReadLatch" data-role="edge" class="release">
+    <line x1="285" y1="400" x2="285" y2="330"/>
+    <text x="291" y="368" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="start">readGateToReadLatch</text>
+  </g>
+
+  <g id="edge-syncGateToDetectorLatch" data-role="edge" class="release">
+    <path d="M750,258 L940,258 L940,270 L815,270 L815,290"/>
+    <text x="845" y="252" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">syncGateToDetectorLatch</text>
+  </g>
+
+  <g id="edge-detectorLatchAckToReadGate" data-role="edge" class="feedback-ack">
+    <path d="M815,328 L815,418 L320,418"/>
+    <text x="568" y="412" font-weight="600" fill="#7b1fa2" stroke="none" class="edge-label">↻ detectorLatchAckToReadGate</text>
+  </g>
+
+  <g id="edge-sbd0DoneToSyncGate" data-role="edge" class="signal">
+    <path d="M340,95 L740,95 L740,240"/>
+    <text x="540" y="89" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">sbd0DoneToSyncGate</text>
+  </g>
+
+  <g id="edge-sd0DoneToSyncGate" data-role="edge" class="signal">
+    <path d="M335,145 L682,145 L682,240"/>
+    <text x="500" y="143" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">sd0DoneToSyncGate</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- EDGES — Old/new values from i0 to detectors                 -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <g id="edge-i0-sd0-old" data-role="edge" class="edge-connection">
+    <path d="M551,280 L551,195 L224,195 L224,138 L235,138"/>
+    <text x="390" y="189" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
+  </g>
+
+  <g id="edge-i0-sd0-new" data-role="edge" class="edge-connection">
+    <path d="M563,280 L563,175 L230,175 L230,145 L235,145"/>
+    <text x="393" y="169" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
+  </g>
+
+  <g id="edge-i0-sbd0-old" data-role="edge" class="edge-connection">
+    <path d="M521,280 L521,235 L213,235 L213,75 L230,75"/>
+    <text x="370" y="229" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
+    <text x="495" y="268" font-weight="600" fill="#2266aa" stroke="none" font-size="11" text-anchor="end">sbd read i0 ↑</text>
+  </g>
+
+  <g id="edge-i0-sbd0-new" data-role="edge" class="edge-connection">
+    <path d="M533,280 L533,215 L220,215 L220,85 L230,85"/>
+    <text x="373" y="209" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- EDGES — Old/new values from i1 to detectors                 -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <g id="edge-i1-sbd1-old" data-role="edge" class="edge-connection">
+    <path d="M1073,280 L1073,190 L1022,190 L1022,150"/>
+    <text x="1044" y="184" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
+  </g>
+
+  <g id="edge-i1-sbd1-new" data-role="edge" class="edge-connection">
+    <path d="M1085,280 L1085,183 L1034,183 L1034,150"/>
+    <text x="1056" y="177" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
+  </g>
+
+  <g id="edge-i1-sd1-old" data-role="edge" class="edge-connection">
+    <path d="M1113,280 L1113,190 L1142,190 L1142,150"/>
+    <text x="1126" y="184" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
+  </g>
+
+  <g id="edge-i1-sd1-new" data-role="edge" class="edge-connection">
+    <path d="M1125,280 L1125,183 L1154,183 L1154,150"/>
+    <text x="1138" y="177" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- EDGES — AND outputs, streak signal, struct pointers         -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <g id="edge-sbd0-a0" data-role="edge" class="and-out">
+    <path d="M340,75 L786,75"/>
+    <text x="560" y="69" font-weight="300" fill="#283593" stroke="none" class="value-label">0|1</text>
+  </g>
+
+  <g id="edge-sbd1-a0" data-role="edge" class="and-out">
+    <path d="M1045,110 L1045,90 L823,90"/>
+    <text x="934" y="84" font-weight="300" fill="#283593" stroke="none" class="value-label">0|1</text>
+  </g>
+
+  <g id="edge-sd0-sd1" data-role="edge" class="streak">
+    <line x1="335" y1="130" x2="1118" y2="130"/>
+    <text x="727" y="124" font-weight="300" fill="#2e7d32" stroke="none" class="value-label">0|1</text>
+  </g>
+
+  <g id="edge-sd1-i1-ptr" data-role="edge" class="pointer">
+    <path d="M1170,150 L1170,255 L1152,255 L1152,282"/>
+  </g>
+
+  <g id="edge-sd1-sbd1-ptr" data-role="edge" class="pointer">
+    <path d="M1120,130 L1102,130"/>
+  </g>
+
+  <g id="edge-a0-future-out" data-role="edge" class="future-out">
+    <path d="M856,70 L912,70"/>
+    <text x="918" y="74" font-weight="300" fill="#283593" stroke="none" class="edge-label" text-anchor="start" opacity="0.6">pattern out (future)</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- ANNOTATION                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <g id="annotation-backpressure" data-role="annotation">
+    <rect x="20" y="480" width="340" height="55" rx="4" class="behavior-note-bg"/>
+    <text x="190" y="498" font-size="11" class="behavior-note-text">Latches hold values. AND gates control release.</text>
+    <text x="190" y="513" font-size="11" class="behavior-note-text">detectorLatch acks readGate after releasing →</text>
+    <text x="190" y="528" font-size="11" class="behavior-note-text">backpressure: one value per pipeline cycle.</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- LEGEND                                                      -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <g id="legend" data-role="legend">
+    <rect x="20" y="548" width="600" height="174" rx="4" class="legend-bg"/>
+    <text x="85"  y="566" text-anchor="start" class="legend-heading">Color</text>
+    <text x="220" y="566" text-anchor="start" class="legend-heading">Description</text>
+    <line x1="30"  y1="571" x2="610" y2="571" class="legend-divider" stroke-width="1"/>
+    <line x1="210" y1="553" x2="210" y2="717" class="legend-divider" stroke-width="0.5"/>
+
+    <g class="chain">        <line x1="40" y1="586" x2="70" y2="586"/></g>
+    <text x="85"  y="590" text-anchor="start" class="legend-name" fill="#333">Chain</text>
+    <text x="220" y="590" text-anchor="start" class="legend-desc">Data flow: value advances one step along the pipeline</text>
+
+    <g class="edge-connection"><line x1="40" y1="604" x2="70" y2="604"/></g>
+    <text x="85"  y="608" text-anchor="start" class="legend-name" fill="#2266aa">Edge (read)</text>
+    <text x="220" y="608" text-anchor="start" class="legend-desc">Read-port: sbd/sd sample old+new values latched in inhibitor</text>
+
+    <g class="and-out">      <line x1="40" y1="622" x2="70" y2="622"/></g>
+    <text x="85"  y="626" text-anchor="start" class="legend-name" fill="#283593">AND out</text>
+    <text x="220" y="626" text-anchor="start" class="legend-desc">Reduction: sbd outputs combine at a0 (cross-partition equality)</text>
+
+    <g class="signal">       <line x1="40" y1="640" x2="70" y2="640"/></g>
+    <text x="85"  y="644" text-anchor="start" class="legend-name" fill="#7b1fa2">Signal</text>
+    <text x="220" y="644" text-anchor="start" class="legend-desc">Ready/done pulses between nodes and AND gates</text>
+
+    <g class="feedback-ack"> <line x1="40" y1="658" x2="70" y2="658"/></g>
+    <text x="85"  y="662" text-anchor="start" class="legend-name" fill="#7b1fa2">↻ Feedback ack</text>
+    <text x="220" y="662" text-anchor="start" class="legend-desc">Closes the backpressure cycle (detectorLatch → readGate)</text>
+
+    <g class="release">      <line x1="40" y1="676" x2="70" y2="676"/></g>
+    <text x="85"  y="680" text-anchor="start" class="legend-name" fill="#00838f">Release</text>
+    <text x="220" y="680" text-anchor="start" class="legend-desc">AND output unlocks a latch to advance the next value</text>
+
+    <g class="streak">       <line x1="40" y1="694" x2="70" y2="694"/></g>
+    <text x="85"  y="698" text-anchor="start" class="legend-name" fill="#2e7d32">Streak</text>
+    <text x="220" y="698" text-anchor="start" class="legend-desc">Same-sign detection chain (sd0 → sd1)</text>
+
+    <g class="pointer">      <line x1="40" y1="712" x2="70" y2="712"/></g>
+    <text x="85"  y="716" text-anchor="start" class="legend-name" fill="#e65100">Pointer</text>
+    <text x="220" y="716" text-anchor="start" class="legend-desc">Struct reference (not data flow)</text>
+  </g>
+
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- ANIMATION                                                   -->
+  <!-- One full backpressure cycle: 27s loop                      -->
+  <!-- Firing order inferred from Go channel names in source.     -->
+  <!-- Each step ~120ms apart; active phase ends at ~1810ms.      -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <!-- Node highlight overlays: white rect flashes over each node when it fires -->
+
+  <!-- Step 1: in0 fires at t=0ms -->
+  <rect x="20" y="280" width="80" height="60" rx="6"
+        fill="white" stroke="none" opacity="0" pointer-events="none">
+    <animate attributeName="opacity"
+             values="0;0.5;0;0"
+             keyTimes="0;0.0625;0.125;1"
+             dur="27s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Step 3: readGate fires at t=240ms -->
+  <rect x="250" y="400" width="70" height="36" rx="6"
+        fill="white" stroke="none" opacity="0" pointer-events="none">
+    <animate attributeName="opacity"
+             values="0;0;0.5;0;0"
+             keyTimes="0;0.12;0.1825;0.245;1"
+             dur="27s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Step 5: readLatch fires at t=480ms -->
+  <rect x="250" y="292" width="70" height="36" rx="6"
+        fill="white" stroke="none" opacity="0" pointer-events="none">
+    <animate attributeName="opacity"
+             values="0;0;0.5;0;0"
+             keyTimes="0;0.24;0.3025;0.365;1"
+             dur="27s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Step 6: i0 fires after readLatchToI0 arrives (0.389) -->
+  <rect x="500" y="280" width="90" height="60" rx="6"
+        fill="white" stroke="none" opacity="0" pointer-events="none">
+    <animate attributeName="opacity"
+             values="0;0;0.5;0;0"
+             keyTimes="0;0.40;0.46;0.52;1"
+             dur="27s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Step 7: sbd0 fires after i0-sbd0-new arrives (0.56) -->
+  <rect x="230" y="60" width="110" height="40" rx="20"
+        fill="white" stroke="none" opacity="0" pointer-events="none">
+    <animate attributeName="opacity"
+             values="0;0;0.5;0;0"
+             keyTimes="0;0.57;0.60;0.64;1"
+             dur="27s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Step 7: sd0 fires after i0-sd0-new arrives (0.56) -->
+  <rect x="235" y="110" width="100" height="40" rx="20"
+        fill="white" stroke="none" opacity="0" pointer-events="none">
+    <animate attributeName="opacity"
+             values="0;0;0.5;0;0"
+             keyTimes="0;0.57;0.60;0.64;1"
+             dur="27s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Step 9: syncGate fires after sync inputs arrive (0.70) -->
+  <rect x="680" y="240" width="70" height="36" rx="6"
+        fill="white" stroke="none" opacity="0" pointer-events="none">
+    <animate attributeName="opacity"
+             values="0;0;0.5;0;0"
+             keyTimes="0;0.70;0.72;0.76;1"
+             dur="27s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Step 11: detectorLatch fires after release arrives (0.81) -->
+  <rect x="780" y="292" width="70" height="36" rx="6"
+        fill="white" stroke="none" opacity="0" pointer-events="none">
+    <animate attributeName="opacity"
+             values="0;0;0.5;0;0"
+             keyTimes="0;0.81;0.83;0.87;1"
+             dur="27s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Step 12: i1 fires after detectorLatchToI1 arrives (0.93) -->
+  <rect x="1060" y="280" width="90" height="60" rx="6"
+        fill="white" stroke="none" opacity="0" pointer-events="none">
+    <animate attributeName="opacity"
+             values="0;0;0.5;0;0"
+             keyTimes="0;0.93;0.95;0.98;1"
+             dur="27s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Step 8b: a0 fires after sbd-a0 pulses arrive (0.66) -->
+  <rect x="786" y="50" width="70" height="40" rx="6"
+        fill="white" stroke="none" opacity="0" pointer-events="none">
+    <animate attributeName="opacity"
+             values="0;0;0.5;0;0"
+             keyTimes="0;0.66;0.68;0.70;1"
+             dur="27s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Edge pulse overlays: 20px dash travels source→target via stroke-dashoffset -->
+
+  <!-- Step 2: in0ReadyToReadGate, t=480ms–1280ms (magenta signal), path=268px -->
+  <path d="M60,340 L60,418 L250,418"
+        stroke="#7b1fa2" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-268;-268"
+             keyTimes="0;0.06;0.175;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.055;0.06;0.175;0.18;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 4: readGateToReadLatch, t=1440ms–2240ms (teal release), path=70px -->
+  <line x1="285" y1="400" x2="285" y2="330"
+        stroke="#00838f" stroke-width="3"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-70;-70"
+             keyTimes="0;0.18;0.211;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.175;0.18;0.211;0.216;1"
+             dur="27s" repeatCount="indefinite"/>
+  </line>
+
+  <!-- Step 5b: readLatchToI0, t=2400ms–3200ms (chain), path=178px -->
+  <line x1="320" y1="310" x2="498" y2="310"
+        stroke="#333" stroke-width="3"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-178;-178"
+             keyTimes="0;0.3;0.389;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.295;0.3;0.389;0.394;1"
+             dur="27s" repeatCount="indefinite"/>
+  </line>
+
+  <!-- Step 6b: i0-sbd0-old, keyTime 0.36–0.48 (first beat of old→new pair) -->
+  <path d="M521,280 L521,235 L213,235 L213,75 L230,75"
+        stroke="#2266aa" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <title>i0 → sbd0 (old value read)</title>
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-530;-530"
+             keyTimes="0;0.40;0.52;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.395;0.40;0.52;0.525;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 6c: i0-sbd0-new, staggered to keyTime 0.40–0.52 (second beat of old→new pair) -->
+  <path d="M533,280 L533,215 L220,215 L220,85 L230,85"
+        stroke="#2266aa" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <title>i0 → sbd0 (new value read)</title>
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-518;-518"
+             keyTimes="0;0.40;0.52;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.395;0.40;0.52;0.525;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 6d: i0-sd0-old, keyTime 0.36–0.48 (first beat of old→new pair) -->
+  <path d="M551,280 L551,195 L224,195 L224,138 L235,138"
+        stroke="#2266aa" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <title>i0 → sd0 (old value read)</title>
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-480;-480"
+             keyTimes="0;0.40;0.52;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.395;0.40;0.52;0.525;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 6e: i0-sd0-new, staggered to keyTime 0.40–0.52 (second beat of old→new pair) -->
+  <path d="M563,280 L563,175 L230,175 L230,145 L235,145"
+        stroke="#2266aa" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <title>i0 → sd0 (new value read)</title>
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-473;-473"
+             keyTimes="0;0.40;0.52;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.395;0.40;0.52;0.525;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 8: sbd0DoneToSyncGate, t=3840ms–4640ms (magenta signal), path=545px -->
+  <path d="M340,95 L740,95 L740,240"
+        stroke="#7b1fa2" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-545;-545"
+             keyTimes="0;0.60;0.70;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.595;0.60;0.70;0.705;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 8b: sd0DoneToSyncGate, path=442px (exits sd0 right side) -->
+  <path d="M335,145 L682,145 L682,240"
+        stroke="#7b1fa2" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-442;-442"
+             keyTimes="0;0.60;0.70;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.595;0.60;0.70;0.705;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 8c: sbd0-a0 pulse (starts after sbd0 incoming arrives, 0.56) -->
+  <path d="M340,75 L786,75"
+        stroke="#283593" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-446;-446"
+             keyTimes="0;0.60;0.66;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.595;0.60;0.66;0.665;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 8d: sbd1-a0 pulse (coincident with sbd0-a0) -->
+  <path d="M1045,110 L1045,90 L823,90"
+        stroke="#283593" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-242;-242"
+             keyTimes="0;0.60;0.66;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.595;0.60;0.66;0.665;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 10: syncGateToDetectorLatch (after syncGate inputs arrive, 0.70) -->
+  <path d="M750,258 L940,258 L940,270 L815,270 L815,290"
+        stroke="#00838f" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-347;-347"
+             keyTimes="0;0.72;0.81;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.715;0.72;0.81;0.815;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 11b: detectorLatchAckToReadGate — arrival sweep at readGate (0.00 → 0.14); completes before readGate fires at 0.18 -->
+  <path d="M815,328 L815,418 L320,418"
+        stroke="#7b1fa2" stroke-width="4" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <title>Feedback ack: arriving at readGate (from previous cycle)</title>
+    <animate attributeName="stroke-dashoffset"
+             values="0;-585;-585"
+             keyTimes="0;0.14;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;1;1;0.4;0;0"
+             keyTimes="0;0.005;0.14;0.15;0.16;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 11b-departure: detectorLatch emits ack (0.83 → 0.97) — starts after incoming release arrives at 0.81 -->
+  <path d="M815,328 L815,418 L320,418"
+        stroke="#7b1fa2" stroke-width="4" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <title>Feedback ack: detectorLatch emits ack (closes the backpressure cycle)</title>
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-585;-585;-585"
+             keyTimes="0;0.83;0.97;0.99;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0.4;0;0"
+             keyTimes="0;0.825;0.83;0.97;0.98;0.99;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Step 11c: pre-flash at detectorLatch end (origin of ack) -->
+  <circle cx="815" cy="328" r="10"
+          fill="#7b1fa2" stroke="none"
+          opacity="0" pointer-events="none">
+    <title>Feedback ack origin (detectorLatch)</title>
+    <animate attributeName="opacity"
+             values="0;0;0.6;0;0"
+             keyTimes="0;0.815;0.825;0.84;1"
+             dur="27s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Step 12: detectorLatchToI1 (after release arrives, 0.81) -->
+  <line x1="850" y1="310" x2="1058" y2="310"
+        stroke="#333" stroke-width="3"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-208;-208"
+             keyTimes="0;0.83;0.93;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.825;0.83;0.93;0.935;1"
+             dur="27s" repeatCount="indefinite"/>
+  </line>
+
+</svg>
