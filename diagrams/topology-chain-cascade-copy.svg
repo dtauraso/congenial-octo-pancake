@@ -36,7 +36,7 @@
       {"id": "sbd0DoneToSyncGate",        "source": "sbd0",         "target": "syncGate",     "kind": "signal"},
       {"id": "sd0DoneToSyncGate",         "source": "sd0",          "target": "syncGate",     "kind": "signal"},
       {"id": "syncGateToDetectorLatch",   "source": "syncGate",     "target": null,           "kind": "release", "note": "disconnected from detectorLatch"},
-      {"id": "detectorLatchAckToReadGate","source": "detectorLatch","target": "readGate",     "kind": "signal"},
+      {"id": "i1AckToReadGate",         "source": "i1",           "target": "readGate",     "kind": "signal"},
       {"id": "inputToReadGate",           "source": "in0",          "target": "readGate",     "kind": "chain"},
       {"id": "sd1-i1-ptr",               "source": "sd1",          "target": "i1",           "kind": "pointer"},
       {"id": "sd1-sbd1-ptr",             "source": "sd1",          "target": "sbd1",         "kind": "pointer"},
@@ -53,7 +53,7 @@
         {"t": 0.52, "event": "new-value reads complete (second beat)"},
         {"t": 0.56, "event": "a0 fires (pattern reduction)"},
         {"t": 0.60, "event": "syncGate fires"},
-        {"t": 0.66, "event": "feedback ack starts from detectorLatch"},
+        {"t": 0.66, "event": "feedback ack starts from i1"},
         {"t": 0.72, "event": "detectorLatch releases"},
         {"t": 0.84, "event": "i1 fires"},
         {"t": 0.90, "event": "feedback ack arrives at readGate — cycle closes"}
@@ -267,9 +267,9 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <text x="845" y="252" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">syncGateToDetectorLatch</text>
   </g>
 
-<g id="edge-detectorLatchAckToReadGate" data-role="edge" class="feedback-ack">
-    <path d="M815,328 L815,418 L320,418"/>
-    <text x="568" y="412" font-weight="600" fill="#7b1fa2" stroke="none" class="edge-label">↻ detectorLatchAckToReadGate</text>
+<g id="edge-i1AckToReadGate" data-role="edge" class="feedback-ack">
+    <path d="M1105,340 L1105,418 L320,418"/>
+    <text x="712" y="412" font-weight="600" fill="#7b1fa2" stroke="none" class="edge-label">↻ i1AckToReadGate</text>
   </g>
 
   <g id="edge-sbd0DoneToSyncGate" data-role="edge" class="signal">
@@ -370,7 +370,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   <g id="annotation-backpressure" data-role="annotation">
     <rect x="20" y="480" width="340" height="55" rx="4" class="behavior-note-bg"/>
     <text x="190" y="498" font-size="11" class="behavior-note-text">Latches hold values. AND gates control release.</text>
-    <text x="190" y="513" font-size="11" class="behavior-note-text">detectorLatch acks readGate after releasing →</text>
+    <text x="190" y="513" font-size="11" class="behavior-note-text">i1 acks readGate after advancing →</text>
     <text x="190" y="528" font-size="11" class="behavior-note-text">backpressure: one value per pipeline cycle.</text>
   </g>
 
@@ -403,7 +403,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
 
     <g class="feedback-ack"> <line x1="40" y1="658" x2="70" y2="658"/></g>
     <text x="85"  y="662" text-anchor="start" class="legend-name" fill="#7b1fa2">↻ Feedback ack</text>
-    <text x="220" y="662" text-anchor="start" class="legend-desc">Closes the backpressure cycle (detectorLatch → readGate)</text>
+    <text x="220" y="662" text-anchor="start" class="legend-desc">Closes the backpressure cycle (i1 → readGate)</text>
 
     <g class="release">      <line x1="40" y1="676" x2="70" y2="676"/></g>
     <text x="85"  y="680" text-anchor="start" class="legend-name" fill="#00838f">Release</text>
@@ -680,14 +680,14 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-<!-- Step 11b: detectorLatchAckToReadGate — arrival sweep at readGate (0.00 → 0.14); completes before readGate fires at 0.18 -->
-  <path d="M815,328 L815,418 L320,418"
+<!-- Step 11b: i1AckToReadGate — arrival sweep at readGate (0.00 → 0.14); completes before readGate fires at 0.18 -->
+  <path d="M1105,340 L1105,418 L320,418"
         stroke="#7b1fa2" stroke-width="4" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <title>Feedback ack: arriving at readGate (from previous cycle)</title>
     <animate attributeName="stroke-dashoffset"
-             values="0;-585;-585"
+             values="0;-863;-863"
              keyTimes="0;0.14;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
@@ -696,14 +696,14 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Step 11b-departure: detectorLatch emits ack (0.83 → 0.97) — starts after incoming release arrives at 0.81 -->
-  <path d="M815,328 L815,418 L320,418"
+  <!-- Step 11b-departure: i1 emits ack (0.83 → 0.97) — starts after incoming release arrives at 0.81 -->
+  <path d="M1105,340 L1105,418 L320,418"
         stroke="#7b1fa2" stroke-width="4" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
-    <title>Feedback ack: detectorLatch emits ack (closes the backpressure cycle)</title>
+    <title>Feedback ack: i1 emits ack (closes the backpressure cycle)</title>
     <animate attributeName="stroke-dashoffset"
-             values="0;0;-585;-585;-585"
+             values="0;0;-863;-863;-863"
              keyTimes="0;0.83;0.97;0.99;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
@@ -712,11 +712,11 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Step 11c: pre-flash at detectorLatch end (origin of ack) -->
-  <circle cx="815" cy="328" r="10"
+  <!-- Step 11c: pre-flash at i1 end (origin of ack) -->
+  <circle cx="1105" cy="340" r="10"
           fill="#7b1fa2" stroke="none"
           opacity="0" pointer-events="none">
-    <title>Feedback ack origin (detectorLatch)</title>
+    <title>Feedback ack origin (i1)</title>
     <animate attributeName="opacity"
              values="0;0;0.6;0;0"
              keyTimes="0;0.815;0.825;0.84;1"
