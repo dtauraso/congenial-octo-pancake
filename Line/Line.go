@@ -29,18 +29,17 @@ func (l *Line) Setup() {
 	// syncGate: AND(sbd0 done, sd0 done) → releases detectorLatch
 	// detectorLatch acks readGate after releasing → backpressure
 
-	inputToReadLatch := make(chan int, 1)
-	in0ReadyToReadGate := make(chan int, 1)
+	inputToReadGate := make(chan int, 1)
 	detectorLatchAckToReadGate := make(chan int, 1)
 	readGateToReadLatch := make(chan int, 1)
 	readLatchToI0 := make(chan int, 1)
-	input_node := INN.InputNode{Id: 0, Input: input, ToNext: inputToReadLatch, ToReady: in0ReadyToReadGate}
+	input_node := INN.InputNode{Id: 0, Input: input, ToNext: inputToReadGate}
 
 	// Prime ack so first input flows through
 	detectorLatchAckToReadGate <- 1
 
-	readLatch := RLN.ReadLatchNode{Id: 0, FromInput: inputToReadLatch, ToChain: readLatchToI0, Release: readGateToReadLatch}
-	readGate := RGN.ReadGateNode{Id: 0, FromReady: in0ReadyToReadGate, FromAck: detectorLatchAckToReadGate, ToRelease: readGateToReadLatch}
+	readLatch := RLN.ReadLatchNode{Id: 0, FromInput: readGateToReadLatch, ToChain: readLatchToI0}
+	readGate := RGN.ReadGateNode{Id: 0, FromValue: inputToReadGate, FromAck: detectorLatchAckToReadGate, ToLatch: readGateToReadLatch}
 
 	i0ToDetectorLatch := make(chan int, 1)
 	sbd0DoneToSyncGate := make(chan int, 1)

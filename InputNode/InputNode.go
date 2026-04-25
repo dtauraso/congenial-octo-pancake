@@ -9,11 +9,9 @@ type InputNode struct {
 	Id        int
 	Input     <-chan int
 	ToNext    chan<- int
-	ToReady   chan<- int
 	value     int
 	hasValue  bool
 	sentValue bool
-	sentReady bool
 }
 
 func (n *InputNode) Update(s *S.SafeWorker) {
@@ -31,7 +29,6 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 				n.value = v
 				n.hasValue = true
 				n.sentValue = false
-				n.sentReady = false
 				fmt.Printf("in%d: sending %d\n", n.Id, n.value)
 			default:
 			}
@@ -41,20 +38,9 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 			select {
 			case n.ToNext <- n.value:
 				n.sentValue = true
+				n.hasValue = false
 			default:
 			}
-		}
-
-		if n.hasValue && !n.sentReady {
-			select {
-			case n.ToReady <- 1:
-				n.sentReady = true
-			default:
-			}
-		}
-
-		if n.sentValue && n.sentReady {
-			n.hasValue = false
 		}
 	}
 }

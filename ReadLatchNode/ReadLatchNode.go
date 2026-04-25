@@ -6,12 +6,11 @@ import (
 )
 
 type ReadLatchNode struct {
-	Id      int
-	Value   int
-	HasVal  bool
+	Id        int
+	Value     int
+	HasVal    bool
 	FromInput <-chan int
 	ToChain   chan<- int
-	Release   <-chan int
 }
 
 func (l *ReadLatchNode) Update(s *S.SafeWorker) {
@@ -35,9 +34,8 @@ func (l *ReadLatchNode) Update(s *S.SafeWorker) {
 
 		if l.HasVal {
 			select {
-			case <-l.Release:
-				fmt.Printf("readLatch%d: releasing %d\n", l.Id, l.Value)
-				S.Send(l.ToChain, l.Value)
+			case l.ToChain <- l.Value:
+				fmt.Printf("readLatch%d: forwarded %d\n", l.Id, l.Value)
 				l.HasVal = false
 			default:
 			}
