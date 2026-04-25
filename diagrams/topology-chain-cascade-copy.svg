@@ -69,8 +69,8 @@ in0                    — input node feeding values into the chain
 readLatch, detectorLatch — latches holding one value until their AND gate fires
 readGate, syncGate     — AND gates controlling latch release (backpressure)
 i0, i1                 — chain inhibitor stages (shift register cells)
-sbd0, sbd1             — streak-break detectors: fire on sign change (1,-1 or -1,1)
-sd0, sd1               — streak detectors: fire on same-sign run (-1,-1 or 1,1)
+sbd0, sbd1             — streak-break detectors: fire on sign change (1,0 or 0,1)
+sd0, sd1               — streak detectors: fire on same-sign run (0,0 or 1,1)
 a0                     — pattern AND gate reducing sbd outputs to one signal
 old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = read, not write)
   </desc>
@@ -166,25 +166,25 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   <g id="node-sd0" data-role="streak-detector" data-index="0">
     <rect x="235" y="110" width="100" height="40" rx="20" class="shape-sd"/>
     <text x="285" y="126" font-weight="100" class="node-title text-sd">sd0</text>
-    <text x="285" y="140" font-weight="100" class="node-type text-sd">Streak (-1,-1|1,1)</text>
+    <text x="285" y="140" font-weight="100" class="node-type text-sd">Streak (0,0|1,1)</text>
   </g>
 
   <g id="node-sbd0" data-role="streak-break-detector" data-index="0">
     <rect x="230" y="60" width="110" height="40" rx="20" class="shape-sbd0"/>
     <text x="285" y="76" font-weight="100" class="node-title text-sbd0">sbd0</text>
-    <text x="285" y="90" font-weight="100" class="node-type text-sbd0">Streak Break (1,-1|-1,1)</text>
+    <text x="285" y="90" font-weight="100" class="node-type text-sbd0">Streak Break (1,0|0,1)</text>
   </g>
 
   <g id="node-sbd1" data-role="streak-break-detector" data-index="1">
     <rect x="990" y="110" width="110" height="40" rx="20" class="shape-sbd1"/>
     <text x="1045" y="126" font-weight="100" class="node-title text-sbd1">sbd1</text>
-    <text x="1045" y="140" font-weight="100" class="node-type text-sbd1">Streak Break (1,-1|-1,1)</text>
+    <text x="1045" y="140" font-weight="100" class="node-type text-sbd1">Streak Break (1,0|0,1)</text>
   </g>
 
   <g id="node-sd1" data-role="streak-detector" data-index="1">
     <rect x="1120" y="110" width="100" height="40" rx="20" class="shape-sd"/>
     <text x="1170" y="126" font-weight="100" class="node-title text-sd">sd1</text>
-    <text x="1170" y="140" font-weight="100" class="node-type text-sd">Streak (-1,-1|1,1)</text>
+    <text x="1170" y="140" font-weight="100" class="node-type text-sd">Streak (0,0|1,1)</text>
   </g>
 
   <!-- ── syncGate: between detector row and pipeline row ── -->
@@ -199,7 +199,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <rect x="20" y="280" width="80" height="60" rx="6" class="shape-input"/>
     <text x="60" y="301" font-weight="100" class="node-title text-input">in0</text>
     <text x="60" y="315" font-weight="100" class="node-sublabel text-sublabel">Input</text>
-    <text x="60" y="329" font-weight="100" class="node-type text-sublabel">[-1,1,1,-1]→</text>
+    <text x="60" y="329" font-weight="100" class="node-type text-sublabel">[0,1,1,0]→</text>
   </g>
 
   <g id="node-readLatch" data-role="latch">

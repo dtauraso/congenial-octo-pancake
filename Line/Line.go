@@ -19,10 +19,10 @@ type Line struct {
 
 func (l *Line) Setup() {
 	input := make(chan int, 4)
-	input <- -1
+	input <- 0
 	input <- 1
 	input <- 1
-	input <- -1
+	input <- 0
 
 	// Chain: in0 -> readLatch --(readGate release)--> i0 -> detectorLatch --(syncGate release)--> i1
 	// readGate: AND(in0 ready, detectorLatch ack) → releases readLatch

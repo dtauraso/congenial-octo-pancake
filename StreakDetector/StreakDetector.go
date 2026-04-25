@@ -60,9 +60,9 @@ func (sd *StreakDetector) Update(s *S.SafeWorker) {
 		}
 
 		if sd.HasLeft && sd.HasRight {
-			// Detect streak: -1,-1 or 1,1
+			// Detect streak: 0,0 or 1,1
 			result := 0
-			if (sd.LeftValue == 1 && sd.RightValue == 1) || (sd.LeftValue == -1 && sd.RightValue == -1) {
+			if (sd.LeftValue == 1 && sd.RightValue == 1) || (sd.LeftValue == 0 && sd.RightValue == 0) {
 				result = 1
 			}
 			fmt.Printf("sd%d: streak(%d,%d) = %d (streak=%v)\n", sd.Id, sd.LeftValue, sd.RightValue, result, result == 1)
