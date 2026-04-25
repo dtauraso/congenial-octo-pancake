@@ -19,7 +19,7 @@
       {"id": "a0",           "role": "pattern-and-gate"}
     ],
     "edges": [
-      {"id": "readLatchToI0",              "source": "readLatch",    "target": "i0",           "kind": "chain"},
+      {"id": "readGateToI0",               "source": "readGate",     "target": "i0",           "kind": "chain"},
       {"id": "i0ToDetectorLatch",          "source": "i0",           "target": "detectorLatch","kind": "chain"},
       {"id": "detectorLatchToI1",          "source": "detectorLatch","target": "i1",           "kind": "chain"},
       {"id": "i0-sbd0-old",               "source": "i0",           "target": "sbd0",         "kind": "edge-old"},
@@ -38,7 +38,6 @@
       {"id": "syncGateToDetectorLatch",   "source": "syncGate",     "target": null,           "kind": "release", "note": "disconnected from detectorLatch"},
       {"id": "detectorLatchAckToReadGate","source": "detectorLatch","target": "readGate",     "kind": "signal"},
       {"id": "inputToReadGate",           "source": "in0",          "target": "readGate",     "kind": "chain"},
-      {"id": "readGateToReadLatch",       "source": "readGate",     "target": "readLatch",    "kind": "chain"},
       {"id": "sd1-i1-ptr",               "source": "sd1",          "target": "i1",           "kind": "pointer"},
       {"id": "sd1-sbd1-ptr",             "source": "sd1",          "target": "sbd1",         "kind": "pointer"},
       {"id": "a0-future-out",            "source": "a0",           "target": "downstream",   "kind": "future-out"}
@@ -48,7 +47,7 @@
       "steps": [
         {"t": 0.06, "event": "in0 fires"},
         {"t": 0.19, "event": "readGate fires"},
-        {"t": 0.30, "event": "readLatch releases"},
+        {"t": 0.30, "event": "readGate value pulse traveling to i0 (readLatch bypassed)"},
         {"t": 0.42, "event": "i0 fires"},
         {"t": 0.48, "event": "sbd0/sd0 fire; old-value reads complete (first beat)"},
         {"t": 0.52, "event": "new-value reads complete (second beat)"},
@@ -238,9 +237,10 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   <!-- EDGES — Chain                                               -->
   <!-- ═══════════════════════════════════════════════════════════ -->
 
-  <g id="edge-readLatchToI0" data-role="edge" class="chain">
-    <line x1="320" y1="310" x2="498" y2="310"/>
-    <text x="409" y="304" font-weight="300" fill="#111" stroke="none" class="edge-label">readLatchToI0</text>
+  <g id="edge-readGateToI0" data-role="edge" class="chain">
+    <path d="M285,400 L450,400 L450,310 L498,310"/>
+    <text x="468" y="304" font-weight="300" fill="#111" stroke="none" class="edge-label">readGateToI0</text>
+    <text x="445" y="395" font-weight="300" fill="#333" stroke="none" class="value-label" text-anchor="end">0|1</text>
   </g>
 
   <g id="edge-i0ToDetectorLatch" data-role="edge" class="chain">
@@ -265,12 +265,6 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   <g id="edge-syncGateToDetectorLatch" data-role="edge" class="release">
     <path d="M750,258 L940,258 L940,275 L860,275"/>
     <text x="845" y="252" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">syncGateToDetectorLatch</text>
-  </g>
-
-  <g id="edge-readGateToReadLatch" data-role="edge" class="chain">
-    <line x1="285" y1="400" x2="285" y2="330"/>
-    <text x="291" y="368" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="start">readGateToReadLatch</text>
-    <text x="305" y="382" font-weight="300" fill="#333" stroke="none" class="value-label" text-anchor="start">0|1</text>
   </g>
 
 <g id="edge-detectorLatchAckToReadGate" data-role="edge" class="feedback-ack">
@@ -452,16 +446,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- Step 5: readLatch fires at t=480ms -->
-  <rect x="250" y="292" width="70" height="36" rx="6"
-        fill="white" stroke="none" opacity="0" pointer-events="none">
-    <animate attributeName="opacity"
-             values="0;0;0.5;0;0"
-             keyTimes="0;0.24;0.3025;0.365;1"
-             dur="27s" repeatCount="indefinite"/>
-  </rect>
-
-  <!-- Step 6: i0 fires after readLatchToI0 arrives (0.389) -->
+<!-- Step 6: i0 fires after readLatchToI0 arrives (0.389) -->
   <rect x="500" y="280" width="90" height="60" rx="6"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
@@ -541,35 +526,20 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Step 4: readGateToReadLatch, chain pulse carrying gated value to readLatch, path=70px -->
-  <line x1="285" y1="400" x2="285" y2="330"
-        stroke="#333" stroke-width="3"
+  <!-- Step 4: readGateToI0, chain pulse from readGate directly to i0 (readLatch bypassed), path≈403px -->
+  <path d="M285,400 L450,400 L450,310 L498,310"
+        stroke="#333" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
-             values="0;0;-70;-70"
-             keyTimes="0;0.18;0.211;1"
+             values="0;0;-403;-403"
+             keyTimes="0;0.18;0.389;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.175;0.18;0.211;0.216;1"
+             keyTimes="0;0.175;0.18;0.389;0.394;1"
              dur="27s" repeatCount="indefinite"/>
-  </line>
-
-  <!-- Step 5b: readLatchToI0, t=2400ms–3200ms (chain), path=178px -->
-  <line x1="320" y1="310" x2="498" y2="310"
-        stroke="#333" stroke-width="3"
-        stroke-dasharray="20,9999" stroke-dashoffset="0"
-        opacity="0" pointer-events="none">
-    <animate attributeName="stroke-dashoffset"
-             values="0;0;-178;-178"
-             keyTimes="0;0.3;0.389;1"
-             dur="27s" repeatCount="indefinite"/>
-    <animate attributeName="opacity"
-             values="0;0;1;1;0;0"
-             keyTimes="0;0.295;0.3;0.389;0.394;1"
-             dur="27s" repeatCount="indefinite"/>
-  </line>
+  </path>
 
   <!-- Step 6b: i0-sbd0-old, keyTime 0.36–0.48 (first beat of old→new pair) -->
   <!-- DISABLED: edge disconnected from i0

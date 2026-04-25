@@ -32,21 +32,22 @@ func (l *Line) Setup() {
 	inputToReadGate := make(chan int, 1)
 	detectorLatchAckToReadGate := make(chan int, 1)
 	readGateToReadLatch := make(chan int, 1)
-	readLatchToI0 := make(chan int, 1)
+	readGateToI0 := make(chan int, 1)
 	input_node := INN.InputNode{Id: 0, Input: input, ToNext: inputToReadGate}
 
 	// Prime ack so first input flows through
 	detectorLatchAckToReadGate <- 1
 
-	readLatch := RLN.ReadLatchNode{Id: 0, FromInput: readGateToReadLatch, ToChain: readLatchToI0}
-	readGate := RGN.ReadGateNode{Id: 0, FromValue: inputToReadGate, FromAck: detectorLatchAckToReadGate, ToLatch: readGateToReadLatch}
+	// readLatch is bypassed: readGate now writes directly to i0.
+	readLatch := RLN.ReadLatchNode{Id: 0, FromInput: readGateToReadLatch, ToChain: make(chan int, 1)}
+	readGate := RGN.ReadGateNode{Id: 0, FromValue: inputToReadGate, FromAck: detectorLatchAckToReadGate, ToLatch: readGateToI0}
 
 	i0ToDetectorLatch := make(chan int, 1)
 	sbd0DoneToSyncGate := make(chan int, 1)
 	sd0DoneToSyncGate := make(chan int, 1)
 	syncGateToDownstream := make(chan int, 1)
 	detectorLatchToI1 := make(chan int, 1)
-	i0 := CI.NewChainInhibitorNode(0, readLatchToI0, i0ToDetectorLatch)
+	i0 := CI.NewChainInhibitorNode(0, readGateToI0, i0ToDetectorLatch)
 
 	detectorLatch := SLN.SyncLatchNode{Id: 0, FromChain: i0ToDetectorLatch, ToChain: detectorLatchToI1, ToAck: detectorLatchAckToReadGate}
 	syncGate := SGN.SyncGateNode{Id: 0, FromSbdDone: sbd0DoneToSyncGate, FromSdDone: sd0DoneToSyncGate, ToRelease: syncGateToDownstream}
