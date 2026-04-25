@@ -717,19 +717,4 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </circle>
 
-  <!-- Step 12: detectorLatchToI1 (after release arrives, 0.81) -->
-  <line x1="850" y1="310" x2="1058" y2="310"
-        stroke="#333" stroke-width="3"
-        stroke-dasharray="20,9999" stroke-dashoffset="0"
-        opacity="0" pointer-events="none">
-    <animate attributeName="stroke-dashoffset"
-             values="0;0;-208;-208"
-             keyTimes="0;0.83;0.93;1"
-             dur="27s" repeatCount="indefinite"/>
-    <animate attributeName="opacity"
-             values="0;0;1;1;0;0"
-             keyTimes="0;0.825;0.83;0.93;0.935;1"
-             dur="27s" repeatCount="indefinite"/>
-  </line>
-
 </svg>
