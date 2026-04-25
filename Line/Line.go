@@ -42,7 +42,7 @@ func (l *Line) Setup() {
 	readLatch := RLN.ReadLatchNode{Id: 0, FromInput: readGateToReadLatch, ToChain: make(chan int, 1)}
 	readGate := RGN.ReadGateNode{Id: 0, FromValue: inputToReadGate, FromAck: i1AckToReadGate, ToLatch: readGateToI0}
 
-	i0ToI1 := make(chan int, 2)
+	i0ToI1 := make(chan int, 1)
 	sbd0DoneToSyncGate := make(chan int, 1)
 	sd0DoneToSyncGate := make(chan int, 1)
 	syncGateToDownstream := make(chan int, 1)
