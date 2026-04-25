@@ -20,8 +20,7 @@
     ],
     "edges": [
       {"id": "readGateToI0",               "source": "readGate",     "target": "i0",           "kind": "chain"},
-      {"id": "i0ToDetectorLatch",          "source": "i0",           "target": "detectorLatch","kind": "chain"},
-      {"id": "detectorLatchToI1",          "source": "detectorLatch","target": "i1",           "kind": "chain"},
+      {"id": "i0ToI1",                     "source": "i0",           "target": "i1",           "kind": "chain", "note": "bypasses detectorLatch"},
       {"id": "i0-sbd0-old",               "source": "i0",           "target": "sbd0",         "kind": "edge-old"},
       {"id": "i0-sbd0-new",               "source": "i0",           "target": "sbd0",         "kind": "edge-new"},
       {"id": "i0-sd0-old",                "source": "i0",           "target": "sd0",          "kind": "edge-old"},
@@ -243,14 +242,9 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <text x="445" y="395" font-weight="300" fill="#333" stroke="none" class="value-label" text-anchor="end">0|1</text>
   </g>
 
-  <g id="edge-i0ToDetectorLatch" data-role="edge" class="chain">
-    <line x1="590" y1="310" x2="778" y2="310"/>
-    <text x="684" y="304" font-weight="300" fill="#111" stroke="none" class="edge-label">i0ToDetectorLatch</text>
-  </g>
-
-  <g id="edge-detectorLatchToI1" data-role="edge" class="chain">
-    <line x1="850" y1="310" x2="1058" y2="310"/>
-    <text x="954" y="304" font-weight="300" fill="#111" stroke="none" class="edge-label">detectorLatchToI1</text>
+  <g id="edge-i0ToI1" data-role="edge" class="chain">
+    <path d="M590,310 L620,310 L620,272 L1028,272 L1028,310 L1058,310"/>
+    <text x="824" y="266" font-weight="300" fill="#111" stroke="none" class="edge-label">i0ToI1</text>
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->

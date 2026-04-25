@@ -24,10 +24,10 @@ func (l *Line) Setup() {
 	input <- 1
 	input <- 0
 
-	// Chain: in0 -> readLatch --(readGate release)--> i0 -> detectorLatch --(syncGate release)--> i1
-	// readGate: AND(in0 ready, detectorLatch ack) → releases readLatch
-	// syncGate: AND(sbd0 done, sd0 done) → releases detectorLatch
-	// detectorLatch acks readGate after releasing → backpressure
+	// Chain: in0 -> readLatch --(readGate release)--> i0 -> i1 (detectorLatch bypassed)
+	// readGate: AND(in0 ready, i1 ack) → releases value to i0
+	// syncGate: AND(sbd0 done, sd0 done) → (formerly released detectorLatch)
+	// i1 acks readGate after receiving → backpressure
 
 	inputToReadGate := make(chan int, 1)
 	i1AckToReadGate := make(chan int, 1)
@@ -42,16 +42,16 @@ func (l *Line) Setup() {
 	readLatch := RLN.ReadLatchNode{Id: 0, FromInput: readGateToReadLatch, ToChain: make(chan int, 1)}
 	readGate := RGN.ReadGateNode{Id: 0, FromValue: inputToReadGate, FromAck: i1AckToReadGate, ToLatch: readGateToI0}
 
-	i0ToDetectorLatch := make(chan int, 1)
+	i0ToI1 := make(chan int, 2)
 	sbd0DoneToSyncGate := make(chan int, 1)
 	sd0DoneToSyncGate := make(chan int, 1)
 	syncGateToDownstream := make(chan int, 1)
-	detectorLatchToI1 := make(chan int, 1)
-	i0 := CI.NewChainInhibitorNode(0, readGateToI0, i0ToDetectorLatch)
+	i0 := CI.NewChainInhibitorNode(0, readGateToI0, i0ToI1)
 
-	detectorLatch := SLN.SyncLatchNode{Id: 0, FromChain: i0ToDetectorLatch, ToChain: detectorLatchToI1}
+	// detectorLatch is bypassed: i0 writes directly to i1.
+	detectorLatch := SLN.SyncLatchNode{Id: 0, FromChain: make(chan int, 1), ToChain: make(chan int, 1)}
 	syncGate := SGN.SyncGateNode{Id: 0, FromSbdDone: sbd0DoneToSyncGate, FromSdDone: sd0DoneToSyncGate, ToRelease: syncGateToDownstream}
-	i1 := CI.NewChainInhibitorNode(1, detectorLatchToI1, make(chan int, 3))
+	i1 := CI.NewChainInhibitorNode(1, i0ToI1, make(chan int, 3))
 	i1.ToAck = i1AckToReadGate
 
 	// sbd0: streak break detector on i0 (old+new from i0)
