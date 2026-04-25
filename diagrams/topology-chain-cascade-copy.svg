@@ -265,6 +265,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   <g id="edge-readGateToReadLatch" data-role="edge" class="chain">
     <line x1="285" y1="400" x2="285" y2="330"/>
     <text x="291" y="368" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="start">readGateToReadLatch</text>
+    <text x="305" y="382" font-weight="300" fill="#333" stroke="none" class="value-label" text-anchor="start">0|1</text>
   </g>
 
   <g id="edge-syncGateToDetectorLatch" data-role="edge" class="release">
