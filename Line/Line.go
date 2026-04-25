@@ -44,12 +44,12 @@ func (l *Line) Setup() {
 	i0ToDetectorLatch := make(chan int, 1)
 	sbd0DoneToSyncGate := make(chan int, 1)
 	sd0DoneToSyncGate := make(chan int, 1)
-	syncGateToDetectorLatch := make(chan int, 1)
+	syncGateToDownstream := make(chan int, 1)
 	detectorLatchToI1 := make(chan int, 1)
 	i0 := CI.NewChainInhibitorNode(0, readLatchToI0, i0ToDetectorLatch)
 
-	detectorLatch := SLN.SyncLatchNode{Id: 0, FromChain: i0ToDetectorLatch, ToChain: detectorLatchToI1, Release: syncGateToDetectorLatch, ToAck: detectorLatchAckToReadGate}
-	syncGate := SGN.SyncGateNode{Id: 0, FromSbdDone: sbd0DoneToSyncGate, FromSdDone: sd0DoneToSyncGate, ToRelease: syncGateToDetectorLatch}
+	detectorLatch := SLN.SyncLatchNode{Id: 0, FromChain: i0ToDetectorLatch, ToChain: detectorLatchToI1, ToAck: detectorLatchAckToReadGate}
+	syncGate := SGN.SyncGateNode{Id: 0, FromSbdDone: sbd0DoneToSyncGate, FromSdDone: sd0DoneToSyncGate, ToRelease: syncGateToDownstream}
 	i1 := CI.NewChainInhibitorNode(1, detectorLatchToI1, make(chan int, 3))
 
 	// sbd0: streak break detector on i0 (old+new from i0)
@@ -75,11 +75,17 @@ func (l *Line) Setup() {
 	i1NewToSd1 := make(chan int, 1)
 	sd1 := SD.StreakDetector{Id: 1, CurrentInhibitor: &i1, StreakBreakDetector: &sbd1, SbdNextChan: i1NewToSbd1, SdNextChan: i1NewToSd1, FromCurrentInhibitor: i1OldToSd1, FromNextInhibitor: i1NewToSd1, FromPrevDetector: sd0ToSd1}
 
-	// Wire edge channels to inhibitors (old + new)
-	i0.ToEdge = []chan<- int{i0OldToSbd0, i0OldToSd0}
-	i0.ToEdgeNew = []chan<- int{i0NewToSbd0, i0NewToSd0}
-	i1.ToEdge = []chan<- int{i1OldToSbd1, i1OldToSd1}
-	i1.ToEdgeNew = []chan<- int{i1NewToSbd1, i1NewToSd1}
+	// Blue edges (old + new reads) intentionally not wired:
+	// i0 and i1 no longer send to sbd/sd; detectorLatch is now a passthrough
+	// and does not depend on syncGate (which depended on sbd/sd done signals).
+	_ = i0OldToSbd0
+	_ = i0NewToSbd0
+	_ = i0OldToSd0
+	_ = i0NewToSd0
+	_ = i1OldToSbd1
+	_ = i1NewToSbd1
+	_ = i1OldToSd1
+	_ = i1NewToSd1
 
 	// a0: AND gate fed by sbd0 and sbd1
 	andOut := make(chan int, 3)

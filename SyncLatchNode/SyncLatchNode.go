@@ -11,7 +11,6 @@ type SyncLatchNode struct {
 	HasVal  bool
 	FromChain <-chan int
 	ToChain   chan<- int
-	Release   <-chan int
 	ToAck     chan<- int
 }
 
@@ -35,14 +34,10 @@ func (l *SyncLatchNode) Update(s *S.SafeWorker) {
 		}
 
 		if l.HasVal {
-			select {
-			case <-l.Release:
-				fmt.Printf("detectorLatch%d: releasing %d\n", l.Id, l.Value)
-				S.Send(l.ToChain, l.Value)
-				S.Send(l.ToAck, 1)
-				l.HasVal = false
-			default:
-			}
+			fmt.Printf("detectorLatch%d: releasing %d\n", l.Id, l.Value)
+			S.Send(l.ToChain, l.Value)
+			S.Send(l.ToAck, 1)
+			l.HasVal = false
 		}
 	}
 }

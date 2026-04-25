@@ -35,7 +35,7 @@
       {"id": "sd0-sd1",                   "source": "sd0",          "target": "sd1",          "kind": "streak"},
       {"id": "sbd0DoneToSyncGate",        "source": "sbd0",         "target": "syncGate",     "kind": "signal"},
       {"id": "sd0DoneToSyncGate",         "source": "sd0",          "target": "syncGate",     "kind": "signal"},
-      {"id": "syncGateToDetectorLatch",   "source": "syncGate",     "target": "detectorLatch","kind": "release"},
+      {"id": "syncGateToDetectorLatch",   "source": "syncGate",     "target": null,           "kind": "release", "note": "disconnected from detectorLatch"},
       {"id": "detectorLatchAckToReadGate","source": "detectorLatch","target": "readGate",     "kind": "signal"},
       {"id": "inputToReadGate",           "source": "in0",          "target": "readGate",     "kind": "chain"},
       {"id": "readGateToReadLatch",       "source": "readGate",     "target": "readLatch",    "kind": "chain"},
@@ -262,18 +262,18 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <text x="155" y="412" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">inputToReadGate</text>
   </g>
 
+  <g id="edge-syncGateToDetectorLatch" data-role="edge" class="release">
+    <path d="M750,258 L940,258 L940,275 L860,275"/>
+    <text x="845" y="252" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">syncGateToDetectorLatch</text>
+  </g>
+
   <g id="edge-readGateToReadLatch" data-role="edge" class="chain">
     <line x1="285" y1="400" x2="285" y2="330"/>
     <text x="291" y="368" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="start">readGateToReadLatch</text>
     <text x="305" y="382" font-weight="300" fill="#333" stroke="none" class="value-label" text-anchor="start">0|1</text>
   </g>
 
-  <g id="edge-syncGateToDetectorLatch" data-role="edge" class="release">
-    <path d="M750,258 L940,258 L940,270 L815,270 L815,290"/>
-    <text x="845" y="252" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">syncGateToDetectorLatch</text>
-  </g>
-
-  <g id="edge-detectorLatchAckToReadGate" data-role="edge" class="feedback-ack">
+<g id="edge-detectorLatchAckToReadGate" data-role="edge" class="feedback-ack">
     <path d="M815,328 L815,418 L320,418"/>
     <text x="568" y="412" font-weight="600" fill="#7b1fa2" stroke="none" class="edge-label">↻ detectorLatchAckToReadGate</text>
   </g>
@@ -318,22 +318,22 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   <!-- ═══════════════════════════════════════════════════════════ -->
 
   <g id="edge-i1-sbd1-old" data-role="edge" class="edge-connection">
-    <path d="M1073,280 L1073,190 L1022,190 L1022,150"/>
+    <path d="M1073,270 L1073,190 L1022,190 L1022,150"/>
     <text x="1044" y="184" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
   </g>
 
   <g id="edge-i1-sbd1-new" data-role="edge" class="edge-connection">
-    <path d="M1085,280 L1085,183 L1034,183 L1034,150"/>
+    <path d="M1085,270 L1085,183 L1034,183 L1034,150"/>
     <text x="1056" y="177" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
   </g>
 
   <g id="edge-i1-sd1-old" data-role="edge" class="edge-connection">
-    <path d="M1113,280 L1113,190 L1142,190 L1142,150"/>
+    <path d="M1113,270 L1113,190 L1142,190 L1142,150"/>
     <text x="1126" y="184" font-weight="300" fill="#2266aa" stroke="none" class="value-label">old</text>
   </g>
 
   <g id="edge-i1-sd1-new" data-role="edge" class="edge-connection">
-    <path d="M1125,280 L1125,183 L1154,183 L1154,150"/>
+    <path d="M1125,270 L1125,183 L1154,183 L1154,150"/>
     <text x="1138" y="177" font-weight="300" fill="#2266aa" stroke="none" class="value-label">new</text>
   </g>
 
@@ -710,22 +710,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Step 10: syncGateToDetectorLatch (after syncGate inputs arrive, 0.70) -->
-  <path d="M750,258 L940,258 L940,270 L815,270 L815,290"
-        stroke="#00838f" stroke-width="3" fill="none"
-        stroke-dasharray="20,9999" stroke-dashoffset="0"
-        opacity="0" pointer-events="none">
-    <animate attributeName="stroke-dashoffset"
-             values="0;0;-347;-347"
-             keyTimes="0;0.72;0.81;1"
-             dur="27s" repeatCount="indefinite"/>
-    <animate attributeName="opacity"
-             values="0;0;1;1;0;0"
-             keyTimes="0;0.715;0.72;0.81;0.815;1"
-             dur="27s" repeatCount="indefinite"/>
-  </path>
-
-  <!-- Step 11b: detectorLatchAckToReadGate — arrival sweep at readGate (0.00 → 0.14); completes before readGate fires at 0.18 -->
+<!-- Step 11b: detectorLatchAckToReadGate — arrival sweep at readGate (0.00 → 0.14); completes before readGate fires at 0.18 -->
   <path d="M815,328 L815,418 L320,418"
         stroke="#7b1fa2" stroke-width="4" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
