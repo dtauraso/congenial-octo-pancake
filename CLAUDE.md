@@ -130,15 +130,14 @@ Project memory lives in `memory/` at the repo root. Files:
 - `memory/project_backpressure_pattern.md` — latch + AND gate backpressure wiring
 - `memory/project_sustained_activity.md` — self-cycling particle design direction
 - `memory/user_background.md` — user context and working style
-- `memory/feedback_commit_workflow.md` — commit/push workflow preferences
 - `memory/feedback_open_files.md` — tooling preferences
 
 ## Workflow
 
+- **All changes require explicit user sign-off before committing or pushing — no exceptions, regardless of file type (code, SVG, docs, memory, config).** After any change, build/run/verify and then stop and wait. Only commit when the user explicitly asks ("commit and push", "ship it", "lgtm", etc.). A sign-off authorizes the specific change just discussed, not future changes.
 - One logical change per commit
-- Build and run before committing; verify output matches previous run
-- For SVG changes, show the result in preview and get explicit sign-off before committing
-- Push each commit to the current feature branch
+- Build and run before reporting a change as ready; verify output matches previous run
+- Push each commit to the current feature branch (only after the sign-off authorizing it)
 - Channel names encode which two nodes are connected — preserve this convention
 
 ## Language / runtime
