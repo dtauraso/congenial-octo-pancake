@@ -5,6 +5,10 @@
     "diagram": "topology-chain-cascade",
     "title": "Line Topology — Cascade Copy (no latches)",
     "nodes": [
+      {"id": "p10",          "role": "partition"},
+      {"id": "p01",          "role": "partition"},
+      {"id": "p11",          "role": "partition"},
+      {"id": "p00",          "role": "partition"},
       {"id": "in0",          "role": "input"},
       {"id": "readGate",     "role": "and-gate"},
       {"id": "i0",           "role": "inhibitor",             "index": 0},
@@ -57,6 +61,7 @@
   </metadata>
 
   <desc>
+10, 01, 11, 00         — partition nodes (binary pattern labels)
 in0                    — input node feeding values into the chain
 readGate, syncGate     — AND gates: readGate gates input by ack; syncGate aligns detector done signals
 i0, i1                 — chain inhibitor stages (shift register cells); cascade-copy: value flows i0 → i1 directly
@@ -74,6 +79,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
 
     /* ── Node shapes ─────────────────────────────────────────── */
     .shape-input    { fill: #e0e0e0; stroke: #666;    stroke-width: 2; }
+    .shape-partition{ fill: #e8eaf6; stroke: #5c6bc0; stroke-width: 2; }
     .shape-inhibitor{ fill: #fff3e0; stroke: #e65100; stroke-width: 2; }
     .shape-and-gate { fill: #f3e5f5; stroke: #7b1fa2; stroke-width: 2; }
     .shape-pattern-and { fill: #e8eaf6; stroke: #283593; stroke-width: 2; }
@@ -87,6 +93,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     .node-type     { text-anchor: middle; font-weight: normal; font-size: 11px; }
 
     .text-input    { fill: #333; }
+    .text-partition{ fill: #3949ab; }
     .text-sublabel { fill: #555; }
     .text-inhibitor{ fill: #e65100; }
     .text-inhibitor-sub { fill: #bf360c; }
@@ -142,6 +149,27 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- NODES                                                       -->
   <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <!-- ── Partition nodes: top-left column ── -->
+  <g id="node-p10" data-role="partition">
+    <rect x="20" y="50" width="56" height="32" rx="6" class="shape-partition"/>
+    <text x="48" y="70" font-weight="100" class="node-title text-partition">10</text>
+  </g>
+
+  <g id="node-p01" data-role="partition">
+    <rect x="20" y="92" width="56" height="32" rx="6" class="shape-partition"/>
+    <text x="48" y="112" font-weight="100" class="node-title text-partition">01</text>
+  </g>
+
+  <g id="node-p11" data-role="partition">
+    <rect x="20" y="134" width="56" height="32" rx="6" class="shape-partition"/>
+    <text x="48" y="154" font-weight="100" class="node-title text-partition">11</text>
+  </g>
+
+  <g id="node-p00" data-role="partition">
+    <rect x="20" y="176" width="56" height="32" rx="6" class="shape-partition"/>
+    <text x="48" y="196" font-weight="100" class="node-title text-partition">00</text>
+  </g>
 
   <!-- ── a0: pattern AND gate (top center, between the two sbd nodes) ── -->
   <g id="node-a0" data-role="pattern-and-gate">
