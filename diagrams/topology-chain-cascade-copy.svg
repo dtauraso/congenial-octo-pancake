@@ -3,16 +3,14 @@
   <metadata>
   {
     "diagram": "topology-chain-cascade",
-    "title": "Line Topology — Latch + AND Gate Backpressure",
+    "title": "Line Topology — Cascade Copy (no latches)",
     "nodes": [
       {"id": "in0",          "role": "input"},
-      {"id": "readLatch",    "role": "latch"},
       {"id": "readGate",     "role": "and-gate"},
       {"id": "i0",           "role": "inhibitor",             "index": 0},
       {"id": "sbd0",         "role": "streak-break-detector", "index": 0},
       {"id": "sd0",          "role": "streak-detector",       "index": 0},
       {"id": "syncGate",     "role": "and-gate"},
-      {"id": "detectorLatch","role": "latch"},
       {"id": "i1",           "role": "inhibitor",             "index": 1},
       {"id": "sbd1",         "role": "streak-break-detector", "index": 1},
       {"id": "sd1",          "role": "streak-detector",       "index": 1},
@@ -20,7 +18,7 @@
     ],
     "edges": [
       {"id": "readGateToI0",               "source": "readGate",     "target": "i0",           "kind": "chain"},
-      {"id": "i0ToI1",                     "source": "i0",           "target": "i1",           "kind": "chain", "note": "bypasses detectorLatch"},
+      {"id": "i0ToI1",                     "source": "i0",           "target": "i1",           "kind": "chain"},
       {"id": "i0-sbd0-old",               "source": "i0",           "target": "sbd0",         "kind": "edge-old"},
       {"id": "i0-sbd0-new",               "source": "i0",           "target": "sbd0",         "kind": "edge-new"},
       {"id": "i0-sd0-old",                "source": "i0",           "target": "sd0",          "kind": "edge-old"},
@@ -34,7 +32,6 @@
       {"id": "sd0-sd1",                   "source": "sd0",          "target": "sd1",          "kind": "streak"},
       {"id": "sbd0DoneToSyncGate",        "source": "sbd0",         "target": "syncGate",     "kind": "signal"},
       {"id": "sd0DoneToSyncGate",         "source": "sd0",          "target": "syncGate",     "kind": "signal"},
-      {"id": "syncGateToDetectorLatch",   "source": "syncGate",     "target": null,           "kind": "release", "note": "disconnected from detectorLatch"},
       {"id": "i1AckToReadGate",         "source": "i1",           "target": "readGate",     "kind": "signal"},
       {"id": "inputToReadGate",           "source": "in0",          "target": "readGate",     "kind": "chain"},
       {"id": "sd1-i1-ptr",               "source": "sd1",          "target": "i1",           "kind": "pointer"},
@@ -46,14 +43,12 @@
       "steps": [
         {"t": 0.06, "event": "in0 fires"},
         {"t": 0.19, "event": "readGate fires"},
-        {"t": 0.30, "event": "readGate value pulse traveling to i0 (readLatch bypassed)"},
+        {"t": 0.30, "event": "readGate value pulse traveling to i0"},
         {"t": 0.42, "event": "i0 fires"},
         {"t": 0.48, "event": "sbd0/sd0 fire; old-value reads complete (first beat)"},
         {"t": 0.52, "event": "new-value reads complete (second beat)"},
         {"t": 0.56, "event": "a0 fires (pattern reduction)"},
         {"t": 0.60, "event": "syncGate fires"},
-        {"t": 0.66, "event": "feedback ack starts from i1"},
-        {"t": 0.72, "event": "detectorLatch releases"},
         {"t": 0.84, "event": "i1 fires"},
         {"t": 0.90, "event": "feedback ack arrives at readGate — cycle closes"}
       ]
@@ -63,9 +58,8 @@
 
   <desc>
 in0                    — input node feeding values into the chain
-readLatch, detectorLatch — latches holding one value until their AND gate fires
-readGate, syncGate     — AND gates controlling latch release (backpressure)
-i0, i1                 — chain inhibitor stages (shift register cells)
+readGate, syncGate     — AND gates: readGate gates input by ack; syncGate aligns detector done signals
+i0, i1                 — chain inhibitor stages (shift register cells); cascade-copy: value flows i0 → i1 directly
 sbd0, sbd1             — streak-break detectors: fire on sign change (1,0 or 0,1)
 sd0, sd1               — streak detectors: fire on same-sign run (0,0 or 1,1)
 a0                     — pattern AND gate reducing sbd outputs to one signal
@@ -81,7 +75,6 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     /* ── Node shapes ─────────────────────────────────────────── */
     .shape-input    { fill: #e0e0e0; stroke: #666;    stroke-width: 2; }
     .shape-inhibitor{ fill: #fff3e0; stroke: #e65100; stroke-width: 2; }
-    .shape-latch    { fill: #e0f7fa; stroke: #00838f; stroke-width: 2; }
     .shape-and-gate { fill: #f3e5f5; stroke: #7b1fa2; stroke-width: 2; }
     .shape-pattern-and { fill: #e8eaf6; stroke: #283593; stroke-width: 2; }
     .shape-sbd0     { fill: #ffebee; stroke: #c62828; stroke-width: 2; }
@@ -97,7 +90,6 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     .text-sublabel { fill: #555; }
     .text-inhibitor{ fill: #e65100; }
     .text-inhibitor-sub { fill: #bf360c; }
-    .text-latch    { fill: #00838f; }
     .text-and-gate { fill: #7b1fa2; }
     .text-pattern-and { fill: #283593; }
     .text-sbd0     { fill: #c62828; }
@@ -110,7 +102,6 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     .and-out         { stroke: #283593; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-indigo); }
     .signal          { stroke: #7b1fa2; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-magenta); }
     .feedback-ack    { stroke: #7b1fa2; stroke-width: 2.5px; fill: none; stroke-dasharray: 6 3; marker-end: url(#arrow-magenta); }
-    .release         { stroke: #00838f; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-teal); }
     .streak          { stroke: #2e7d32; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-green); }
     .pointer         { stroke: #e65100; stroke-width: 1.5px; fill: none; stroke-dasharray: 4 3; marker-end: url(#arrow-orange); }
     .future-out      { stroke: #283593; stroke-width: 1.5px; fill: none; stroke-dasharray: 4 3; opacity: 0.5; marker-end: url(#arrow-indigo); }
@@ -146,7 +137,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   <rect width="1380" height="740" rx="8" class="diagram-bg"/>
 
   <!-- Title -->
-  <text x="690" y="30" class="title-text">Line Topology — Latch + AND Gate Backpressure</text>
+  <text x="690" y="30" class="title-text">Line Topology — Cascade Copy (no latches)</text>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- NODES                                                       -->
@@ -191,18 +182,12 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <text x="715" y="269" font-weight="100" class="node-type text-and-gate">AND</text>
   </g>
 
-  <!-- ── Pipeline row: in0, readLatch, i0, detectorLatch, i1 ── -->
+  <!-- ── Pipeline row: in0, i0, i1 (cascade-copy: no latches) ── -->
   <g id="node-in0" data-role="input">
     <rect x="20" y="280" width="80" height="60" rx="6" class="shape-input"/>
     <text x="60" y="301" font-weight="100" class="node-title text-input">in0</text>
     <text x="60" y="315" font-weight="100" class="node-sublabel text-sublabel">Input</text>
     <text x="60" y="329" font-weight="100" class="node-type text-sublabel">[0,1,1,0]→</text>
-  </g>
-
-  <g id="node-readLatch" data-role="latch">
-    <rect x="250" y="292" width="70" height="36" rx="6" class="shape-latch"/>
-    <text x="285" y="307" font-weight="100" class="node-title text-latch">readLatch</text>
-    <text x="285" y="321" font-weight="100" class="node-type text-latch">LATCH</text>
   </g>
 
   <g id="node-i0" data-role="inhibitor" data-index="0">
@@ -212,12 +197,6 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <text x="545" y="330" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
   </g>
 
-  <g id="node-detectorLatch" data-role="latch">
-    <rect x="780" y="292" width="70" height="36" rx="6" class="shape-latch"/>
-    <text x="815" y="307" font-weight="100" class="node-title text-latch">detectorLatch</text>
-    <text x="815" y="321" font-weight="100" class="node-type text-latch">LATCH</text>
-  </g>
-
   <g id="node-i1" data-role="inhibitor" data-index="1">
     <rect x="1060" y="280" width="90" height="60" rx="6" class="shape-inhibitor"/>
     <text x="1105" y="300" font-weight="100" class="node-title text-inhibitor">i1</text>
@@ -225,7 +204,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <text x="1105" y="330" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
   </g>
 
-  <!-- ── Gate row: readGate below readLatch ── -->
+  <!-- ── Gate row: readGate below pipeline ── -->
   <g id="node-readGate" data-role="and-gate">
     <rect x="250" y="400" width="70" height="36" rx="6" class="shape-and-gate"/>
     <text x="285" y="415" font-weight="100" class="node-title text-and-gate">readGate</text>
@@ -254,11 +233,6 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
   <g id="edge-inputToReadGate" data-role="edge" class="chain">
     <path d="M60,340 L60,418 L250,418"/>
     <text x="155" y="412" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">inputToReadGate</text>
-  </g>
-
-  <g id="edge-syncGateToDetectorLatch" data-role="edge" class="release">
-    <path d="M750,258 L940,258 L940,275 L860,275"/>
-    <text x="845" y="252" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">syncGateToDetectorLatch</text>
   </g>
 
 <g id="edge-i1AckToReadGate" data-role="edge" class="feedback-ack">
@@ -363,7 +337,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
 
   <g id="annotation-backpressure" data-role="annotation">
     <rect x="20" y="480" width="340" height="55" rx="4" class="behavior-note-bg"/>
-    <text x="190" y="498" font-size="11" class="behavior-note-text">Latches hold values. AND gates control release.</text>
+    <text x="190" y="498" font-size="11" class="behavior-note-text">Cascade copy: i0 → i1 directly (no latches).</text>
     <text x="190" y="513" font-size="11" class="behavior-note-text">i1 acks readGate after advancing →</text>
     <text x="190" y="528" font-size="11" class="behavior-note-text">backpressure: one value per pipeline cycle.</text>
   </g>
@@ -399,11 +373,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
     <text x="85"  y="662" text-anchor="start" class="legend-name" fill="#7b1fa2">↻ Feedback ack</text>
     <text x="220" y="662" text-anchor="start" class="legend-desc">Closes the backpressure cycle (i1 → readGate)</text>
 
-    <g class="release">      <line x1="40" y1="676" x2="70" y2="676"/></g>
-    <text x="85"  y="680" text-anchor="start" class="legend-name" fill="#00838f">Release</text>
-    <text x="220" y="680" text-anchor="start" class="legend-desc">AND output unlocks a latch to advance the next value</text>
-
-    <g class="streak">       <line x1="40" y1="694" x2="70" y2="694"/></g>
+<g class="streak">       <line x1="40" y1="694" x2="70" y2="694"/></g>
     <text x="85"  y="698" text-anchor="start" class="legend-name" fill="#2e7d32">Streak</text>
     <text x="220" y="698" text-anchor="start" class="legend-desc">Same-sign detection chain (sd0 → sd1)</text>
 
@@ -440,7 +410,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-<!-- Step 6: i0 fires after readLatchToI0 arrives (0.389) -->
+<!-- Step 6: i0 fires after readGateToI0 arrives (0.389) -->
   <rect x="500" y="280" width="90" height="60" rx="6"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
@@ -476,16 +446,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- Step 11: detectorLatch fires after release arrives (0.81) -->
-  <rect x="780" y="292" width="70" height="36" rx="6"
-        fill="white" stroke="none" opacity="0" pointer-events="none">
-    <animate attributeName="opacity"
-             values="0;0;0.5;0;0"
-             keyTimes="0;0.81;0.83;0.87;1"
-             dur="27s" repeatCount="indefinite"/>
-  </rect>
-
-  <!-- Step 12: i1 fires after detectorLatchToI1 arrives (0.93) -->
+<!-- Step 12: i1 fires after i0ToI1 arrives (0.93) -->
   <rect x="1060" y="280" width="90" height="60" rx="6"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
@@ -520,7 +481,7 @@ old/new paths (blue)   — sbd/sd READ values latched in i0/i1 (open arrow = rea
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Step 4: readGateToI0, chain pulse from readGate directly to i0 (readLatch bypassed), path≈403px -->
+  <!-- Step 4: readGateToI0, chain pulse from readGate directly to i0, path≈403px -->
   <path d="M285,400 L450,400 L450,310 L498,310"
         stroke="#333" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
