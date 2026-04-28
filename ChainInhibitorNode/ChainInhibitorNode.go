@@ -31,7 +31,7 @@ func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 
 		select {
 		case value := <-in.FromPrev:
-			fmt.Printf("%dCI: received %d (old=%d)\n", in.Id, value, in.HeldValue)
+			fmt.Printf("i%d: received %d (old=%d)\n", in.Id, value, in.HeldValue)
 			for _, ch := range in.ToEdge {
 				S.Send(ch, in.HeldValue)
 			}

@@ -1,14 +1,10 @@
 package Line
 
 import (
-	AN "github.com/dtauraso/congenial-octo-pancake/AndGateNode"
 	CI "github.com/dtauraso/congenial-octo-pancake/ChainInhibitorNode"
 	INN "github.com/dtauraso/congenial-octo-pancake/InputNode"
 	RGN "github.com/dtauraso/congenial-octo-pancake/ReadGateNode"
 	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
-	SBD "github.com/dtauraso/congenial-octo-pancake/StreakBreakDetector"
-	SD "github.com/dtauraso/congenial-octo-pancake/StreakDetector"
-	SGN "github.com/dtauraso/congenial-octo-pancake/SyncGateNode"
 )
 
 type Line struct {
@@ -24,7 +20,6 @@ func (l *Line) Setup() {
 
 	// Cascade-copy chain: in0 -> readGate -> i0 -> i1
 	// readGate: AND(in0 ready, i1 ack) → forwards value directly to i0
-	// syncGate: AND(sbd0 done, sd0 done) → downstream sync signal
 	// i1 acks readGate after receiving → backpressure
 
 	inputToReadGate := make(chan int, 1)
@@ -38,51 +33,10 @@ func (l *Line) Setup() {
 	readGate := RGN.ReadGateNode{Id: 0, FromValue: inputToReadGate, FromAck: i1AckToReadGate, ToLatch: readGateToI0}
 
 	i0ToI1 := make(chan int, 1)
-	sbd0DoneToSyncGate := make(chan int, 1)
-	sd0DoneToSyncGate := make(chan int, 1)
-	syncGateToDownstream := make(chan int, 1)
 	i0 := CI.NewChainInhibitorNode(0, readGateToI0, i0ToI1)
 
-	syncGate := SGN.SyncGateNode{Id: 0, FromSbdDone: sbd0DoneToSyncGate, FromSdDone: sd0DoneToSyncGate, ToRelease: syncGateToDownstream}
 	i1 := CI.NewChainInhibitorNode(1, i0ToI1, make(chan int, 3))
 	i1.ToAck = i1AckToReadGate
 
-	// sbd0: streak break detector on i0 (old+new from i0)
-	i0OldToSbd0 := make(chan int, 1)
-	i0NewToSbd0 := make(chan int, 1)
-	sbd0ToPartition := make(chan int, 3)
-	sbd0 := SBD.StreakBreakDetector{Id: 0, FromCurrentInhibitor: i0OldToSbd0, FromNextInhibitor: i0NewToSbd0, ToPartition: sbd0ToPartition, ToSync: sbd0DoneToSyncGate}
-
-	// sbd1: streak break detector on i1 (old+new from i1)
-	i1OldToSbd1 := make(chan int, 1)
-	i1NewToSbd1 := make(chan int, 1)
-	sbd1ToPartition := make(chan int, 3)
-	sbd1 := SBD.StreakBreakDetector{Id: 1, FromCurrentInhibitor: i1OldToSbd1, FromNextInhibitor: i1NewToSbd1, ToPartition: sbd1ToPartition}
-
-	// sd0: streak detector on i0 (old+new from i0)
-	i0OldToSd0 := make(chan int, 1)
-	i0NewToSd0 := make(chan int, 1)
-	sd0ToSd1 := make(chan int, 1)
-	sd0 := SD.StreakDetector{Id: 0, FromCurrentInhibitor: i0OldToSd0, FromNextInhibitor: i0NewToSd0, ToNextDetector: sd0ToSd1, ToSync: sd0DoneToSyncGate}
-
-	// sd1: streak detector on i1 (old+new from i1)
-	i1OldToSd1 := make(chan int, 1)
-	i1NewToSd1 := make(chan int, 1)
-	sd1 := SD.StreakDetector{Id: 1, CurrentInhibitor: &i1, StreakBreakDetector: &sbd1, SbdNextChan: i1NewToSbd1, SdNextChan: i1NewToSd1, FromCurrentInhibitor: i1OldToSd1, FromNextInhibitor: i1NewToSd1, FromPrevDetector: sd0ToSd1}
-
-	// Blue edges (old + new reads) intentionally not wired in cascade-copy mode
-	_ = i0OldToSbd0
-	_ = i0NewToSbd0
-	_ = i0OldToSd0
-	_ = i0NewToSd0
-	_ = i1OldToSbd1
-	_ = i1NewToSbd1
-	_ = i1OldToSd1
-	_ = i1NewToSd1
-
-	// a0: AND gate fed by sbd0 and sbd1
-	andOut := make(chan int, 3)
-	a0 := AN.AndGateNode{Id: 0, FromLeft: sbd0ToPartition, FromRight: sbd1ToPartition, ToNext: andOut}
-
-	l.Line = []S.Node{&input_node, &readGate, &i0, &syncGate, &i1, &sbd0, &sbd1, &sd0, &sd1, &a0}
+	l.Line = []S.Node{&input_node, &readGate, &i0, &i1}
 }

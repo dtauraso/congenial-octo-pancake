@@ -44,7 +44,7 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 		}
 
 		if g.HasValue && g.HasAck {
-			fmt.Printf("readGate%d: value=%d ack=%d → %d\n", g.Id, g.Value, g.AckVal, g.Value)
+			fmt.Printf("readGate: value=%d ack=%d → %d\n", g.Value, g.AckVal, g.Value)
 			S.Send(g.ToLatch, g.Value)
 			g.HasValue = false
 			g.HasAck = false
