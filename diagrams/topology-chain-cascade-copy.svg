@@ -6,9 +6,6 @@
     "title": "Line Topology — Cascade Copy (no latches)",
     "nodes": [
       {"id": "p10",          "role": "partition"},
-      {"id": "p01",          "role": "partition"},
-      {"id": "p11",          "role": "partition"},
-      {"id": "p00",          "role": "partition"},
       {"id": "in0",          "role": "input"},
       {"id": "readGate",     "role": "and-gate"},
       {"id": "i0",           "role": "inhibitor",             "index": 0},
@@ -37,7 +34,7 @@
   </metadata>
 
   <desc>
-10, 01, 11, 00         — partition nodes (binary pattern labels)
+10                     — partition node (binary pattern label)
 in0                    — input node feeding values into the chain
 readGate               — AND gate: gates input advance by i1 ack
 i0, i1                 — chain inhibitor stages (shift register cells); cascade-copy: value flows i0 → i1 directly
@@ -113,20 +110,6 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
     <text x="48" y="70" font-weight="100" class="node-title text-partition">10</text>
   </g>
 
-  <g id="node-p01" data-role="partition">
-    <rect x="20" y="92" width="56" height="32" rx="6" class="shape-partition"/>
-    <text x="48" y="112" font-weight="100" class="node-title text-partition">01</text>
-  </g>
-
-  <g id="node-p11" data-role="partition">
-    <rect x="20" y="134" width="56" height="32" rx="6" class="shape-partition"/>
-    <text x="48" y="154" font-weight="100" class="node-title text-partition">11</text>
-  </g>
-
-  <g id="node-p00" data-role="partition">
-    <rect x="20" y="176" width="56" height="32" rx="6" class="shape-partition"/>
-    <text x="48" y="196" font-weight="100" class="node-title text-partition">00</text>
-  </g>
 
   <!-- ── a0: pattern AND gate (top center, future wiring placeholder) ── -->
   <g id="node-a0" data-role="pattern-and-gate">
