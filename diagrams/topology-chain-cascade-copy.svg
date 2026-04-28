@@ -10,13 +10,16 @@
       {"id": "readGate",     "role": "and-gate"},
       {"id": "i0",           "role": "inhibitor",             "index": 0},
       {"id": "i1",           "role": "inhibitor",             "index": 1},
-      {"id": "a0",           "role": "pattern-and-gate"}
+      {"id": "a0",           "role": "pattern-and-gate"},
+      {"id": "inhibitRight0","role": "inhibit-right-gate"}
     ],
     "edges": [
       {"id": "readGateToI0",     "source": "readGate", "target": "i0",         "kind": "chain"},
       {"id": "i0ToI1",           "source": "i0",       "target": "i1",         "kind": "chain"},
       {"id": "i1AckToReadGate",  "source": "i1",       "target": "readGate",   "kind": "feedback-ack"},
       {"id": "inputToReadGate",  "source": "in0",      "target": "readGate",   "kind": "chain"},
+      {"id": "i0ToInhibitRight",         "source": "i0",           "target": "inhibitRight0","kind": "inhibit-in"},
+      {"id": "i1ToInhibitRight",         "source": "i1",           "target": "inhibitRight0","kind": "inhibit-in"}
     ],
     "timing": {
       "cycleSeconds": 27,
@@ -38,6 +41,7 @@ in0                    — input node feeding values into the chain
 readGate               — AND gate: gates input advance by i1 ack
 i0, i1                 — chain inhibitor stages (shift register cells); cascade-copy: value flows i0 → i1 directly
 a0                     — pattern AND gate (no inputs yet — future wiring placeholder)
+inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   </desc>
 
   <style>
@@ -52,6 +56,7 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
     .shape-inhibitor   { fill: #fff3e0; stroke: #e65100; stroke-width: 2; }
     .shape-and-gate    { fill: #f3e5f5; stroke: #7b1fa2; stroke-width: 2; }
     .shape-pattern-and { fill: #e8eaf6; stroke: #283593; stroke-width: 2; }
+    .shape-inhibit-right { fill: #fce4ec; stroke: #880e4f; stroke-width: 2; }
 
     /* ── Node text ───────────────────────────────────────────── */
     .node-title    { text-anchor: middle; font-weight: normal; font-size: 12px; }
@@ -65,11 +70,13 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
     .text-inhibitor-sub { fill: #bf360c; }
     .text-and-gate      { fill: #7b1fa2; }
     .text-pattern-and   { fill: #283593; }
+    .text-inhibit-right { fill: #880e4f; }
 
     /* ── Edge lines ──────────────────────────────────────────── */
     .chain        { stroke: #333;    stroke-width: 1.5px; fill: none; marker-end: url(#arrow); }
     .feedback-ack { stroke: #7b1fa2; stroke-width: 2.5px; fill: none; stroke-dasharray: 6 3; marker-end: url(#arrow-magenta); }
     .future-out   { stroke: #283593; stroke-width: 1.5px; fill: none; stroke-dasharray: 4 3; opacity: 0.5; marker-end: url(#arrow-indigo); }
+    .inhibit-in   { stroke: #880e4f; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-pink); }
 
     /* ── Edge labels ─────────────────────────────────────────── */
     .edge-label  { font-size: 12px; text-anchor: middle; }
@@ -91,6 +98,7 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
     <marker id="arrow"         markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#333"/></marker>
     <marker id="arrow-indigo"  markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#283593"/></marker>
     <marker id="arrow-magenta" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#7b1fa2"/></marker>
+    <marker id="arrow-pink"    markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#880e4f"/></marker>
   </defs>
 
   <!-- Background -->
@@ -139,6 +147,13 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
     <text x="1105" y="330" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
   </g>
 
+  <!-- ── inhibitRight0: above pipeline center, between i0 and i1 ── -->
+  <g id="node-inhibitRight0" data-role="inhibit-right-gate">
+    <rect x="760" y="200" width="90" height="36" rx="6" class="shape-inhibit-right"/>
+    <text x="805" y="215" font-weight="100" class="node-title text-inhibit-right">inhibitRight0</text>
+    <text x="805" y="229" font-weight="100" class="node-type text-inhibit-right">INHIBIT(L=1,R=0)</text>
+  </g>
+
   <!-- ── readGate inline on pipeline row, between in0 and i0 ── -->
   <g id="node-readGate" data-role="and-gate">
     <rect x="240" y="292" width="70" height="36" rx="6" class="shape-and-gate"/>
@@ -176,8 +191,18 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- EDGES — Future placeholder                                  -->
+  <!-- EDGES — InhibitRightGate inputs and output                  -->
   <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <g id="edge-i0ToInhibitRight" data-role="edge" class="inhibit-in">
+    <path d="M545,280 L545,254 L780,254 L780,236"/>
+    <text x="663" y="248" font-weight="300" fill="#880e4f" stroke="none" class="edge-label">i0ToInhibitRight</text>
+  </g>
+
+  <g id="edge-i1ToInhibitRight" data-role="edge" class="inhibit-in">
+    <path d="M1105,280 L1105,246 L850,246 L850,236"/>
+    <text x="978" y="240" font-weight="300" fill="#880e4f" stroke="none" class="edge-label">i1ToInhibitRight</text>
+  </g>
 
 
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -196,11 +221,11 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
   <!-- ═══════════════════════════════════════════════════════════ -->
 
   <g id="legend" data-role="legend">
-    <rect x="20" y="548" width="600" height="80" rx="4" class="legend-bg"/>
+    <rect x="20" y="548" width="600" height="98" rx="4" class="legend-bg"/>
     <text x="85"  y="566" text-anchor="start" class="legend-heading">Color</text>
     <text x="220" y="566" text-anchor="start" class="legend-heading">Description</text>
     <line x1="30"  y1="571" x2="610" y2="571" class="legend-divider" stroke-width="1"/>
-    <line x1="210" y1="553" x2="210" y2="628" class="legend-divider" stroke-width="0.5"/>
+    <line x1="210" y1="553" x2="210" y2="646" class="legend-divider" stroke-width="0.5"/>
 
     <g class="chain">        <line x1="40" y1="586" x2="70" y2="586"/></g>
     <text x="85"  y="590" text-anchor="start" class="legend-name" fill="#333">Chain</text>
@@ -209,6 +234,10 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
     <g class="feedback-ack"> <line x1="40" y1="604" x2="70" y2="604"/></g>
     <text x="85"  y="608" text-anchor="start" class="legend-name" fill="#7b1fa2">↻ Feedback ack</text>
     <text x="220" y="608" text-anchor="start" class="legend-desc">Closes the backpressure cycle (i1 → readGate)</text>
+
+    <g class="inhibit-in">  <line x1="40" y1="622" x2="70" y2="622"/></g>
+    <text x="85"  y="626" text-anchor="start" class="legend-name" fill="#880e4f">Inhibit in</text>
+    <text x="220" y="626" text-anchor="start" class="legend-desc">Input to InhibitRightGate (left=1 AND right=0 → fires)</text>
   </g>
 
 
@@ -245,6 +274,15 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
              keyTimes="0;0.40;0.46;0.52;1"
+             dur="27s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- inhibitRight0 fires after both i0 and i1 have sent held values (after i1 fires at 0.95) -->
+  <rect x="760" y="200" width="90" height="36" rx="6"
+        fill="white" stroke="none" opacity="0" pointer-events="none">
+    <animate attributeName="opacity"
+             values="0;0;0.5;0;0"
+             keyTimes="0;0.96;0.97;0.98;1"
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
@@ -286,6 +324,36 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
              keyTimes="0;0.175;0.18;0.389;0.394;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- i0ToInhibitRight pulse: i0 fires at ~0.46, sends HeldValue to gate, path≈290px -->
+  <path d="M545,280 L545,254 L780,254 L780,236"
+        stroke="#880e4f" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-290;-290"
+             keyTimes="0;0.46;0.56;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.455;0.46;0.56;0.565;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- i1ToInhibitRight pulse: i1 fires at ~0.95, sends HeldValue to gate, path≈350px -->
+  <path d="M1105,280 L1105,246 L850,246 L850,236"
+        stroke="#880e4f" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-350;-350"
+             keyTimes="0;0.95;0.97;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.945;0.95;0.97;0.975;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 

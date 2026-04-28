@@ -2,6 +2,7 @@ package Line
 
 import (
 	CI "github.com/dtauraso/congenial-octo-pancake/ChainInhibitorNode"
+	IRG "github.com/dtauraso/congenial-octo-pancake/InhibitRightGateNode"
 	INN "github.com/dtauraso/congenial-octo-pancake/InputNode"
 	RGN "github.com/dtauraso/congenial-octo-pancake/ReadGateNode"
 	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
@@ -33,10 +34,16 @@ func (l *Line) Setup() {
 	readGate := RGN.ReadGateNode{Id: 0, FromValue: inputToReadGate, FromAck: i1AckToReadGate, ToLatch: readGateToI0}
 
 	i0ToI1 := make(chan int, 1)
+	i0ToInhibitRight := make(chan int, 1)
 	i0 := CI.NewChainInhibitorNode(0, readGateToI0, i0ToI1)
+	i0.ToEdge = []chan<- int{i0ToInhibitRight}
 
+	i1ToInhibitRight := make(chan int, 1)
 	i1 := CI.NewChainInhibitorNode(1, i0ToI1, make(chan int, 3))
 	i1.ToAck = i1AckToReadGate
+	i1.ToEdge = []chan<- int{i1ToInhibitRight}
 
-	l.Line = []S.Node{&input_node, &readGate, &i0, &i1}
+	inhibitRight := IRG.InhibitRightGateNode{Id: 0, FromLeft: i0ToInhibitRight, FromRight: i1ToInhibitRight, ToOut: make(chan int, 1)}
+
+	l.Line = []S.Node{&input_node, &readGate, &i0, &i1, &inhibitRight}
 }
