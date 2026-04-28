@@ -3,7 +3,7 @@
   <metadata>
   {
     "diagram": "topology-chain-cascade",
-    "title": "Line Topology — Cascade Copy (no latches)",
+    "title": "Line Topology — Cascade Copy",
     "nodes": [
       {"id": "p10",          "role": "partition"},
       {"id": "in0",          "role": "input"},
@@ -97,7 +97,7 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
   <rect width="1380" height="740" rx="8" class="diagram-bg"/>
 
   <!-- Title -->
-  <text x="690" y="30" class="title-text">Line Topology — Cascade Copy (no latches)</text>
+  <text x="690" y="30" class="title-text">Line Topology — Cascade Copy</text>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- NODES                                                       -->
@@ -117,7 +117,7 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
     <text x="821" y="81" font-weight="100" class="node-type text-pattern-and">AND</text>
   </g>
 
-  <!-- ── Pipeline row: in0, i0, i1 (cascade-copy: no latches) ── -->
+  <!-- ── Pipeline row: in0, i0, i1 ── -->
   <g id="node-in0" data-role="input">
     <rect x="20" y="280" width="80" height="60" rx="6" class="shape-input"/>
     <text x="60" y="301" font-weight="100" class="node-title text-input">in0</text>
@@ -186,7 +186,7 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
 
   <g id="annotation-backpressure" data-role="annotation">
     <rect x="20" y="480" width="340" height="55" rx="4" class="behavior-note-bg"/>
-    <text x="190" y="498" font-size="11" class="behavior-note-text">Cascade copy: i0 → i1 directly (no latches).</text>
+    <text x="190" y="498" font-size="11" class="behavior-note-text">Cascade copy: i0 → i1 directly.</text>
     <text x="190" y="513" font-size="11" class="behavior-note-text">i1 acks readGate after advancing →</text>
     <text x="190" y="528" font-size="11" class="behavior-note-text">backpressure: one value per pipeline cycle.</text>
   </g>
