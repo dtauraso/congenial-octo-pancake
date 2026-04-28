@@ -17,7 +17,6 @@
       {"id": "i0ToI1",           "source": "i0",       "target": "i1",         "kind": "chain"},
       {"id": "i1AckToReadGate",  "source": "i1",       "target": "readGate",   "kind": "feedback-ack"},
       {"id": "inputToReadGate",  "source": "in0",      "target": "readGate",   "kind": "chain"},
-      {"id": "a0-future-out",    "source": "a0",       "target": "downstream", "kind": "future-out"}
     ],
     "timing": {
       "cycleSeconds": 27,
@@ -180,10 +179,6 @@ a0                     — pattern AND gate (no inputs yet — future wiring pla
   <!-- EDGES — Future placeholder                                  -->
   <!-- ═══════════════════════════════════════════════════════════ -->
 
-  <g id="edge-a0-future-out" data-role="edge" class="future-out">
-    <path d="M856,70 L912,70"/>
-    <text x="918" y="74" font-weight="300" fill="#283593" stroke="none" class="edge-label" text-anchor="start" opacity="0.6">pattern out (future)</text>
-  </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- ANNOTATION                                                  -->
