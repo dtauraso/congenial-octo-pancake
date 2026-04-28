@@ -13,9 +13,8 @@ type Line struct {
 }
 
 func (l *Line) Setup() {
-	input := make(chan int, 4)
+	input := make(chan int, 3)
 	input <- 0
-	input <- 1
 	input <- 1
 	input <- 0
 
