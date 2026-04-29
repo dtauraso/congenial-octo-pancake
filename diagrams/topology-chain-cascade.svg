@@ -24,12 +24,12 @@
       "pulseSpeedPxPerSec": 80,
       "steps": [
         {"t": 0.000, "event": "i1 fires → i1AckToReadGate + i1ToInhibitRight depart"},
-        {"t": 0.138, "event": "i1ToInhibitRight arrives at inhibitRight0 (waiting for i0)"},
-        {"t": 0.461, "event": "i1AckToReadGate arrives at readGate; readGate waits for in0"},
-        {"t": 0.632, "event": "in0 fires → inputToReadGate departs"},
-        {"t": 0.696, "event": "inputToReadGate arrives; readGate fires (ack already waiting) → readGateToI0"},
-        {"t": 0.783, "event": "readGateToI0 arrives; i0 fires → i0ToI1 + i0ToInhibitRight depart"},
-        {"t": 0.912, "event": "i0ToInhibitRight arrives; inhibitRight0 fires"},
+        {"t": 0.074, "event": "i1ToInhibitRight arrives at inhibitRight0 (waiting for i0)"},
+        {"t": 0.331, "event": "i1AckToReadGate arrives at readGate; readGate waits for in0"},
+        {"t": 0.739, "event": "in0 fires → inputToReadGate departs"},
+        {"t": 0.826, "event": "inputToReadGate arrives; readGate fires (ack already waiting) → readGateToI0"},
+        {"t": 0.913, "event": "readGateToI0 arrives; i0 fires → i0ToI1 + i0ToInhibitRight depart"},
+        {"t": 0.987, "event": "i0ToInhibitRight arrives; inhibitRight0 fires"},
         {"t": 1.000, "event": "i0ToI1 arrives; i1 fires → t=0 next cycle"}
       ]
     }
@@ -114,31 +114,31 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   </g>
 
   <g id="node-i0" data-role="inhibitor" data-index="0">
-    <rect x="500" y="280" width="90" height="60" rx="6" class="shape-inhibitor"/>
-    <text x="545" y="300" font-weight="100" class="node-title text-inhibitor">i0</text>
-    <text x="545" y="315" font-weight="100" class="node-sublabel text-inhibitor-sub">Chain</text>
-    <text x="545" y="330" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
+    <rect x="550" y="280" width="90" height="60" rx="6" class="shape-inhibitor"/>
+    <text x="595" y="300" font-weight="100" class="node-title text-inhibitor">i0</text>
+    <text x="595" y="315" font-weight="100" class="node-sublabel text-inhibitor-sub">Chain</text>
+    <text x="595" y="330" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
   </g>
 
   <g id="node-i1" data-role="inhibitor" data-index="1">
-    <rect x="1060" y="280" width="90" height="60" rx="6" class="shape-inhibitor"/>
-    <text x="1105" y="300" font-weight="100" class="node-title text-inhibitor">i1</text>
-    <text x="1105" y="315" font-weight="100" class="node-sublabel text-inhibitor-sub">Chain</text>
-    <text x="1105" y="330" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
+    <rect x="830" y="280" width="90" height="60" rx="6" class="shape-inhibitor"/>
+    <text x="875" y="300" font-weight="100" class="node-title text-inhibitor">i1</text>
+    <text x="875" y="315" font-weight="100" class="node-sublabel text-inhibitor-sub">Chain</text>
+    <text x="875" y="330" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
   </g>
 
   <!-- ── inhibitRight0: above pipeline center, between i0 and i1 ── -->
   <g id="node-inhibitRight0" data-role="inhibit-right-gate">
-    <rect x="760" y="200" width="90" height="36" rx="6" class="shape-inhibit-right"/>
-    <text x="805" y="215" font-weight="100" class="node-title text-inhibit-right">inhibitRight0</text>
-    <text x="805" y="229" font-weight="100" class="node-type text-inhibit-right">INHIBIT(L=1,R=0)</text>
+    <rect x="690" y="200" width="90" height="36" rx="6" class="shape-inhibit-right"/>
+    <text x="735" y="215" font-weight="100" class="node-title text-inhibit-right">inhibitRight0</text>
+    <text x="735" y="229" font-weight="100" class="node-type text-inhibit-right">INHIBIT(L=1,R=0)</text>
   </g>
 
   <!-- ── readGate inline on pipeline row, between in0 and i0 ── -->
   <g id="node-readGate" data-role="and-gate">
-    <rect x="240" y="292" width="70" height="36" rx="6" class="shape-and-gate"/>
-    <text x="275" y="307" font-weight="100" class="node-title text-and-gate">readGate</text>
-    <text x="275" y="321" font-weight="100" class="node-type text-and-gate">AND</text>
+    <rect x="290" y="292" width="70" height="36" rx="6" class="shape-and-gate"/>
+    <text x="325" y="307" font-weight="100" class="node-title text-and-gate">readGate</text>
+    <text x="325" y="321" font-weight="100" class="node-type text-and-gate">AND</text>
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -146,14 +146,14 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   <!-- ═══════════════════════════════════════════════════════════ -->
 
   <g id="edge-readGateToI0" data-role="edge" class="chain">
-    <line x1="310" y1="310" x2="498" y2="310"/>
-    <text x="404" y="324" font-weight="300" fill="#111" stroke="none" class="edge-label">readGateToI0</text>
-    <text x="490" y="324" font-weight="300" fill="#333" stroke="none" class="value-label" text-anchor="end">0|1</text>
+    <line x1="360" y1="310" x2="548" y2="310"/>
+    <text x="454" y="324" font-weight="300" fill="#111" stroke="none" class="edge-label">readGateToI0</text>
+    <text x="540" y="324" font-weight="300" fill="#333" stroke="none" class="value-label" text-anchor="end">0|1</text>
   </g>
 
   <g id="edge-i0ToI1" data-role="edge" class="chain">
-    <line x1="590" y1="310" x2="1058" y2="310"/>
-    <text x="824" y="324" font-weight="300" fill="#111" stroke="none" class="edge-label">i0ToI1</text>
+    <line x1="640" y1="310" x2="828" y2="310"/>
+    <text x="734" y="324" font-weight="300" fill="#111" stroke="none" class="edge-label">i0ToI1</text>
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -161,13 +161,13 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   <!-- ═══════════════════════════════════════════════════════════ -->
 
   <g id="edge-inputToReadGate" data-role="edge" class="chain">
-    <line x1="100" y1="310" x2="238" y2="310"/>
-    <text x="169" y="324" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">inputToReadGate</text>
+    <line x1="100" y1="310" x2="288" y2="310"/>
+    <text x="194" y="324" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">inputToReadGate</text>
   </g>
 
   <g id="edge-i1AckToReadGate" data-role="edge" class="feedback-ack">
-    <path d="M1105,340 L1105,418 L275,418 L275,330"/>
-    <text x="690" y="434" font-weight="600" fill="#7b1fa2" stroke="none" class="edge-label">↻ i1AckToReadGate</text>
+    <path d="M875,340 L875,418 L325,418 L325,330"/>
+    <text x="600" y="434" font-weight="600" fill="#7b1fa2" stroke="none" class="edge-label">↻ i1AckToReadGate</text>
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -175,13 +175,13 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   <!-- ═══════════════════════════════════════════════════════════ -->
 
   <g id="edge-i0ToInhibitRight" data-role="edge" class="inhibit-in">
-    <path d="M545,280 L545,254 L780,254 L780,236"/>
-    <text x="663" y="270" font-weight="300" fill="#880e4f" stroke="none" class="edge-label">i0ToInhibitRight</text>
+    <path d="M595,280 L595,254 L710,254 L710,236"/>
+    <text x="652" y="270" font-weight="300" fill="#880e4f" stroke="none" class="edge-label">i0ToInhibitRight</text>
   </g>
 
   <g id="edge-i1ToInhibitRight" data-role="edge" class="inhibit-in">
-    <path d="M1105,280 L1105,246 L850,246 L850,236"/>
-    <text x="978" y="262" font-weight="300" fill="#880e4f" stroke="none" class="edge-label">i1ToInhibitRight</text>
+    <path d="M875,280 L875,246 L760,246 L760,236"/>
+    <text x="817" y="262" font-weight="300" fill="#880e4f" stroke="none" class="edge-label">i1ToInhibitRight</text>
   </g>
 
 
@@ -226,20 +226,20 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   <!-- One full backpressure cycle: 27s loop. 80 px/s throughout. -->
   <!-- Timeline (fractions of 27s):                               -->
   <!--   0.000  i1 fires → ack + i1ToInhibitRight depart from i1  -->
-  <!--   0.138  i1ToInhibitRight arrives at inhibitRight0 (waiting)-->
-  <!--   0.000→0.461  ack travels full 996px i1→readGate          -->
-  <!--   0.461  ack arrives at readGate; waits for in0             -->
-  <!--   0.632  in0 fires → inputToReadGate departs               -->
-  <!--   0.696  inputToReadGate arrives → readGate fires           -->
-  <!--   0.783  i0 fires → i0ToI1 + i0ToInhibitRight depart       -->
-  <!--   0.912  i0ToInhibitRight arrives → inhibitRight0 fires     -->
+  <!--   0.074  i1ToInhibitRight arrives at inhibitRight0 (waiting)-->
+  <!--   0.000→0.331  ack travels full 716px i1→readGate          -->
+  <!--   0.331  ack arrives at readGate; waits for in0             -->
+  <!--   0.739  in0 fires → inputToReadGate departs               -->
+  <!--   0.826  inputToReadGate arrives → readGate fires           -->
+  <!--   0.913  i0 fires → i0ToI1 + i0ToInhibitRight depart       -->
+  <!--   0.987  i0ToInhibitRight arrives → inhibitRight0 fires     -->
   <!--   1.000  i0ToI1 arrives → i1 fires (=t=0 next cycle)       -->
   <!-- ═══════════════════════════════════════════════════════════ -->
 
   <!-- Node highlight overlays -->
 
   <!-- i1 fires at t=0.000 (starts visible, fades; also fires at t=1.000=cycle-wrap) -->
-  <rect x="1060" y="280" width="90" height="60" rx="6"
+  <rect x="830" y="280" width="90" height="60" rx="6"
         fill="white" stroke="none" opacity="0.5" pointer-events="none">
     <animate attributeName="opacity"
              values="0.5;0;0;0.5;0"
@@ -247,63 +247,62 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- inhibitRight0 fires at t=0.912 -->
-  <rect x="760" y="200" width="90" height="36" rx="6"
+  <!-- inhibitRight0 fires at t=0.987 -->
+  <rect x="690" y="200" width="90" height="36" rx="6"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.907;0.912;0.962;1"
+             keyTimes="0;0.982;0.987;0.997;1"
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- in0 fires at t=0.632 -->
+  <!-- in0 fires at t=0.739 -->
   <rect x="20" y="280" width="80" height="60" rx="6"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.627;0.632;0.682;1"
+             keyTimes="0;0.734;0.739;0.789;1"
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- readGate fires at t=0.696 -->
-  <rect x="240" y="292" width="70" height="36" rx="6"
+  <!-- readGate fires at t=0.826 -->
+  <rect x="290" y="292" width="70" height="36" rx="6"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.691;0.696;0.746;1"
+             keyTimes="0;0.821;0.826;0.876;1"
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- i0 fires at t=0.783 -->
-  <rect x="500" y="280" width="90" height="60" rx="6"
+  <!-- i0 fires at t=0.913 -->
+  <rect x="550" y="280" width="90" height="60" rx="6"
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.778;0.783;0.833;1"
+             keyTimes="0;0.908;0.913;0.963;1"
              dur="27s" repeatCount="indefinite"/>
   </rect>
 
   <!-- Edge pulses at 80 px/s -->
 
-  <!-- i1AckToReadGate: 996px → 12.45s; departs i1 at t=0.000, arrives readGate at t=0.461 -->
-  <!-- Single copy — full 996px visible in one cycle. Starts at cycle boundary (i1 fires).   -->
-  <path d="M1105,340 L1105,418 L275,418 L275,330"
+  <!-- i1AckToReadGate: 716px → 8.95s; departs i1 at t=0.000, arrives readGate at t=0.331 -->
+  <path d="M875,340 L875,418 L325,418 L325,330"
         stroke="#7b1fa2" stroke-width="4" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="1" pointer-events="none">
-    <title>Feedback ack: i1 → readGate, 996px at 80px/s</title>
+    <title>Feedback ack: i1 → readGate, 716px at 80px/s</title>
     <animate attributeName="stroke-dashoffset"
-             values="0;-996;-996"
-             keyTimes="0;0.461;1"
+             values="0;-716;-716"
+             keyTimes="0;0.331;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="1;1;0;0"
-             keyTimes="0;0.461;0.466;1"
+             keyTimes="0;0.331;0.336;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
   <!-- Flash at i1 ack origin (fires at t=0, cycle boundary) -->
-  <circle cx="1105" cy="340" r="10"
+  <circle cx="875" cy="340" r="10"
           fill="#7b1fa2" stroke="none"
           opacity="0.6" pointer-events="none">
     <title>Feedback ack origin (i1)</title>
@@ -313,78 +312,78 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
              dur="27s" repeatCount="indefinite"/>
   </circle>
 
-  <!-- i1ToInhibitRight: 299px → 3.738s; depart 0.000, arrive 0.138 -->
-  <path d="M1105,280 L1105,246 L850,246 L850,236"
+  <!-- i1ToInhibitRight: 159px → 1.99s; depart 0.000, arrive 0.074 -->
+  <path d="M875,280 L875,246 L760,246 L760,236"
         stroke="#880e4f" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="1" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
-             values="0;-299;-299"
-             keyTimes="0;0.138;1"
+             values="0;-159;-159"
+             keyTimes="0;0.074;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="1;1;0;0"
-             keyTimes="0;0.138;0.143;1"
+             keyTimes="0;0.074;0.079;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- inputToReadGate: 138px → 1.725s; depart 0.632, arrive 0.696 -->
-  <path d="M100,310 L238,310"
-        stroke="#333" stroke-width="3" fill="none"
-        stroke-dasharray="20,9999" stroke-dashoffset="0"
-        opacity="0" pointer-events="none">
-    <animate attributeName="stroke-dashoffset"
-             values="0;0;-138;-138"
-             keyTimes="0;0.632;0.696;1"
-             dur="27s" repeatCount="indefinite"/>
-    <animate attributeName="opacity"
-             values="0;0;1;1;0;0"
-             keyTimes="0;0.627;0.632;0.696;0.701;1"
-             dur="27s" repeatCount="indefinite"/>
-  </path>
-
-  <!-- readGateToI0: 188px → 2.35s; depart 0.696, arrive 0.783 -->
-  <path d="M310,310 L498,310"
+  <!-- inputToReadGate: 188px → 2.35s; depart 0.739, arrive 0.826 -->
+  <path d="M100,310 L288,310"
         stroke="#333" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;0;-188;-188"
-             keyTimes="0;0.696;0.783;1"
+             keyTimes="0;0.739;0.826;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.691;0.696;0.783;0.788;1"
+             keyTimes="0;0.734;0.739;0.826;0.831;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
-  <!-- i0ToInhibitRight: 279px → 3.488s; depart 0.783, arrive 0.912 -->
-  <path d="M545,280 L545,254 L780,254 L780,236"
-        stroke="#880e4f" stroke-width="3" fill="none"
-        stroke-dasharray="20,9999" stroke-dashoffset="0"
-        opacity="0" pointer-events="none">
-    <animate attributeName="stroke-dashoffset"
-             values="0;0;-279;-279"
-             keyTimes="0;0.783;0.912;1"
-             dur="27s" repeatCount="indefinite"/>
-    <animate attributeName="opacity"
-             values="0;0;1;1;0;0"
-             keyTimes="0;0.778;0.783;0.912;0.917;1"
-             dur="27s" repeatCount="indefinite"/>
-  </path>
-
-  <!-- i0ToI1: 468px → 5.85s; depart 0.783, arrive 1.000 (i1 fires at cycle boundary) -->
-  <path d="M590,310 L1058,310"
+  <!-- readGateToI0: 188px → 2.35s; depart 0.826, arrive 0.913 -->
+  <path d="M360,310 L548,310"
         stroke="#333" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
-             values="0;0;-468;-468"
-             keyTimes="0;0.783;1;1"
+             values="0;0;-188;-188"
+             keyTimes="0;0.826;0.913;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.821;0.826;0.913;0.918;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- i0ToInhibitRight: 159px → 1.99s; depart 0.913, arrive 0.987 -->
+  <path d="M595,280 L595,254 L710,254 L710,236"
+        stroke="#880e4f" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-159;-159"
+             keyTimes="0;0.913;0.987;1"
+             dur="27s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.908;0.913;0.987;0.992;1"
+             dur="27s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- i0ToI1: 188px → 2.35s; depart 0.913, arrive 1.000 (i1 fires at cycle boundary) -->
+  <path d="M640,310 L828,310"
+        stroke="#333" stroke-width="3" fill="none"
+        stroke-dasharray="20,9999" stroke-dashoffset="0"
+        opacity="0" pointer-events="none">
+    <animate attributeName="stroke-dashoffset"
+             values="0;0;-188;-188"
+             keyTimes="0;0.913;1;1"
              dur="27s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0"
-             keyTimes="0;0.778;0.783;0.999;1"
+             keyTimes="0;0.908;0.913;0.999;1"
              dur="27s" repeatCount="indefinite"/>
   </path>
 
@@ -392,183 +391,183 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   <!-- ANIMATION — Value labels (81s = 3×27s)                     -->
   <!-- Label keyTimes = (in_cycle_fraction + cycle_index) / 3.    -->
   <!-- Pulse windows per 27s cycle:                               -->
-  <!--   i1ToInhibitRight: 0.000→0.138                            -->
-  <!--   inputToReadGate:  0.632→0.696                            -->
-  <!--   readGateToI0:     0.696→0.783                            -->
-  <!--   i0ToInhibitRight: 0.783→0.912                            -->
-  <!--   i0ToI1:           0.783→1.000                            -->
+  <!--   i1ToInhibitRight: 0.000→0.074                            -->
+  <!--   inputToReadGate:  0.739→0.826                            -->
+  <!--   readGateToI0:     0.826→0.913                            -->
+  <!--   i0ToInhibitRight: 0.913→0.987                            -->
+  <!--   i0ToI1:           0.913→1.000                            -->
   <!-- ═══════════════════════════════════════════════════════════ -->
 
   <!-- ── i1ToInhibitRight value labels ── -->
-  <!-- cycle0: value=0; 81s: 0.000→0.046 -->
+  <!-- cycle0: value=0; 81s: 0.000→0.025 -->
   <g opacity="1" pointer-events="none">
-    <animateMotion path="M1105,280 L1105,246 L850,246 L850,236"
-      keyTimes="0;0.046;1" keyPoints="0;1;1"
+    <animateMotion path="M875,280 L875,246 L760,246 L760,236"
+      keyTimes="0;0.025;1" keyPoints="0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="1;1;0;0"
-      keyTimes="0;0.046;0.051;1"
+      keyTimes="0;0.025;0.030;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
   </g>
-  <!-- cycle1: value=0; 81s: 0.333→0.379 -->
+  <!-- cycle1: value=0; 81s: 0.333→0.358 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M1105,280 L1105,246 L850,246 L850,236"
-      keyTimes="0;0.333;0.379;1" keyPoints="0;0;1;1"
+    <animateMotion path="M875,280 L875,246 L760,246 L760,236"
+      keyTimes="0;0.333;0.358;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.331;0.333;0.379;0.384;1"
+      keyTimes="0;0.331;0.333;0.358;0.363;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
   </g>
-  <!-- cycle2: value=1; 81s: 0.667→0.713 -->
+  <!-- cycle2: value=1; 81s: 0.667→0.691 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M1105,280 L1105,246 L850,246 L850,236"
-      keyTimes="0;0.667;0.713;1" keyPoints="0;0;1;1"
+    <animateMotion path="M875,280 L875,246 L760,246 L760,236"
+      keyTimes="0;0.667;0.691;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.665;0.667;0.713;0.718;1"
+      keyTimes="0;0.665;0.667;0.691;0.696;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">1</text>
   </g>
 
   <!-- ── inputToReadGate value labels ── -->
-  <!-- cycle0: value=0; 81s: 0.211→0.232 -->
+  <!-- cycle0: value=0; 81s: 0.246→0.275 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M100,300 L238,300"
-      keyTimes="0;0.211;0.232;1" keyPoints="0;0;1;1"
+    <animateMotion path="M100,300 L288,300"
+      keyTimes="0;0.246;0.275;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.209;0.211;0.232;0.237;1"
+      keyTimes="0;0.244;0.246;0.275;0.280;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
-  <!-- cycle1: value=1; 81s: 0.544→0.565 -->
+  <!-- cycle1: value=1; 81s: 0.580→0.609 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M100,300 L238,300"
-      keyTimes="0;0.544;0.565;1" keyPoints="0;0;1;1"
+    <animateMotion path="M100,300 L288,300"
+      keyTimes="0;0.580;0.609;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.542;0.544;0.565;0.570;1"
+      keyTimes="0;0.578;0.580;0.609;0.614;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">1</text>
   </g>
-  <!-- cycle2: value=0; 81s: 0.877→0.899 -->
+  <!-- cycle2: value=0; 81s: 0.913→0.942 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M100,300 L238,300"
-      keyTimes="0;0.877;0.899;1" keyPoints="0;0;1;1"
+    <animateMotion path="M100,300 L288,300"
+      keyTimes="0;0.913;0.942;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.875;0.877;0.899;0.904;1"
+      keyTimes="0;0.911;0.913;0.942;0.947;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
 
   <!-- ── readGateToI0 value labels ── -->
-  <!-- cycle0: value=0; 81s: 0.232→0.261 -->
+  <!-- cycle0: value=0; 81s: 0.275→0.304 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M310,300 L498,300"
-      keyTimes="0;0.232;0.261;1" keyPoints="0;0;1;1"
+    <animateMotion path="M360,300 L548,300"
+      keyTimes="0;0.275;0.304;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.230;0.232;0.261;0.266;1"
+      keyTimes="0;0.273;0.275;0.304;0.309;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
-  <!-- cycle1: value=1; 81s: 0.565→0.594 -->
+  <!-- cycle1: value=1; 81s: 0.609→0.638 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M310,300 L498,300"
-      keyTimes="0;0.565;0.594;1" keyPoints="0;0;1;1"
+    <animateMotion path="M360,300 L548,300"
+      keyTimes="0;0.609;0.638;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.563;0.565;0.594;0.599;1"
+      keyTimes="0;0.607;0.609;0.638;0.643;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">1</text>
   </g>
-  <!-- cycle2: value=0; 81s: 0.899→0.928 -->
+  <!-- cycle2: value=0; 81s: 0.942→0.971 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M310,300 L498,300"
-      keyTimes="0;0.899;0.928;1" keyPoints="0;0;1;1"
+    <animateMotion path="M360,300 L548,300"
+      keyTimes="0;0.942;0.971;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.897;0.899;0.928;0.933;1"
+      keyTimes="0;0.940;0.942;0.971;0.976;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
 
   <!-- ── i0ToInhibitRight value labels ── -->
-  <!-- cycle0: value=0; 81s: 0.261→0.304 -->
+  <!-- cycle0: value=0; 81s: 0.304→0.329 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M545,280 L545,254 L780,254 L780,236"
-      keyTimes="0;0.261;0.304;1" keyPoints="0;0;1;1"
+    <animateMotion path="M595,280 L595,254 L710,254 L710,236"
+      keyTimes="0;0.304;0.329;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.259;0.261;0.304;0.309;1"
+      keyTimes="0;0.302;0.304;0.329;0.334;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
   </g>
-  <!-- cycle1: value=1; 81s: 0.594→0.637 -->
+  <!-- cycle1: value=1; 81s: 0.638→0.662 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M545,280 L545,254 L780,254 L780,236"
-      keyTimes="0;0.594;0.637;1" keyPoints="0;0;1;1"
+    <animateMotion path="M595,280 L595,254 L710,254 L710,236"
+      keyTimes="0;0.638;0.662;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.592;0.594;0.637;0.642;1"
+      keyTimes="0;0.636;0.638;0.662;0.667;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">1</text>
   </g>
-  <!-- cycle2: value=0; 81s: 0.928→0.971 -->
+  <!-- cycle2: value=0; 81s: 0.971→0.996 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M545,280 L545,254 L780,254 L780,236"
-      keyTimes="0;0.928;0.971;1" keyPoints="0;0;1;1"
+    <animateMotion path="M595,280 L595,254 L710,254 L710,236"
+      keyTimes="0;0.971;0.996;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.926;0.928;0.971;0.976;1"
+      keyTimes="0;0.969;0.971;0.996;0.999;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
   </g>
 
   <!-- ── i0ToI1 value labels ── -->
-  <!-- cycle0: value=0; 81s: 0.261→0.333 -->
+  <!-- cycle0: value=0; 81s: 0.304→0.333 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M590,300 L1058,300"
-      keyTimes="0;0.261;0.333;1" keyPoints="0;0;1;1"
+    <animateMotion path="M640,300 L828,300"
+      keyTimes="0;0.304;0.333;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.259;0.261;0.333;0.338;1"
+      keyTimes="0;0.302;0.304;0.333;0.338;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
-  <!-- cycle1: value=1; 81s: 0.594→0.667 -->
+  <!-- cycle1: value=1; 81s: 0.638→0.667 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M590,300 L1058,300"
-      keyTimes="0;0.594;0.667;1" keyPoints="0;0;1;1"
+    <animateMotion path="M640,300 L828,300"
+      keyTimes="0;0.638;0.667;1" keyPoints="0;0;1;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.592;0.594;0.667;0.672;1"
+      keyTimes="0;0.636;0.638;0.667;0.672;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">1</text>
   </g>
-  <!-- cycle2: value=0; 81s: 0.928→1.000 -->
+  <!-- cycle2: value=0; 81s: 0.971→1.000 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M590,300 L1058,300"
-      keyTimes="0;0.928;1" keyPoints="0;0;1"
+    <animateMotion path="M640,300 L828,300"
+      keyTimes="0;0.971;1" keyPoints="0;0;1"
       dur="81s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0"
-      keyTimes="0;0.926;0.928;0.999;1"
+      keyTimes="0;0.969;0.971;0.999;1"
       dur="81s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
