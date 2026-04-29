@@ -420,7 +420,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
   </g>
-  <!-- cycle2: value=1; 81s: 0.667→0.691 -->
+  <!-- cycle2: i1 held=0 (input "1" hasn't propagated through both stages within 3 cycles) -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M875,270 L875,236 L760,236 L760,226"
       keyTimes="0;0.667;0.706;1" keyPoints="0;0;1;1"
@@ -429,7 +429,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
       keyTimes="0;0.665;0.667;0.706;0.711;1"
       dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
-    <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">1</text>
+    <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
   </g>
 
   <!-- ── inputToReadGate value labels ── -->
@@ -502,8 +502,8 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
 
-  <!-- ── i0ToInhibitRight value labels ── -->
-  <!-- cycle0: value=0; 81s: 0.304→0.329 -->
+  <!-- ── i0ToInhibitRight value labels (i0 emits previously-held value to inhibitRight0) ── -->
+  <!-- cycle0: held=0 (initial) -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M595,270 L595,244 L710,244 L710,226"
       keyTimes="0;0.287;0.326;1" keyPoints="0;0;1;1"
@@ -514,7 +514,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
   </g>
-  <!-- cycle1: value=1; 81s: 0.638→0.662 -->
+  <!-- cycle1: held=0 (cycle 0's input was 0) -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M595,270 L595,244 L710,244 L710,226"
       keyTimes="0;0.620;0.660;1" keyPoints="0;0;1;1"
@@ -523,9 +523,9 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
       keyTimes="0;0.618;0.620;0.660;0.665;1"
       dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
-    <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">1</text>
+    <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
   </g>
-  <!-- cycle2: value=0; 81s: 0.971→0.996 -->
+  <!-- cycle2: held=1 (cycle 1's input was 1) -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M595,270 L595,244 L710,244 L710,226"
       keyTimes="0;0.954;0.993;1" keyPoints="0;0;1;1"
@@ -534,11 +534,11 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
       keyTimes="0;0.952;0.954;0.993;0.998;1"
       dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
-    <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
+    <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">1</text>
   </g>
 
-  <!-- ── i0ToI1 value labels ── -->
-  <!-- cycle0: value=0; 81s: 0.304→0.333 -->
+  <!-- ── i0ToI1 value labels (i0 emits previously-held value on each readGate pulse) ── -->
+  <!-- cycle0: held=0 (initial) -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M640,300 L828,300"
       keyTimes="0;0.287;0.333;1" keyPoints="0;0;1;1"
@@ -549,7 +549,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
-  <!-- cycle1: value=1; 81s: 0.638→0.667 -->
+  <!-- cycle1: held=0 (cycle 0's input was 0) -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M640,300 L828,300"
       keyTimes="0;0.620;0.667;1" keyPoints="0;0;1;1"
@@ -558,9 +558,9 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
       keyTimes="0;0.618;0.620;0.667;0.672;1"
       dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
-    <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">1</text>
+    <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
-  <!-- cycle2: value=0; 81s: 0.971→1.000 -->
+  <!-- cycle2: held=1 (cycle 1's input was 1) -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M640,300 L828,300"
       keyTimes="0;0.954;1" keyPoints="0;0;1"
@@ -569,7 +569,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
       keyTimes="0;0.952;0.954;0.999;1"
       dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
-    <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
+    <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">1</text>
   </g>
 
 </svg>
