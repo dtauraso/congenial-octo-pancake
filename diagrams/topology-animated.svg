@@ -30,10 +30,24 @@
   <circle cx="340" cy="150" r="10" fill="none" stroke="#e65100" stroke-width="1.5"/>
   <text x="340" y="153" text-anchor="middle" font-size="8" fill="#e65100">i2</text>
 
+  <!-- Gate AND nodes between inhibitors -->
+  <rect x="148" y="146" width="8" height="8" fill="none" stroke="#283593" stroke-width="1" rx="1"/>
+  <rect x="260" y="146" width="8" height="8" fill="none" stroke="#283593" stroke-width="1" rx="1"/>
+
+  <!-- Recognition AND gate -->
+  <circle cx="280" cy="190" r="6" fill="none" stroke="#283593" stroke-width="1"/>
+  <text x="280" y="193" text-anchor="middle" font-size="6" fill="#283593">a0</text>
+
+  <!-- i1 -> a0, i2 -> a0 -->
+  <line x1="220" y1="160" x2="274" y2="185" stroke="#283593" stroke-width="0.5"/>
+  <line x1="340" y1="160" x2="286" y2="185" stroke="#283593" stroke-width="0.5"/>
+
   <!-- Static lines -->
   <line x1="48" y1="150" x2="88" y2="150" stroke="#333" stroke-width="0.8" marker-end="url(#arr)"/>
-  <line x1="110" y1="150" x2="208" y2="150" stroke="#333" stroke-width="0.8" marker-end="url(#arr)"/>
-  <line x1="230" y1="150" x2="328" y2="150" stroke="#333" stroke-width="0.8" marker-end="url(#arr)"/>
+  <line x1="110" y1="150" x2="146" y2="150" stroke="#333" stroke-width="0.8" marker-end="url(#arr)"/>
+  <line x1="156" y1="150" x2="208" y2="150" stroke="#333" stroke-width="0.8" marker-end="url(#arr)"/>
+  <line x1="230" y1="150" x2="258" y2="150" stroke="#333" stroke-width="0.8" marker-end="url(#arr)"/>
+  <line x1="268" y1="150" x2="328" y2="150" stroke="#333" stroke-width="0.8" marker-end="url(#arr)"/>
   <line x1="105" y1="140" x2="155" y2="90" stroke="#2266aa" stroke-width="0.5"/>
   <line x1="215" y1="140" x2="165" y2="90" stroke="#2266aa" stroke-width="0.5"/>
   <line x1="225" y1="140" x2="275" y2="90" stroke="#2266aa" stroke-width="0.5"/>

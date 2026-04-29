@@ -6,9 +6,12 @@ import (
 )
 
 type InputNode struct {
-	Id     int
-	Input  <-chan int
-	ToNext chan<- int
+	Id        int
+	Input     <-chan int
+	ToNext    chan<- int
+	value     int
+	hasValue  bool
+	sentValue bool
 }
 
 func (n *InputNode) Update(s *S.SafeWorker) {
@@ -20,11 +23,24 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 		default:
 		}
 
-		select {
-		case value := <-n.Input:
-			fmt.Printf("in%d: sending %d\n", n.Id, value)
-			n.ToNext <- value
-		default:
+		if !n.hasValue {
+			select {
+			case v := <-n.Input:
+				n.value = v
+				n.hasValue = true
+				n.sentValue = false
+				fmt.Printf("in%d: sending %d\n", n.Id, n.value)
+			default:
+			}
+		}
+
+		if n.hasValue && !n.sentValue {
+			select {
+			case n.ToNext <- n.value:
+				n.sentValue = true
+				n.hasValue = false
+			default:
+			}
 		}
 	}
 }
