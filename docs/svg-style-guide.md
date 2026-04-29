@@ -69,15 +69,14 @@ Every edge kind is a CSS class on a `<g>` wrapper; the `<line>` or `<path>` insi
 | `.edge-connection` | `#2266aa` | 1.5 | solid | **open** V (blue) | read-port sample (old/new) |
 | `.and-out` | `#283593` | 1.5 | solid | filled (indigo) | AND-gate reduction out |
 | `.signal` | `#7b1fa2` | 1.5 | solid | filled (magenta) | ready/done pulse |
-| `.feedback-ack` | `#7b1fa2` | **2.5** | **6 3** dashed | filled (magenta) | backpressure cycle closer |
+| `.feedback-ack` | `#7b1fa2` | 1.5 | solid | filled (magenta) | backpressure cycle closer (loop role marked by ↻ on label) |
 | `.release` | `#00838f` | 1.5 | solid | filled (teal) | latch release |
 | `.streak` | `#2e7d32` | 1.5 | solid | filled (green) | sd→sd same-sign chain |
 | `.pointer` | `#e65100` | 1.5 | **4 3** dashed | filled (orange) | struct ref, not dataflow |
 | `.future-out` | `#283593` | 1.5 | **4 3** dashed, opacity 0.5 | filled (indigo) | placeholder / not yet wired |
 
 Conventions:
-- **Dashed = non-dataflow** (pointer, future-out) or **cycle-closing** (feedback-ack).
-- **Thicker (2.5px)** reserved for the feedback-ack so the backpressure loop visually pops.
+- **Dashed = non-dataflow** (pointer, future-out). The feedback-ack is a real channel send and renders solid like other dataflow edges; its loop-closing role is marked by a ↻ glyph on the label, not by stroke style.
 - **Open arrowhead** distinguishes a *read* (sampling the value, not consuming it) from a *write*/transfer.
 
 ## 6. Edge Path Routing
@@ -144,7 +143,7 @@ All defined in `<defs>`, identical geometry (`M0,0 L8,3 L0,6`, 8×6, refX=8 refY
 3. **Mirror asymmetry.** `sbd0` is red, `sbd1` is blue — same role, different color. Left/right distinction is carried by palette, not just position.
 4. **Future-out stub.** `a0` has a faint, dashed, half-opacity exit edge (`.future-out`) pointing to a not-yet-existing downstream node. Pattern: draw placeholder with `opacity: 0.5` + dash to pre-commit to an interface.
 5. **Pointer vs. dataflow.** `sd1→i1`, `sd1→sbd1` use `.pointer` (orange dashed) to indicate these are Go struct references captured at construction time, not runtime messages. Useful convention for hybrid dataflow/object diagrams.
-6. **Feedback-ack weight asymmetry.** The ack is the only 2.5px line; everything else is 1.5. Intentional — the backpressure cycle is the diagram's headline.
+6. **Loop role lives on the label, not the stroke.** The feedback-ack uses the same 1.5px solid stroke as other dataflow edges (it's an ordinary `chan int` send in code). Its cycle-closing role is signaled by the ↻ glyph prefix on its label.
 7. **Values on edges are semantic, not ornamental.** `0|1` appears on `.and-out` and `.streak` lines to show the carrier type; `old`/`new` appears on read edges to indicate which of the two latched slots is being sampled.
 8. **Node titles are ultra-thin (font-weight 100).** Combined with the muted-pastel fills, this keeps labels legible but visually secondary to the topology — the graph is the primary artifact.
 

@@ -69,7 +69,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
 
     /* ── Edge lines ──────────────────────────────────────────── */
     .chain        { stroke: #333;    stroke-width: 1.5px; fill: none; marker-end: url(#arrow); }
-    .feedback-ack { stroke: #7b1fa2; stroke-width: 2.5px; fill: none; stroke-dasharray: 6 3; marker-end: url(#arrow-magenta); }
+    .feedback-ack { stroke: #7b1fa2; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-magenta); }
     .inhibit-in   { stroke: #880e4f; stroke-width: 1.5px; fill: none; marker-end: url(#arrow-pink); }
 
     /* ── Edge labels ─────────────────────────────────────────── */
@@ -301,7 +301,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
 
   <!-- i1AckToReadGate: 638px → 8.95s; departs i1 at t=0.000, arrives readGate at t=0.331 -->
   <path d="M875,340 L875,379 L325,379 L325,330"
-        stroke="#7b1fa2" stroke-width="4" fill="none"
+        stroke="#7b1fa2" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="1" pointer-events="none">
     <title>Feedback ack: i1 → readGate, 638px</title>
