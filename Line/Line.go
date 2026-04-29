@@ -24,15 +24,13 @@ func (l *Line) Setup() {
 
 	inputToReadGate := make(chan int, 1)
 	i1AckToReadGate := make(chan int, 1)
-	inhibitRightAckToReadGate := make(chan int, 1)
 	readGateToI0 := make(chan int, 1)
 	input_node := INN.InputNode{Id: 0, Input: input, ToNext: inputToReadGate}
 
-	// Prime acks so first input flows through
+	// Prime ack so first input flows through
 	i1AckToReadGate <- 1
-	inhibitRightAckToReadGate <- 1
 
-	readGate := RGN.ReadGateNode{Id: 0, FromValue: inputToReadGate, FromAcks: []<-chan int{i1AckToReadGate, inhibitRightAckToReadGate}, ToLatch: readGateToI0}
+	readGate := RGN.ReadGateNode{Id: 0, FromValue: inputToReadGate, FromAck: i1AckToReadGate, ToLatch: readGateToI0}
 
 	i0ToI1 := make(chan int, 1)
 	i0ToInhibitRight := make(chan int, 1)
@@ -44,7 +42,7 @@ func (l *Line) Setup() {
 	i1.ToAck = i1AckToReadGate
 	i1.ToEdge = []chan<- int{i1ToInhibitRight}
 
-	inhibitRight := IRG.InhibitRightGateNode{Id: 0, FromLeft: i0ToInhibitRight, FromRight: i1ToInhibitRight, ToOut: make(chan int, 1), ToAck: inhibitRightAckToReadGate}
+	inhibitRight := IRG.InhibitRightGateNode{Id: 0, FromLeft: i0ToInhibitRight, FromRight: i1ToInhibitRight, ToOut: make(chan int, 1)}
 
 	l.Line = []S.Node{&input_node, &readGate, &i0, &i1, &inhibitRight}
 }

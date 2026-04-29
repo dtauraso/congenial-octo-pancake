@@ -9,17 +9,15 @@ type ReadGateNode struct {
 	Id        int
 	Value     int
 	HasValue  bool
+	AckVal    int
+	HasAck    bool
 	FromValue <-chan int
-	FromAcks  []<-chan int
-	HasAcks   []bool
+	FromAck   <-chan int
 	ToLatch   chan<- int
 }
 
 func (g *ReadGateNode) Update(s *S.SafeWorker) {
 	defer s.Wg.Done()
-	if len(g.HasAcks) != len(g.FromAcks) {
-		g.HasAcks = make([]bool, len(g.FromAcks))
-	}
 	for {
 		select {
 		case <-s.Ctx.Done():
@@ -36,32 +34,20 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 			}
 		}
 
-		for i, ch := range g.FromAcks {
-			if g.HasAcks[i] {
-				continue
-			}
+		if !g.HasAck {
 			select {
-			case <-ch:
-				g.HasAcks[i] = true
+			case v := <-g.FromAck:
+				g.AckVal = v
+				g.HasAck = true
 			default:
 			}
 		}
 
-		allAcked := true
-		for _, h := range g.HasAcks {
-			if !h {
-				allAcked = false
-				break
-			}
-		}
-
-		if g.HasValue && allAcked {
-			fmt.Printf("readGate: value=%d acks=%d → %d\n", g.Value, len(g.FromAcks), g.Value)
+		if g.HasValue && g.HasAck {
+			fmt.Printf("readGate: value=%d ack=%d → %d\n", g.Value, g.AckVal, g.Value)
 			S.Send(g.ToLatch, g.Value)
 			g.HasValue = false
-			for i := range g.HasAcks {
-				g.HasAcks[i] = false
-			}
+			g.HasAck = false
 		}
 	}
 }
