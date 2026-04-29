@@ -147,13 +147,13 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
 
   <g id="edge-readGateToI0" data-role="edge" class="chain">
     <line x1="310" y1="310" x2="498" y2="310"/>
-    <text x="404" y="304" font-weight="300" fill="#111" stroke="none" class="edge-label">readGateToI0</text>
-    <text x="490" y="304" font-weight="300" fill="#333" stroke="none" class="value-label" text-anchor="end">0|1</text>
+    <text x="404" y="324" font-weight="300" fill="#111" stroke="none" class="edge-label">readGateToI0</text>
+    <text x="490" y="324" font-weight="300" fill="#333" stroke="none" class="value-label" text-anchor="end">0|1</text>
   </g>
 
   <g id="edge-i0ToI1" data-role="edge" class="chain">
     <line x1="590" y1="310" x2="1058" y2="310"/>
-    <text x="824" y="304" font-weight="300" fill="#111" stroke="none" class="edge-label">i0ToI1</text>
+    <text x="824" y="324" font-weight="300" fill="#111" stroke="none" class="edge-label">i0ToI1</text>
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -162,12 +162,12 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
 
   <g id="edge-inputToReadGate" data-role="edge" class="chain">
     <line x1="100" y1="310" x2="238" y2="310"/>
-    <text x="169" y="304" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">inputToReadGate</text>
+    <text x="169" y="324" font-weight="300" fill="#111" stroke="none" class="edge-label" text-anchor="middle">inputToReadGate</text>
   </g>
 
   <g id="edge-i1AckToReadGate" data-role="edge" class="feedback-ack">
     <path d="M1105,340 L1105,418 L275,418 L275,330"/>
-    <text x="690" y="412" font-weight="600" fill="#7b1fa2" stroke="none" class="edge-label">↻ i1AckToReadGate</text>
+    <text x="690" y="434" font-weight="600" fill="#7b1fa2" stroke="none" class="edge-label">↻ i1AckToReadGate</text>
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -176,12 +176,12 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
 
   <g id="edge-i0ToInhibitRight" data-role="edge" class="inhibit-in">
     <path d="M545,280 L545,254 L780,254 L780,236"/>
-    <text x="663" y="248" font-weight="300" fill="#880e4f" stroke="none" class="edge-label">i0ToInhibitRight</text>
+    <text x="663" y="270" font-weight="300" fill="#880e4f" stroke="none" class="edge-label">i0ToInhibitRight</text>
   </g>
 
   <g id="edge-i1ToInhibitRight" data-role="edge" class="inhibit-in">
     <path d="M1105,280 L1105,246 L850,246 L850,236"/>
-    <text x="978" y="240" font-weight="300" fill="#880e4f" stroke="none" class="edge-label">i1ToInhibitRight</text>
+    <text x="978" y="262" font-weight="300" fill="#880e4f" stroke="none" class="edge-label">i1ToInhibitRight</text>
   </g>
 
 
