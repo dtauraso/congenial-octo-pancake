@@ -194,8 +194,8 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   </g>
 
   <g id="edge-i1ToInhibitRight" data-role="edge" class="inhibit-in">
-    <path d="M875,280 L875,246 L760,246 L760,236"/>
-    <text x="817" y="262" font-weight="300" fill="#880e4f" stroke="none" class="edge-label">i1ToInhibitRight</text>
+    <path d="M875,280 L875,254 L760,254 L760,236"/>
+    <text x="817" y="270" font-weight="300" fill="#880e4f" stroke="none" class="edge-label">i1ToInhibitRight</text>
   </g>
 
 
@@ -327,7 +327,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   </circle>
 
   <!-- i1ToInhibitRight: 159px → 1.99s; depart 0.000, arrive 0.074 -->
-  <path d="M875,280 L875,246 L760,246 L760,236"
+  <path d="M875,280 L875,254 L760,254 L760,236"
         stroke="#880e4f" stroke-width="3" fill="none"
         stroke-dasharray="20,9999" stroke-dashoffset="0"
         opacity="1" pointer-events="none">
@@ -415,7 +415,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   <!-- ── i1ToInhibitRight value labels ── -->
   <!-- cycle0: value=0; 81s: 0.000→0.025 -->
   <g opacity="1" pointer-events="none">
-    <animateMotion path="M875,270 L875,236 L760,236 L760,226"
+    <animateMotion path="M875,270 L875,244 L760,244 L760,226"
       keyTimes="0;0.040;1" keyPoints="0;1;1"
       dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="1;1;0;0"
@@ -426,7 +426,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   </g>
   <!-- cycle1: value=0; 81s: 0.333→0.358 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M875,270 L875,236 L760,236 L760,226"
+    <animateMotion path="M875,270 L875,244 L760,244 L760,226"
       keyTimes="0;0.333;0.373;1" keyPoints="0;0;1;1"
       dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
@@ -437,7 +437,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   </g>
   <!-- cycle2: i1 held=0 (input "1" hasn't propagated through both stages within 3 cycles) -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M875,270 L875,236 L760,236 L760,226"
+    <animateMotion path="M875,270 L875,244 L760,244 L760,226"
       keyTimes="0;0.667;0.706;1" keyPoints="0;0;1;1"
       dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
@@ -550,6 +550,41 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
       dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">1</text>
+  </g>
+
+  <!-- ── i1AckToReadGate value labels (1-bit ready signal back to readGate) ── -->
+  <!-- cycle0: depart i1 at t=0.000, arrive readGate at t=0.176 (0.529 of 16.902s) -->
+  <g opacity="0" pointer-events="none">
+    <animateMotion path="M875,340 L875,379 L325,379 L325,330"
+      keyTimes="0;0;0.176;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
+    <animate attributeName="opacity" values="1;1;0;0"
+      keyTimes="0;0.176;0.181;1"
+      dur="50.706s" repeatCount="indefinite"/>
+    <rect x="-8" y="-24" width="16" height="14" rx="3" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="1"/>
+    <text x="0" y="-13" text-anchor="middle" font-size="11" font-weight="600" fill="#7b1fa2" stroke="none">1</text>
+  </g>
+  <!-- cycle1: depart 0.333, arrive 0.509 -->
+  <g opacity="0" pointer-events="none">
+    <animateMotion path="M875,340 L875,379 L325,379 L325,330"
+      keyTimes="0;0.333;0.509;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0"
+      keyTimes="0;0.331;0.333;0.509;0.514;1"
+      dur="50.706s" repeatCount="indefinite"/>
+    <rect x="-8" y="-24" width="16" height="14" rx="3" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="1"/>
+    <text x="0" y="-13" text-anchor="middle" font-size="11" font-weight="600" fill="#7b1fa2" stroke="none">1</text>
+  </g>
+  <!-- cycle2: depart 0.667, arrive 0.843 -->
+  <g opacity="0" pointer-events="none">
+    <animateMotion path="M875,340 L875,379 L325,379 L325,330"
+      keyTimes="0;0.667;0.843;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0"
+      keyTimes="0;0.665;0.667;0.843;0.848;1"
+      dur="50.706s" repeatCount="indefinite"/>
+    <rect x="-8" y="-24" width="16" height="14" rx="3" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="1"/>
+    <text x="0" y="-13" text-anchor="middle" font-size="11" font-weight="600" fill="#7b1fa2" stroke="none">1</text>
   </g>
 
   <!-- ── i0ToI1 value labels (i0 emits previously-held value on each readGate pulse) ── -->
