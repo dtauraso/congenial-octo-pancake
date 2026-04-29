@@ -148,7 +148,6 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   <g id="edge-readGateToI0" data-role="edge" class="chain">
     <line x1="360" y1="310" x2="548" y2="310"/>
     <text x="454" y="324" font-weight="300" fill="#111" stroke="none" class="edge-label">readGateToI0</text>
-    <text x="540" y="324" font-weight="300" fill="#333" stroke="none" class="value-label" text-anchor="end">0|1</text>
   </g>
 
   <g id="edge-i0ToI1" data-role="edge" class="chain">
