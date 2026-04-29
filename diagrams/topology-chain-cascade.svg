@@ -15,7 +15,6 @@
       {"id": "readGateToI0",     "source": "readGate", "target": "i0",         "kind": "chain"},
       {"id": "i0ToI1",           "source": "i0",       "target": "i1",         "kind": "chain"},
       {"id": "i1AckToReadGate",  "source": "i1",       "target": "readGate",   "kind": "feedback-ack"},
-      {"id": "inhibitRightAckToReadGate","source": "inhibitRight0","target": "readGate",   "kind": "feedback-ack"},
       {"id": "inputToReadGate",  "source": "in0",      "target": "readGate",   "kind": "chain"},
       {"id": "i0ToInhibitRight",         "source": "i0",           "target": "inhibitRight0","kind": "inhibit-in"},
       {"id": "i1ToInhibitRight",         "source": "i1",           "target": "inhibitRight0","kind": "inhibit-in"}
@@ -30,7 +29,7 @@
         {"t": 0.739, "event": "in0 fires → inputToReadGate departs"},
         {"t": 0.826, "event": "inputToReadGate arrives; readGate fires (ack already waiting) → readGateToI0"},
         {"t": 0.913, "event": "readGateToI0 arrives; i0 fires → i0ToI1 + i0ToInhibitRight depart"},
-        {"t": 0.987, "event": "i0ToInhibitRight arrives; inhibitRight0 fires → inhibitRightAckToReadGate departs"},
+        {"t": 0.987, "event": "i0ToInhibitRight arrives; inhibitRight0 fires"},
         {"t": 1.000, "event": "i0ToI1 arrives; i1 fires → t=0 next cycle"}
       ]
     }
@@ -39,9 +38,9 @@
 
   <desc>
 in0                    — input node feeding values into the chain
-readGate               — AND gate: gates input advance by i1 ack AND inhibitRight0 ack (both required)
+readGate               — AND gate: gates input advance by i1 ack
 i0, i1                 — chain inhibitor stages (shift register cells); cascade: value flows i0 → i1 directly
-inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0; acks readGate after each fire
+inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   </desc>
 
   <style>
@@ -170,11 +169,6 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0; acks rea
     <text x="600" y="395" font-weight="600" fill="#7b1fa2" stroke="none" class="edge-label">↻ i1AckToReadGate</text>
   </g>
 
-  <g id="edge-inhibitRightAckToReadGate" data-role="edge" class="feedback-ack">
-    <path d="M680,218 L680,170 L325,170 L325,292"/>
-    <text x="500" y="163" font-weight="600" fill="#7b1fa2" stroke="none" class="edge-label">↻ inhibitRightAckToReadGate</text>
-  </g>
-
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- EDGES — InhibitRightGate inputs and output                  -->
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -197,8 +191,8 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0; acks rea
   <g id="annotation-backpressure" data-role="annotation">
     <rect x="20" y="480" width="340" height="55" rx="4" class="behavior-note-bg"/>
     <text x="190" y="498" font-size="11" class="behavior-note-text">Cascade: i0 → i1 directly.</text>
-    <text x="190" y="513" font-size="11" class="behavior-note-text">readGate AND(i1 ack, inhibitRight0 ack) →</text>
-    <text x="190" y="528" font-size="11" class="behavior-note-text">no next pulse until inhibit pair consumed.</text>
+    <text x="190" y="513" font-size="11" class="behavior-note-text">i1 acks readGate after advancing →</text>
+    <text x="190" y="528" font-size="11" class="behavior-note-text">backpressure: one value per pipeline cycle.</text>
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
@@ -218,7 +212,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0; acks rea
 
     <g class="feedback-ack"> <line x1="40" y1="604" x2="70" y2="604"/></g>
     <text x="85"  y="608" text-anchor="start" class="legend-name" fill="#7b1fa2">↻ Feedback ack</text>
-    <text x="220" y="608" text-anchor="start" class="legend-desc">Closes backpressure: i1 → readGate AND inhibitRight0 → readGate</text>
+    <text x="220" y="608" text-anchor="start" class="legend-desc">Closes the backpressure cycle (i1 → readGate)</text>
 
     <g class="inhibit-in">  <line x1="40" y1="622" x2="70" y2="622"/></g>
     <text x="85"  y="626" text-anchor="start" class="legend-name" fill="#880e4f">Inhibit in</text>
@@ -314,53 +308,6 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0; acks rea
     <animate attributeName="opacity"
              values="0.6;0;0"
              keyTimes="0;0.032;1"
-             dur="16.902s" repeatCount="indefinite"/>
-  </circle>
-
-  <!-- inhibitRightAckToReadGate: 525px → 6.56s = 0.388 of cycle.            -->
-  <!--   Departs inhibitRight0 at t=0.987, arrives readGate at t=0.375 of next cycle. -->
-  <!--   Wrap-around: rendered as two copies (departing tail + arriving head).        -->
-
-  <!-- Departing tail: visible 0.987 → 1.000 (cycle end), pulse leaves inhibitRight0 -->
-  <path d="M680,218 L680,170 L325,170 L325,292"
-        stroke="#7b1fa2" stroke-width="4" fill="none"
-        stroke-dasharray="20,9999" stroke-dashoffset="0"
-        opacity="0" pointer-events="none">
-    <title>Feedback ack: inhibitRight0 → readGate (departing)</title>
-    <animate attributeName="stroke-dashoffset"
-             values="0;0;-17;-17"
-             keyTimes="0;0.987;1;1"
-             dur="16.902s" repeatCount="indefinite"/>
-    <animate attributeName="opacity"
-             values="0;0;1;1"
-             keyTimes="0;0.985;0.987;1"
-             dur="16.902s" repeatCount="indefinite"/>
-  </path>
-
-  <!-- Arriving head: visible 0 → 0.375 of cycle, pulse approaches readGate -->
-  <path d="M680,218 L680,170 L325,170 L325,292"
-        stroke="#7b1fa2" stroke-width="4" fill="none"
-        stroke-dasharray="20,9999" stroke-dashoffset="-17"
-        opacity="1" pointer-events="none">
-    <title>Feedback ack: inhibitRight0 → readGate (arriving)</title>
-    <animate attributeName="stroke-dashoffset"
-             values="-17;-525;-525"
-             keyTimes="0;0.375;1"
-             dur="16.902s" repeatCount="indefinite"/>
-    <animate attributeName="opacity"
-             values="1;1;0;0"
-             keyTimes="0;0.375;0.378;1"
-             dur="16.902s" repeatCount="indefinite"/>
-  </path>
-
-  <!-- Flash at inhibitRight0 ack origin (fires at t=0.987) -->
-  <circle cx="680" cy="218" r="8"
-          fill="#7b1fa2" stroke="none"
-          opacity="0" pointer-events="none">
-    <title>Feedback ack origin (inhibitRight0)</title>
-    <animate attributeName="opacity"
-             values="0;0;0.6;0;0"
-             keyTimes="0;0.985;0.987;1;1"
              dur="16.902s" repeatCount="indefinite"/>
   </circle>
 
