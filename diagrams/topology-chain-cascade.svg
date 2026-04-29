@@ -115,16 +115,31 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
 
   <g id="node-i0" data-role="inhibitor" data-index="0">
     <rect x="550" y="280" width="90" height="60" rx="6" class="shape-inhibitor"/>
-    <text x="595" y="300" font-weight="100" class="node-title text-inhibitor">i0</text>
-    <text x="595" y="315" font-weight="100" class="node-sublabel text-inhibitor-sub">Chain</text>
-    <text x="595" y="330" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
+    <text x="595" y="298" font-weight="100" class="node-title text-inhibitor">i0</text>
+    <text x="595" y="313" font-weight="100" class="node-sublabel text-inhibitor-sub">Chain Inhibitor</text>
+    <!-- held value display: 0 from t=0 to fire@0.620, 1 from 0.620 to 0.954, 0 from 0.954 to 1 -->
+    <text x="595" y="332" font-weight="600" font-size="13" fill="#bf360c" stroke="none" text-anchor="middle">held=0
+      <animate attributeName="opacity"
+               values="1;0;1"
+               keyTimes="0;0.620;0.954"
+               calcMode="discrete"
+               dur="50.706s" repeatCount="indefinite"/>
+    </text>
+    <text x="595" y="332" font-weight="600" font-size="13" fill="#bf360c" stroke="none" text-anchor="middle" opacity="0">held=1
+      <animate attributeName="opacity"
+               values="0;1;0"
+               keyTimes="0;0.620;0.954"
+               calcMode="discrete"
+               dur="50.706s" repeatCount="indefinite"/>
+    </text>
   </g>
 
   <g id="node-i1" data-role="inhibitor" data-index="1">
     <rect x="830" y="280" width="90" height="60" rx="6" class="shape-inhibitor"/>
-    <text x="875" y="300" font-weight="100" class="node-title text-inhibitor">i1</text>
-    <text x="875" y="315" font-weight="100" class="node-sublabel text-inhibitor-sub">Chain</text>
-    <text x="875" y="330" font-weight="100" class="node-sublabel text-inhibitor-sub">Inhibitor</text>
+    <text x="875" y="298" font-weight="100" class="node-title text-inhibitor">i1</text>
+    <text x="875" y="313" font-weight="100" class="node-sublabel text-inhibitor-sub">Chain Inhibitor</text>
+    <!-- held=0 throughout 3-cycle window; input "1" needs a 4th cycle to reach i1's held -->
+    <text x="875" y="332" font-weight="600" font-size="13" fill="#bf360c" stroke="none" text-anchor="middle">held=0</text>
   </g>
 
   <!-- ── inhibitRight0: above pipeline center, between i0 and i1 ── -->
