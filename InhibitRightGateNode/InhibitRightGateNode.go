@@ -15,6 +15,7 @@ type InhibitRightGateNode struct {
 	FromLeft  <-chan int
 	FromRight <-chan int
 	ToOut     chan<- int
+	ToAck     chan<- int
 }
 
 func (g *InhibitRightGateNode) Update(s *S.SafeWorker) {
@@ -51,6 +52,7 @@ func (g *InhibitRightGateNode) Update(s *S.SafeWorker) {
 			}
 			fmt.Printf("inhibitRightGate%d: left=%d right=%d → %d\n", g.Id, g.Left, g.Right, result)
 			S.Send(g.ToOut, result)
+			S.Send(g.ToAck, 1)
 			g.HasLeft = false
 			g.HasRight = false
 		}
