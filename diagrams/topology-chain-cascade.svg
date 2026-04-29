@@ -222,16 +222,16 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
 
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- ANIMATION                                                   -->
-  <!-- One full backpressure cycle: 27s loop. 80 px/s throughout. -->
-  <!-- Timeline (fractions of 27s):                               -->
+  <!-- One full backpressure cycle: 16.902s loop. 80 px/s throughout. -->
+  <!-- Timeline (fractions of 16.902s):                               -->
   <!--   0.000  i1 fires → ack + i1ToInhibitRight depart from i1  -->
-  <!--   0.074  i1ToInhibitRight arrives at inhibitRight0 (waiting)-->
-  <!--   0.000→0.331  ack travels full 716px i1→readGate          -->
-  <!--   0.331  ack arrives at readGate; waits for in0             -->
-  <!--   0.739  in0 fires → inputToReadGate departs               -->
-  <!--   0.826  inputToReadGate arrives → readGate fires           -->
-  <!--   0.913  i0 fires → i0ToI1 + i0ToInhibitRight depart       -->
-  <!--   0.987  i0ToInhibitRight arrives → inhibitRight0 fires     -->
+  <!--   0.119  i1ToInhibitRight arrives at inhibitRight0 (waiting)-->
+  <!--   0.000→0.529  ack travels full 716px i1→readGate          -->
+  <!--   0.529  ack arrives at readGate; waits for in0             -->
+  <!--   0.582  in0 fires → inputToReadGate departs               -->
+  <!--   0.722  inputToReadGate arrives → readGate fires           -->
+  <!--   0.861  i0 fires → i0ToI1 + i0ToInhibitRight depart       -->
+  <!--   0.979  i0ToInhibitRight arrives → inhibitRight0 fires     -->
   <!--   1.000  i0ToI1 arrives → i1 fires (=t=0 next cycle)       -->
   <!-- ═══════════════════════════════════════════════════════════ -->
 
@@ -242,8 +242,8 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
         fill="white" stroke="none" opacity="0.5" pointer-events="none">
     <animate attributeName="opacity"
              values="0.5;0;0;0.5;0"
-             keyTimes="0;0.050;0.990;0.995;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.080;0.983;0.988;1"
+             dur="16.902s" repeatCount="indefinite"/>
   </rect>
 
   <!-- inhibitRight0 fires at t=0.987 -->
@@ -251,8 +251,8 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.982;0.987;0.997;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.974;0.979;0.989;1"
+             dur="16.902s" repeatCount="indefinite"/>
   </rect>
 
   <!-- in0 fires at t=0.739 -->
@@ -260,8 +260,8 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.734;0.739;0.789;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.580;0.582;0.632;1"
+             dur="16.902s" repeatCount="indefinite"/>
   </rect>
 
   <!-- readGate fires at t=0.826 -->
@@ -269,8 +269,8 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.821;0.826;0.876;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.716;0.722;0.774;1"
+             dur="16.902s" repeatCount="indefinite"/>
   </rect>
 
   <!-- i0 fires at t=0.913 -->
@@ -278,8 +278,8 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
         fill="white" stroke="none" opacity="0" pointer-events="none">
     <animate attributeName="opacity"
              values="0;0;0.5;0;0"
-             keyTimes="0;0.908;0.913;0.963;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.856;0.861;0.913;1"
+             dur="16.902s" repeatCount="indefinite"/>
   </rect>
 
   <!-- Edge pulses at 80 px/s -->
@@ -292,12 +292,12 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
     <title>Feedback ack: i1 → readGate, 716px at 80px/s</title>
     <animate attributeName="stroke-dashoffset"
              values="0;-716;-716"
-             keyTimes="0;0.331;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.529;1"
+             dur="16.902s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="1;1;0;0"
-             keyTimes="0;0.331;0.336;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.529;0.532;1"
+             dur="16.902s" repeatCount="indefinite"/>
   </path>
 
   <!-- Flash at i1 ack origin (fires at t=0, cycle boundary) -->
@@ -307,8 +307,8 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
     <title>Feedback ack origin (i1)</title>
     <animate attributeName="opacity"
              values="0.6;0;0"
-             keyTimes="0;0.020;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.032;1"
+             dur="16.902s" repeatCount="indefinite"/>
   </circle>
 
   <!-- i1ToInhibitRight: 159px → 1.99s; depart 0.000, arrive 0.074 -->
@@ -318,12 +318,12 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
         opacity="1" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;-159;-159"
-             keyTimes="0;0.074;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.119;1"
+             dur="16.902s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="1;1;0;0"
-             keyTimes="0;0.074;0.079;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.119;0.124;1"
+             dur="16.902s" repeatCount="indefinite"/>
   </path>
 
   <!-- inputToReadGate: 188px → 2.35s; depart 0.739, arrive 0.826 -->
@@ -333,12 +333,12 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;0;-188;-188"
-             keyTimes="0;0.739;0.826;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.582;0.722;1"
+             dur="16.902s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.734;0.739;0.826;0.831;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.580;0.582;0.722;0.727;1"
+             dur="16.902s" repeatCount="indefinite"/>
   </path>
 
   <!-- readGateToI0: 188px → 2.35s; depart 0.826, arrive 0.913 -->
@@ -348,12 +348,12 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;0;-188;-188"
-             keyTimes="0;0.826;0.913;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.722;0.861;1"
+             dur="16.902s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.821;0.826;0.913;0.918;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.716;0.722;0.861;0.866;1"
+             dur="16.902s" repeatCount="indefinite"/>
   </path>
 
   <!-- i0ToInhibitRight: 159px → 1.99s; depart 0.913, arrive 0.987 -->
@@ -363,12 +363,12 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;0;-159;-159"
-             keyTimes="0;0.913;0.987;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.861;0.979;1"
+             dur="16.902s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0;0"
-             keyTimes="0;0.908;0.913;0.987;0.992;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.856;0.861;0.979;0.984;1"
+             dur="16.902s" repeatCount="indefinite"/>
   </path>
 
   <!-- i0ToI1: 188px → 2.35s; depart 0.913, arrive 1.000 (i1 fires at cycle boundary) -->
@@ -378,56 +378,56 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
         opacity="0" pointer-events="none">
     <animate attributeName="stroke-dashoffset"
              values="0;0;-188;-188"
-             keyTimes="0;0.913;1;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.861;1;1"
+             dur="16.902s" repeatCount="indefinite"/>
     <animate attributeName="opacity"
              values="0;0;1;1;0"
-             keyTimes="0;0.908;0.913;0.999;1"
-             dur="27s" repeatCount="indefinite"/>
+             keyTimes="0;0.856;0.861;0.999;1"
+             dur="16.902s" repeatCount="indefinite"/>
   </path>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- ANIMATION — Value labels (81s = 3×27s)                     -->
+  <!-- ANIMATION — Value labels (50.706s = 3×16.902s)                     -->
   <!-- Label keyTimes = (in_cycle_fraction + cycle_index) / 3.    -->
-  <!-- Pulse windows per 27s cycle:                               -->
-  <!--   i1ToInhibitRight: 0.000→0.074                            -->
-  <!--   inputToReadGate:  0.739→0.826                            -->
-  <!--   readGateToI0:     0.826→0.913                            -->
-  <!--   i0ToInhibitRight: 0.913→0.987                            -->
-  <!--   i0ToI1:           0.913→1.000                            -->
+  <!-- Pulse windows per 16.902s cycle:                               -->
+  <!--   i1ToInhibitRight: 0.000→0.119                            -->
+  <!--   inputToReadGate:  0.582→0.722                            -->
+  <!--   readGateToI0:     0.722→0.861                            -->
+  <!--   i0ToInhibitRight: 0.861→0.979                            -->
+  <!--   i0ToI1:           0.861→1.000                            -->
   <!-- ═══════════════════════════════════════════════════════════ -->
 
   <!-- ── i1ToInhibitRight value labels ── -->
   <!-- cycle0: value=0; 81s: 0.000→0.025 -->
   <g opacity="1" pointer-events="none">
-    <animateMotion path="M875,280 L875,246 L760,246 L760,236"
-      keyTimes="0;0.025;1" keyPoints="0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+    <animateMotion path="M875,270 L875,236 L760,236 L760,226"
+      keyTimes="0;0.040;1" keyPoints="0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="1;1;0;0"
-      keyTimes="0;0.025;0.030;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.040;0.045;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
   </g>
   <!-- cycle1: value=0; 81s: 0.333→0.358 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M875,280 L875,246 L760,246 L760,236"
-      keyTimes="0;0.333;0.358;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+    <animateMotion path="M875,270 L875,236 L760,236 L760,226"
+      keyTimes="0;0.333;0.373;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.331;0.333;0.358;0.363;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.331;0.333;0.373;0.378;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
   </g>
   <!-- cycle2: value=1; 81s: 0.667→0.691 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M875,280 L875,246 L760,246 L760,236"
-      keyTimes="0;0.667;0.691;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+    <animateMotion path="M875,270 L875,236 L760,236 L760,226"
+      keyTimes="0;0.667;0.706;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.665;0.667;0.691;0.696;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.665;0.667;0.706;0.711;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">1</text>
   </g>
@@ -436,33 +436,33 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   <!-- cycle0: value=0; 81s: 0.246→0.275 -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M100,300 L288,300"
-      keyTimes="0;0.246;0.275;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+      keyTimes="0;0.194;0.241;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.244;0.246;0.275;0.280;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.192;0.194;0.241;0.246;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
   <!-- cycle1: value=1; 81s: 0.580→0.609 -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M100,300 L288,300"
-      keyTimes="0;0.580;0.609;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+      keyTimes="0;0.527;0.574;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.578;0.580;0.609;0.614;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.525;0.527;0.574;0.579;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">1</text>
   </g>
   <!-- cycle2: value=0; 81s: 0.913→0.942 -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M100,300 L288,300"
-      keyTimes="0;0.913;0.942;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+      keyTimes="0;0.861;0.907;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.911;0.913;0.942;0.947;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.859;0.861;0.907;0.912;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
@@ -471,33 +471,33 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   <!-- cycle0: value=0; 81s: 0.275→0.304 -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M360,300 L548,300"
-      keyTimes="0;0.275;0.304;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+      keyTimes="0;0.241;0.287;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.273;0.275;0.304;0.309;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.239;0.241;0.287;0.292;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
   <!-- cycle1: value=1; 81s: 0.609→0.638 -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M360,300 L548,300"
-      keyTimes="0;0.609;0.638;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+      keyTimes="0;0.574;0.620;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.607;0.609;0.638;0.643;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.572;0.574;0.620;0.625;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">1</text>
   </g>
   <!-- cycle2: value=0; 81s: 0.942→0.971 -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M360,300 L548,300"
-      keyTimes="0;0.942;0.971;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+      keyTimes="0;0.907;0.954;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.940;0.942;0.971;0.976;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.905;0.907;0.954;0.959;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
@@ -505,34 +505,34 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   <!-- ── i0ToInhibitRight value labels ── -->
   <!-- cycle0: value=0; 81s: 0.304→0.329 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M595,280 L595,254 L710,254 L710,236"
-      keyTimes="0;0.304;0.329;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+    <animateMotion path="M595,270 L595,244 L710,244 L710,226"
+      keyTimes="0;0.287;0.326;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.302;0.304;0.329;0.334;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.285;0.287;0.326;0.331;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
   </g>
   <!-- cycle1: value=1; 81s: 0.638→0.662 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M595,280 L595,254 L710,254 L710,236"
-      keyTimes="0;0.638;0.662;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+    <animateMotion path="M595,270 L595,244 L710,244 L710,226"
+      keyTimes="0;0.620;0.660;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.636;0.638;0.662;0.667;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.618;0.620;0.660;0.665;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">1</text>
   </g>
   <!-- cycle2: value=0; 81s: 0.971→0.996 -->
   <g opacity="0" pointer-events="none">
-    <animateMotion path="M595,280 L595,254 L710,254 L710,236"
-      keyTimes="0;0.971;0.996;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+    <animateMotion path="M595,270 L595,244 L710,244 L710,226"
+      keyTimes="0;0.954;0.993;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.969;0.971;0.996;0.999;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.952;0.954;0.993;0.998;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#fce4ec" stroke="#880e4f" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#880e4f" stroke="none">0</text>
   </g>
@@ -541,33 +541,33 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
   <!-- cycle0: value=0; 81s: 0.304→0.333 -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M640,300 L828,300"
-      keyTimes="0;0.304;0.333;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+      keyTimes="0;0.287;0.333;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.302;0.304;0.333;0.338;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.285;0.287;0.333;0.338;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
   <!-- cycle1: value=1; 81s: 0.638→0.667 -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M640,300 L828,300"
-      keyTimes="0;0.638;0.667;1" keyPoints="0;0;1;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+      keyTimes="0;0.620;0.667;1" keyPoints="0;0;1;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0;0"
-      keyTimes="0;0.636;0.638;0.667;0.672;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.618;0.620;0.667;0.672;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">1</text>
   </g>
   <!-- cycle2: value=0; 81s: 0.971→1.000 -->
   <g opacity="0" pointer-events="none">
     <animateMotion path="M640,300 L828,300"
-      keyTimes="0;0.971;1" keyPoints="0;0;1"
-      dur="81s" repeatCount="indefinite" calcMode="linear"/>
+      keyTimes="0;0.954;1" keyPoints="0;0;1"
+      dur="50.706s" repeatCount="indefinite" calcMode="linear"/>
     <animate attributeName="opacity" values="0;0;1;1;0"
-      keyTimes="0;0.969;0.971;0.999;1"
-      dur="81s" repeatCount="indefinite"/>
+      keyTimes="0;0.952;0.954;0.999;1"
+      dur="50.706s" repeatCount="indefinite"/>
     <rect x="-8" y="-15" width="16" height="14" rx="3" fill="#eee" stroke="#333" stroke-width="1"/>
     <text x="0" y="-4" text-anchor="middle" font-size="11" font-weight="600" fill="#333" stroke="none">0</text>
   </g>
