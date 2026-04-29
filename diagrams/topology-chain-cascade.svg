@@ -129,7 +129,7 @@ inhibitRight0          — INHIBIT gate: fires only when i0=1 AND i1=0
 
   <!-- ── inhibitRight0: above pipeline center, between i0 and i1 ── -->
   <g id="node-inhibitRight0" data-role="inhibit-right-gate">
-    <rect x="690" y="200" width="90" height="36" rx="6" class="shape-inhibit-right"/>
+    <rect x="680" y="200" width="110" height="36" rx="6" class="shape-inhibit-right"/>
     <text x="735" y="215" font-weight="100" class="node-title text-inhibit-right">inhibitRight0</text>
     <text x="735" y="229" font-weight="100" class="node-type text-inhibit-right">INHIBIT(L=1,R=0)</text>
   </g>
