@@ -5,7 +5,7 @@
 import { NODE_TYPES } from "../schema";
 import { applyDim as applyDimRf, selectedNodeIds } from "./rf/bridge";
 import { scheduleViewSave } from "./save";
-import { spec, view, viewerState } from "./state";
+import { mutateViewer, spec, view, viewerState } from "./state";
 import { applyView, syncViewFromRenderer } from "./view";
 import type { SavedView } from "./viewerState";
 
@@ -16,6 +16,7 @@ let activeViewName: string | undefined;
 export function initViewsPanel() {
   panel = document.createElement("div");
   panel.className = "views-panel";
+  panel.dataset.undoScope = "viewer";
 
   const header = document.createElement("div");
   header.className = "views-header";
@@ -113,18 +114,21 @@ function saveView(name: string) {
     viewport: { x: view.x, y: view.y, w: view.w, h: view.h },
     nodeIds: ids,
   };
-  const views = viewerState.views ?? [];
-  const existingIdx = views.findIndex((v) => v.name === name);
-  if (existingIdx >= 0) views[existingIdx] = next;
-  else views.push(next);
-  viewerState.views = views;
+  mutateViewer((s) => {
+    const views = s.views ?? [];
+    const existingIdx = views.findIndex((v) => v.name === name);
+    if (existingIdx >= 0) views[existingIdx] = next;
+    else views.push(next);
+    s.views = views;
+  });
   scheduleViewSave();
   renderList();
 }
 
 function deleteView(name: string) {
-  const views = viewerState.views ?? [];
-  viewerState.views = views.filter((v) => v.name !== name);
+  mutateViewer((s) => {
+    s.views = (s.views ?? []).filter((v) => v.name !== name);
+  });
   if (activeViewName === name) clearActiveView();
   scheduleViewSave();
   renderList();

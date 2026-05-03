@@ -25,7 +25,24 @@ import { MOTION_TYPES } from "../../sim/handlers";
 import { beginRenameNodeId, setRenameRerender } from "../rename";
 import { beginEditSublabel, setSublabelRerender } from "../sublabel";
 import { flushViewSave, markViewSynced, scheduleSave, scheduleViewSave, vscode } from "../save";
-import { clearSpecHistory, mutateSpec, redoSpec, setSpec, setViewerState, spec, undoSpec, viewerState } from "../state";
+import { refreshViewsPanel } from "../views";
+import { refreshTimelinePanel } from "../timeline";
+import {
+  canRedoViewer,
+  canUndoViewer,
+  clearSpecHistory,
+  clearViewerHistory,
+  mutateSpec,
+  mutateViewer,
+  redoSpec,
+  redoViewer,
+  setSpec,
+  setViewerState,
+  spec,
+  undoSpec,
+  undoViewer,
+  viewerState,
+} from "../state";
 import {
   isLegacyCamera,
   parseViewerState,
@@ -98,15 +115,70 @@ function Inner() {
   const reconnectOk = useRef<boolean>(false);
   const rf = useReactFlow();
 
-  // Spec undo/redo. Cmd/Ctrl-Z and Cmd/Ctrl-Shift-Z (also Ctrl-Y) walk the
-  // snapshot stack maintained in state.ts, then push the restored spec
-  // through the same rerender path as a normal edit. Skipped while a text
-  // input is focused (let the browser's native undo win) and while the
-  // comparison pane is read-only.
+  // Undo/redo. Two scoped stacks (spec, viewer) live in state.ts; this
+  // handler routes Cmd/Ctrl-Z and Cmd/Ctrl-Shift-Z (or Ctrl-Y) to whichever
+  // stack matches the surface the user last interacted with. Surface is
+  // tagged with `data-undo-scope="viewer"` on the views and timeline
+  // panels; everything else (the main RF pane) falls through to spec.
+  // Skipped while a text input is focused (browser's native undo wins) and
+  // while the comparison pane is read-only.
+  const lastScopeRef = useRef<"spec" | "viewer">("spec");
+  // Brief diff-added flash on items that re-appear after an undo/redo.
+  // Phase-8.md asks for both diff-added and diff-removed; for MVP we tag
+  // re-appearing items only — items removed by the undo no longer render,
+  // so there's nothing to decorate without a ghost-rendering pass.
+  const flashIdsRef = useRef<Set<string>>(new Set());
+  const flashTimerRef = useRef<number | null>(null);
   useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      const scoped = t?.closest?.<HTMLElement>("[data-undo-scope]");
+      lastScopeRef.current = (scoped?.dataset.undoScope as "spec" | "viewer") ?? "spec";
+    };
     const isTextTarget = (t: EventTarget | null) =>
       t instanceof HTMLElement &&
       (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+    const flash = (ids: Set<string>) => {
+      if (ids.size === 0) return;
+      flashIdsRef.current = ids;
+      if (flashTimerRef.current !== null) window.clearTimeout(flashTimerRef.current);
+      flashTimerRef.current = window.setTimeout(() => {
+        flashIdsRef.current = new Set();
+        flashTimerRef.current = null;
+        if (lastSpec.current) {
+          const f = specToFlow(lastSpec.current, viewerState.folds);
+          setNodes(f.nodes);
+          setEdges(f.edges);
+        }
+      }, 1500);
+    };
+    const decorate = (flow: ReturnType<typeof specToFlow>, ids: Set<string>) => {
+      if (ids.size === 0) return flow;
+      const tag = (cn: string | undefined) =>
+        [cn, "diff-added"].filter(Boolean).join(" ");
+      flow.nodes = flow.nodes.map((n) =>
+        ids.has(n.id) ? { ...n, className: tag(n.className) } : n,
+      );
+      flow.edges = flow.edges.map((e) =>
+        ids.has(e.id) ? { ...e, className: tag(e.className) } : e,
+      );
+      return flow;
+    };
+    const rebuildWithFlash = (flashSet: Set<string>) => {
+      if (!lastSpec.current) return;
+      const flow = specToFlow(lastSpec.current, viewerState.folds);
+      const decorated = decorate(flow, flashSet);
+      setNodes(decorated.nodes);
+      setEdges(decorated.edges);
+      flash(flashSet);
+    };
+    const idsOf = (s: Spec | null): Set<string> => {
+      const out = new Set<string>();
+      if (!s) return out;
+      for (const n of s.nodes) out.add(n.id);
+      for (const e of s.edges) out.add(e.id);
+      return out;
+    };
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;
       const k = e.key.toLowerCase();
@@ -116,16 +188,36 @@ function Inner() {
       if (isTextTarget(e.target)) return;
       if (compareModeRef.current === "A-other") return;
       e.preventDefault();
-      const next = isUndo ? undoSpec() : redoSpec();
-      if (!next) return;
-      lastSpec.current = next;
-      const flow = specToFlow(next, viewerState.folds);
-      setNodes(flow.nodes);
-      setEdges(flow.edges);
-      scheduleSave();
+      if (lastScopeRef.current === "viewer") {
+        const beforeFolds = new Set((viewerState.folds ?? []).map((f) => f.id));
+        const next = isUndo ? undoViewer() : redoViewer();
+        if (!next) return;
+        const afterFolds = new Set((next.folds ?? []).map((f) => f.id));
+        const reappeared = new Set<string>();
+        for (const id of afterFolds) if (!beforeFolds.has(id)) reappeared.add(id);
+        rebuildWithFlash(reappeared);
+        refreshViewsPanel();
+        refreshTimelinePanel();
+        scheduleViewSave();
+      } else {
+        const before = idsOf(lastSpec.current);
+        const next = isUndo ? undoSpec() : redoSpec();
+        if (!next) return;
+        lastSpec.current = next;
+        const after = idsOf(next);
+        const reappeared = new Set<string>();
+        for (const id of after) if (!before.has(id)) reappeared.add(id);
+        rebuildWithFlash(reappeared);
+        scheduleSave();
+      }
     };
+    window.addEventListener("mousedown", onMouseDown, true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onMouseDown, true);
+      window.removeEventListener("keydown", onKey);
+      if (flashTimerRef.current !== null) window.clearTimeout(flashTimerRef.current);
+    };
   }, []);
 
   // Bridge handlers (camera, dim, selection getter).
@@ -212,6 +304,10 @@ function Inner() {
       } else if (msg.type === "view-load") {
         const next: ViewerState = parseViewerState(msg.text);
         setViewerState(next);
+        // Same reasoning as clearSpecHistory on spec load: a fresh sidecar
+        // makes prior viewer history incoherent (folds/views/bookmarks may
+        // not exist there).
+        clearViewerHistory();
         markViewSynced(msg.text ?? serializeViewerState(next));
         // If the spec already loaded *and* the sidecar has folds, rebuild
         // the flow now so the folds (which live on viewerState, not the
@@ -321,7 +417,9 @@ function Inner() {
     const foldIds = deleted.filter((n) => n.type === "fold").map((n) => n.id);
     const specIds = deleted.filter((n) => n.type !== "fold").map((n) => n.id);
     if (foldIds.length > 0 && viewerState.folds) {
-      viewerState.folds = viewerState.folds.filter((f) => !foldIds.includes(f.id));
+      mutateViewer((s) => {
+        s.folds = (s.folds ?? []).filter((f) => !foldIds.includes(f.id));
+      });
       console.info(`[fold] removed: ${foldIds.join(", ")}`);
       flushViewSave();
       // If only folds were deleted, rebuild the flow now (otherwise the spec
@@ -630,7 +728,7 @@ function Inner() {
     }
     cx = cx / memberIds.length;
     cy = cy / memberIds.length;
-    const id = createFold(viewerState, memberIds, [cx, cy]);
+    const id = mutateViewer((s) => createFold(s, memberIds, [cx, cy]));
     if (!id) {
       console.info(
         `[fold] createFold rejected (members may already be inside another fold): ${memberIds.join(", ")}`,

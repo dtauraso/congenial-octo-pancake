@@ -19,7 +19,7 @@ import {
   subscribeState,
 } from "../sim/runner";
 import { scheduleViewSave, vscode } from "./save";
-import { getSpec, viewerState } from "./state";
+import { getSpec, mutateViewer, viewerState } from "./state";
 import { parseTrace, type TraceEvent } from "../sim/trace";
 import { historyToTrace } from "../sim/trace";
 import { detectDrift, summarizeDrift } from "../sim/drift";
@@ -48,6 +48,7 @@ let driftSummary = "";
 export function initTimelinePanel() {
   panel = document.createElement("div");
   panel.className = "timeline-panel";
+  panel.dataset.undoScope = "viewer";
 
   playBtn = document.createElement("button");
   playBtn.className = "timeline-play";
@@ -266,20 +267,23 @@ function renderBookmarks() {
 }
 
 function addBookmark(name: string, startNodeId: string, cycle: number) {
-  const list = viewerState.bookmarks ?? [];
-  const idx = list.findIndex((b) => b.name === name);
   const next: Bookmark = { name, startNodeId, cycle };
-  if (idx >= 0) list[idx] = next;
-  else list.push(next);
-  list.sort((a, b) => a.cycle - b.cycle);
-  viewerState.bookmarks = list;
+  mutateViewer((s) => {
+    const list = s.bookmarks ?? [];
+    const idx = list.findIndex((b) => b.name === name);
+    if (idx >= 0) list[idx] = next;
+    else list.push(next);
+    list.sort((a, b) => a.cycle - b.cycle);
+    s.bookmarks = list;
+  });
   scheduleViewSave();
   renderBookmarks();
 }
 
 function deleteBookmark(name: string) {
-  const list = viewerState.bookmarks ?? [];
-  viewerState.bookmarks = list.filter((b) => b.name !== name);
+  mutateViewer((s) => {
+    s.bookmarks = (s.bookmarks ?? []).filter((b) => b.name !== name);
+  });
   scheduleViewSave();
   renderBookmarks();
 }

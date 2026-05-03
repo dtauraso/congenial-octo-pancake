@@ -67,4 +67,51 @@ export function setViewerState(next: ViewerState) {
   viewerState = next;
 }
 
+// Viewer-side history is independent of the spec stack — phase-8.md
+// requires the two surfaces' undo histories never bleed. Only deliberate
+// creations (folds, saved views, bookmarks) flow through mutateViewer.
+// Camera pan, lastSelectionIds, and the active-view dim mask are
+// incidental tracking and bypass it.
+const viewerUndoStack: ViewerState[] = [];
+const viewerRedoStack: ViewerState[] = [];
+
+export function mutateViewer<T>(fn: (v: ViewerState) => T): T {
+  const next = structuredClone(viewerState);
+  const result = fn(next);
+  // Skip the history push when fn produced no observable change. Viewer
+  // operations have validation paths that can early-return (createFold
+  // rejects overlap, etc.); without this, those rejections still leave a
+  // no-op entry on the stack that the user has to undo through.
+  if (JSON.stringify(next) === JSON.stringify(viewerState)) return result;
+  viewerUndoStack.push(viewerState);
+  if (viewerUndoStack.length > UNDO_LIMIT) viewerUndoStack.shift();
+  viewerRedoStack.length = 0;
+  setViewerState(next);
+  return result;
+}
+
+export function undoViewer(): ViewerState | null {
+  const prev = viewerUndoStack.pop();
+  if (!prev) return null;
+  viewerRedoStack.push(viewerState);
+  setViewerState(prev);
+  return prev;
+}
+
+export function redoViewer(): ViewerState | null {
+  const next = viewerRedoStack.pop();
+  if (!next) return null;
+  viewerUndoStack.push(viewerState);
+  setViewerState(next);
+  return next;
+}
+
+export function clearViewerHistory() {
+  viewerUndoStack.length = 0;
+  viewerRedoStack.length = 0;
+}
+
+export function canUndoViewer(): boolean { return viewerUndoStack.length > 0; }
+export function canRedoViewer(): boolean { return viewerRedoStack.length > 0; }
+
 export const nodeById = new Map<string, Node>();

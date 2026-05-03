@@ -10,14 +10,20 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import {
   canRedoSpec,
+  canRedoViewer,
   canUndoSpec,
+  canUndoViewer,
   clearSpecHistory,
+  clearViewerHistory,
   getSpec,
   mutateSpec,
+  mutateViewer,
   redoSpec,
+  redoViewer,
   setSpec,
   setViewerState,
   undoSpec,
+  undoViewer,
   viewerState,
 } from "../src/webview/state";
 import type { Spec } from "../src/schema";
@@ -39,6 +45,7 @@ beforeEach(() => {
   setSpec(structuredClone(initial));
   setViewerState(structuredClone(baseViewer));
   clearSpecHistory();
+  clearViewerHistory();
 });
 
 describe("spec undo/redo (Tier 2)", () => {
@@ -82,5 +89,55 @@ describe("spec undo/redo (Tier 2)", () => {
     const before = JSON.stringify(getSpec());
     expect(undoSpec()).toBeNull();
     expect(JSON.stringify(getSpec())).toBe(before);
+  });
+});
+
+describe("viewer undo/redo (Tier 2)", () => {
+  it("viewer undo restores prior viewer state byte-for-byte", () => {
+    const before = JSON.stringify(viewerState);
+    mutateViewer((s) => {
+      s.views = [...(s.views ?? []), { name: "v2", nodeIds: ["in"] }];
+    });
+    expect(JSON.stringify(viewerState)).not.toBe(before);
+    expect(canUndoViewer()).toBe(true);
+    undoViewer();
+    expect(JSON.stringify(viewerState)).toBe(before);
+  });
+
+  it("viewer undo/redo does not touch the spec", () => {
+    const specBefore = JSON.stringify(getSpec());
+    mutateViewer((s) => { s.bookmarks = [{ name: "b2", startNodeId: "in", cycle: 9 }]; });
+    expect(JSON.stringify(getSpec())).toBe(specBefore);
+    undoViewer();
+    expect(JSON.stringify(getSpec())).toBe(specBefore);
+    redoViewer();
+    expect(JSON.stringify(getSpec())).toBe(specBefore);
+  });
+
+  it("viewer redo replays the undone edit", () => {
+    mutateViewer((s) => { s.bookmarks = [{ name: "b2", startNodeId: "in", cycle: 9 }]; });
+    const after = JSON.stringify(viewerState);
+    undoViewer();
+    expect(canRedoViewer()).toBe(true);
+    redoViewer();
+    expect(JSON.stringify(viewerState)).toBe(after);
+  });
+
+  it("a no-op viewer mutation is not pushed onto the stack", () => {
+    expect(canUndoViewer()).toBe(false);
+    mutateViewer((_s) => { /* no change */ });
+    expect(canUndoViewer()).toBe(false);
+  });
+
+  it("the two stacks are independent — spec mutation leaves viewer history alone", () => {
+    mutateViewer((s) => { s.views = [...(s.views ?? []), { name: "v3", nodeIds: ["in"] }]; });
+    const viewerBefore = JSON.stringify(viewerState);
+    mutateSpec((s) => { s.nodes.push({ id: "rl", type: "ReadLatch", x: 1, y: 0 }); });
+    undoSpec();
+    // Spec was rolled back, but viewer history must be exactly where the
+    // viewer mutation left it — both content and stack depth.
+    expect(JSON.stringify(viewerState)).toBe(viewerBefore);
+    expect(canUndoViewer()).toBe(true);
+    expect(canRedoViewer()).toBe(false);
   });
 });
