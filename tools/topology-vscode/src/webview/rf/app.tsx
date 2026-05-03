@@ -284,9 +284,14 @@ function Inner() {
     if (nodeIds.length === 0 && edgeIds.length === 0) return;
     applyDelete(spec, viewerState, nodeIds, edgeIds);
     lastSpec.current = spec;
+    // applyDelete cascades (e.g. drops edges incident to deleted nodes) —
+    // RF only removed the items its own change set named, so rebuild from
+    // the post-delete spec to flush stale visuals before the host save
+    // round-trip.
+    rebuildFlow();
     scheduleSave();
     scheduleViewSave();
-  }, [scheduleViewSave]);
+  }, [rebuildFlow, scheduleViewSave]);
 
   const onNodesDelete = useCallback((deleted: RFNode[]) => {
     // Folds live in viewerState, not the spec — split them out so applyDelete
