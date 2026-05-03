@@ -176,10 +176,16 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
       vscode.Uri.file(path.join(this.context.extensionPath, "out", "webview.css"))
     );
     const nonce = randomNonce();
+    // React Flow positions every node via inline `style="transform: ..."`
+    // attributes, which `style-src` governs when `style-src-attr` is unset.
+    // The bundled stylesheet is still served from cspSource; 'unsafe-inline'
+    // is the minimal additional grant needed for RF to lay nodes out. The
+    // webview is a controlled iframe with no third-party content, so the
+    // XSS-via-stylesheet surface is negligible.
     const csp = [
       `default-src 'none'`,
       `img-src ${webview.cspSource} data:`,
-      `style-src ${webview.cspSource}`,
+      `style-src ${webview.cspSource} 'unsafe-inline'`,
       `script-src 'nonce-${nonce}'`,
       `font-src ${webview.cspSource}`,
     ].join("; ");

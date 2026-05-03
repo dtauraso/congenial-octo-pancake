@@ -1,11 +1,15 @@
 import * as vscode from "vscode";
-import * as path from "path";
 
+// Compute the sidecar URI by operating on the URI path (forward slashes,
+// scheme-agnostic) instead of round-tripping through fsPath, which on
+// Windows uses backslashes and only works for the file: scheme.
 export function viewSidecarUri(docUri: vscode.Uri): vscode.Uri {
-  const p = docUri.fsPath;
-  const ext = path.extname(p);
-  const base = ext ? p.slice(0, -ext.length) : p;
-  return vscode.Uri.file(`${base}.view.json`);
+  const lastSlash = docUri.path.lastIndexOf("/");
+  const dir = lastSlash >= 0 ? docUri.path.slice(0, lastSlash) : "";
+  const base = lastSlash >= 0 ? docUri.path.slice(lastSlash + 1) : docUri.path;
+  const dot = base.lastIndexOf(".");
+  const stem = dot > 0 ? base.slice(0, dot) : base;
+  return docUri.with({ path: `${dir}/${stem}.view.json` });
 }
 
 export async function readSidecar(uri: vscode.Uri): Promise<string | undefined> {
