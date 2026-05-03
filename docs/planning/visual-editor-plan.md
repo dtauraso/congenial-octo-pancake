@@ -27,37 +27,43 @@ you're working on.
 |---|---|---|---|---|
 | 1 — pipeline foundations | ✅ done | [phase-1.md](visual-editor/phase-1.md) | ~2 | ~\$120 |
 | 2 — recall affordances | ✅ done | [phase-2.md](visual-editor/phase-2.md) | ≤2 | ≤\$120 |
-| 3 — structural editing | 🟡 ~½ remaining (3 Tier-3 follow-ups) | [phase-3.md](visual-editor/phase-3.md) | ~2.75 | ~\$30 left |
-| 4 — fold/unfold | ✅ done; nested ⏳ | [phase-4.md](visual-editor/phase-4.md) | ~⅜ actual | ~\$30 nested |
-| 4.5 — plugin hardening (audit) | 🟡 4.5.1 done; 4.5.2–4.5.6 ⏳ | [phase-4.5.md](visual-editor/phase-4.5.md) | ~3.75 | ~\$165 left |
-| 5 — comparison | ⏳ next-up; open questions resolved | [phase-5.md](visual-editor/phase-5.md) | ~1.875 | ~\$110 |
-| 5.5 — animation model rewrite | ⏳ gates Phase 6 | [phase-5.5.md](visual-editor/phase-5.5.md) | ~2 (risk 3) | ~\$120 (risk \$180) |
-| 6 — keyframed motion | ⏳ rebudget after 5.5 | [phase-6.md](visual-editor/phase-6.md) | ~2.5, risk ~4 | ~\$225 (risk \$360) |
-| 7 — trace replay | ⏳ | [phase-7.md](visual-editor/phase-7.md) | ~6 | ~\$280 |
-| 8 — polish (undo, snap, e2e) | ⏳ | [phase-8.md](visual-editor/phase-8.md) | ~1.375 | ~\$80 |
-| 9 — SVG diagram parity | ⏳ | [phase-9.md](visual-editor/phase-9.md) | ~2 | ~\$180 |
+| 3 — structural editing | 🟡 ~½ remaining (3 Tier-3 follow-ups) | [phase-3.md](visual-editor/phase-3.md) | — | ~\$3 left |
+| 4 — fold/unfold | ✅ done; nested ⏳ | [phase-4.md](visual-editor/phase-4.md) | — | ~\$3 nested |
+| 4.5 — plugin hardening (audit) | 🟡 4.5.1 done; 4.5.2–4.5.6 ⏳ | [phase-4.5.md](visual-editor/phase-4.5.md) | — | ~\$15 left |
+| 5 — comparison | ✅ done | [phase-5.md](visual-editor/phase-5.md) | — | ~\$5.65 actual |
+| 5.5 — animation model rewrite | ⏳ gates Phase 6 | [phase-5.5.md](visual-editor/phase-5.5.md) | — | ~\$20 (risk \$35) |
+| 6 — keyframed motion | ⏳ rebudget after 5.5 | [phase-6.md](visual-editor/phase-6.md) | — | ~\$35 (risk \$60) |
+| 7 — trace replay | ⏳ | [phase-7.md](visual-editor/phase-7.md) | — | ~\$45 (risk \$80) |
+| 8 — polish (undo, snap, e2e) | ⏳ | [phase-8.md](visual-editor/phase-8.md) | — | ~\$8 |
+| 9 — SVG diagram parity | ⏳ | [phase-9.md](visual-editor/phase-9.md) | — | ~\$18 |
 
-**\$ totals (remaining):** ~\$1,100 midpoint to ship Phases 3 → 9 + Phase 4.5 hardening, range ~\$550–\$1,950 depending on workload-shape outcomes. See [risk-and-effort.md](visual-editor/risk-and-effort.md) for the cap-hit → \$ conversion methodology.
+**Cap-hit column dropped.** Phase 5 came in at ~\$5.65 against a \$110 estimate (~5% of midpoint, ~18× overestimate). The cap-hit unit was calibrated against an older model and a less mature codebase; with Opus 4.7 + the existing harness/adapter/save infrastructure, mechanical phases run roughly an order of magnitude under the original budget. \$ figures above are the post-Phase-5 recalibration; cap-hit estimates are no longer load-bearing. See [risk-and-effort.md](visual-editor/risk-and-effort.md) for the methodology.
+
+**\$ totals (remaining):** ~\$150 midpoint to ship Phases 3 → 9 + Phase 4.5 hardening, range ~\$100–\$280 depending on whether the refactor/exploratory phases (5.5, 6, 7) hit their risk-case multipliers. Mechanical phases (3-leftover, 4-nested, 4.5, 8, 9) scaled at ~10% of original estimate; refactor (5.5, 6) and exploratory (7) at ~15–20% with wider risk bands since the Phase-5 efficiency factor may not generalize fully to less-scoped work.
 | Cross-cutting — testing strategy | — | [testing-strategy.md](visual-editor/testing-strategy.md) | — |
 | Cross-cutting — risk & effort | — | [risk-and-effort.md](visual-editor/risk-and-effort.md) | — |
 
 ## ▶ NEXT UP
 
 The most load-bearing remaining work, in priority order. Pick whichever
-matches the cap available and the kind of break you'd most regret.
+matches the budget available and the kind of break you'd most regret.
 
-1. **Phase 5 — comparison [~1.5 + ~⅜ tests].** The headline next phase.
-   Side-by-side diff against git HEAD or a second spec. See [phase-5.md](visual-editor/phase-5.md).
-2. **Phase 4.5.2+ — plugin hardening continuation.** 4.5.1 (data-loss bugs)
+1. **Phase 4.5.2+ — plugin hardening continuation [~\$15].** 4.5.1 (data-loss bugs)
    shipped; remaining bands are correctness, packaging, hygiene, test
-   coverage. See [phase-4.5.md](visual-editor/phase-4.5.md). Worth running
-   before Phase 5 if comparison's two-pane mode would amplify any unfixed
-   audit findings.
-3. **Phase 4 nested folding follow-up [~½, ⏳].** Single-level folds work;
+   coverage. See [phase-4.5.md](visual-editor/phase-4.5.md). The remaining
+   audit findings are now the largest unaddressed risk surface.
+2. **Phase 5 follow-ups [~\$3].** Two known gaps from Phase 5: (a) the
+   collapsed-fold diff badge with category counts (`diff-decorate.ts` +
+   `FoldNode.tsx`); (b) the `.dim` wrapper opacity dimming the halo —
+   move dim's opacity onto the inner body so halos punch through at full
+   opacity. See [phase-5.md](visual-editor/phase-5.md).
+3. **Phase 5.5 — animation model rewrite [~\$20].** Gates Phase 6.
+   See [phase-5.5.md](visual-editor/phase-5.5.md).
+4. **Phase 4 nested folding follow-up [~\$3].** Single-level folds work;
    pick up only when a real topology hits the level-of-nesting wall.
-4. **Phase 3 Tier 3 follow-ups [~⅜ remaining, ⏳].** Three queued cases
+5. **Phase 3 Tier 3 follow-ups [~\$3].** Three queued cases
    (port-drag → chan, palette-drag-position, port-drag mismatched-kinds
-   fallback). Lower leverage than Phase 5; opportunistic.
+   fallback). Opportunistic.
 
 ## What the tool is for, in priority order
 
@@ -193,11 +199,14 @@ timeline + bookmarks, keyframed motion + record-mode editor, trace replay.
 
 ## Status snapshot (this branch)
 
-Phases 1, 2, and 4 complete. Phase 3 substrate migration done; remaining is
-three Tier-3 e2e follow-ups (~⅜). Phase 4.5.1 (data-loss bugs) shipped;
-4.5.2–4.5.6 ⏳. The visual → spec → Go pipeline runs on every save with a
-status indicator; recall affordances (saved views, bookmarks, playback) in
-place.
+Phases 1, 2, 4, and 5 complete. Phase 3 substrate migration done; remaining
+is three Tier-3 e2e follow-ups. Phase 4.5.1 (data-loss bugs) shipped;
+4.5.2–4.5.6 ⏳. Phase 5 shipped at ~\$5.65 actual against \$110 estimate
+(see commits `74e6abc`, `153c74d`); two known follow-ups (collapsed-fold
+diff badge, dim+diff CSS punch-through). The visual → spec → Go pipeline
+runs on every save with a status indicator; recall affordances (saved
+views, bookmarks, playback) in place; comparison vs. HEAD or second file
+in place.
 
 Phase 1 alone changed the tool from "live preview" to "design surface."
 Phases 2–3 made it a durable design surface. Phases 4–6 are recall +

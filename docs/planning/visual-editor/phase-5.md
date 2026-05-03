@@ -1,6 +1,10 @@
 # Phase 5 — comparison
 
-**Cap:** ~1.5 + ~⅜ tests = ~1.875. **$ extra-usage est:** ~$110 (range $55–$190, 1× mixed).
+**Status:** ✅ done. **Actual:** ~\$5.65 (vs. ~\$110 estimate; ~5% / ~18× overestimate). Shipped in 7 steps across commits `74e6abc` (steps 1–3: diff-core + compare loaders + compare toolbar) and `153c74d` (steps 4–7: diff decoration + onion-skin + Tier 2/3 tests).
+
+**Known follow-ups (not blocking):**
+1. Collapsed-fold diff badge with category counts. When a folded region's members differ between live and other, the placeholder currently shows no indicator. `decorateForCompare` would need to compute a per-fold member-diff and attach it to the fold node; `FoldNode.tsx` would render the badge. ~\$3.
+2. `.dim` + diff halo punch-through. The phase spec calls for halos to render at full opacity even when the body is dimmed, but `.dim` currently puts opacity on the wrapper, which dims the box-shadow halo too. CSS refactor: move dim's opacity off the wrapper and onto the inner body content. ~\$3.
 
 ## Open questions resolved
 
