@@ -206,15 +206,23 @@ the tool's value collapses without it.
 The most load-bearing remaining work, in priority order. Pick whichever
 matches the cap available and the kind of break you'd most regret.
 
-1. **Phase 5 — comparison [~1.5 + ~⅜ tests].** The headline next phase.
+1. **Phase 4.5 Tier-1 (data-loss bugs) [~¾, ⏳].** From the plugin code
+   audit. Five fixes that silently destroy user work today: sidecar
+   writes bypassing the document model (C1), the two competing view-save
+   debouncers (C2), unhandled `applyEdit`/`save` rejections (H3),
+   text-equality suppression that breaks on no-op saves (C3), and
+   regular-node drag positions never persisting (H9 — the editor's
+   stated job). Do this *before* Phase 5: Phase 5's two-pane mode
+   doubles the surface for all of these. See the Phase 4.5 entry below.
+2. **Phase 5 — comparison [~1.5 + ~⅜ tests].** The headline next phase.
    Side-by-side diff against git HEAD or a second spec. See the Phase 5
    entry below for the open questions and the per-phase test items
    (Tier 2 invariants + Tier 3 system-shape cases) that promote the
    spec/viewer/topogen contracts from rules-in-doc to enforced tests.
-2. **Phase 4 nested folding follow-up [~½, ⏳].** Single-level folds work;
+3. **Phase 4 nested folding follow-up [~½, ⏳].** Single-level folds work;
    nested ones still rejected. Pick up only when a real topology hits
    the level-of-nesting wall.
-3. **Phase 3 Tier 3 follow-ups [~⅜ remaining, ⏳].** Three cases queued:
+4. **Phase 3 Tier 3 follow-ups [~⅜ remaining, ⏳].** Three cases queued:
    port-drag asserts `chan` materializes in generated Go (~⅛),
    palette-drag-position (~⅛, deferred — pixel-stable assertion is
    harder), port-drag mismatched-kinds fallback (~⅛). Lower leverage
@@ -273,6 +281,41 @@ Cap-hit estimates in **[brackets]** at each phase and item. See [Risk and effort
   - **[~⅛, done]** ✅ Tier 3 invariant test: fold gestures (create/toggle/delete) post only `view-save`, never `save` ([e2e/fold-no-spec-save.spec.ts](../../tools/topology-vscode/e2e/fold-no-spec-save.spec.ts)). Selection pre-set via `__wirefold_view_fixture`; spec asserted byte-identical pre/post; getSent() filtered for `save` messages must be empty. Promotes "folds are purely visual" from plan-doc note to enforced runtime contract — exactly the silent-corrosion failure mode the broader testing strategy was added to guard against.
   - **[~⅛, done]** ✅ Tier 2 system-shape test: fold + delete (already covered). [test/delete.test.ts:69-75](../../tools/topology-vscode/test/delete.test.ts#L69-L75) asserts that `applyDelete` scrubs `fold.memberIds` when a member node is deleted. The unit-level coverage was already in place from Phase 3's delete retro; no new test needed.
   - **[~½]** ⏳ Nested folding (follow-up). Today [fold-core.ts](../../tools/topology-vscode/src/webview/fold-core.ts) rejects creating a fold whose members are already in another fold, and [adapter.ts](../../tools/topology-vscode/src/webview/rf/adapter.ts) takes "first wins" when a node appears in multiple folds. Lifting that needs: (1) a containment relation on `viewerState.folds` (parent fold id, or derived from membership inclusion); (2) edge re-routing that walks up the chain to the nearest *collapsed* ancestor on each side rather than checking only direct membership; (3) expanded-bounds that recurse so an outer expanded fold sizes itself around inner folds (collapsed placeholders + expanded child frames), not just leaf members; (4) delete that frees inner members back to the outer fold rather than to the top level. Tier 2 retro grid grows by the collapse/expand combinations across the tree. Pick up when a real topology hits a level-of-nesting wall — until then, single-level folds carry the recall affordance.
+
+- **Phase 4.5 — plugin hardening (audit-driven)** **[~3.75 total across 5 sub-phases]** ⏳ Sourced from a full code-quality audit of `tools/topology-vscode/`. Five priority bands; do them in order — the bands are not interchangeable. Phase 4.5.1 is the "stop destroying user work" tier and gates everything else. Phase 4.5.5 is the test coverage that prevents the same bugs from re-shipping.
+  - **Phase 4.5.1 — data-loss bugs [~¾]**
+    - **[~¼]** ⏳ **C1.** Sidecar `view-save` writes via `workspace.fs.writeFile` clobber unsaved editor changes; debounce never flushes on dispose. Route through a `WorkspaceEdit` on a `TextDocument`; flush on `panel.onDidDispose` and on `onDidChangeViewState(visible=false)`. ([src/extension.ts:79-80](../../tools/topology-vscode/src/extension.ts#L79-L80), [src/sidecar.ts:20-22](../../tools/topology-vscode/src/sidecar.ts#L20-L22))
+    - **[~⅛]** ⏳ **C2.** Two competing view-save debouncers (global in [src/webview/save.ts:73-88](../../tools/topology-vscode/src/webview/save.ts#L73-L88), local in [src/webview/rf/app.tsx:172-194](../../tools/topology-vscode/src/webview/rf/app.tsx#L172-L194)) with separate `lastSyncedView` state. Pan-then-bookmark within 400ms loses the camera. Delete the local one; fold all callers onto the shared module-level debouncer.
+    - **[~⅛]** ⏳ **H3.** `await applyEdit(...)` / `await document.save()` can reject (readonly file, save provider error); current handler is uncaught and the webview already reported success. Wrap in try/catch; post `{type:"save-error"}` back so the toolbar can show the failure. ([src/extension.ts:76-77](../../tools/topology-vscode/src/extension.ts#L76-L77))
+    - **[~⅛]** ⏳ **C3.** Suppress-by-text-equality breaks on no-op saves and on identical-text resaves; the next external edit gets misclassified and clobbers in-flight webview state. Switch to `document.version` (set `lastAppliedVersion` after `applyEdit` resolves; ignore changes whose `e.document.version <= lastAppliedVersion`). ([src/extension.ts:40-53](../../tools/topology-vscode/src/extension.ts#L40-L53))
+    - **[~⅛]** ⏳ **H9.** `onNodeDragStop` only branches on `node.type === "fold"`; dragging a normal node updates RF state but never writes back to `spec.nodes[i].x/y` or calls `scheduleSave`. Positions snap back on the next disk reload. Add a non-fold branch that mutates `spec.nodes` and schedules a save. ([src/webview/rf/app.tsx:464-476](../../tools/topology-vscode/src/webview/rf/app.tsx#L464-L476))
+  - **Phase 4.5.2 — correctness & protocol [~¾]**
+    - **[~¼]** ⏳ **H4.** Webview↔host messages are read with no schema validation; could write `[object Object]` to disk. Define a discriminated-union `WebviewToHostMsg` / `HostToWebviewMsg` shared by both sides; type-narrow before use; reject unknown types. ([src/extension.ts:70-91](../../tools/topology-vscode/src/extension.ts#L70-L91), [src/webview/main.tsx:29](../../tools/topology-vscode/src/webview/main.tsx#L29))
+    - **[~⅛]** ⏳ **H5.** `parseViewerState` returns `v as ViewerState` with no shape validation — hand-edited sidecars crash consumers. Mirror `parseSpec`'s validation discipline; on failure, log + return defaults. ([src/webview/viewerState.ts:36-44](../../tools/topology-vscode/src/webview/viewerState.ts#L36-L44))
+    - **[~⅛]** ⏳ **H8.** Camera persists both legacy `{x,y,w,h}` viewBox (zeroed) and `zoom`; the viewBox-fallback path divides by zero in [camera.ts:15](../../tools/topology-vscode/src/webview/camera.ts#L15) for sidecars without `zoom`. Pick one representation; migrate older sidecars on load. ([src/webview/rf/app.tsx:196-199](../../tools/topology-vscode/src/webview/rf/app.tsx#L196-L199))
+    - **[~⅛]** ⏳ **H7.** `lastSelectionIds` re-application across `load`/`view-load` arrival order leaves stale selection. Always reconcile selection on `view-load` (drop selected when not in saved set), or wait for both messages before initial render. ([src/webview/rf/app.tsx:117-124](../../tools/topology-vscode/src/webview/rf/app.tsx#L117-L124))
+    - **[~⅛]** ⏳ **M9.** Mixed delete (fold + node) skips `rebuildFlow`; stale visuals persist until host round-trip. Make `handleDelete` call `rebuildFlow()` after mutating spec. ([src/webview/rf/app.tsx:241-261](../../tools/topology-vscode/src/webview/rf/app.tsx#L241-L261))
+  - **Phase 4.5.3 — reach & packaging [~½]** *(do before any install/publish)*
+    - **[~⅛]** ⏳ **H6.** Custom-editor `filenamePattern: "topology.json"` matches only literal name; `my-topology.json` won't open. Broaden to `**/*topology.json`. ([package.json:18-22](../../tools/topology-vscode/package.json#L18-L22))
+    - **[~⅛]** ⏳ **H1.** `bundleWatcher` is `createFileSystemWatcher(absoluteString)`; `GlobPattern` only matches inside the workspace, so the watcher silently never fires for installed users. Wrap in `RelativePattern`, or gate on `context.extensionMode === Development`. ([src/extension.ts:55-56](../../tools/topology-vscode/src/extension.ts#L55-L56))
+    - **[~⅛]** ⏳ **H2.** Watcher / topogen / runner / docSub leak on activation failure (only disposed via `panel.onDidDispose`). Push every disposable into `context.subscriptions`. ([src/extension.ts:56,65](../../tools/topology-vscode/src/extension.ts#L56))
+    - **[~⅛]** ⏳ **M13.** `.vscodeignore` ships `test/**`, `e2e/**`, `*.config.*`, sourcemaps, `package-lock.json`, `playwright-report/`, `test-results/` in the VSIX. Add the missing exclusions. ([.vscodeignore](../../tools/topology-vscode/.vscodeignore))
+  - **Phase 4.5.4 — runtime hygiene [~¾]**
+    - **[~⅛]** ⏳ **M2.** `cp.exec` for topogen has a 1MB stdout cap — large diagnostics kill the run with ENOBUFS. Use `cp.spawn("go", ["run", "./cmd/topogen", "--check"])` and stream stderr (consistent with `runCommand.ts`). ([src/topogenRunner.ts:48](../../tools/topology-vscode/src/topogenRunner.ts#L48))
+    - **[~⅛]** ⏳ **M3 / M4.** `kill("SIGTERM")` on `go run` leaves the inner binary orphaned on macOS; cancellation detection by signal name races against natural exits. Spawn with `detached: true`, kill the process group; track an explicit `cancelled` flag. ([src/runCommand.ts:29,50-53](../../tools/topology-vscode/src/runCommand.ts#L50-L53))
+    - **[~⅛]** ⏳ **M7 / M8.** `retainContextWhenHidden: true` plus an unconditional RAF loop plus per-node WAAPI animations drains battery on hidden tabs; `notify()` allocates a fresh array each frame. Pause RAF + animations on `document.visibilitychange`; reuse the array. ([src/extension.ts:13](../../tools/topology-vscode/src/extension.ts#L13), [src/webview/playback.ts:111-118](../../tools/topology-vscode/src/webview/playback.ts#L111-L118))
+    - **[~⅛]** ⏳ **M1.** CSP `style-src ${webview.cspSource}` may block any `<style>` element React Flow injects (inline `style=` attributes are fine without `'unsafe-inline'`; injected `<style>` is not). Verify in webview devtools; add `'unsafe-inline'` if RF requires. ([src/extension.ts:106-108](../../tools/topology-vscode/src/extension.ts#L106-L108))
+    - **[~⅛]** ⏳ **M10.** Module-level `let spec` mutated in place defeats any future `useEffect([spec])`. Treat spec as immutable; produce new objects on edit. ([src/webview/state.ts:6](../../tools/topology-vscode/src/webview/state.ts#L6))
+    - **[~⅛]** ⏳ **M6 / M12.** Audit `path` reconstruction in `sidecar.ts` for Windows (`Uri.joinPath` instead of string concat); confirm webview loads `.map` files for production stack traces. ([src/sidecar.ts:5-8](../../tools/topology-vscode/src/sidecar.ts#L5-L8), [esbuild.mjs:10](../../tools/topology-vscode/esbuild.mjs#L10))
+  - **Phase 4.5.5 — test coverage to lock the audit findings [~1]**
+    - **[~½]** ⏳ Extension-host integration tests via `@vscode/test-electron`: sidecar I/O, message protocol round-trip, debounce flush-on-dispose, applyEdit version-suppression. The audit's Critical and High items are concentrated in host code that has zero test coverage today; this is the load-bearing addition.
+    - **[~⅛]** ⏳ `parseSpec` rejection-path tests (every reject branch in [src/schema.ts](../../tools/topology-vscode/src/schema.ts)).
+    - **[~⅛]** ⏳ `parseViewerState` validation tests (will fail until H5 lands; that's the point).
+    - **[~⅛]** ⏳ `onConnect` port-taken rejection test ([app.tsx:279-287](../../tools/topology-vscode/src/webview/rf/app.tsx#L279-L287)) — load-bearing invariant for codegen.
+    - **[~⅛]** ⏳ Camera-without-`zoom` regression test (would catch H8).
+    - **[~⅛]** ⏳ Node-drag persistence e2e test (will fail until H9 lands).
+    - **[~⅛]** ⏳ Add CSP meta to `e2e/harness.html` so prod-CSP bugs surface in Playwright instead of leaking past until install. ([e2e/harness.html](../../tools/topology-vscode/e2e/harness.html))
+  - **Phase 4.5.6 — lows & nits [opportunistic]** Pick up while touching adjacent code; not a planned cap-hit. Includes: legacy SVG viewport restore size-dependence (L1), `EDGE_KIND_OPTIONS` duplication of `EDGE_KINDS` (L2), unused `view` import (L3), URL-safe nonce (L4), `flowToSpec` always-`"any"` debt (L5 — overlaps Phase 9), test-only `__wirefold_test` shipped in production (L7), empty-`contentChanges` filter (L8), dead `panStartListeners` (L9), `parseDur` NaN check on the `ms` branch (L10), toolbar HTML hand-built in host then bound by webview JS, `topogen` errors via `showErrorMessage` per save instead of OutputChannel, `package.json` missing `categories`/`repository`/`icon`/`engines.node`, tsconfig strictness (`noUncheckedIndexedAccess` etc.), no ESLint config.
 
 - **Phase 5 — comparison** **[~1.5 + ~⅜ tests]**
   - **[~½]** Side-by-side mode loading two specs (current vs. git HEAD, or two files).
@@ -466,6 +509,12 @@ savings against the prior `~13` total.
   budget extra for things that visually overlay a primitive — they
   must live in the same DOM frame and transform context as the
   primitive itself, or alignment / lifecycle / scale drift somewhere.
+- Phase 4.5: ~3.75 cap hits (audit-driven plugin hardening). Five
+  bands; 4.5.1 (~¾) is data-loss bugs and gates everything else,
+  4.5.5 (~1) is the test coverage that prevents regression. Sourced
+  from a full code-quality audit of `tools/topology-vscode/`. Worth
+  running before Phase 5 because Phase 5's two-pane mode doubles the
+  surface for every Critical / High item.
 - Phase 4: ~⅜ cap hit actual (vs. ~1 estimate, vs. ~2 pre-RF).
   Underran because the slice was three composable pieces (adapter
   rerouting, FoldNode component, gesture wiring) sharing one
@@ -498,10 +547,12 @@ savings against the prior `~13` total.
   stack would create. Worth doing right since the undo stack's shape
   is structural — painful to retrofit later.
 
-Phases 3–6 remaining: **~5.25 cap hits** (Phase 3 ~½ + Phase 5 ~1.5
-+ Phase 6 ~2.5, +0.5 for sublabel/undo savings already booked,
-−¾ from the Tier 3 harness underrun, −⅝ from the Phase 4
-underrun). Phase 4 itself is now done at ~⅜ actual. Headline
+Phases 3–6 remaining (excluding Phase 4.5): **~5.25 cap hits**
+(Phase 3 ~½ + Phase 5 ~1.5 + Phase 6 ~2.5, +0.5 for sublabel/undo
+savings already booked, −¾ from the Tier 3 harness underrun,
+−⅝ from the Phase 4 underrun). **+~3.75 for Phase 4.5** brings
+the band to **~9 cap hits** through Phase 6 inclusive of audit
+hardening. Phase 4 itself is now done at ~⅜ actual. Headline
 pipeline through Phase 3: **~½ more cap hits** from where this
 branch sits (substrate + migration tail done, Tier 3 harness done;
 remaining is the four Tier 3 follow-up cases). Phases 4 and 8 stay
