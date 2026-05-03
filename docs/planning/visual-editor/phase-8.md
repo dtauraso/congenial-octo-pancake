@@ -13,7 +13,8 @@
 
 | Chunk | Commit | $ | est |
 |---|---|---|---|
-| 1 — Spec undo/redo MVP + Tier 2 invariant | _pending_ | $0.73 | $1.20 est, under |
+| 1 — Spec undo/redo MVP + Tier 2 invariant | `8ef693f` | $0.73 | $1.20 est, under |
+| 2 — Viewer undo + scope routing + diff-added affordance | _pending_ | $2.08 | $1.50 est, slightly over |
 
 **Chunk 1 — Spec undo/redo MVP** (proposal signed off 2026-05-03):
 hand-rolled snapshot stacks (cap 50) wired into `mutateSpec` in
@@ -28,5 +29,25 @@ test (`spec-undo-invariant.test.ts`) pins: undo restores
 byte-for-byte, redo replays, fresh mutation clears redo, viewer
 state is byte-identical across undo/redo, empty-stack undo no-ops.
 Visual rollback affordance and viewer-side undo deferred to chunk 2.
+
+**Chunk 2 — Viewer undo + scope routing + diff-added affordance**
+(proposal signed off 2026-05-03): second snapshot stack
+(`mutateViewer` in `state.ts`) wraps the four deliberate viewer
+mutations — `saveView`/`deleteView` in `views.ts`,
+`addBookmark`/`deleteBookmark` in `timeline.ts`, and the
+`createFold`/fold-delete paths in `rf/app.tsx`. Toggle-collapse and
+drag-position on existing folds stay incidental, matching the doc's
+exclusion of camera/lastSelectionIds. Scope routing tracks
+`lastScopeRef` via capture-phase mousedown walking up to
+`[data-undo-scope="viewer"]` (set on the views and timeline panel
+roots); everything else falls through to spec. Visual affordance
+flashes `.diff-added` (Phase 5 vocabulary) on re-appearing
+node/edge/fold ids for 1500ms after each undo/redo. Tier 2 invariant
+extended: viewer undo doesn't touch spec, no-op viewer mutations
+skip the stack push, and a spec undo leaves the viewer stack's
+content *and* depth untouched. `.diff-removed` flash and the
+optional camera pan from phase-8.md were left unimplemented — items
+removed by undo no longer render (no surface to decorate without a
+ghost-render pass) and the camera pan is marked optional in the doc.
 
 - *Dropped: SVG export.* The `diagrams/` set is hand-authored to the style guide and the editor itself is the live view — exporting would mean re-implementing the style guide twice (live + export). Revive only when hand-authored diagrams drift from the spec badly enough to hurt; until then, screenshots / recordings cover incidental sharing.
