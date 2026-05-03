@@ -26,6 +26,7 @@ import { beginEditSublabel, setSublabelRerender } from "../sublabel";
 import { flushViewSave, markViewSynced, scheduleSave, scheduleViewSave, vscode } from "../save";
 import { setSpec, setViewerState, spec, viewerState } from "../state";
 import {
+  isLegacyCamera,
   parseViewerState,
   serializeViewerState,
   type ViewerState,
@@ -207,13 +208,19 @@ function Inner() {
           );
         }
         const c = next.camera;
-        if (c && typeof c.zoom === "number") {
+        if (c && !isLegacyCamera(c)) {
           rf.setViewport({ x: c.x, y: c.y, zoom: c.zoom });
         } else if (c) {
+          // Legacy SVG viewBox sidecar — convert with the current pane size,
+          // then rewrite `next.camera` in canonical form so the next save
+          // persists the migrated shape and we never re-read the legacy box.
           const pane = paneRef.current;
           if (pane) {
             const { width, height } = pane.getBoundingClientRect();
-            rf.setViewport(boxToViewport({ x: c.x, y: c.y, w: c.w, h: c.h }, width, height));
+            const vp = boxToViewport(c, width, height);
+            rf.setViewport(vp);
+            next.camera = { x: vp.x, y: vp.y, zoom: vp.zoom };
+            scheduleViewSave();
           }
         }
       }
@@ -224,7 +231,7 @@ function Inner() {
   }, [rf]);
 
   const persistViewport = useCallback((vp: Viewport) => {
-    viewerState.camera = { x: vp.x, y: vp.y, w: 0, h: 0, zoom: vp.zoom };
+    viewerState.camera = { x: vp.x, y: vp.y, zoom: vp.zoom };
     scheduleViewSave();
   }, []);
 

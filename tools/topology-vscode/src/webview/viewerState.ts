@@ -2,10 +2,16 @@
 // spec; topogen ignores them entirely. See visual-editor-plan.md §"Spec vs
 // viewer state" for the policy.
 
-// `w`/`h` describe an SVG viewBox (legacy lit-html renderer); `zoom` is
-// React Flow's pan/zoom representation. Both shapes coexist while the
-// migration is in flight; readers pick whichever they understand.
-export type Camera = { x: number; y: number; w: number; h: number; zoom?: number };
+// Canonical camera is React Flow's pan/zoom: `{x, y, zoom}`. The lit-html
+// era persisted an SVG viewBox `{x, y, w, h}`; we still read those on load
+// and migrate to canonical on the next save, but never write the legacy
+// shape ourselves.
+export type Camera = { x: number; y: number; zoom: number };
+export type LegacyCameraBox = { x: number; y: number; w: number; h: number };
+
+export function isLegacyCamera(c: Camera | LegacyCameraBox): c is LegacyCameraBox {
+  return typeof (c as Camera).zoom !== "number";
+}
 
 export type SavedView = {
   name: string;
@@ -26,7 +32,7 @@ export type Fold = {
 export type Bookmark = { name: string; t: number };
 
 export type ViewerState = {
-  camera?: Camera;
+  camera?: Camera | LegacyCameraBox;
   views?: SavedView[];
   folds?: Fold[];
   bookmarks?: Bookmark[];
@@ -46,12 +52,16 @@ const isStr = (v: unknown): v is string => typeof v === "string";
 const isStrArr = (v: unknown): v is string[] =>
   Array.isArray(v) && v.every(isStr);
 
-function parseCamera(v: unknown): Camera | undefined {
+function parseCamera(v: unknown): Camera | LegacyCameraBox | undefined {
   if (!isObj(v)) return undefined;
-  if (!isNum(v.x) || !isNum(v.y) || !isNum(v.w) || !isNum(v.h)) return undefined;
-  const cam: Camera = { x: v.x, y: v.y, w: v.w, h: v.h };
-  if (isNum(v.zoom)) cam.zoom = v.zoom;
-  return cam;
+  if (!isNum(v.x) || !isNum(v.y)) return undefined;
+  // Canonical takes precedence; old transitional sidecars wrote `{x,y,w:0,h:0,zoom}`
+  // and the canonical branch correctly ignores the zeroed w/h.
+  if (isNum(v.zoom)) return { x: v.x, y: v.y, zoom: v.zoom };
+  if (isNum(v.w) && isNum(v.h) && v.w > 0 && v.h > 0) {
+    return { x: v.x, y: v.y, w: v.w, h: v.h };
+  }
+  return undefined;
 }
 
 function parseSavedView(v: unknown): SavedView | undefined {
