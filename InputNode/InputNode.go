@@ -30,6 +30,7 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 				n.value = v
 				n.hasValue = true
 				n.sentValue = false
+				s.Trace.Recv(n.Name, "Input", v)
 				fmt.Printf("%s: sending %d\n", n.Name, n.value)
 			default:
 			}
@@ -40,6 +41,8 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 			case n.ToNext <- n.value:
 				n.sentValue = true
 				n.hasValue = false
+				s.Trace.Fire(n.Name)
+				s.Trace.Send(n.Name, "out", n.value)
 			default:
 			}
 		}

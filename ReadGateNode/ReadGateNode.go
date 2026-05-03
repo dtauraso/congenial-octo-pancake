@@ -31,6 +31,7 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 			case v := <-g.FromValue:
 				g.Value = v
 				g.HasValue = true
+				s.Trace.Recv(g.Name, "chainIn", v)
 			default:
 			}
 		}
@@ -40,13 +41,16 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 			case v := <-g.FromAck:
 				g.AckVal = v
 				g.HasAck = true
+				s.Trace.Recv(g.Name, "ack", v)
 			default:
 			}
 		}
 
 		if g.HasValue && g.HasAck {
 			fmt.Printf("%s: value=%d ack=%d → %d\n", g.Name, g.Value, g.AckVal, g.Value)
+			s.Trace.Fire(g.Name)
 			S.Send(g.ToLatch, g.Value)
+			s.Trace.Send(g.Name, "out", g.Value)
 			g.HasValue = false
 			g.HasAck = false
 		}
