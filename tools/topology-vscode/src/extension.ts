@@ -164,6 +164,31 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
           );
           return;
         }
+        case "trace-load": {
+          const picked = await vscode.window.showOpenDialog({
+            canSelectMany: false,
+            openLabel: "Load trace",
+            filters: { "Trace files": ["jsonl"] },
+            defaultUri: document.uri,
+          });
+          if (!picked || picked.length === 0) return;
+          const uri = picked[0];
+          try {
+            const bytes = await vscode.workspace.fs.readFile(uri);
+            const text = new TextDecoder().decode(bytes);
+            const label = path.basename(uri.fsPath);
+            post({ type: "trace-loaded", text, label });
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            post({ type: "trace-error", message });
+          }
+          return;
+        }
+        case "trace-clear":
+          // Pure UI action — webview clears its own trace state. No host
+          // work needed; included in the message vocab so the user-side
+          // log is uniform with trace-load.
+          return;
       }
     });
   }

@@ -22,7 +22,9 @@ export type WebviewToHostMsg =
   | { type: "run" }
   | { type: "run-cancel" }
   | { type: "compare-head" }
-  | { type: "compare-file" };
+  | { type: "compare-file" }
+  | { type: "trace-load" }
+  | { type: "trace-clear" };
 
 export type HostToWebviewMsg =
   | { type: "load"; text: string }
@@ -32,15 +34,18 @@ export type HostToWebviewMsg =
   | { type: "flush" }
   | { type: "save-error"; message: string }
   | { type: "compare-load"; source: CompareSource; text: string; label: string }
-  | { type: "compare-error"; source: CompareSource; message: string };
+  | { type: "compare-error"; source: CompareSource; message: string }
+  | { type: "trace-loaded"; text: string; label: string }
+  | { type: "trace-error"; message: string };
 
 export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new Set([
   "ready", "save", "view-save", "run", "run-cancel", "compare-head", "compare-file",
+  "trace-load", "trace-clear",
 ]);
 
 export const HOST_TO_WEBVIEW_TYPES: ReadonlySet<HostToWebviewMsg["type"]> = new Set([
   "load", "view-load", "topogen-status", "run-status", "flush", "save-error",
-  "compare-load", "compare-error",
+  "compare-load", "compare-error", "trace-loaded", "trace-error",
 ]);
 
 export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {

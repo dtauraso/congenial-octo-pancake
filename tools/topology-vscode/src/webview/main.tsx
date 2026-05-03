@@ -5,7 +5,7 @@ import App from "./rf/app";
 import { flushSave, flushViewSave, setTopogenStatus } from "./save";
 import { initRunButton, setRunStatus } from "./run";
 import { parseHostToWebview } from "../messages";
-import { initTimelinePanel, refreshTimelinePanel } from "./timeline";
+import { initTimelinePanel, onTraceLoaded, onTraceError, refreshTimelinePanel } from "./timeline";
 import { attachClearOnPan, initViewsPanel, refreshViewsPanel } from "./views";
 import { getSpec } from "./state";
 import { applyDim } from "./rf/bridge";
@@ -49,6 +49,10 @@ window.addEventListener("message", (e) => {
     // becoming hidden / about to dispose).
     flushSave();
     flushViewSave();
+  } else if (msg.type === "trace-loaded") {
+    onTraceLoaded(msg.text, msg.label);
+  } else if (msg.type === "trace-error") {
+    onTraceError(msg.message);
   } else if (msg.type === "view-load") {
     // App handles the camera; we refresh the panels that depend on the sidecar.
     queueMicrotask(() => {

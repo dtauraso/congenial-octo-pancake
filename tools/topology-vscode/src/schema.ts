@@ -255,6 +255,8 @@ const str = (v: unknown, path: string): string =>
   typeof v === "string" ? v : fail(path, `expected string, got ${typeof v}`);
 const num = (v: unknown, path: string): number =>
   typeof v === "number" ? v : fail(path, `expected number, got ${typeof v}`);
+const bool = (v: unknown, path: string): boolean =>
+  typeof v === "boolean" ? v : fail(path, `expected boolean, got ${typeof v}`);
 const obj = (v: unknown, path: string): Record<string, unknown> =>
   isObj(v) ? v : fail(path, `expected object, got ${Array.isArray(v) ? "array" : typeof v}`);
 const arr = (v: unknown, path: string): unknown[] =>
@@ -311,6 +313,7 @@ function parseEdge(v: unknown, path: string): Edge {
     route: opt(o.route, (x) => oneOf(x, ["line", "snake", "below"] as const, `${path}.route`)),
     lane: opt(o.lane, (x) => num(x, `${path}.lane`)),
     arrowStyle: opt(o.arrowStyle, (x) => oneOf(x, ["filled", "open"] as const, `${path}.arrowStyle`)),
+    concurrent: opt(o.concurrent, (x) => bool(x, `${path}.concurrent`)),
     data: o.data,
   };
 }

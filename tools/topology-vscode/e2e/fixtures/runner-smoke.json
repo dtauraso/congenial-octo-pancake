@@ -10,7 +10,8 @@
       "sourceHandle": "out",
       "target": "ci",
       "targetHandle": "in",
-      "kind": "chain"
+      "kind": "chain",
+      "concurrent": false
     }
   ],
   "timing": {
