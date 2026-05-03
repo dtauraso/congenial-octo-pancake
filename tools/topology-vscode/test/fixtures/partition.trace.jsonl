@@ -1,0 +1,6 @@
+{"step":0,"kind":"recv","node":"p","port":"in","value":1}
+{"step":1,"kind":"fire","node":"p"}
+{"step":2,"kind":"send","edge":"pOut","value":1}
+{"step":3,"kind":"recv","node":"p","port":"in","value":1}
+{"step":4,"kind":"fire","node":"p"}
+{"step":5,"kind":"send","edge":"pOut","value":0}
