@@ -155,16 +155,18 @@ const partitionIn: HandlerFn = (state, input, props) => {
   const cur = Number(state.phase ?? PARTITION_NOT_INIT);
   if (Number(input.value) !== 1) return noEmit(state);
   const slidePx = Number(props.slidePx ?? 30);
+  const slideDy = Number(props.slideDy ?? 0);
   const dx = Number(state.dx ?? 0);
+  const dy = Number(state.dy ?? 0);
   if (cur === PARTITION_NOT_INIT) {
     return {
-      state: { ...state, phase: PARTITION_GROWING, dx: dx + slidePx },
+      state: { ...state, phase: PARTITION_GROWING, dx: dx + slidePx, dy: dy + slideDy },
       emissions: [{ port: "out", value: 1 }],
     };
   }
   if (cur === PARTITION_GROWING) {
     return {
-      state: { ...state, phase: PARTITION_STOPPED, dx: dx + slidePx },
+      state: { ...state, phase: PARTITION_STOPPED, dx: dx + slidePx, dy: dy + slideDy },
       emissions: [{ port: "out", value: 0 }],
     };
   }
@@ -194,6 +196,15 @@ export const HANDLERS: Record<string, Record<string, HandlerFn>> = {
 // any node downstream of one is treated as gated. Keep in sync with
 // HANDLERS — adding a new join handler without listing it here will
 // cause its downstream edges to be misclassified as concurrent.
+// Node types whose handlers write `state.dx` / `state.dy`. Phase 6 Chunk B
+// uses this to route paused-drag onto props (slidePx/slideDy) rather than
+// base x/y, since base x/y is only the *origin* the per-step slide adds
+// to. Keep in sync with handlers that write dx/dy — sibling rule to
+// GATE_TYPES.
+export const MOTION_TYPES: ReadonlySet<string> = new Set([
+  "Partition",
+]);
+
 export const GATE_TYPES: ReadonlySet<string> = new Set([
   "AndGate",
   "SyncGate",

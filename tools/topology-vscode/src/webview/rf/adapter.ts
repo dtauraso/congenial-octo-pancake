@@ -136,6 +136,7 @@ export function specToFlow(
         // spec. The runner overwrites world.state from initWorld; the
         // spec field is the seed, not the live value.
         state: n.state,
+        props: n.props,
       },
     };
   });
@@ -185,6 +186,7 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       type?: string;
       sublabel?: string;
       state?: SpecNode["state"];
+      props?: SpecNode["props"];
     };
     return {
       id: n.id,
@@ -193,6 +195,7 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       y: n.position.y,
       ...(d.sublabel !== undefined ? { sublabel: d.sublabel } : {}),
       ...(d.state !== undefined ? { state: d.state } : {}),
+      ...(d.props !== undefined ? { props: d.props } : {}),
     };
   });
 

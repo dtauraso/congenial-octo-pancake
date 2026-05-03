@@ -20,7 +20,8 @@ import { applyDelete } from "../delete-core";
 import { createFold, toggleFold } from "../fold-core";
 import { NodePalette, PALETTE_DATA_TYPE } from "./NodePalette";
 import { CompareToolbar, type CompareMode } from "./CompareToolbar";
-import { load as loadRunner, reset as resetRunner } from "../../sim/runner";
+import { isPlaying as isRunnerPlaying, load as loadRunner, reset as resetRunner } from "../../sim/runner";
+import { MOTION_TYPES } from "../../sim/handlers";
 import { beginRenameNodeId, setRenameRerender } from "../rename";
 import { beginEditSublabel, setSublabelRerender } from "../sublabel";
 import { flushViewSave, markViewSynced, scheduleSave, scheduleViewSave, vscode } from "../save";
@@ -543,7 +544,32 @@ function Inner() {
       // reload snaps the node back to its old position.
       const sn = spec.nodes.find((n) => n.id === node.id);
       if (!sn) return;
-      if (sn.x === node.position.x && sn.y === node.position.y) return;
+      const dx = node.position.x - sn.x;
+      const dy = node.position.y - sn.y;
+      if (dx === 0 && dy === 0) return;
+      // Phase 6 Chunk B record-mode-lite: paused drag on a motion-bearing
+      // node rewrites the per-phase slide rule (props.slidePx/slideDy) so
+      // the next firing lands at the dropped position. base (x, y) is the
+      // origin the slide accumulates from, not the rendered position, so
+      // editing it would shift the entire trajectory — not what the user
+      // means by "drop here." See docs/planning/visual-editor/phase-6.md.
+      if (MOTION_TYPES.has(sn.type) && !isRunnerPlaying()) {
+        const next = mutateSpec((s) => {
+          const target = s.nodes.find((n) => n.id === node.id);
+          if (!target) return;
+          const p = { ...(target.props ?? {}) };
+          p.slidePx = Number(p.slidePx ?? 30) + dx;
+          p.slideDy = Number(p.slideDy ?? 0) + dy;
+          target.props = p;
+        });
+        lastSpec.current = next;
+        // Spec base x/y didn't change, so RF must re-snap to the original
+        // position — otherwise the dragged-to coordinate sticks visually
+        // and compounds with the next state.dx tween.
+        rebuildFlow();
+        scheduleSave();
+        return;
+      }
       const next = mutateSpec((s) => {
         const target = s.nodes.find((n) => n.id === node.id);
         if (!target) return;
@@ -553,7 +579,7 @@ function Inner() {
       lastSpec.current = next;
       scheduleSave();
     },
-    []
+    [rebuildFlow]
   );
 
   const foldCurrentSelection = useCallback(() => {
