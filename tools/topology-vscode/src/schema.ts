@@ -140,7 +140,6 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     inputs: [],
     outputs: [
       { name: "out", kind: "chain" },
-      { name: "ready", kind: "signal" },
     ],
     shape: "rect", fill: "#e0e0e0", stroke: "#666", width: 80, height: 60,
   },

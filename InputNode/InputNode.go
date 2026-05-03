@@ -1,7 +1,6 @@
 package InputNode
 
 import (
-	"fmt"
 	S "github.com/dtauraso/wirefold/SafeWorker"
 )
 
@@ -31,7 +30,6 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 				n.hasValue = true
 				n.sentValue = false
 				s.Trace.Recv(n.Name, "Input", v)
-				fmt.Printf("%s: sending %d\n", n.Name, n.value)
 			default:
 			}
 		}
