@@ -143,7 +143,17 @@ actuals.
 | 9a — delete unused DistributeNode stub | `5cac4a4` | (in 9b) | — |
 | 9b — ChainInhibitor cross-language parity | `7a5e55d` | $1.00 | $1.35 est combined, on-target |
 | 10 — InputNode cross-language parity | `237e213` | $0.48 | $0.50 est ($0.30–$0.90), on-target |
-| **Phase 8 chunks 1–10 total** | | **$7.97** | **$5–15 original band** |
+| 11 — ReadLatch cross-language parity | `05c0036` | $0.72 | $0.50 est ($0.30–$0.80), slightly over |
+| **Phase 8 chunks 1–11 total** | | **$8.69** | **$5–15 original band** |
+
+**Chunk 11 — ReadLatch** (proposal signed off 2026-05-03): last
+gate-shaped node without parity coverage; not currently in
+Wiring.go but locks the contract before it re-enters. No code
+changes — Go `ReadLatchNode` and TS `latchHandlers` already
+aligned. Fixture `read-latch.trace.jsonl` exercises both branches
+(empty release → recv only, no fire; held release → recv → fire →
+send out + ack). `FixtureParity_ReadLatch_test.go` modeled on
+ChainInhibitor precedent.
 
 **Chunk 10 — InputNode** (proposal signed off 2026-05-03): last live
 wired node without parity coverage. Drop unused `ready` output from
