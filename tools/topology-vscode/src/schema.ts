@@ -89,10 +89,32 @@ export type TimingStep = {
 export type LegendRow = { kind: EdgeKind; name: string; desc: string };
 export type Note = { x: number; y: number; width?: number; height?: number; text: string };
 
+export type SeedEvent = {
+  nodeId: string;
+  outPort: string;
+  value: StateValue;
+  // Optional ignition tick. Defaults to 0 (all seed events fire on the
+  // first simulator tick).
+  atTick?: number;
+};
+
 export type Spec = {
   nodes: Node[];
   edges: Edge[];
-  timing?: { duration?: string; steps: TimingStep[] };
+  timing?: {
+    duration?: string;
+    steps: TimingStep[];
+    // Phase 5.5: initial events that ignite the simulation. Replaces the
+    // SVG-era `steps[]` master script (kept in parallel for now; full
+    // removal in Chunk D).
+    seed?: SeedEvent[];
+  };
+  // Cycle counter source. If set, the cycle counter increments each
+  // time the named node fires. If unset, the simulator falls back to
+  // (ii-a) quiescent-input — cycle increments each time the in-flight
+  // queues drain to empty. Topologies that never quiesce (continuous
+  // self-sustain) must set this.
+  cycleAnchor?: string;
   legend?: LegendRow[];
   notes?: Note[];
 };
@@ -314,6 +336,16 @@ function parseTimingStep(v: unknown, path: string): TimingStep {
   };
 }
 
+function parseSeedEvent(v: unknown, path: string): SeedEvent {
+  const o = obj(v, path);
+  return {
+    nodeId: str(o.nodeId, `${path}.nodeId`),
+    outPort: str(o.outPort, `${path}.outPort`),
+    value: stateValue(o.value, `${path}.value`),
+    atTick: opt(o.atTick, (x) => num(x, `${path}.atTick`)),
+  };
+}
+
 function parseLegendRow(v: unknown, path: string): LegendRow {
   const o = obj(v, path);
   return {
@@ -364,8 +396,11 @@ export function parseSpec(input: unknown): Spec {
       return {
         duration: opt(to.duration, (x) => str(x, "spec.timing.duration")),
         steps: arr(to.steps, "spec.timing.steps").map((s, i) => parseTimingStep(s, `spec.timing.steps[${i}]`)),
+        seed: opt(to.seed, (x) =>
+          arr(x, "spec.timing.seed").map((e, i) => parseSeedEvent(e, `spec.timing.seed[${i}]`))),
       };
     }),
+    cycleAnchor: opt(o.cycleAnchor, (x) => str(x, "spec.cycleAnchor")),
     legend: opt(o.legend, (l) =>
       arr(l, "spec.legend").map((r, i) => parseLegendRow(r, `spec.legend[${i}]`))),
     notes: opt(o.notes, (l) =>
