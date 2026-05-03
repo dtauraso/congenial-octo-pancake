@@ -1,6 +1,6 @@
 # Phase 8 — polish
 
-**[open-ended, ~⅜ saved by React Flow + the AnimatedNode pattern; +~⅜ tests]**
+**Cap:** ~⅞ scoped + ½ Tier 4 = ~1.375. **$ extra-usage est:** ~$80 (range $40–$140, 1× mixed). Open-ended; ~⅜ saved by React Flow + the AnimatedNode pattern; +~⅜ tests.
 
 - **[~⅛]** Spec undo / redo. (Cheaper than the original ~¼: the "mutate spec → rebuild via `specToFlow` → `setNodes`/`setEdges`" pipeline is already proven by id rename's `rerender` callback; an undo stack of spec snapshots plugs into the same callback.) **Substrate:** use [`zundo`](https://github.com/charkour/zundo), the dominant Zustand undo middleware (~2KB, snapshot-based with built-in grouping/diffing). Wraps the spec store in one line; avoids hand-rolling and maintaining a stack.
 - **[~⅛]** Deliberate-viewer undo / redo: folds, saved views, bookmarks. *Not* camera, lastSelectionIds, current playhead, or active-view selection — those are incidental tracking, not deliberate creations, and undoing them is jarring (cf. word processors not undoing scroll position). Same `zundo` substrate, **separate undo stack** so spec and viewer histories are independent: pressing undo with focus in the main pane rolls back spec changes; pressing it with focus in a viewer panel (folds list, saved-views, bookmarks) rolls back that panel's creations. Avoids the surprising case where pressing undo after deleting a saved view also rolls back an unrelated spec edit.

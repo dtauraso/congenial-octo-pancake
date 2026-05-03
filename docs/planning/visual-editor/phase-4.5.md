@@ -1,6 +1,14 @@
 # Phase 4.5 — plugin hardening (audit-driven)
 
-**[~3.75 total across 5 sub-phases]** ⏳ Sourced from a full code-quality audit of `tools/topology-vscode/`. Five priority bands; do them in order — the bands are not interchangeable. Phase 4.5.1 is the "stop destroying user work" tier and gates everything else. Phase 4.5.5 is the test coverage that prevents the same bugs from re-shipping.
+**Cap:** ~3.75 total across 5 sub-phases. **$ extra-usage est:** ~$210 total (range $110–$355).
+- 4.5.1 done (~¼ actual, Go/TS edits, 0.75×): ~$11 equivalent (pre-spillover).
+- 4.5.2 (~¾, mixed): ~$45 (range $25–$75).
+- 4.5.3 (~½, packaging — cache-heavy 0.5×): ~$15 (range $10–$30).
+- 4.5.4 (~¾, mixed): ~$45 (range $25–$75).
+- 4.5.5 (~1, test writing, 1×): ~$60 (range $30–$100).
+- 4.5.6 opportunistic — uncosted.
+
+⏳ Sourced from a full code-quality audit of `tools/topology-vscode/`. Five priority bands; do them in order — the bands are not interchangeable. Phase 4.5.1 is the "stop destroying user work" tier and gates everything else. Phase 4.5.5 is the test coverage that prevents the same bugs from re-shipping.
 
 ## Phase 4.5.1 — data-loss bugs ✅ [~¾ est / ~¼ actual]
 

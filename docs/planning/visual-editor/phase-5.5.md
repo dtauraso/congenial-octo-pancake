@@ -1,6 +1,8 @@
 # Phase 5.5 — animation model rewrite (simulator + per-node tickers)
 
-**[~2 cap est, ⏳]** Replaces the current `timing.steps[]`-driven master playback clock — an SVG-era artifact whose position/timing coupling forced a script recompute on every layout edit and was a major past cap-hit sink. Also clarifies how Phases 6 and 7 land. Must ship before Phase 6 (keyframed motion) starts.
+**Cap:** ~2 (risk to ~3). **$ extra-usage est:** ~$120 (range $60–$200, 1× mixed); risk-case ~$180 (up to ~$300). ⏳
+
+Replaces the current `timing.steps[]`-driven master playback clock — an SVG-era artifact whose position/timing coupling forced a script recompute on every layout edit and was a major past cap-hit sink. Also clarifies how Phases 6 and 7 land. Must ship before Phase 6 (keyframed motion) starts.
 
 *Goal:* animation behavior emerges from the topology + per-node response rules, the way it does in the running Go system. Spec edits never touch a global script. Position is independent of timing.
 

@@ -1,6 +1,6 @@
 # Phase 6 — keyframed motion (when a topology actually rewires during its cycle)
 
-**[~2.5, risk to ~4; +~⅜ tests; rebudget after Phase 5.5]**
+**Cap:** ~2.5 (risk to ~4) + ~⅜ tests. **$ extra-usage est:** ~$225 (range $115–$400, 1.5× UI-iteration heavy: keyframe interpolation + record-mode); risk-case ~$360 (up to ~$560). Rebudget after Phase 5.5.
 
 - **[~⅛]** ⏳ Tier 1 round-trip coverage extended to `positionKeyframes` / `endpointKeyframes` / `visibility` *before* any UI lands (each new spec field becomes a fixture row; the bridge can't silently drop them).
 - **[~¼]** Schema: `positionKeyframes`, `endpointKeyframes`, `visibility`.

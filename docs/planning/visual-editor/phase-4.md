@@ -1,6 +1,7 @@
 # Phase 4 — fold/unfold ✅
 
-**[~1 est / ~⅜ actual]**
+**Cap:** ~1 est / ~⅜ actual. **$ extra-usage est:** ~$60 (range $30–$100, 1× mixed); actual ≈ ⅜ × $60 = ~$22 equivalent (not tracked).
+**Nested folding follow-up (~½ remaining):** ~$30 (range $15–$50).
 
 ## ⏳ Remaining
 

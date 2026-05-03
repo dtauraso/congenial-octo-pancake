@@ -2,6 +2,18 @@
 
 Effort is measured in **Opus 4.7 cap hits** — how many times the session token budget is exhausted before the work is done. A "session" here means "one cap exhaustion." Calibration anchor: Phase 2 shipped in ≤2 cap hits.
 
+**Secondary metric: extra-usage dollars.** This project runs on a Pro plan with extra-usage spillover enabled — once the Pro cap is hit, work continues at metered API rates against a budget. Tracking the $ spent past cap on each phase gives a second-axis estimate ("this would cost $X to push through without waiting for the next cap window") and a hard signal because the spillover comes out of a real budget.
+
+**Conversion (cap-hit → API-equivalent $).** Opus 4.7 list rates: $15/M input, $75/M output, $1.50/M cache reads, $18.75/M cache writes. A cap-hit of coding work typically burns ~8–12M cached input reads + ~1–3M fresh input + ~1–3M cache writes + ~200–500k output. **Working midpoint: ~$60 per cap-hit, range $30–$100** depending on workload shape:
+
+| Workload shape | Multiplier | $/cap |
+|---|---|---|
+| Planning, refactoring, Go-edit-heavy (cache-hit-heavy, few fresh reads) | 0.5–0.75× | $30–45 |
+| Mixed coding + verification | 1× | $60 |
+| UI iteration with extension reloads, frequent file rereads | 1.25–1.75× | $75–105 |
+
+**How to use it.** Each phase carries a `$ extra-usage` line alongside its cap estimate. The number is `cap × shape-multiplier`, with a range. Record actuals via `/cost` after each phase; a phase whose $-actual diverges sharply from its cap-count is signal that the cap-hit unit isn't capturing the real work shape (and the multiplier table above needs adjusting). Per-phase shape is called out where it deviates from 1×.
+
 What burns the cap: large file reads on each context rebuild, back-and-forth UI iteration with extension reloads, and verification runs through `topogen` that re-read generated Go. Pure planning / small edits are cheap; gesture-by-gesture UI work and keyframe animation work are expensive.
 
 A round of repo cleanup landed before resuming Phase 3 (commits `29413bd…3d5bade`): SVG conventions out of CLAUDE.md auto-load, deleted the parallel `tools/topology-editor/` tree, split `extension.ts` by concern, added `tools/topology-vscode/ARCHITECTURE.md` as a one-screen file map, spec-summary header on generated `Wiring/wiring.go`, and `topogen --check` so debounced saves validate without rewriting the file. The estimates below already credit those savings against the prior `~13` total.

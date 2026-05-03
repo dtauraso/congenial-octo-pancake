@@ -1,6 +1,6 @@
 # Phase 5 — comparison
 
-**[~1.5 + ~⅜ tests]**
+**Cap:** ~1.5 + ~⅜ tests = ~1.875. **$ extra-usage est:** ~$110 (range $55–$190, 1× mixed).
 
 ## Open questions resolved
 

@@ -1,6 +1,6 @@
 # Phase 7 — trace replay rejoins the pipeline
 
-**[several, see [trace-replay-plan.md](../trace-replay-plan.md); +~¼ tests]**
+**Cap:** several — ~4 Go-tracing + ~2 UI = ~6. **$ extra-usage est:** ~$280 (range $140–$500). Go-edit portion (4 caps × 0.6× = ~$145) is cheap per cap; UI portion (2 caps × 1× = ~$120) is mixed. See [trace-replay-plan.md](../trace-replay-plan.md). +~¼ tests.
 
 - **[~2–3]** Implement value-flow tracing in the generated Go (per [trace-replay-plan.md](../trace-replay-plan.md)). (Dominates; Go edits are token-light.)
 - **[~1]** Editor loads or streams traces; replays observed behavior on the same diagram.

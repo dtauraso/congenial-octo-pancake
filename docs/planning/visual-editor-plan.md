@@ -23,19 +23,21 @@ This index covers cross-cutting decisions and a phase table. Each phase has
 its own file under [visual-editor/](visual-editor/). Load only the phase(s)
 you're working on.
 
-| Phase | Status | File | Cap est. |
-|---|---|---|---|
-| 1 — pipeline foundations | ✅ done | [phase-1.md](visual-editor/phase-1.md) | ~2 |
-| 2 — recall affordances | ✅ done | [phase-2.md](visual-editor/phase-2.md) | ≤2 |
-| 3 — structural editing | 🟡 ~½ remaining (3 Tier-3 follow-ups) | [phase-3.md](visual-editor/phase-3.md) | ~2.75 |
-| 4 — fold/unfold | ✅ done; nested ⏳ | [phase-4.md](visual-editor/phase-4.md) | ~⅜ actual |
-| 4.5 — plugin hardening (audit) | 🟡 4.5.1 done; 4.5.2–4.5.6 ⏳ | [phase-4.5.md](visual-editor/phase-4.5.md) | ~3.75 |
-| 5 — comparison | ⏳ next-up; open questions resolved | [phase-5.md](visual-editor/phase-5.md) | ~1.5 + ~⅜ tests |
-| 5.5 — animation model rewrite | ⏳ gates Phase 6 | [phase-5.5.md](visual-editor/phase-5.5.md) | ~2 |
-| 6 — keyframed motion | ⏳ rebudget after 5.5 | [phase-6.md](visual-editor/phase-6.md) | ~2.5, risk ~4 |
-| 7 — trace replay | ⏳ | [phase-7.md](visual-editor/phase-7.md) | several |
-| 8 — polish (undo, snap, e2e) | ⏳ | [phase-8.md](visual-editor/phase-8.md) | open-ended |
-| 9 — SVG diagram parity | ⏳ | [phase-9.md](visual-editor/phase-9.md) | ~2 |
+| Phase | Status | File | Cap est. | $ extra-usage est. |
+|---|---|---|---|---|
+| 1 — pipeline foundations | ✅ done | [phase-1.md](visual-editor/phase-1.md) | ~2 | ~$120 |
+| 2 — recall affordances | ✅ done | [phase-2.md](visual-editor/phase-2.md) | ≤2 | ≤$120 |
+| 3 — structural editing | 🟡 ~½ remaining (3 Tier-3 follow-ups) | [phase-3.md](visual-editor/phase-3.md) | ~2.75 | ~$30 left |
+| 4 — fold/unfold | ✅ done; nested ⏳ | [phase-4.md](visual-editor/phase-4.md) | ~⅜ actual | ~$30 nested |
+| 4.5 — plugin hardening (audit) | 🟡 4.5.1 done; 4.5.2–4.5.6 ⏳ | [phase-4.5.md](visual-editor/phase-4.5.md) | ~3.75 | ~$165 left |
+| 5 — comparison | ⏳ next-up; open questions resolved | [phase-5.md](visual-editor/phase-5.md) | ~1.875 | ~$110 |
+| 5.5 — animation model rewrite | ⏳ gates Phase 6 | [phase-5.5.md](visual-editor/phase-5.5.md) | ~2 (risk 3) | ~$120 (risk $180) |
+| 6 — keyframed motion | ⏳ rebudget after 5.5 | [phase-6.md](visual-editor/phase-6.md) | ~2.5, risk ~4 | ~$225 (risk $360) |
+| 7 — trace replay | ⏳ | [phase-7.md](visual-editor/phase-7.md) | ~6 | ~$280 |
+| 8 — polish (undo, snap, e2e) | ⏳ | [phase-8.md](visual-editor/phase-8.md) | ~1.375 | ~$80 |
+| 9 — SVG diagram parity | ⏳ | [phase-9.md](visual-editor/phase-9.md) | ~2 | ~$180 |
+
+**$ totals (remaining):** ~$1,100 midpoint to ship Phases 3 → 9 + Phase 4.5 hardening, range ~$550–$1,950 depending on workload-shape outcomes. See [risk-and-effort.md](visual-editor/risk-and-effort.md) for the cap-hit → $ conversion methodology.
 | Cross-cutting — testing strategy | — | [testing-strategy.md](visual-editor/testing-strategy.md) | — |
 | Cross-cutting — risk & effort | — | [risk-and-effort.md](visual-editor/risk-and-effort.md) | — |
 
