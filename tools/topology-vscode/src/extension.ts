@@ -65,17 +65,35 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
       }
     });
 
-    const bundlePath = path.join(this.context.extensionPath, "out", "webview.js");
-    const bundleWatcher = vscode.workspace.createFileSystemWatcher(bundlePath);
-    const reload = () => {
-      panel.webview.html = this.html(panel.webview);
-    };
-    bundleWatcher.onDidChange(reload);
-    bundleWatcher.onDidCreate(reload);
+    // Hot-reload of the webview bundle is a dev-loop convenience. The
+    // GlobPattern an absolute path produces only matches paths inside the
+    // workspace, so it silently never fires for installed users; gate the
+    // watcher on the extension mode rather than relying on that quirk.
+    const bundleWatcher =
+      this.context.extensionMode === vscode.ExtensionMode.Development
+        ? vscode.workspace.createFileSystemWatcher(
+            path.join(this.context.extensionPath, "out", "webview.js")
+          )
+        : undefined;
+    if (bundleWatcher) {
+      const reload = () => {
+        panel.webview.html = this.html(panel.webview);
+      };
+      bundleWatcher.onDidChange(reload);
+      bundleWatcher.onDidCreate(reload);
+    }
+
+    // Push everything into context.subscriptions immediately so an
+    // activation failure between creation and panel.onDidDispose can't
+    // leak watchers / processes. dispose() is idempotent on the VS Code
+    // disposables we use here, so the panel.onDidDispose path below is
+    // safe to keep for eager release per-panel.
+    this.context.subscriptions.push(docSub, viewStateSub, topogen, runner);
+    if (bundleWatcher) this.context.subscriptions.push(bundleWatcher);
 
     panel.onDidDispose(() => {
       docSub.dispose();
-      bundleWatcher.dispose();
+      bundleWatcher?.dispose();
       viewStateSub.dispose();
       topogen.dispose();
       runner.dispose();
