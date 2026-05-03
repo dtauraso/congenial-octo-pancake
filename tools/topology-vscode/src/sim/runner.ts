@@ -14,6 +14,9 @@ import {
   type FireRecord,
 } from "./simulator";
 import { classifyConcurrentEdges } from "./concurrency";
+import { getHandler } from "./handlers";
+import { NODE_TYPES } from "../schema";
+import type { TraceEvent } from "./trace";
 
 export type FireEvent = {
   type: "fire";
@@ -51,6 +54,8 @@ let world: World | null = null;
 let concurrentEdges: Set<string> = new Set();
 let intervalId: ReturnType<typeof setInterval> | 0 = 0;
 let playing = false;
+let replayEvents: TraceEvent[] | null = null;
+let replayIndex = 0;
 const listeners: RunnerListener[] = [];
 const stateListeners: Array<() => void> = [];
 
@@ -71,7 +76,32 @@ export function load(next: Spec): void {
   spec = next;
   world = initWorld(next);
   concurrentEdges = classifyConcurrentEdges(next);
+  replayEvents = null;
+  replayIndex = 0;
   notifyState();
+}
+
+// Replay mode: drive the runner from a recorded TraceEvent[] instead of
+// running the live simulator. Each tick advances one trace event:
+//   recv → re-run the receiving node's handler so world.state stays in
+//          sync (Phase 6 motion reads world.state.dx/dy); emit FireEvent
+//   send → emit EmitEvent on the named edge
+//   fire → no-op (the FireEvent already fired on recv)
+// The simulator queue is left empty in this mode; trace order is the
+// only authority. Once Go emits traces (Chunk 3), this same path
+// renders them.
+export function loadTrace(nextSpec: Spec, events: readonly TraceEvent[]): void {
+  spec = nextSpec;
+  world = initWorld(nextSpec);
+  if (world) world.queue = [];
+  concurrentEdges = classifyConcurrentEdges(nextSpec);
+  replayEvents = events.slice();
+  replayIndex = 0;
+  notifyState();
+}
+
+export function isReplaying(): boolean {
+  return replayEvents !== null;
 }
 
 // Read-only view of the current concurrent-edge classification. The
@@ -94,7 +124,13 @@ export function play(): void {
   // started), re-seed by resetting. Lets the play button behave as
   // "restart from seed" when nothing's queued, instead of silently
   // pausing on the first interval tick.
-  if (!world || world.queue.length === 0) {
+  if (replayEvents) {
+    if (replayIndex >= replayEvents.length) {
+      replayIndex = 0;
+      world = initWorld(spec);
+      if (world) world.queue = [];
+    }
+  } else if (!world || world.queue.length === 0) {
     world = initWorld(spec);
   }
   playing = true;
@@ -153,6 +189,10 @@ export function isPlaying(): boolean {
 // step-debugger (Chunk D) can drive single steps without the timer.
 export function stepOnce(): void {
   if (!spec || !world) return;
+  if (replayEvents) {
+    replayStepOnce();
+    return;
+  }
   if (world.queue.length === 0) {
     pause();
     notifyState();
@@ -162,6 +202,50 @@ export function stepOnce(): void {
   world = step(spec, world);
   const fresh = world.history.slice(before);
   for (const rec of fresh) emitEvents(rec);
+  notifyState();
+}
+
+// Consume one trace event. recv → run handler + emit FireEvent;
+// send → emit EmitEvent; fire → no-op. Stops replay when exhausted.
+function replayStepOnce(): void {
+  if (!spec || !world || !replayEvents) return;
+  if (replayIndex >= replayEvents.length) {
+    pause();
+    notifyState();
+    return;
+  }
+  const ev = replayEvents[replayIndex++];
+  if (ev.kind === "recv") {
+    const node = spec.nodes.find((n) => n.id === ev.node);
+    const handler = node ? getHandler(node.type, ev.port) : undefined;
+    if (handler && node) {
+      const prev = world.state[ev.node] ?? {};
+      const def = NODE_TYPES[node.type];
+      const props = { ...(def?.defaultProps ?? {}), ...(node.props ?? {}) };
+      const result = handler(prev, { port: ev.port, value: ev.value }, props);
+      world.state = { ...world.state, [ev.node]: result.state };
+    }
+    notify({
+      type: "fire",
+      nodeId: ev.node,
+      inputPort: ev.port,
+      inputValue: ev.value,
+      tick: world.tick,
+      ord: replayIndex,
+    });
+  } else if (ev.kind === "send") {
+    const edge = findEdge(spec, ev.edge);
+    if (edge) {
+      notify({
+        type: "emit",
+        edgeId: edge.id,
+        fromNodeId: edge.source,
+        toNodeId: edge.target,
+        value: ev.value,
+        tick: world.tick,
+      });
+    }
+  }
   notifyState();
 }
 
@@ -190,6 +274,14 @@ export function subscribeState(fn: () => void): () => void {
 
 function tick(): void {
   if (!spec || !world) return;
+  if (replayEvents) {
+    if (replayIndex >= replayEvents.length) {
+      pause();
+      return;
+    }
+    stepOnce();
+    return;
+  }
   if (world.queue.length === 0) {
     pause();
     return;
