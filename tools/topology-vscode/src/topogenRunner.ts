@@ -26,7 +26,7 @@ export class TopogenRunner {
   // written or rejects with a stderr message; status is posted as a side
   // effect so the indicator reflects the write result too.
   write(): Promise<void> {
-    return this.exec("go run ./cmd/topogen");
+    return this.run(["run", "./cmd/topogen"]);
   }
 
   private kick() {
@@ -34,36 +34,52 @@ export class TopogenRunner {
       this.pending = true;
       return;
     }
-    this.exec("go run ./cmd/topogen --check").catch(() => {});
+    this.run(["run", "./cmd/topogen", "--check"]).catch(() => {});
   }
 
-  private exec(cmd: string): Promise<void> {
+  // Streams stderr instead of buffering it through cp.exec — the 1MB stdout
+  // cap there killed runs whose error output was a large compile dump.
+  private run(args: string[]): Promise<void> {
     const folder = vscode.workspace.workspaceFolders?.[0];
     if (!folder) return Promise.resolve();
     this.running = true;
     this.post({ state: "running" });
     return new Promise((resolve, reject) => {
-      cp.exec(cmd, { cwd: folder.uri.fsPath }, (err, _stdout, stderr) => {
+      const proc = cp.spawn("go", args, { cwd: folder.uri.fsPath });
+      let stderr = "";
+      proc.stderr?.on("data", (d) => { stderr += d.toString(); });
+      // Drain stdout so the pipe doesn't fill and stall the process; we
+      // don't surface it (topogen prints nothing useful on success).
+      proc.stdout?.on("data", () => {});
+      proc.on("error", (err) => {
         this.running = false;
-        if (err) {
-          const message = (stderr || err.message).trim();
-          this.post({ state: "error", message });
-          vscode.window.showErrorMessage(`topogen failed: ${message}`);
-          if (this.pending) {
-            this.pending = false;
-            this.kick();
-          }
-          reject(new Error(message));
+        const message = (stderr || err.message).trim();
+        this.post({ state: "error", message });
+        vscode.window.showErrorMessage(`topogen failed: ${message}`);
+        this.drainPending();
+        reject(new Error(message));
+      });
+      proc.on("close", (code) => {
+        this.running = false;
+        if (code === 0) {
+          this.post({ state: "ok" });
+          this.drainPending();
+          resolve();
           return;
         }
-        this.post({ state: "ok" });
-        if (this.pending) {
-          this.pending = false;
-          this.kick();
-        }
-        resolve();
+        const message = stderr.trim() || `exit code ${code}`;
+        this.post({ state: "error", message });
+        vscode.window.showErrorMessage(`topogen failed: ${message}`);
+        this.drainPending();
+        reject(new Error(message));
       });
     });
+  }
+
+  private drainPending() {
+    if (!this.pending) return;
+    this.pending = false;
+    this.kick();
   }
 
   dispose() {
