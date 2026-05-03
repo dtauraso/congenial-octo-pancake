@@ -98,7 +98,10 @@ export function initWorld(spec: Spec): World {
     nextOrd: 0,
   };
   const idx = indexEdges(spec);
-  for (const seed of spec.timing?.seed ?? []) {
+  // Explicit empty array means "seed nothing on purpose" — only fall
+  // back to defaults when seed is undefined.
+  const effective = spec.timing?.seed ?? defaultSeed(spec);
+  for (const seed of effective) {
     scheduleEmission(
       world,
       idx,
@@ -111,6 +114,17 @@ export function initWorld(spec: Spec): World {
   // Sort so deterministic FIFO is preserved even if seeds list reorders.
   world.queue.sort(orderEvents);
   return world;
+}
+
+// Fallback when the spec has no `timing.seed`: emit one pulse=1 on the
+// `out` port of every Input node. Lets the play button do something
+// visible on any topology that has at least one Input, without the
+// user having to author a seed block by hand. If the topology has no
+// Input nodes, the queue stays empty and play() pauses immediately.
+function defaultSeed(spec: Spec): import("../schema").SeedEvent[] {
+  return spec.nodes
+    .filter((n) => n.type === "Input")
+    .map((n) => ({ nodeId: n.id, outPort: "out", value: 1, atTick: 0 }));
 }
 
 function orderEvents(a: SimEvent, b: SimEvent): number {

@@ -6,7 +6,6 @@ import {
   type EdgeKind,
   type Node as SpecNode,
   type Spec,
-  type StateValue,
 } from "../../schema";
 import type { Fold } from "../viewerState";
 
@@ -50,38 +49,11 @@ export function specToFlow(
   spec: Spec,
   folds: Fold[] = [],
 ): { nodes: RFNode[]; edges: RFEdge[] } {
-  const fireTimes = new Map<string, number[]>();
-  // stateSegs: nodeId -> field -> [{t, v}, ...] (sorted by t).
-  const stateSegs = new Map<string, Map<string, { t: number; v: StateValue }[]>>();
-
-  // Seed initial state from each node.state at t=0.
-  for (const n of spec.nodes) {
-    if (!n.state) continue;
-    const fields = new Map<string, { t: number; v: StateValue }[]>();
-    for (const [f, v] of Object.entries(n.state)) {
-      fields.set(f, [{ t: 0, v }]);
-    }
-    stateSegs.set(n.id, fields);
-  }
-
-  for (const s of spec.timing?.steps ?? []) {
-    if (s.fires) for (const id of s.fires) {
-      const arr = fireTimes.get(id) ?? [];
-      arr.push(s.t);
-      fireTimes.set(id, arr);
-    }
-    if (s.state) {
-      for (const [nodeId, fieldMap] of Object.entries(s.state)) {
-        let nodeFields = stateSegs.get(nodeId);
-        if (!nodeFields) { nodeFields = new Map(); stateSegs.set(nodeId, nodeFields); }
-        for (const [field, value] of Object.entries(fieldMap)) {
-          const segs = nodeFields.get(field) ?? [];
-          segs.push({ t: s.t, v: value });
-          nodeFields.set(field, segs);
-        }
-      }
-    }
-  }
+  // Phase 5.5: animation is driven by the simulator runner emitting
+  // events for AnimatedNode/AnimatedEdge to subscribe to. The adapter
+  // no longer pre-computes fireTimes / state segments / pulse offsets
+  // from timing.steps[]; that field is parser-accepted no-op pending
+  // full removal in Chunk D.
 
   // Map memberId → containing collapsed fold id. Nested folds are not
   // supported here; if a node appears in multiple collapsed folds, the first
@@ -144,14 +116,6 @@ export function specToFlow(
     const def = NODE_TYPES[n.type];
     const width = def?.width ?? 110;
     const height = def?.height ?? 60;
-    const ft = fireTimes.get(n.id);
-    const fieldsMap = stateSegs.get(n.id);
-    const stateFields = fieldsMap
-      ? Array.from(fieldsMap.entries()).map(([field, segs]) => ({
-          field,
-          segments: [...segs].sort((a, b) => a.t - b.t),
-        }))
-      : undefined;
     return {
       id: n.id,
       type: "animated",
@@ -165,20 +129,11 @@ export function specToFlow(
         shape: def?.shape ?? "rect",
         width,
         height,
-        fireTimes: ft,
-        stateFields,
         inputs: def?.inputs ?? [],
         outputs: def?.outputs ?? [],
       },
     };
   });
-
-  const departAt = new Map<string, number>();
-  const arriveAt = new Map<string, number>();
-  for (const s of spec.timing?.steps ?? []) {
-    for (const id of s.departs ?? []) departAt.set(id, s.t);
-    for (const id of s.arrives ?? []) arriveAt.set(id, s.t);
-  }
 
   const edges: RFEdge[] = [];
   for (const e of spec.edges) {
@@ -188,9 +143,6 @@ export function specToFlow(
     // skip rendering.
     if (srcFold && dstFold && srcFold === dstFold) continue;
 
-    const td = departAt.get(e.id);
-    const ta = arriveAt.get(e.id);
-    const pulse = td !== undefined && ta !== undefined && ta > td ? { td, ta } : undefined;
     const source = srcFold ?? e.source;
     const target = dstFold ?? e.target;
     // When an endpoint is rerouted to a fold placeholder, the original
@@ -208,7 +160,7 @@ export function specToFlow(
       type: "animated",
       label: e.label,
       style: { stroke: KIND_COLORS[e.kind] ?? "#888", strokeWidth: 1.5 },
-      data: { kind: e.kind, sourceHandle: e.sourceHandle, targetHandle: e.targetHandle, pulse },
+      data: { kind: e.kind, sourceHandle: e.sourceHandle, targetHandle: e.targetHandle },
     });
   }
 

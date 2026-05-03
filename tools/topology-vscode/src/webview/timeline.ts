@@ -1,28 +1,23 @@
-// Bottom timeline strip: play/pause, scrubber, bookmark markers.
+// Bottom control strip: play/pause + a live tick/cycle readout.
 //
-// Bookmarks live in viewerState.bookmarks (sidecar). Click a marker to seek
-// to its t and pause; "+ bookmark" captures the current playhead.
+// Phase 5.5 stripped the global scrubber and the bookmarks-at-t markers
+// — there is no master clock anymore, so `seek(t)` has no meaning. The
+// bookmark UI returns in Chunk D as resumption coordinates
+// {name, startNodeId, cycle} that fast-forward the simulator via
+// replayTo. This module is intentionally minimal until then.
 
 import {
-  getT01,
   isPlaying,
   pause,
   play,
-  seek,
-  subscribe,
-} from "./playback";
-import { scheduleViewSave } from "./save";
-import { viewerState } from "./state";
-import type { Bookmark } from "./viewerState";
+  subscribeState,
+  getWorld,
+} from "../sim/runner";
 
 let panel: HTMLDivElement;
-let track: HTMLDivElement;
-let playhead: HTMLDivElement;
 let playBtn: HTMLButtonElement;
-let timeLabel: HTMLSpanElement;
-let markersEl: HTMLDivElement;
-let addBtn: HTMLButtonElement;
-let nameInput: HTMLInputElement;
+let stepBtn: HTMLButtonElement;
+let label: HTMLSpanElement;
 
 export function initTimelinePanel() {
   panel = document.createElement("div");
@@ -31,125 +26,45 @@ export function initTimelinePanel() {
   playBtn = document.createElement("button");
   playBtn.className = "timeline-play";
   playBtn.addEventListener("click", () => {
-    if (isPlaying()) pause(); else play();
+    if (isPlaying()) pause();
+    else play();
   });
 
-  track = document.createElement("div");
-  track.className = "timeline-track";
-  track.addEventListener("click", (ev) => {
-    const rect = track.getBoundingClientRect();
-    const t = (ev.clientX - rect.left) / rect.width;
-    seek(t);
+  stepBtn = document.createElement("button");
+  stepBtn.className = "timeline-step";
+  stepBtn.textContent = "⏭";
+  stepBtn.title = "step one event";
+  stepBtn.addEventListener("click", async () => {
+    const { stepOnce } = await import("../sim/runner");
     pause();
+    stepOnce();
   });
 
-  markersEl = document.createElement("div");
-  markersEl.className = "timeline-markers";
-  track.appendChild(markersEl);
-
-  playhead = document.createElement("div");
-  playhead.className = "timeline-playhead";
-  track.appendChild(playhead);
-
-  timeLabel = document.createElement("span");
-  timeLabel.className = "timeline-time";
-
-  addBtn = document.createElement("button");
-  addBtn.className = "timeline-add";
-  addBtn.textContent = "+ bookmark";
-  addBtn.title = "Add a bookmark at the current playhead";
-
-  nameInput = document.createElement("input");
-  nameInput.type = "text";
-  nameInput.placeholder = "bookmark name…";
-  nameInput.className = "timeline-name-input";
-  nameInput.style.display = "none";
-
-  addBtn.addEventListener("click", () => {
-    pause();
-    addBtn.style.display = "none";
-    nameInput.style.display = "";
-    nameInput.value = "";
-    nameInput.focus();
-  });
-  const finishInput = (commit: boolean) => {
-    const name = nameInput.value.trim();
-    nameInput.style.display = "none";
-    addBtn.style.display = "";
-    if (commit && name) addBookmark(name, getT01());
-  };
-  nameInput.addEventListener("keydown", (ev) => {
-    if (ev.key === "Enter") finishInput(true);
-    else if (ev.key === "Escape") finishInput(false);
-  });
-  nameInput.addEventListener("blur", () => finishInput(true));
+  label = document.createElement("span");
+  label.className = "timeline-time";
 
   panel.appendChild(playBtn);
-  panel.appendChild(track);
-  panel.appendChild(timeLabel);
-  panel.appendChild(addBtn);
-  panel.appendChild(nameInput);
+  panel.appendChild(stepBtn);
+  panel.appendChild(label);
   document.body.appendChild(panel);
 
-  subscribe(updateUI);
-  renderMarkers();
+  subscribeState(updateUI);
   updateUI();
 }
 
 export function refreshTimelinePanel() {
   if (!panel) return;
-  renderMarkers();
+  updateUI();
 }
 
 function updateUI() {
   if (!panel) return;
-  const t = getT01();
-  playhead.style.left = `${t * 100}%`;
+  const w = getWorld();
   playBtn.textContent = isPlaying() ? "⏸" : "▶";
   playBtn.title = isPlaying() ? "pause" : "play";
-  timeLabel.textContent = t.toFixed(3);
-}
-
-function renderMarkers() {
-  markersEl.replaceChildren();
-  const bookmarks = viewerState.bookmarks ?? [];
-  for (const b of bookmarks) {
-    const m = document.createElement("button");
-    m.className = "timeline-marker";
-    m.style.left = `${b.t * 100}%`;
-    m.title = `${b.name} (t=${b.t.toFixed(3)}) — click to jump, Delete to remove`;
-    m.textContent = b.name;
-    m.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      seek(b.t);
-      pause();
-      m.focus();
-    });
-    m.addEventListener("keydown", (ev) => {
-      if (ev.key === "Delete" || ev.key === "Backspace") {
-        ev.preventDefault();
-        deleteBookmark(b.name);
-      }
-    });
-    markersEl.appendChild(m);
+  if (w) {
+    label.textContent = `tick ${w.tick} · cycle ${w.cycle} · queued ${w.queue.length}`;
+  } else {
+    label.textContent = "—";
   }
-}
-
-function addBookmark(name: string, t: number) {
-  const list = viewerState.bookmarks ?? [];
-  const idx = list.findIndex((b) => b.name === name);
-  const next: Bookmark = { name, t };
-  if (idx >= 0) list[idx] = next;
-  else list.push(next);
-  list.sort((a, b) => a.t - b.t);
-  viewerState.bookmarks = list;
-  scheduleViewSave();
-  renderMarkers();
-}
-
-function deleteBookmark(name: string) {
-  const list = viewerState.bookmarks ?? [];
-  viewerState.bookmarks = list.filter((b) => b.name !== name);
-  scheduleViewSave();
-  renderMarkers();
 }

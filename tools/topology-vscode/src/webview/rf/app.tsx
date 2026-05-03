@@ -20,7 +20,7 @@ import { applyDelete } from "../delete-core";
 import { createFold, toggleFold } from "../fold-core";
 import { NodePalette, PALETTE_DATA_TYPE } from "./NodePalette";
 import { CompareToolbar, type CompareMode } from "./CompareToolbar";
-import { resetAnimations } from "../render/animation";
+import { load as loadRunner, reset as resetRunner } from "../../sim/runner";
 import { beginRenameNodeId, setRenameRerender } from "../rename";
 import { beginEditSublabel, setSublabelRerender } from "../sublabel";
 import { flushViewSave, markViewSynced, scheduleSave, scheduleViewSave, vscode } from "../save";
@@ -38,19 +38,10 @@ import { AnimatedNode } from "./AnimatedNode";
 import { FoldNode } from "./FoldNode";
 import { notifyPanStart, register } from "./bridge";
 import { boxToViewport, viewportToBox } from "./camera";
-import { setDuration, startTickLoop } from "../playback";
 import { parseHostToWebview } from "../../messages";
 
 const EDGE_TYPES = { animated: AnimatedEdge };
 const RF_NODE_TYPES = { animated: AnimatedNode, fold: FoldNode };
-
-function parseDur(s: string | undefined): number {
-  if (!s) return 27000;
-  if (s.endsWith("ms")) return parseFloat(s);
-  if (s.endsWith("s")) return parseFloat(s) * 1000;
-  const n = parseFloat(s);
-  return Number.isFinite(n) ? n : 27000;
-}
 
 const EDGE_KIND_OPTIONS: EdgeKind[] = [
   "chain", "signal", "feedback-ack", "release", "streak",
@@ -150,11 +141,8 @@ function Inner() {
           const next: Spec = parseSpec(JSON.parse(msg.text));
           setSpec(next);
           lastSpec.current = next;
-          if (next.timing) {
-            setDuration(parseDur(next.timing.duration));
-            startTickLoop();
-          }
-          resetAnimations();
+          loadRunner(next);
+          resetRunner();
           const flow = specToFlow(next, viewerState.folds);
           // Reconcile the persisted selection against the current node set:
           // ids no longer present (after a delete in another session) are
