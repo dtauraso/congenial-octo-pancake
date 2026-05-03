@@ -40,6 +40,13 @@ describe("spec ↔ React Flow round-trip", () => {
     expect(roundTrip(src)).toEqual(src);
   });
 
+  // Phase 6 Chunk B: paused drag writes props.slidePx/slideDy. Round-trip
+  // must preserve the props or a save-then-reload would erase the gesture.
+  it("preserves node.props (slidePx/slideDy) for motion-bearing nodes", () => {
+    const src = loadFixture("props-motion.json");
+    expect(roundTrip(src)).toEqual(src);
+  });
+
   it("preserves the live topology.json (basic fields)", () => {
     // Live spec uses a stripped subset — the adapter currently round-trips
     // exactly what topogen consumes. If this regresses, codegen drift

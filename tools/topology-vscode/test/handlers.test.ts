@@ -5,7 +5,7 @@
 // the load-bearing claim that the simulator can mirror real Go behavior.
 
 import { describe, expect, it } from "vitest";
-import { getHandler, HANDLERS } from "../src/sim/handlers";
+import { getHandler, HANDLERS, MOTION_TYPES } from "../src/sim/handlers";
 import { NODE_TYPES, type HandlerState } from "../src/schema";
 
 const empty: HandlerState = {};
@@ -179,6 +179,27 @@ describe("Partition", () => {
   it("does not advance dx when ignoring a value (phase Stopped)", () => {
     const r = run("Partition", "in", 1, { phase: 2, dx: 60 }, { slidePx: 30 });
     expect(r.state.dx).toBe(60);
+  });
+
+  // Phase 6 Chunk B: paused-drag writes props.slideDy alongside slidePx;
+  // the handler must accumulate dy symmetrically so vertical drags show
+  // up in the next tween.
+  it("writes dy motion on each phase advance (props.slideDy)", () => {
+    const r1 = run("Partition", "in", 1, {}, { slidePx: 30, slideDy: -10 });
+    expect(r1.state.dx).toBe(30);
+    expect(r1.state.dy).toBe(-10);
+    const r2 = run("Partition", "in", 1, r1.state, { slidePx: 30, slideDy: -10 });
+    expect(r2.state.dy).toBe(-20);
+  });
+});
+
+describe("MOTION_TYPES", () => {
+  it("lists Partition (the only motion-bearing handler today)", () => {
+    expect(MOTION_TYPES.has("Partition")).toBe(true);
+  });
+  it("does not list non-motion handlers", () => {
+    expect(MOTION_TYPES.has("ChainInhibitor")).toBe(false);
+    expect(MOTION_TYPES.has("AndGate")).toBe(false);
   });
 });
 
