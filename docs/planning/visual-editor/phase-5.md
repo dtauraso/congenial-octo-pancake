@@ -2,7 +2,7 @@
 
 **Status:** ✅ done. **Actual:** ~\$5.65 (vs. ~\$110 estimate; ~5% / ~18× overestimate). Shipped in 7 steps across commits `74e6abc` (steps 1–3: diff-core + compare loaders + compare toolbar) and `153c74d` (steps 4–7: diff decoration + onion-skin + Tier 2/3 tests).
 
-**Follow-ups: ✅ shipped.** Both Phase 5 follow-ups landed in a single sub-band; see commit log on `visual-editor`.
+**Follow-ups: ✅ shipped at \$2.40 actual** (vs. ~\$6 estimated for the pair; ~40% of midpoint — on the mechanical-band trend). Commits `bb0ac48` (CSS) and `be4beef` (badge + tests + plan).
 1. ~~Collapsed-fold diff badge with category counts.~~ `decorateForCompare` now tallies added/removed/moved members per collapsed fold and attaches `diffCounts` to the fold node's `data`; `FoldNode` renders a small `+N −N ~N` badge on the placeholder. Tier 2 unit test in `test/diff-decorate.test.ts`.
 2. ~~`.dim` + diff halo punch-through.~~ CSS refactored: `.react-flow__node.dim > *` dims the inner body, so the wrapper's `box-shadow` / `outline` halos stay at full opacity. The aspirational comment-block guarantee at the bottom of the comparison-mode CSS section was removed (it was claiming a behavior the rule didn't actually produce).
 

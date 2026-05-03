@@ -30,7 +30,7 @@ you're working on.
 | 3 — structural editing | 🟡 ~½ remaining (3 Tier-3 follow-ups) | [phase-3.md](visual-editor/phase-3.md) | — | ~\$3 left |
 | 4 — fold/unfold | ✅ done; nested ⏳ | [phase-4.md](visual-editor/phase-4.md) | — | ~\$3 nested |
 | 4.5 — plugin hardening (audit) | ✅ 4.5.1–4.5.5 done; 4.5.6 opportunistic | [phase-4.5.md](visual-editor/phase-4.5.md) | — | ~\$13.47 actual |
-| 5 — comparison | ✅ done | [phase-5.md](visual-editor/phase-5.md) | — | ~\$5.65 actual |
+| 5 — comparison | ✅ done (incl. follow-ups) | [phase-5.md](visual-editor/phase-5.md) | — | ~\$8.05 actual |
 | 5.5 — animation model rewrite | ⏳ gates Phase 6 | [phase-5.5.md](visual-editor/phase-5.5.md) | — | ~\$20 (risk \$35) |
 | 6 — keyframed motion | ⏳ rebudget after 5.5 | [phase-6.md](visual-editor/phase-6.md) | — | ~\$35 (risk \$60) |
 | 7 — trace replay | ⏳ | [phase-7.md](visual-editor/phase-7.md) | — | ~\$45 (risk \$80) |
@@ -58,9 +58,8 @@ matches the budget available and the kind of break you'd most regret.
 4. **Phase 4.5.6 — audit lows & nits [opportunistic].** Pick up while
    touching adjacent code; not a planned spend. See [phase-4.5.md](visual-editor/phase-4.5.md).
 
-**Recently shipped:** Phase 5 follow-ups (collapsed-fold diff badge + dim
-halo punch-through) — small CSS / data-flow changes, see
-[phase-5.md](visual-editor/phase-5.md).
+**Recently shipped:** Phase 5 follow-ups at \$2.40 actual (collapsed-fold
+diff badge + dim halo punch-through). See [phase-5.md](visual-editor/phase-5.md).
 
 ## What the tool is for, in priority order
 
@@ -203,8 +202,9 @@ original \$210 audit estimate; mechanical-phase factor is ~10%, hardening
 ran slightly higher because audit work involves more codebase
 exploration than pure-function authoring). 4.5.6 lows & nits remain
 opportunistic. Phase 5 shipped at ~\$5.65 actual against \$110 estimate
-(see commits `74e6abc`, `153c74d`); two known follow-ups (collapsed-fold
-diff badge, dim+diff CSS punch-through). The visual → spec → Go pipeline
+(see commits `74e6abc`, `153c74d`); both follow-ups (collapsed-fold
+diff badge `be4beef`, dim halo punch-through `bb0ac48`) shipped at
+\$2.40 — Phase 5 total \$8.05. The visual → spec → Go pipeline
 runs on every save with a status indicator; recall affordances (saved
 views, bookmarks, playback) in place; comparison vs. HEAD or second file
 in place.
