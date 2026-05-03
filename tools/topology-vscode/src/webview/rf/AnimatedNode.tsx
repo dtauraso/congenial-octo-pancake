@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { KIND_COLORS, type Port } from "../../schema";
-import { stepToNode, subscribe } from "../../sim/runner";
+import { stepToNode, subscribe, getWorld, getTickMs } from "../../sim/runner";
 
 // Visible port dot. Sized large enough to be a real drag target, colored by
 // the port's edge kind so users can see which kinds connect to which.
@@ -51,6 +51,16 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   // flash. State-text updates piggyback on the same event channel — we
   // re-render with the latest input port + value seen by this node.
   const [stateText, setStateText] = useState<string[]>([]);
+  // Phase 6 Chunk A: motion is a derived view of simulator state. On
+  // each fire for this node we read world.state[id] for dx/dy and
+  // apply a CSS transform tween over the current tick interval. Default
+  // (0,0) when the node has no motion handler — pure event-triggered
+  // flash topologies render unchanged.
+  const [offset, setOffset] = useState<{ dx: number; dy: number }>(() => {
+    const s = getWorld()?.state?.[id];
+    return { dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) };
+  });
+  const [tweenMs, setTweenMs] = useState<number>(getTickMs());
 
   useEffect(() => {
     const unsub = subscribe((ev) => {
@@ -70,6 +80,9 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         );
       }
       setStateText([`${ev.inputPort}=${ev.inputValue}`]);
+      const s = getWorld()?.state?.[id];
+      setOffset({ dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) });
+      setTweenMs(getTickMs());
     });
     return unsub;
   }, [id]);
@@ -126,6 +139,9 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         boxSizing: "border-box",
         overflow: "visible",
         isolation: "isolate",
+        transform: `translate(${offset.dx}px, ${offset.dy}px)`,
+        transition: `transform ${tweenMs}ms linear`,
+        willChange: "transform",
       }}
     >
       {stepBtn}

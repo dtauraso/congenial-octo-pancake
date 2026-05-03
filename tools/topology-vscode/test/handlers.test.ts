@@ -164,6 +164,22 @@ describe("Partition", () => {
     expect(r.emissions).toEqual([]);
     expect(r.state.phase).toBe(1);
   });
+
+  // Phase 6 Chunk A: each phase advance writes dx into state so the
+  // renderer can tween a slide. Default slide is 30px from
+  // NODE_TYPES.Partition.defaultProps; tests use an explicit prop so
+  // the magnitude isn't action-at-a-distance.
+  it("writes dx motion on each phase advance (props.slidePx)", () => {
+    const r1 = run("Partition", "in", 1, {}, { slidePx: 30 });
+    expect(r1.state.dx).toBe(30);
+    const r2 = run("Partition", "in", 1, r1.state, { slidePx: 30 });
+    expect(r2.state.dx).toBe(60);
+  });
+
+  it("does not advance dx when ignoring a value (phase Stopped)", () => {
+    const r = run("Partition", "in", 1, { phase: 2, dx: 60 }, { slidePx: 30 });
+    expect(r.state.dx).toBe(60);
+  });
 });
 
 describe("handler purity", () => {

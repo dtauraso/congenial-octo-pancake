@@ -226,6 +226,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     inputs: [{ name: "in", kind: "chain" }],
     outputs: [{ name: "out", kind: "chain" }],
     shape: "rect", fill: "#fce4ec", stroke: "#ad1457", width: 90, height: 50,
+    defaultProps: { slidePx: 30 },
   },
 };
 

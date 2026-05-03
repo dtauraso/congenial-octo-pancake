@@ -141,21 +141,30 @@ const sdJoin: HandlerFn = (state, input) => {
 // `out` only on the Growing transition (continuous Grow emission in the
 // Go node is modeled as a single transition pulse here; the simulator
 // can re-pulse via concurrent-edge mode in N1').
+//
+// Phase 6 Chunk A: writes `dx` into state on each transition so the
+// renderer can tween a visible slide. Magnitude (props.slidePx, default
+// 30) sets pixels per phase advance. The slide is the Partition's
+// timing-window endpoint moving along the chain; nothing in `topogen`
+// reads dx today, but the rule (motion-bearing state lives on spec) is
+// what makes it spec-side rather than viewer-side.
 const PARTITION_NOT_INIT = 0;
 const PARTITION_GROWING = 1;
 const PARTITION_STOPPED = 2;
-const partitionIn: HandlerFn = (state, input) => {
+const partitionIn: HandlerFn = (state, input, props) => {
   const cur = Number(state.phase ?? PARTITION_NOT_INIT);
   if (Number(input.value) !== 1) return noEmit(state);
+  const slidePx = Number(props.slidePx ?? 30);
+  const dx = Number(state.dx ?? 0);
   if (cur === PARTITION_NOT_INIT) {
     return {
-      state: { ...state, phase: PARTITION_GROWING },
+      state: { ...state, phase: PARTITION_GROWING, dx: dx + slidePx },
       emissions: [{ port: "out", value: 1 }],
     };
   }
   if (cur === PARTITION_GROWING) {
     return {
-      state: { ...state, phase: PARTITION_STOPPED },
+      state: { ...state, phase: PARTITION_STOPPED, dx: dx + slidePx },
       emissions: [{ port: "out", value: 0 }],
     };
   }

@@ -32,6 +32,14 @@ describe("spec ↔ React Flow round-trip", () => {
     expect(roundTrip(src)).toEqual(src);
   });
 
+  // Phase 6 Chunk A: motion-bearing state (dx/dy) lives on the spec
+  // because handlers cause it. Round-trip must preserve it or the
+  // bridge would silently drop the seed for partition slides etc.
+  it("preserves node.state (dx/dy seed) for motion-bearing nodes", () => {
+    const src = loadFixture("state-motion.json");
+    expect(roundTrip(src)).toEqual(src);
+  });
+
   it("preserves the live topology.json (basic fields)", () => {
     // Live spec uses a stripped subset — the adapter currently round-trips
     // exactly what topogen consumes. If this regresses, codegen drift

@@ -131,6 +131,11 @@ export function specToFlow(
         height,
         inputs: def?.inputs ?? [],
         outputs: def?.outputs ?? [],
+        // Phase 6 Chunk A: round-trip node.state so initial dx/dy
+        // (and any other handler-state seed) survives spec → flow →
+        // spec. The runner overwrites world.state from initWorld; the
+        // spec field is the seed, not the live value.
+        state: n.state,
       },
     };
   });
@@ -176,13 +181,18 @@ export function specToFlow(
 export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
   // Fold nodes are viewer-only and never round-trip into the spec.
   const specNodes: SpecNode[] = nodes.filter((n) => n.type !== "fold").map((n) => {
-    const d = (n.data ?? {}) as { type?: string; sublabel?: string };
+    const d = (n.data ?? {}) as {
+      type?: string;
+      sublabel?: string;
+      state?: SpecNode["state"];
+    };
     return {
       id: n.id,
       type: d.type ?? "Generic",
       x: n.position.x,
       y: n.position.y,
       ...(d.sublabel !== undefined ? { sublabel: d.sublabel } : {}),
+      ...(d.state !== undefined ? { state: d.state } : {}),
     };
   });
 
