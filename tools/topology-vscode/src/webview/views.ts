@@ -3,7 +3,7 @@
 // from current viewport (selection model lands in Phase 3).
 
 import { NODE_TYPES } from "../schema";
-import { applyDim as applyDimRf, onPanStart, selectedNodeIds } from "./rf/bridge";
+import { applyDim as applyDimRf, selectedNodeIds } from "./rf/bridge";
 import { scheduleViewSave } from "./save";
 import { spec, view, viewerState } from "./state";
 import { applyView, syncViewFromRenderer } from "./view";
@@ -131,12 +131,14 @@ function deleteView(name: string) {
 }
 
 function applySavedView(v: SavedView) {
-  view.x = v.viewport.x;
-  view.y = v.viewport.y;
-  view.w = v.viewport.w;
-  view.h = v.viewport.h;
-  applyView();
-  scheduleViewSave();
+  if (v.viewport) {
+    view.x = v.viewport.x;
+    view.y = v.viewport.y;
+    view.w = v.viewport.w;
+    view.h = v.viewport.h;
+    applyView();
+    scheduleViewSave();
+  }
   setActiveView(v.name, new Set(v.nodeIds));
 }
 

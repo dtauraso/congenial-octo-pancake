@@ -13,6 +13,7 @@ type Handlers = {
   onPanStart?: (fn: () => void) => void;
   getViewport?: () => Viewport;
   getSelectedNodeIds?: () => string[];
+  fitNodes?: (ids: string[]) => void;
 };
 
 const h: Handlers = {};
@@ -27,6 +28,7 @@ export function currentViewBox(): ViewBox {
 }
 export function applyDim(members: Set<string> | undefined) { h.setDim?.(members); }
 export function selectedNodeIds(): string[] { return h.getSelectedNodeIds?.() ?? []; }
+export function fitNodes(ids: string[]) { h.fitNodes?.(ids); }
 
 const panStartListeners: Array<() => void> = [];
 export function notifyPanStart() { for (const fn of panStartListeners) fn(); }

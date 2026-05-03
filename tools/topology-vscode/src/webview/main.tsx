@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import "reactflow/dist/style.css";
 import "./webview.css";
 import App from "./rf/app";
-import { setTopogenStatus, type TopogenStatus } from "./save";
+import { flushSave, flushViewSave, setTopogenStatus, type TopogenStatus } from "./save";
 import { initRunButton, setRunStatus, type RunStatus } from "./run";
 import { initTimelinePanel, refreshTimelinePanel } from "./timeline";
 import { attachClearOnPan, initViewsPanel, refreshViewsPanel } from "./views";
@@ -34,6 +34,11 @@ window.addEventListener("message", (e) => {
   } else if (msg.type === "run-status") {
     const { type: _t, ...rest } = msg;
     setRunStatus(rest as RunStatus);
+  } else if (msg.type === "flush") {
+    // Host requests immediate flush of any pending debounced saves (panel
+    // becoming hidden / about to dispose).
+    flushSave();
+    flushViewSave();
   } else if (msg.type === "view-load") {
     // App handles the camera; we refresh the panels that depend on the sidecar.
     queueMicrotask(() => {

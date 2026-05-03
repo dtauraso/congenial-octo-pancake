@@ -22,7 +22,7 @@ import { NodePalette, PALETTE_DATA_TYPE } from "./NodePalette";
 import { resetAnimations } from "../render/animation";
 import { beginRenameNodeId, setRenameRerender } from "../rename";
 import { beginEditSublabel, setSublabelRerender } from "../sublabel";
-import { scheduleSave, vscode } from "../save";
+import { flushViewSave, markViewSynced, scheduleSave, scheduleViewSave, vscode } from "../save";
 import { setSpec, setViewerState, spec, viewerState } from "../state";
 import {
   parseViewerState,
@@ -65,8 +65,6 @@ function Inner() {
   const [dimmed, setDimmed] = useState<Set<string> | null>(null);
   const [edgeMenu, setEdgeMenu] = useState<{ x: number; y: number; edgeId: string } | null>(null);
   const selectedRef = useRef<Set<string>>(new Set());
-  const lastSyncedView = useRef<string | undefined>(undefined);
-  const viewSaveTimer = useRef<number | undefined>(undefined);
   const paneRef = useRef<HTMLDivElement | null>(null);
   const lastSpec = useRef<Spec | null>(null);
   const reconnectOk = useRef<boolean>(false);
@@ -89,6 +87,13 @@ function Inner() {
       },
       setDim: (members) => setDimmed(members ? new Set(members) : null),
       getSelectedNodeIds: () => Array.from(selectedRef.current),
+      fitNodes: (ids) => {
+        if (ids.length === 0) return;
+        const set = new Set(ids);
+        const nodes = rf.getNodes().filter((n) => set.has(n.id));
+        if (nodes.length === 0) return;
+        rf.fitView({ nodes, padding: 0.4, duration: 250, maxZoom: 1.2 });
+      },
     });
     const rerenderFromSpec = () => {
       if (!lastSpec.current) return;
@@ -129,7 +134,7 @@ function Inner() {
       } else if (msg.type === "view-load") {
         const next: ViewerState = parseViewerState(msg.text);
         setViewerState(next);
-        lastSyncedView.current = msg.text ?? serializeViewerState(next);
+        markViewSynced(msg.text ?? serializeViewerState(next));
         // If the spec already loaded *and* the sidecar has folds, rebuild
         // the flow now so the folds (which live on viewerState, not the
         // spec) actually appear. Skip when no folds — the spec-load path
@@ -169,34 +174,10 @@ function Inner() {
     return () => window.removeEventListener("message", handler);
   }, [rf]);
 
-  const flushViewSave = useCallback(() => {
-    if (viewSaveTimer.current !== undefined) {
-      window.clearTimeout(viewSaveTimer.current);
-      viewSaveTimer.current = undefined;
-    }
-    const text = serializeViewerState(viewerState);
-    if (text === lastSyncedView.current) return;
-    lastSyncedView.current = text;
-    vscode.postMessage({ type: "view-save", text });
-  }, []);
-
-  const scheduleViewSave = useCallback(() => {
-    if (viewSaveTimer.current !== undefined) {
-      window.clearTimeout(viewSaveTimer.current);
-    }
-    viewSaveTimer.current = window.setTimeout(() => {
-      viewSaveTimer.current = undefined;
-      const text = serializeViewerState(viewerState);
-      if (text === lastSyncedView.current) return;
-      lastSyncedView.current = text;
-      vscode.postMessage({ type: "view-save", text });
-    }, 400);
-  }, []);
-
   const persistViewport = useCallback((vp: Viewport) => {
     viewerState.camera = { x: vp.x, y: vp.y, w: 0, h: 0, zoom: vp.zoom };
     scheduleViewSave();
-  }, [scheduleViewSave]);
+  }, []);
 
   const onMoveStart = useCallback(() => { notifyPanStart(); }, []);
   const onMoveEnd = useCallback((_: unknown, vp: Viewport) => {
@@ -463,16 +444,26 @@ function Inner() {
 
   const onNodeDragStop = useCallback(
     (_ev: React.MouseEvent, node: RFNode) => {
-      // Persist fold-placeholder drags back into viewerState.folds so the
-      // position survives reload (member positions live in the spec; folds
-      // live in the sidecar).
-      if (node.type !== "fold") return;
-      const f = viewerState.folds?.find((x) => x.id === node.id);
-      if (!f) return;
-      f.position = [node.position.x, node.position.y];
-      scheduleViewSave();
+      if (node.type === "fold") {
+        // Persist fold-placeholder drags back into viewerState.folds so the
+        // position survives reload (folds live in the sidecar).
+        const f = viewerState.folds?.find((x) => x.id === node.id);
+        if (!f) return;
+        f.position = [node.position.x, node.position.y];
+        scheduleViewSave();
+        return;
+      }
+      // Regular node: persist x/y back to the spec, otherwise the next disk
+      // reload snaps the node back to its old position.
+      const sn = spec.nodes.find((n) => n.id === node.id);
+      if (!sn) return;
+      if (sn.x === node.position.x && sn.y === node.position.y) return;
+      sn.x = node.position.x;
+      sn.y = node.position.y;
+      lastSpec.current = spec;
+      scheduleSave();
     },
-    [scheduleViewSave]
+    []
   );
 
   const foldCurrentSelection = useCallback(() => {

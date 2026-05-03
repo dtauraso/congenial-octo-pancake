@@ -37,7 +37,11 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
       panel.webview.postMessage({ type: "run-status", ...status })
     );
 
-    let lastAppliedText: string | undefined;
+    // Suppress the `onDidChangeTextDocument` fire we trigger ourselves by
+    // tracking the document version we last applied. Text-equality breaks on
+    // no-op resaves (the same text fires a change event whose version bumps);
+    // version comparison handles those correctly.
+    let lastAppliedVersion = document.version;
     const send = () =>
       panel.webview.postMessage({ type: "load", text: document.getText() });
 
@@ -48,8 +52,14 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
 
     const docSub = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() !== document.uri.toString()) return;
-      if (e.document.getText() === lastAppliedText) return;
+      if (e.document.version <= lastAppliedVersion) return;
       send();
+    });
+
+    const viewStateSub = panel.onDidChangeViewState(() => {
+      if (!panel.visible) {
+        panel.webview.postMessage({ type: "flush" });
+      }
     });
 
     const bundlePath = path.join(this.context.extensionPath, "out", "webview.js");
@@ -63,6 +73,7 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
     panel.onDidDispose(() => {
       docSub.dispose();
       bundleWatcher.dispose();
+      viewStateSub.dispose();
       topogen.dispose();
       runner.dispose();
     });
@@ -72,12 +83,27 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
         send();
         await sendView();
       } else if (msg.type === "save") {
-        lastAppliedText = msg.text;
-        await applyEdit(document, msg.text);
-        await document.save();
-        topogen.schedule();
+        try {
+          // Bump the suppression watermark synchronously before applyEdit so
+          // the change event (which fires before applyEdit's promise resolves)
+          // is filtered by docSub.
+          lastAppliedVersion = document.version + 1;
+          await applyEdit(document, msg.text);
+          await document.save();
+          // Re-sync in case the actual post-edit version diverged.
+          lastAppliedVersion = document.version;
+          topogen.schedule();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          panel.webview.postMessage({ type: "save-error", message });
+        }
       } else if (msg.type === "view-save") {
-        await writeSidecar(sidecarUri, msg.text);
+        try {
+          await writeSidecar(sidecarUri, msg.text);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          panel.webview.postMessage({ type: "save-error", message });
+        }
       } else if (msg.type === "run") {
         try {
           await topogen.write();

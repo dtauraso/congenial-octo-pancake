@@ -9,7 +9,9 @@ export type Camera = { x: number; y: number; w: number; h: number; zoom?: number
 
 export type SavedView = {
   name: string;
-  viewport: { x: number; y: number; w: number; h: number };
+  // Legacy field — older sidecars captured the camera at save time. New
+  // saves omit it; clicking a view frames its members via RF fitView.
+  viewport?: { x: number; y: number; w: number; h: number };
   nodeIds: string[];
 };
 
