@@ -319,15 +319,157 @@ Cap-hit estimates in **[brackets]** at each phase and item. See [Risk and effort
   - **Phase 4.5.6 — lows & nits [opportunistic]** Pick up while touching adjacent code; not a planned cap-hit. Includes: legacy SVG viewport restore size-dependence (L1), `EDGE_KIND_OPTIONS` duplication of `EDGE_KINDS` (L2), unused `view` import (L3), URL-safe nonce (L4), `flowToSpec` always-`"any"` debt (L5 — overlaps Phase 9), test-only `__wirefold_test` shipped in production (L7), empty-`contentChanges` filter (L8), dead `panStartListeners` (L9), `parseDur` NaN check on the `ms` branch (L10), toolbar HTML hand-built in host then bound by webview JS, `topogen` errors via `showErrorMessage` per save instead of OutputChannel, `package.json` missing `categories`/`repository`/`icon`/`engines.node`, tsconfig strictness (`noUncheckedIndexedAccess` etc.), no ESLint config. Also: saved-view click UX — currently captures + restores the camera at save time; tried `fitView` on `nodeIds` (no captured camera) but tuning was finicky (zoom too strong even with `padding: 0.4, maxZoom: 1.2`). Reverted to camera-capture; the `fitNodes` bridge entry + optional `viewport?` field on `SavedView` are left in place to make the next attempt cheap. `viewport` made optional on `SavedView` schema for forward-compat.
 
 - **Phase 5 — comparison** **[~1.5 + ~⅜ tests]**
+
+  *Open questions resolved:*
+
+  1. **Source / surfacing of "the other spec." Unified single-canvas
+     view, not split-pane.** Two interaction modes, both layered on
+     the existing live editor (no second RF instance). Loading: a
+     "Compare with HEAD" button (one-click default; host-side handler
+     shells `git show HEAD:<relpath>` and posts the parsed spec back
+     to the webview) and "Compare with file…" (host-side picker). The
+     webview holds the comparison spec in memory; the live spec
+     remains the only thing wired to topogen / save.
+
+     - **Mode A — Toggle + persistent diff halos.** Canvas shows one
+       spec at a time; an A/B toggle flips which is rendered.
+       Playback runs on whichever side you're viewing (single timing
+       array, no ambiguity). Items unique to the currently-shown side
+       get a dashed colored halo (e.g. green halo on B-only nodes
+       when viewing B); moved nodes show a faint ghost outline at
+       their other-side position with a thin connector; retimed
+       nodes get a small clock badge in the corner; rewired edges
+       render dashed. Halos use stroke style + opacity, not fills,
+       so playback flashes stay uncontaminated.
+     - **Mode B — Onion-skin / ghost overlay.** Live spec renders
+       solid; HEAD/other renders as a translucent layer underneath
+       (~25% opacity). Agreement is invisible (ghost hidden under
+       solid); disagreement appears as translucent shapes peeking
+       out (HEAD-only nodes look faded; live-only nodes look crisp
+       with no ghost behind). Playback animates the live layer; the
+       ghost stays static. A held-key (spacebar) momentarily swaps
+       layer ordering to foreground the ghost.
+
+     Mode A is the default; Mode B is a toggle in the comparison
+     toolbar (and the spacebar shortcut while in B). Nested folding
+     keeps the on-screen node count small enough that ghost overlay
+     doesn't get crowded; if a future case stresses it, fall back to
+     Mode A only inside that subgraph.
+
+     *Rejected:* split-pane two-RF-instances (two cameras to manage,
+     coupling decisions); diff-only skeleton (loses playback context);
+     crossfade slider (animation-tool-y, not how this tool reads);
+     membership ribbons on a union view (would crowd the canvas
+     without nested folding — kept on the table only conditionally).
+
+     *Subsumed:* the original "two RF instances vs. one canvas" and
+     "camera sync mode" sub-questions are decided by the unified-view
+     choice — one RF canvas, one camera. Mode B's ghost shapes are
+     injected as additional RF nodes with a `.ghost` className so
+     they ride RF's coordinate transform for free (no hand-rolled
+     SVG overlay).
+
+  2. **Diff representation. Pure module.** New file
+     [tools/topology-vscode/src/webview/diff-core.ts] exporting
+     `diffSpecs(a: Spec, b: Spec) → SpecDiff` with output shape
+     `{ nodes: { added, removed, moved }, edges: { added,
+     removed, rewired } }` (each a `string[]` of ids). The
+     renderer reads the diff and decorates RF nodes/edges via
+     className. Kept *outside* the spec↔flow adapter — diff is a
+     spec↔spec concern, adapter stays purely render. Tier 2 contract
+     test (already in the per-phase test list) covers no-mutation,
+     determinism, and add/remove symmetry under arg swap.
+
+     *Rejected:* folding diff into the adapter (mixes two
+     responsibilities, makes the round-trip test harder to keep
+     honest); per-component lazy diff lookup (over-engineered — spec
+     is small, whole-graph diff is microseconds at the 250ms save
+     cadence).
+
+  3. **Visual highlight vocabulary. Four categories; mix channels;
+     compose with `.dim`.** Diff categories get distinct visual
+     treatment, using a mix of channels so no one channel gets
+     overloaded:
+     - **Halo color** for membership-difference: `.diff-added` =
+       green halo (stroke ring), `.diff-removed` = red halo.
+     - **Stroke style** for shape/wire change: `.diff-moved` =
+       amber dashed outline (node), `.diff-rewired` = amber dashed
+       edge stroke.
+
+     `.diff-retimed` is *dropped*: `timing.steps[]` is on its way
+     out as a stored spec field (see Phase 5.5 — Animation model
+     rewrite), so a "retimed" category would be defining a diff
+     against a field that won't exist. If a future per-node
+     `props`/config formalism lands, a `.diff-reconfigured`
+     category (gear badge) would slot in to surface those changes;
+     don't pre-bake it.
+
+     **Diff staleness during edits:** the diff recomputes alongside
+     the existing 250ms save debounce — same cadence as topogen. Rule:
+     *what's saved is what's diffed*. Highlights lag the edit by
+     ≤ 250ms, well under the threshold where it would feel stale, and
+     mid-rename keystrokes don't trigger flicker. Live pane stays
+     editable while comparison is open (rejected option (d) — cuts off
+     the "edit and see the diff update" workflow that's the whole point).
+
+     **Position threshold for `.diff-moved`:** L¹ dead-band,
+     `|Δx| + |Δy| > 1px` in spec coordinates counts as moved. Sub-pixel
+     drift from formatter / hand-edit differences is suppressed; any
+     intentional layout adjustment ≥ 1px still flags. Threshold lives
+     as `POSITION_EPSILON = 1` in `diff-core.ts`. Tier 2 contract test
+     includes a "drift below threshold isn't reported" case.
+
+     Halos / dashed strokes all live on the *outside* of
+     the node body, leaving fills free for playback flashes.
+     Composition with the existing `.dim` saved-view class:
+     **diff highlights punch through dim** — the node stays at ~18%
+     body opacity but its halo renders at full opacity, so a
+     change in a non-active view is still glanceable. Tier 3
+     saved-view+diff test enforces this rule. Final tuning of
+     palette/sizes is left to in-editor iteration once visuals
+     land — taste calls easier to make against real diffs than in
+     the abstract.
+
   - **[~½]** Side-by-side mode loading two specs (current vs. git HEAD, or two files).
-  - **[~½]** Computed diff: added / removed / repositioned / rewired / retimed. (Mechanical.)
+  - **[~½]** Computed diff: added / removed / moved / rewired. (Mechanical. `retimed` dropped — see Phase 5.5.)
   - **[~½]** Visual highlight (color tint, badges) for diff items. (Two-pane camera sync UX is the variable part.)
   - **[~⅛]** Tier 2 contract test: `diffSpecs(a, b)` is a pure function — no spec mutation, deterministic output, symmetric where appropriate (added vs. removed swap when args swap). Each diff category gets a fixture pair. Locks down the diff before the renderer-side decoration adds noise.
   - **[~⅛]** Tier 2 invariant test: only the *live* pane talks to topogen. Spy on `vscode.postMessage`, mutate the comparison pane's nodes, assert no `{type: "save"}` fires from that pane. Catches the bug where the comparison pane accidentally re-runs codegen against a HEAD spec.
   - **[~⅛]** Tier 3 system-shape test: fold + diff. Load two specs that differ inside a folded region; verify diff highlighting surfaces on the placeholder when collapsed (badge with category counts) and on the underlying members when expanded. Documents the rule: diff state composes with fold state, neither swallows the other.
   - **[~⅛]** Tier 3 system-shape test: saved-view + diff. With a saved view active, the dim/active className must compose with the diff classNames without one overriding the other. Concrete failure shape: `.dim` and `.diff-added` both set on a node — both styles must be visible (e.g., dimmed-but-tinted), or one must explicitly win per a documented rule.
 
-- **Phase 6 — keyframed motion (when a topology actually rewires during its cycle)** **[~2.5, risk to ~4; +~⅜ tests]**
+- **Phase 5.5 — animation model rewrite (simulator + per-node tickers)** **[~2 cap est, ⏳]** Replaces the current `timing.steps[]`-driven master playback clock — an SVG-era artifact whose position/timing coupling forced a script recompute on every layout edit and was a major past cap-hit sink. Also clarifies how Phases 6 and 7 land. Must ship before Phase 6 (keyframed motion) starts.
+
+  *Goal:* animation behavior emerges from the topology + per-node response rules, the way it does in the running Go system. Spec edits never touch a global script. Position is independent of timing.
+
+  *Components:*
+  - **Per-node response rules (props/handlers).** Each node-type registry entry declares a per-input handler ("when a pulse arrives on `in`, fire and emit on `out` after delay D"). Per-instance config (`AndGate.inputCount`, `Latch.delay`) lives on `spec.nodes[i].props`. Response rules + props are the only authority for what fires when. `timing.steps[]` is removed from the spec or kept only as an *initial seed* (a small list of `(port, t0, value)` tuples that kick off the simulation).
+  - **Simulator.** Pure module that, given (spec, optional seed, current world-state), advances the simulation by one event: pop one ready input, run the receiver's handler, emit pulses on outputs into in-flight queues. Deterministic given a tie-break rule (e.g., FIFO by event-arrival id). Independent of the renderer.
+  - **N1' — concurrency reveal mode (auto-detected concurrent edges).** Edges flagged "concurrent" run a self-pacing pulse loop: pulse N+1 leaves the source when pulse N arrives at the target. Rate emerges from edge traversal time, so faster edges visibly cycle faster — surfaces *which parts of the graph run in parallel and how their natural rhythms relate*. Concurrent edges are detected automatically by analyzing the per-node handlers + edge graph: an edge is concurrent if its source's firing isn't gated by another edge that's gated upstream (no AND/sync ancestor). This needs the per-node handler formalism to land first; manual override flag (`edge.concurrent: true`) is the fallback if auto-detection turns out unreliable in practice.
+  - **N2 — step-debugger.** Per-node play / pause / step. Step = process one input pulse (fire + emit). Play = step on a wall-clock interval (e.g. 200ms). Pulses-in-flight pause when their source pauses. Multiple nodes can play concurrently. Visualized as per-node pause/play affordances in the corner of each `AnimatedNode`.
+
+  *What gets gutted from the existing system:*
+  - **Master playback clock** (`playback.ts`) — removed. Per-node tickers replace it.
+  - **Global timeline scrubber** — removed (no global `t` to scrub).
+  - **Bookmarks-at-t** — replaced with **resumption-coordinate bookmarks**. Each bookmark is `{name, startNodeId, cycle}` (one node per bookmark; multi-node ignition is "activate two bookmarks at once" via shift-click, not a list field on a single bookmark). Clicking a bookmark fast-forwards the simulator to `cycle = Y` with `startNodeId` as the active node, then hands off to N2 (play / pause / step from there). Cycle definition: **anchor-fire (ii-b)** — `spec.cycleAnchor: nodeId` declares one node as the cycle counter; cycle increments each time the anchor fires. Default if `cycleAnchor` is unset: **(ii-a) quiescent-input** — cycle increments each time the simulator drains one input value and returns to a no-in-flight state. Fast-forward strategy: **F1 deterministic replay** (simulator re-runs cycle 0 → Y silently, then UI takes over). No snapshot storage. F2 (memoized snapshots every N cycles) only added if F1 turns out slow in practice for real topology sizes.
+  - **`timing.steps[]` in the spec** — removed (or reduced to seed-only).
+
+  *What survives unchanged:*
+  - Per-node flash + state-text animations — become one-shot, event-triggered (fire-on-handler-fire) instead of clock-subscribed.
+  - Edge pulse traversal — one-shot per pulse event. Concurrent edges are just continuous re-triggers of the same primitive.
+  - `▶ run` / build pipeline.
+  - Spec/viewer split, sidecar, codegen pipeline, fold/saved-view machinery.
+
+  *Dependencies created:*
+  - **Phase 6 (keyframed motion):** rebudget after this lands. *Real* node motion (a partition node sliding) becomes a node-prop the simulator reads; pure-presentation animation lives on viewer state. Probably *cheaper* than current ~2.5 estimate because the spec/viewer split for keyframes becomes mechanical.
+  - **Phase 7 (trace replay):** clarifies materially. A trace from the running Go is structurally `(node, event-type, value, ordinal)` tuples — directly comparable against simulator output. "Drift" is well-defined.
+  - **`.diff-reconfigured`** for Phase 5: only meaningful once `props` exist. Add to Phase 5 vocabulary as a follow-up after this phase ships.
+
+  *Risk:* the per-node handler formalism is the load-bearing piece. If handlers aren't expressive enough, real Go behaviors won't be reproducible in the simulator and N1' / N2 give a false picture. Seed handler set should cover the existing `NODE_TYPES` registry; expand only as new node-types are added. Keep handlers as small, pure `(state, input) → (state', emissions)` functions — same shape Redux reducers / React `useReducer` use, same property: easy to test in isolation.
+
+  *Estimate breakdown:* response-rule formalism + seed handlers (~½), simulator core + tie-break + tests (~½), N2 per-node UI controls + event-triggered animation rewrite (~½), N1' auto-detection + self-pacing edge loop (~½). Total ~2 caps; risk to ~3 if auto-detection turns flaky and we have to fall back to manual flags + UX for setting them.
+
+- **Phase 6 — keyframed motion (when a topology actually rewires during its cycle)** **[~2.5, risk to ~4; +~⅜ tests; rebudget after Phase 5.5]**
   - **[~⅛]** ⏳ Tier 1 round-trip coverage extended to `positionKeyframes` / `endpointKeyframes` / `visibility` *before* any UI lands (each new spec field becomes a fixture row; the bridge can't silently drop them).
   - **[~¼]** Schema: `positionKeyframes`, `endpointKeyframes`, `visibility`.
   - **[~¾]** Renderer tweens between keyframes during playback.
