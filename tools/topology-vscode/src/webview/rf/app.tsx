@@ -61,6 +61,12 @@ import { parseHostToWebview } from "../../messages";
 const EDGE_TYPES = { animated: AnimatedEdge };
 const RF_NODE_TYPES = { animated: AnimatedNode, fold: FoldNode };
 
+// Snap-to-grid step matches the Background `gap={24}` so node positions
+// land on the visible dots. Alignment-guide tolerance is in flow units;
+// 4 covers off-grid drag noise without firing on every near-miss.
+const GRID = 24;
+const ALIGN_TOL = 4;
+
 const EDGE_KIND_OPTIONS: EdgeKind[] = [
   "chain", "signal", "feedback-ack", "release", "streak",
   "pointer", "and-out", "edge-connection", "inhibit-in", "any",
@@ -114,6 +120,11 @@ function Inner() {
   const lastSpec = useRef<Spec | null>(null);
   const reconnectOk = useRef<boolean>(false);
   const rf = useReactFlow();
+  // Alignment guides during drag. Coordinates are flow-space; the rendered
+  // overlay applies the live RF viewport transform to position them on
+  // screen. Cleared on drag stop and on selection drag (multi-node moves
+  // would need per-node guides, which is more than this MVP warrants).
+  const [guides, setGuides] = useState<{ vx: number | null; hy: number | null }>({ vx: null, hy: null });
 
   // Undo/redo. Two scoped stacks (spec, viewer) live in state.ts; this
   // handler routes Cmd/Ctrl-Z and Cmd/Ctrl-Shift-Z (or Ctrl-Y) to whichever
@@ -659,8 +670,37 @@ function Inner() {
     [rebuildFlow, flushViewSave]
   );
 
+  const onNodeDrag = useCallback(
+    (_ev: React.MouseEvent, node: RFNode) => {
+      if (isReadOnlyView()) return;
+      if (node.type === "fold") {
+        // Fold placeholder dimensions vary; skipping keeps the matcher
+        // honest and avoids guides that snap to a moving target.
+        if (guides.vx !== null || guides.hy !== null) setGuides({ vx: null, hy: null });
+        return;
+      }
+      const def = NODE_TYPES[node.type as string] ?? NODE_TYPES.Generic;
+      const cx = node.position.x + def.width / 2;
+      const cy = node.position.y + def.height / 2;
+      let vx: number | null = null;
+      let hy: number | null = null;
+      for (const other of rf.getNodes()) {
+        if (other.id === node.id || other.type === "fold") continue;
+        const odef = NODE_TYPES[other.type as string] ?? NODE_TYPES.Generic;
+        const ocx = other.position.x + odef.width / 2;
+        const ocy = other.position.y + odef.height / 2;
+        if (vx === null && Math.abs(ocx - cx) < ALIGN_TOL) vx = ocx;
+        if (hy === null && Math.abs(ocy - cy) < ALIGN_TOL) hy = ocy;
+        if (vx !== null && hy !== null) break;
+      }
+      if (vx !== guides.vx || hy !== guides.hy) setGuides({ vx, hy });
+    },
+    [rf, guides.vx, guides.hy],
+  );
+
   const onNodeDragStop = useCallback(
     (_ev: React.MouseEvent, node: RFNode) => {
+      setGuides({ vx: null, hy: null });
       if (isReadOnlyView()) return;
       if (node.type === "fold") {
         // Persist fold-placeholder drags back into viewerState.folds so the
@@ -826,7 +866,10 @@ function Inner() {
         onNodeDoubleClick={onNodeDoubleClick}
         onNodeContextMenu={onNodeContextMenu}
         onSelectionContextMenu={onSelectionContextMenu}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
+        snapToGrid={true}
+        snapGrid={[GRID, GRID]}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
         onConnect={onConnect}
@@ -851,6 +894,25 @@ function Inner() {
         <Background gap={24} />
         <Controls />
       </ReactFlow>
+      {(guides.vx !== null || guides.hy !== null) && (() => {
+        const vp = rf.getViewport();
+        return (
+          <>
+            {guides.vx !== null && (
+              <div
+                className="align-guide align-guide-v"
+                style={{ left: guides.vx * vp.zoom + vp.x }}
+              />
+            )}
+            {guides.hy !== null && (
+              <div
+                className="align-guide align-guide-h"
+                style={{ top: guides.hy * vp.zoom + vp.y }}
+              />
+            )}
+          </>
+        );
+      })()}
       <NodePalette />
       <CompareToolbar
         mode={compareMode}
