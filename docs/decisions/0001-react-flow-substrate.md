@@ -40,8 +40,8 @@ node/edge store is a *view* fed by adapters. The webview keeps its
 existing extension-host integration (debounced save, sidecar, build
 and run, master playback clock).
 
-Migration happens during Phase 3 of the drag-to-author plan
-([docs/planning/drag-to-author-plan.md](../planning/drag-to-author-plan.md)),
+Migration happens during Phase 3 of the visual-editor plan
+([docs/planning/visual-editor-plan.md](../planning/visual-editor-plan.md)),
 costing ~1.5 caps one-time. Phases 1–2 features (pan/zoom save,
 saved views, animation-driven node state) re-port onto React Flow
 primitives during the migration; the underlying behaviors and file

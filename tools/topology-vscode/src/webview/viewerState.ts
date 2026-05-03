@@ -1,5 +1,5 @@
 // Viewer state — sidecar to topology.json. None of these fields belong in the
-// spec; topogen ignores them entirely. See drag-to-author-plan.md §"Spec vs
+// spec; topogen ignores them entirely. See visual-editor-plan.md §"Spec vs
 // viewer state" for the policy.
 
 // `w`/`h` describe an SVG viewBox (legacy lit-html renderer); `zoom` is

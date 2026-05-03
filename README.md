@@ -26,7 +26,7 @@ Two things in one repo:
 
 ## Status
 
-The dataflow runtime is working. The editor is mid-build — the React Flow rendering substrate, codegen integration, spec/viewer split, saved views, and animated playback timeline are shipped. Phases for richer port-drag editing, fold geometry, trace replay, and visual parity with the reference SVGs are in flight. See [docs/planning/drag-to-author-plan.md](docs/planning/drag-to-author-plan.md) for the full plan and cap estimates.
+The dataflow runtime is working. The editor is mid-build — the React Flow rendering substrate, codegen integration, spec/viewer split, saved views, and animated playback timeline are shipped. Phases for richer port-drag editing, fold geometry, trace replay, and visual parity with the reference SVGs are in flight. See [docs/planning/visual-editor-plan.md](docs/planning/visual-editor-plan.md) for the full plan and cap estimates.
 
 ## Running it
 

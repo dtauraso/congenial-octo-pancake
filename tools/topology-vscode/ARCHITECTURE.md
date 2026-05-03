@@ -67,12 +67,12 @@ Each `webview/<feature>.ts` owns one UI affordance. Most expose
   side, `viewerState.ts` types on the webview side.
 
 If a field affects generated Go, it belongs in the spec. Otherwise the
-sidecar. See [drag-to-author-plan.md](../../docs/planning/drag-to-author-plan.md).
+sidecar. See [visual-editor-plan.md](../../docs/planning/visual-editor-plan.md).
 
 ## Editor substrate
 
 The webview renders with **lit-html + plain SVG today**, migrating to
-**React Flow inside the webview** during Phase 3 of the drag-to-author
+**React Flow inside the webview** during Phase 3 of the visual-editor
 plan. `topogen` stays authoritative either way — the substrate change is
 about *how nodes/edges are rendered and interacted with*, not about who
 owns the spec.
