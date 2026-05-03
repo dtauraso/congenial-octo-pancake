@@ -240,10 +240,11 @@ Cap-hit estimates in **[brackets]** at each phase and item. See [Risk and effort
     - **[~⅛]** ⏳ Palette-drag at coords persists position across reload.
     - **[~⅛]** ⏳ Rename to clashing id rejects with inline error.
 
-- **Phase 4 — fold/unfold** **[~1]**
-  - **[~½]** Sidecar `folds[]` mapped onto React Flow's subflow / parent-node primitive. Edges crossing the boundary re-route via React Flow's built-in handling; nested folds need manual coordination.
-  - **[~¼]** Right-click → fold; double-click placeholder → expand.
-  - **[~¼]** Decide: are folds purely visual, or do they also become generated Go sub-packages? Default: purely visual (sidecar only). Revisit if code-gen organization wants matching structure.
+- **Phase 4 — fold/unfold ✅** **[~1 est / ~⅜ actual]**
+  - **[~½ est / ~¼ actual, done]** ✅ Sidecar `folds[]` rendered as a separate RF node alongside members (rejected `parentNode` — relative-coordinate complexity vs. the stable-layout invariant). Collapsed members + their internal edges are skipped in the flow; edges crossing the boundary are rerouted to the placeholder *only in the flow* (spec edges keep their original endpoints, so expand reinstates the original wiring without spec mutation). Tier 2 retro [test/fold.test.ts](../../tools/topology-vscode/test/fold.test.ts) locks the contract: collapsed-render, expanded frame, no-spec-mutation, flowToSpec ignores fold nodes, no-nesting reject.
+  - **[~¼ est / ~⅛ actual, done]** ✅ Right-click on a selected non-fold node folds the selection (≥2 members, fold position = member centroid); double-click on a placeholder toggles collapsed; placeholder drags persist back to `viewerState.folds[].position` via `onNodeDragStop`. All save paths use `scheduleViewSave` only, so topogen never re-runs on a fold gesture.
+  - **[~¼ est / ~0 actual, done]** ✅ Folds are purely visual. `topogen` ignores `topology.view.json`; the flat `Wiring/` package is byte-identical before and after a fold operation. No topogen change. Revisit only if code-gen organization wants matching structure (separate cap-hit, spec-side move).
+  - **[~½]** ⏳ Nested folding (follow-up). Today [fold-core.ts](../../tools/topology-vscode/src/webview/fold-core.ts) rejects creating a fold whose members are already in another fold, and [adapter.ts](../../tools/topology-vscode/src/webview/rf/adapter.ts) takes "first wins" when a node appears in multiple folds. Lifting that needs: (1) a containment relation on `viewerState.folds` (parent fold id, or derived from membership inclusion); (2) edge re-routing that walks up the chain to the nearest *collapsed* ancestor on each side rather than checking only direct membership; (3) expanded-bounds that recurse so an outer expanded fold sizes itself around inner folds (collapsed placeholders + expanded child frames), not just leaf members; (4) delete that frees inner members back to the outer fold rather than to the top level. Tier 2 retro grid grows by the collapse/expand combinations across the tree. Pick up when a real topology hits a level-of-nesting wall — until then, single-level folds carry the recall affordance.
 
 - **Phase 5 — comparison** **[~1.5]**
   - **[~½]** Side-by-side mode loading two specs (current vs. git HEAD, or two files).
@@ -264,7 +265,7 @@ Cap-hit estimates in **[brackets]** at each phase and item. See [Risk and effort
 
 - **Phase 8 — polish** **[open-ended, ~⅜ saved by React Flow + the AnimatedNode pattern]**
   - **[~⅛]** Undo / redo over the spec. (Cheaper than the original ~¼: the "mutate spec → rebuild via `specToFlow` → `setNodes`/`setEdges`" pipeline is already proven by id rename's `rerender` callback; an undo stack of spec snapshots plugs into the same callback. Viewer state excluded.) **Substrate:** use [`zundo`](https://github.com/charkour/zundo), the dominant Zustand undo middleware (~2KB, snapshot-based with built-in grouping/diffing). Wraps the spec store in one line; avoids hand-rolling and maintaining a stack.
-  - **[~¼]** Snap-to-grid; alignment guides. (React Flow has snap-to-grid built in; alignment guides are custom but cheap.)
+  - **[~⅛]** Snap-to-grid; alignment guides. (React Flow has snap-to-grid built in; alignment guides are custom but cheap. Trimmed from ~¼ after the Phase 4 calibration — same shape: library primitive + thin custom layer + no spec touch.)
   - **[~½]** ⏳ Tier 4 headline edit-to-running-Go test. Success criterion #1 ("under 30 seconds end-to-end") made executable: scripted gesture + topogen + `go build`, latency measured. Nightly, not per-commit. Catches latency regressions (topogen slowdowns, debounce drift) that no other tier sees.
   - *Dropped: SVG export.* The `diagrams/` set is hand-authored to the style guide and the editor itself is the live view — exporting would mean re-implementing the style guide twice (live + export). Revive only when hand-authored diagrams drift from the spec badly enough to hurt; until then, screenshots / recordings cover incidental sharing.
 
@@ -401,10 +402,18 @@ savings against the prior `~13` total.
   budget extra for things that visually overlay a primitive — they
   must live in the same DOM frame and transform context as the
   primitive itself, or alignment / lifecycle / scale drift somewhere.
-- Phase 4: ~1 cap hit (down from ~2). React Flow's subflow primitive
-  handles edge re-routing across collapsed boundaries; sidecar
-  schema and right-click UX are the remaining work. Nested folds
-  still need manual coordination.
+- Phase 4: ~⅜ cap hit actual (vs. ~1 estimate, vs. ~2 pre-RF).
+  Underran because the slice was three composable pieces (adapter
+  rerouting, FoldNode component, gesture wiring) sharing one
+  surface; folds also turned out to be cheaper as a sibling RF node
+  than as a `parentNode` parent (no relative-coordinate translation,
+  no member-position migration). **Lesson:** when a slice is "library
+  primitive + sidecar bookkeeping + one or two simple gestures" and
+  the spec stays untouched, the budget can compress to ~⅜–½. Apply
+  this to similar-shape future items (Phase 8 snap-to-grid, Phase 8
+  undo) cautiously; do *not* extrapolate to keyframes (Phase 6) or
+  custom-edge work (Phase 9), which don't share the shape.
+  Nested folds still need manual coordination.
 - Phase 5: ~1.5 cap hits. Diff is mechanical. Two-pane camera sync +
   highlight UX is the variable part.
 - Phase 6: ~2.5 cap hits, risk to ~4. Keyframe interpolation +
@@ -418,13 +427,15 @@ savings against the prior `~13` total.
   `setEdges`" pipeline (used by id rename's `rerender` callback) trim
   another ~⅛ off the undo line — ~⅜ saved total vs. fully custom.
 
-Phases 3–6 remaining: **~6.5 cap hits** (Phase 3 ~½ + Phase 4 ~1
-+ Phase 5 ~1.5 + Phase 6 ~2.5, +0.5 for sublabel/undo savings already
-booked, −¾ from the Tier 3 harness underrun). Headline pipeline
-through Phase 3: **~½ more cap hits** from where this branch sits
-(substrate + migration tail done, Tier 3 harness done; remaining is
-the four Tier 3 follow-up cases). Phases 4 and 8 stay materially
-cheaper than the pre-RF estimates.
+Phases 3–6 remaining: **~5.25 cap hits** (Phase 3 ~½ + Phase 5 ~1.5
++ Phase 6 ~2.5, +0.5 for sublabel/undo savings already booked,
+−¾ from the Tier 3 harness underrun, −⅝ from the Phase 4
+underrun). Phase 4 itself is now done at ~⅜ actual. Headline
+pipeline through Phase 3: **~½ more cap hits** from where this
+branch sits (substrate + migration tail done, Tier 3 harness done;
+remaining is the four Tier 3 follow-up cases). Phases 4 and 8 stay
+materially cheaper than the pre-RF estimates; Phase 4 came in
+cheaper still than its post-RF estimate.
 
 The biggest risks:
 

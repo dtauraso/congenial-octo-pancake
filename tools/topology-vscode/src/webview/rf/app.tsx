@@ -17,6 +17,7 @@ import ReactFlow, {
 import { NODE_TYPES, parseSpec, type EdgeKind, type Spec } from "../../schema";
 import { IDENT_RE } from "../rename-core";
 import { applyDelete } from "../delete-core";
+import { createFold, toggleFold } from "../fold-core";
 import { NodePalette, PALETTE_DATA_TYPE } from "./NodePalette";
 import { resetAnimations } from "../render/animation";
 import { beginRenameNodeId, setRenameRerender } from "../rename";
@@ -31,12 +32,13 @@ import {
 import { specToFlow } from "./adapter";
 import { AnimatedEdge } from "./AnimatedEdge";
 import { AnimatedNode } from "./AnimatedNode";
+import { FoldNode } from "./FoldNode";
 import { notifyPanStart, register } from "./bridge";
 import { boxToViewport, viewportToBox } from "./camera";
 import { setDuration, startTickLoop } from "../playback";
 
 const EDGE_TYPES = { animated: AnimatedEdge };
-const RF_NODE_TYPES = { animated: AnimatedNode };
+const RF_NODE_TYPES = { animated: AnimatedNode, fold: FoldNode };
 
 function parseDur(s: string | undefined): number {
   if (!s) return 27000;
@@ -90,13 +92,27 @@ function Inner() {
     });
     const rerenderFromSpec = () => {
       if (!lastSpec.current) return;
-      const flow = specToFlow(lastSpec.current);
+      const flow = specToFlow(lastSpec.current, viewerState.folds);
       setNodes(flow.nodes);
       setEdges(flow.edges);
     };
     setRenameRerender(rerenderFromSpec);
     setSublabelRerender(rerenderFromSpec);
   }, [rf]);
+
+  useEffect(() => {
+    // DIAGNOSTIC: log every contextmenu event reaching the document so we
+    // can tell whether right-click is firing at all, before RF even sees it.
+    const ctxLog = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      const nodeWrapper = t?.closest?.(".react-flow__node") as HTMLElement | null;
+      console.info(
+        `[ctx] contextmenu fired; target=${t?.tagName}.${t?.className?.toString().slice(0, 40)} nodeWrapper=${nodeWrapper?.dataset?.id ?? "<none>"}`,
+      );
+    };
+    document.addEventListener("contextmenu", ctxLog, true);
+    return () => document.removeEventListener("contextmenu", ctxLog, true);
+  }, []);
 
   useEffect(() => {
     const handler = (e: MessageEvent<Msg>) => {
@@ -111,7 +127,7 @@ function Inner() {
             startTickLoop();
           }
           resetAnimations();
-          const flow = specToFlow(next);
+          const flow = specToFlow(next, viewerState.folds);
           const sel = new Set(viewerState.lastSelectionIds ?? []);
           if (sel.size > 0) {
             flow.nodes = flow.nodes.map((n) =>
@@ -128,6 +144,16 @@ function Inner() {
         const next: ViewerState = parseViewerState(msg.text);
         setViewerState(next);
         lastSyncedView.current = msg.text ?? serializeViewerState(next);
+        // If the spec already loaded *and* the sidecar has folds, rebuild
+        // the flow now so the folds (which live on viewerState, not the
+        // spec) actually appear. Skip when no folds — the spec-load path
+        // already rendered correctly and a second pass would just churn
+        // RF re-renders.
+        if (lastSpec.current && next.folds && next.folds.length > 0) {
+          const flow = specToFlow(lastSpec.current, next.folds);
+          setNodes(flow.nodes);
+          setEdges(flow.edges);
+        }
         if (next.lastSelectionIds && next.lastSelectionIds.length > 0) {
           const sel = new Set(next.lastSelectionIds);
           selectedRef.current = sel;
@@ -156,6 +182,17 @@ function Inner() {
     vscode.postMessage({ type: "ready" });
     return () => window.removeEventListener("message", handler);
   }, [rf]);
+
+  const flushViewSave = useCallback(() => {
+    if (viewSaveTimer.current !== undefined) {
+      window.clearTimeout(viewSaveTimer.current);
+      viewSaveTimer.current = undefined;
+    }
+    const text = serializeViewerState(viewerState);
+    if (text === lastSyncedView.current) return;
+    lastSyncedView.current = text;
+    vscode.postMessage({ type: "view-save", text });
+  }, []);
 
   const scheduleViewSave = useCallback(() => {
     if (viewSaveTimer.current !== undefined) {
@@ -199,6 +236,13 @@ function Inner() {
     },
     [scheduleViewSave]
   );
+  const rebuildFlow = useCallback(() => {
+    if (!lastSpec.current) return;
+    const flow = specToFlow(lastSpec.current, viewerState.folds);
+    setNodes(flow.nodes);
+    setEdges(flow.edges);
+  }, []);
+
   const handleDelete = useCallback((nodeIds: string[], edgeIds: string[]) => {
     if (!lastSpec.current) return;
     if (nodeIds.length === 0 && edgeIds.length === 0) return;
@@ -209,8 +253,23 @@ function Inner() {
   }, [scheduleViewSave]);
 
   const onNodesDelete = useCallback((deleted: RFNode[]) => {
-    handleDelete(deleted.map((n) => n.id), []);
-  }, [handleDelete]);
+    // Folds live in viewerState, not the spec — split them out so applyDelete
+    // doesn't try to remove them from spec.nodes (where they don't exist).
+    const foldIds = deleted.filter((n) => n.type === "fold").map((n) => n.id);
+    const specIds = deleted.filter((n) => n.type !== "fold").map((n) => n.id);
+    if (foldIds.length > 0 && viewerState.folds) {
+      viewerState.folds = viewerState.folds.filter((f) => !foldIds.includes(f.id));
+      console.info(`[fold] removed: ${foldIds.join(", ")}`);
+      flushViewSave();
+      // If only folds were deleted, rebuild the flow now (otherwise the spec
+      // delete path below will rebuild via specToFlow).
+      if (specIds.length === 0) {
+        rebuildFlow();
+        return;
+      }
+    }
+    handleDelete(specIds, []);
+  }, [handleDelete, rebuildFlow, flushViewSave]);
   const onEdgesDelete = useCallback((deleted: RFEdge[]) => {
     handleDelete([], deleted.map((e) => e.id));
   }, [handleDelete]);
@@ -270,7 +329,7 @@ function Inner() {
       label,
     });
     lastSpec.current = spec;
-    const flow = specToFlow(spec);
+    const flow = specToFlow(spec, viewerState.folds);
     setNodes(flow.nodes);
     setEdges(flow.edges);
     scheduleSave();
@@ -314,7 +373,7 @@ function Inner() {
     specEdge.kind = srcPort.kind === dstPort.kind ? srcPort.kind : "any";
     reconnectOk.current = true;
     lastSpec.current = spec;
-    const flow = specToFlow(spec);
+    const flow = specToFlow(spec, viewerState.folds);
     setNodes(flow.nodes);
     setEdges(flow.edges);
     scheduleSave();
@@ -338,7 +397,7 @@ function Inner() {
     if (!specEdge) return;
     specEdge.kind = kind;
     lastSpec.current = spec;
-    const flow = specToFlow(spec);
+    const flow = specToFlow(spec, viewerState.folds);
     setNodes(flow.nodes);
     setEdges(flow.edges);
     scheduleSave();
@@ -371,7 +430,7 @@ function Inner() {
       if (!IDENT_RE.test(id)) return;
       spec.nodes.push({ id, type, x: pos.x, y: pos.y });
       lastSpec.current = spec;
-      const flow = specToFlow(spec);
+      const flow = specToFlow(spec, viewerState.folds);
       setNodes(flow.nodes);
       setEdges(flow.edges);
       scheduleSave();
@@ -381,6 +440,18 @@ function Inner() {
 
   const onNodeDoubleClick = useCallback(
     (ev: React.MouseEvent, node: RFNode) => {
+      // Fold placeholder → toggle collapsed state. Expanded folds aren't
+      // selectable, so dbl-click never fires on them; collapsing again uses
+      // the right-click "fold selection" path on regular nodes.
+      if (node.type === "fold") {
+        if (toggleFold(viewerState, node.id)) {
+          const f = viewerState.folds?.find((x) => x.id === node.id);
+          console.info(`[fold] toggled ${node.id} -> collapsed=${f?.collapsed}`);
+          rebuildFlow();
+          flushViewSave();
+        }
+        return;
+      }
       // Anchor the input over the node wrapper, not whichever inner element
       // happened to receive the click (label / state-text divs are smaller
       // than the node and would offset the input).
@@ -401,7 +472,77 @@ function Inner() {
       const label = wrapper.querySelector<HTMLElement>(".node-label");
       beginRenameNodeId(node.id, label);
     },
-    []
+    [rebuildFlow, flushViewSave]
+  );
+
+  const onNodeDragStop = useCallback(
+    (_ev: React.MouseEvent, node: RFNode) => {
+      // Persist fold-placeholder drags back into viewerState.folds so the
+      // position survives reload (member positions live in the spec; folds
+      // live in the sidecar).
+      if (node.type !== "fold") return;
+      const f = viewerState.folds?.find((x) => x.id === node.id);
+      if (!f) return;
+      f.position = [node.position.x, node.position.y];
+      scheduleViewSave();
+    },
+    [scheduleViewSave]
+  );
+
+  const foldCurrentSelection = useCallback(() => {
+    const sel = selectedRef.current;
+    const memberIds = Array.from(sel).filter((id) => spec.nodes.some((n) => n.id === id));
+    if (memberIds.length < 2) {
+      console.info(`[fold] need >=2 nodes selected to fold; have ${memberIds.length}`);
+      return;
+    }
+    let cx = 0, cy = 0;
+    for (const id of memberIds) {
+      const n = spec.nodes.find((sn) => sn.id === id);
+      if (n) { cx += n.x; cy += n.y; }
+    }
+    cx = cx / memberIds.length;
+    cy = cy / memberIds.length;
+    const id = createFold(viewerState, memberIds, [cx, cy]);
+    if (!id) {
+      console.info(
+        `[fold] createFold rejected (members may already be inside another fold): ${memberIds.join(", ")}`,
+      );
+      return;
+    }
+    console.info(`[fold] created ${id} with ${memberIds.length} members: ${memberIds.join(", ")}`);
+    rebuildFlow();
+    flushViewSave();
+  }, [rebuildFlow, flushViewSave]);
+
+  const onSelectionContextMenu = useCallback(
+    (ev: React.MouseEvent, _selNodes: RFNode[]) => {
+      ev.preventDefault();
+      foldCurrentSelection();
+    },
+    [foldCurrentSelection]
+  );
+
+  const onNodeContextMenu = useCallback(
+    (ev: React.MouseEvent, node: RFNode) => {
+      ev.preventDefault();
+      if (node.type === "fold") {
+        console.info("[fold] right-click on a placeholder is a no-op; double-click to expand");
+        return;
+      }
+      const sel = selectedRef.current;
+      if (!sel.has(node.id)) {
+        // Single-node right-click on an unselected node: silently add it
+        // and fold — but only if there's already an existing selection
+        // (otherwise this is a stray right-click). For now: prompt.
+        console.info(
+          `[fold] right-clicked node "${node.id}" is not in the selection (${sel.size} selected); shift-click to add it before folding`,
+        );
+        return;
+      }
+      foldCurrentSelection();
+    },
+    [foldCurrentSelection]
   );
 
   const styledNodes = dimmed
@@ -430,6 +571,9 @@ function Inner() {
         onMoveEnd={onMoveEnd}
         onSelectionChange={onSelectionChange}
         onNodeDoubleClick={onNodeDoubleClick}
+        onNodeContextMenu={onNodeContextMenu}
+        onSelectionContextMenu={onSelectionContextMenu}
+        onNodeDragStop={onNodeDragStop}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
         onConnect={onConnect}
@@ -440,12 +584,13 @@ function Inner() {
         onPaneClick={closeEdgeMenu}
         minZoom={0.1}
         maxZoom={4}
+        zoomOnDoubleClick={false}
         fitView
         deleteKeyCode={["Delete", "Backspace"]}
         nodesConnectable={true}
         selectionMode={SelectionMode.Partial}
         selectionOnDrag={true}
-        panOnDrag={[1, 2]}
+        panOnDrag={[1]}
         panOnScroll={true}
         edgeTypes={EDGE_TYPES}
         nodeTypes={RF_NODE_TYPES}
