@@ -35,14 +35,102 @@ export type ViewerState = {
 
 export const DEFAULT_VIEWER_STATE: ViewerState = {};
 
+const isObj = (v: unknown): v is Record<string, unknown> =>
+  v !== null && typeof v === "object" && !Array.isArray(v);
+
+const isNum = (v: unknown): v is number =>
+  typeof v === "number" && Number.isFinite(v);
+
+const isStr = (v: unknown): v is string => typeof v === "string";
+
+const isStrArr = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every(isStr);
+
+function parseCamera(v: unknown): Camera | undefined {
+  if (!isObj(v)) return undefined;
+  if (!isNum(v.x) || !isNum(v.y) || !isNum(v.w) || !isNum(v.h)) return undefined;
+  const cam: Camera = { x: v.x, y: v.y, w: v.w, h: v.h };
+  if (isNum(v.zoom)) cam.zoom = v.zoom;
+  return cam;
+}
+
+function parseSavedView(v: unknown): SavedView | undefined {
+  if (!isObj(v)) return undefined;
+  if (!isStr(v.name) || !isStrArr(v.nodeIds)) return undefined;
+  const out: SavedView = { name: v.name, nodeIds: v.nodeIds };
+  if (isObj(v.viewport) && isNum(v.viewport.x) && isNum(v.viewport.y) &&
+      isNum(v.viewport.w) && isNum(v.viewport.h)) {
+    out.viewport = { x: v.viewport.x, y: v.viewport.y, w: v.viewport.w, h: v.viewport.h };
+  }
+  return out;
+}
+
+function parseFold(v: unknown): Fold | undefined {
+  if (!isObj(v)) return undefined;
+  if (!isStr(v.id) || !isStr(v.label) || !isStrArr(v.memberIds)) return undefined;
+  if (!Array.isArray(v.position) || v.position.length !== 2 ||
+      !isNum(v.position[0]) || !isNum(v.position[1])) return undefined;
+  if (typeof v.collapsed !== "boolean") return undefined;
+  return {
+    id: v.id, label: v.label, memberIds: v.memberIds,
+    position: [v.position[0], v.position[1]], collapsed: v.collapsed,
+  };
+}
+
+function parseBookmark(v: unknown): Bookmark | undefined {
+  if (!isObj(v) || !isStr(v.name) || !isNum(v.t)) return undefined;
+  return { name: v.name, t: v.t };
+}
+
+function collect<T>(v: unknown, parse: (x: unknown) => T | undefined): T[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const out: T[] = [];
+  for (const item of v) {
+    const p = parse(item);
+    if (p) out.push(p);
+  }
+  return out;
+}
+
 export function parseViewerState(text: string | undefined): ViewerState {
   if (!text) return { ...DEFAULT_VIEWER_STATE };
+  let raw: unknown;
   try {
-    const v = JSON.parse(text);
-    return v && typeof v === "object" ? (v as ViewerState) : { ...DEFAULT_VIEWER_STATE };
-  } catch {
+    raw = JSON.parse(text);
+  } catch (err) {
+    console.warn("topology.view.json: invalid JSON, ignoring sidecar", err);
     return { ...DEFAULT_VIEWER_STATE };
   }
+  if (!isObj(raw)) {
+    console.warn("topology.view.json: top-level value is not an object, ignoring");
+    return { ...DEFAULT_VIEWER_STATE };
+  }
+  const out: ViewerState = {};
+  if (raw.camera !== undefined) {
+    const cam = parseCamera(raw.camera);
+    if (cam) out.camera = cam;
+    else console.warn("topology.view.json: dropping malformed camera");
+  }
+  if (raw.views !== undefined) {
+    const views = collect(raw.views, parseSavedView);
+    if (views) out.views = views;
+    else console.warn("topology.view.json: views is not an array, dropping");
+  }
+  if (raw.folds !== undefined) {
+    const folds = collect(raw.folds, parseFold);
+    if (folds) out.folds = folds;
+    else console.warn("topology.view.json: folds is not an array, dropping");
+  }
+  if (raw.bookmarks !== undefined) {
+    const bookmarks = collect(raw.bookmarks, parseBookmark);
+    if (bookmarks) out.bookmarks = bookmarks;
+    else console.warn("topology.view.json: bookmarks is not an array, dropping");
+  }
+  if (raw.lastSelectionIds !== undefined) {
+    if (isStrArr(raw.lastSelectionIds)) out.lastSelectionIds = raw.lastSelectionIds;
+    else console.warn("topology.view.json: lastSelectionIds is not a string[], dropping");
+  }
+  return out;
 }
 
 export function serializeViewerState(s: ViewerState): string {
