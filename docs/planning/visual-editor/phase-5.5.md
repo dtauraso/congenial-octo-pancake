@@ -50,10 +50,13 @@ Shipped in four commits on `visual-editor`:
 | A — handler-registry + props schema | `7e1816e` | $2.63 | $5 est, $9 risk |
 | B — pure simulator | `26023b9` | $1.49 | $6 est, $12 risk |
 | C — runner + event-driven render | `ba41e2d` | $7.52 | $5 est, $9 risk |
-| D — step-debugger + bookmarks + steps[] removal | (pending) | $8.28 | $4 est, $5 risk (over) |
+| D — step-debugger + bookmarks + steps[] removal | `a989059` | $8.28 | $4 est, $5 risk (over) |
+| N1' — concurrency-reveal mode (auto-detect + self-pace) | `3670f06` | $1.34 | $2 est, $5 risk |
+
+**Phase 5.5 total: $21.26** across five commits (A+B+C+D+N1').
 
 **Note from Chunk C runtime:** the per-event 200ms tick can feel uneven on chains where some handlers fire instantly and others wait on a join — the visible cadence is the *event* rate, not a uniform clock. Chunk D added a tick-speed slider (60–1500ms) so users can pace it. The auto-reseed on quiescence pauses for one tick before re-firing, which is also user-visible as a beat.
 
 **Visual cadence note (carry into N1' follow-up).** The tick-speed slider paces wall-clock time *between* `step()` calls, but a single step can fan into multiple downstream emissions that all flash on the next tick — so chains where one node fans out to several look jumpy at low tick intervals. Polish idea for follow-up: enforce a minimum wall delay per *event* (not per step) by buffering emissions onto a per-edge queue with paced flushes. Out of scope for the N1' concurrency work but adjacent.
 
-**N1' deferred to Phase 5.5 follow-up.** The N2 step-debugger + bookmark UI absorbed Chunk D's budget; the concurrency-reveal mode (auto-detect + self-pacing edge loop) is a self-contained next bite. The hooks are in place — `runner.subscribe` already publishes `EmitEvent` per edge, and adding a "concurrent-edge" set + a re-emission scheduler is the missing piece. Estimated ~$2 follow-up. Manual `edge.concurrent: true` override should land at the same time as the fallback.
+**N1' shipped (`3670f06`, $1.34).** Forward-BFS classifier from `GATE_TYPES` (joins + latches + detectors) computes the concurrent-edge set on `runner.load`. On each fire, if `inEdgeId` is concurrent the runner re-enqueues a fresh emission from that edge's source and publishes a fresh `EmitEvent` for the visual pulse. Per-edge `concurrent: true | false` override on `Edge`. AnimatedEdge renders a subtle tinted stroke overlay (opacity 0.18) on concurrent edges so parallel regions are visible at a glance even when paused. Per-event wall-clock pacing polish (smooth fan-out flashes) deferred — separate ~$1 follow-up if it ever bites in practice.
