@@ -201,6 +201,31 @@ What stays custom (React Flow does not help):
 Reordered around the pipeline. Codegen integration is in Phase 1 because
 the tool's value collapses without it.
 
+### ▶ NEXT UP
+
+The most load-bearing remaining work, in priority order. Pick whichever
+matches the cap available and the kind of break you'd most regret.
+
+1. **Phase 5 — comparison [~1.5 + ~⅜ tests].** The headline next phase.
+   Side-by-side diff against git HEAD or a second spec. See the Phase 5
+   entry below for the open questions and the per-phase test items
+   (Tier 2 invariants + Tier 3 system-shape cases) that promote the
+   spec/viewer/topogen contracts from rules-in-doc to enforced tests.
+2. **Phase 4 nested folding follow-up [~½, ⏳].** Single-level folds work;
+   nested ones still rejected. Pick up only when a real topology hits
+   the level-of-nesting wall.
+3. **Phase 3 Tier 3 follow-ups [~⅜ remaining, ⏳].** Three cases queued:
+   port-drag asserts `chan` materializes in generated Go (~⅛),
+   palette-drag-position (~⅛, deferred — pixel-stable assertion is
+   harder), port-drag mismatched-kinds fallback (~⅛). Lower leverage
+   than Phase 5; pick up opportunistically when touching adjacent code.
+
+The done-recently items that justify Phase 5 starting next: Phase 4
+shipped at ~⅜ actual, follow-up gesture fixes shipped, Tier 3 fold +
+delete + rename-clash gesture coverage in place. The combinatorial-bug
+surface is currently small enough that adding one new pane (Phase 5)
+won't blow the budget; deferring much longer means more to integrate.
+
 Cap-hit estimates in **[brackets]** at each phase and item. See [Risk and effort](#risk-and-effort) for the methodology. Phases 3, 4, and 8 estimates assume the React Flow substrate above.
 
 - **Phase 1 — pipeline foundations ✅** **[~2, done; React-Flow-affected items re-ported during Phase 3 migration]**
@@ -236,36 +261,52 @@ Cap-hit estimates in **[brackets]** at each phase and item. See [Risk and effort
   - 🟡 Tier 3 gesture integration tests (Playwright, after the gestures above stabilize — defer until churn slows). **[~⅝ total — was ~1–1.5; harness landed in ~¼ vs. ~¾ estimate, so the four follow-ups (~⅛ each = ~½) dominate what's left]**
     - **[~¾ est / ~¼ actual, done]** ✅ Playwright + vscode-webview harness; first gesture case (port-drag-creates-edge). The harness was the load-bearing risk — option (a) (standalone HTML + stubbed `acquireVsCodeApi`) collapsed cleanly because esbuild already emits a self-contained `out/webview.{js,css}` bundle, so the harness is ~50 lines of HTML and the test runs in ~3s with no vscode dependency. The ~¾ estimate reserved budget for a `@vscode/test-electron` fallback that didn't end up needed. **Recalibration:** future Tier 3 cases should be ~⅛ each as planned — but if a case touches host-side fidelity (real workspaceEdit, real sidecar) the option (a) path won't reach it, and (b) reappears at the original ~¾ cost. None of the four queued follow-ups need that. Standalone HTML shell ([e2e/harness.html](../../tools/topology-vscode/e2e/harness.html)) loads the same `out/webview.{js,css}` bundle the real extension does, with `acquireVsCodeApi` stubbed to record posted messages and replay `{type:"load"}` after `ready`. Webview exposes `window.__wirefold_test.{getSpec,getSent}` so tests assert both the live spec mutation and that a save was posted to the host. Tradeoff: gives up host-side workspaceEdit / sidecar fidelity (already covered by Tier 1 round-trip + topogen goldens); keeps gesture-to-spec edge cheap and fast (~3s for the seed test, no vscode download). `npm test` (Vitest) stays the default and unchanged; `npm run test:e2e` is opt-in. Browsers install once via `npx playwright install chromium`. Four follow-up cases stubbed as TODO comments in [e2e/port-drag-creates-edge.spec.ts](../../tools/topology-vscode/e2e/port-drag-creates-edge.spec.ts).
     - **[~⅛]** ⏳ Port-drag creates edge with inferred channel type; topogen-generated Go contains the new `chan`. (The seed case in the harness sub-bullet above already asserts the spec-mutation half — kind inference, handle ids, save round-trip; this entry stays ⏳ until it also asserts the `chan` materializes in the generated Go.)
-    - **[~⅛]** ⏳ Delete-selection removes node + incident edges + `timing.fires[id]`.
-    - **[~⅛]** ⏳ Palette-drag at coords persists position across reload.
-    - **[~⅛]** ⏳ Rename to clashing id rejects with inline error.
+    - **[~⅛, done]** ✅ Delete-selection removes node + incident edges + `timing.fires[id]` ([e2e/delete-cascade.spec.ts](../../tools/topology-vscode/e2e/delete-cascade.spec.ts)). Selection pre-set via `__wirefold_view_fixture` so the test doesn't depend on flaky UI click-to-select; gesture path from `Delete` keypress to spec mutation is end-to-end verified.
+    - **[~⅛]** ⏳ Palette-drag at coords persists position across reload. Deferred — positional correctness is harder to assert deterministically without pixel-measurement against a viewport-zoom-stable layout. Worth picking up alongside any visual-regression work in Phase 9.
+    - **[~⅛, done]** ✅ Rename to clashing id rejects with inline error ([e2e/rename-clash.spec.ts](../../tools/topology-vscode/e2e/rename-clash.spec.ts)). Dialog-event capture asserts the alert fires; spec is byte-identical pre/post (rejection means no mutation).
+    - **[~⅛]** ⏳ Port-drag with mismatched kinds falls back to `"any"`. Lower leverage than the others — exercises a fallback path rather than a load-bearing invariant. Pick up opportunistically.
 
 - **Phase 4 — fold/unfold ✅** **[~1 est / ~⅜ actual]**
   - **[~½ est / ~¼ actual, done]** ✅ Sidecar `folds[]` rendered as a separate RF node alongside members (rejected `parentNode` — relative-coordinate complexity vs. the stable-layout invariant). Collapsed members + their internal edges are skipped in the flow; edges crossing the boundary are rerouted to the placeholder *only in the flow* (spec edges keep their original endpoints, so expand reinstates the original wiring without spec mutation). Tier 2 retro [test/fold.test.ts](../../tools/topology-vscode/test/fold.test.ts) locks the contract: collapsed-render, expanded frame, no-spec-mutation, flowToSpec ignores fold nodes, no-nesting reject.
   - **[~¼ est / ~⅛ actual, done]** ✅ Right-click on a selected non-fold node folds the selection (≥2 members, fold position = member centroid); double-click on a placeholder toggles collapsed; placeholder drags persist back to `viewerState.folds[].position` via `onNodeDragStop`. All save paths use `scheduleViewSave` only, so topogen never re-runs on a fold gesture.
   - **[~¼ est / ~0 actual, done]** ✅ Folds are purely visual. `topogen` ignores `topology.view.json`; the flat `Wiring/` package is byte-identical before and after a fold operation. No topogen change. Revisit only if code-gen organization wants matching structure (separate cap-hit, spec-side move).
+  - **[~⅛, done]** ✅ Tier 3 invariant test: fold gestures (create/toggle/delete) post only `view-save`, never `save` ([e2e/fold-no-spec-save.spec.ts](../../tools/topology-vscode/e2e/fold-no-spec-save.spec.ts)). Selection pre-set via `__wirefold_view_fixture`; spec asserted byte-identical pre/post; getSent() filtered for `save` messages must be empty. Promotes "folds are purely visual" from plan-doc note to enforced runtime contract — exactly the silent-corrosion failure mode the broader testing strategy was added to guard against.
+  - **[~⅛, done]** ✅ Tier 2 system-shape test: fold + delete (already covered). [test/delete.test.ts:69-75](../../tools/topology-vscode/test/delete.test.ts#L69-L75) asserts that `applyDelete` scrubs `fold.memberIds` when a member node is deleted. The unit-level coverage was already in place from Phase 3's delete retro; no new test needed.
   - **[~½]** ⏳ Nested folding (follow-up). Today [fold-core.ts](../../tools/topology-vscode/src/webview/fold-core.ts) rejects creating a fold whose members are already in another fold, and [adapter.ts](../../tools/topology-vscode/src/webview/rf/adapter.ts) takes "first wins" when a node appears in multiple folds. Lifting that needs: (1) a containment relation on `viewerState.folds` (parent fold id, or derived from membership inclusion); (2) edge re-routing that walks up the chain to the nearest *collapsed* ancestor on each side rather than checking only direct membership; (3) expanded-bounds that recurse so an outer expanded fold sizes itself around inner folds (collapsed placeholders + expanded child frames), not just leaf members; (4) delete that frees inner members back to the outer fold rather than to the top level. Tier 2 retro grid grows by the collapse/expand combinations across the tree. Pick up when a real topology hits a level-of-nesting wall — until then, single-level folds carry the recall affordance.
 
-- **Phase 5 — comparison** **[~1.5]**
+- **Phase 5 — comparison** **[~1.5 + ~⅜ tests]**
   - **[~½]** Side-by-side mode loading two specs (current vs. git HEAD, or two files).
   - **[~½]** Computed diff: added / removed / repositioned / rewired / retimed. (Mechanical.)
   - **[~½]** Visual highlight (color tint, badges) for diff items. (Two-pane camera sync UX is the variable part.)
+  - **[~⅛]** Tier 2 contract test: `diffSpecs(a, b)` is a pure function — no spec mutation, deterministic output, symmetric where appropriate (added vs. removed swap when args swap). Each diff category gets a fixture pair. Locks down the diff before the renderer-side decoration adds noise.
+  - **[~⅛]** Tier 2 invariant test: only the *live* pane talks to topogen. Spy on `vscode.postMessage`, mutate the comparison pane's nodes, assert no `{type: "save"}` fires from that pane. Catches the bug where the comparison pane accidentally re-runs codegen against a HEAD spec.
+  - **[~⅛]** Tier 3 system-shape test: fold + diff. Load two specs that differ inside a folded region; verify diff highlighting surfaces on the placeholder when collapsed (badge with category counts) and on the underlying members when expanded. Documents the rule: diff state composes with fold state, neither swallows the other.
+  - **[~⅛]** Tier 3 system-shape test: saved-view + diff. With a saved view active, the dim/active className must compose with the diff classNames without one overriding the other. Concrete failure shape: `.dim` and `.diff-added` both set on a node — both styles must be visible (e.g., dimmed-but-tinted), or one must explicitly win per a documented rule.
 
-- **Phase 6 — keyframed motion (when a topology actually rewires during its cycle)** **[~2.5, risk to ~4]**
+- **Phase 6 — keyframed motion (when a topology actually rewires during its cycle)** **[~2.5, risk to ~4; +~⅜ tests]**
   - **[~⅛]** ⏳ Tier 1 round-trip coverage extended to `positionKeyframes` / `endpointKeyframes` / `visibility` *before* any UI lands (each new spec field becomes a fixture row; the bridge can't silently drop them).
   - **[~¼]** Schema: `positionKeyframes`, `endpointKeyframes`, `visibility`.
   - **[~¾]** Renderer tweens between keyframes during playback.
   - **[~½]** Decide whether `topogen` reads keyframes (yes if the runtime causes the change; no if it's pure presentation). Spec-vs-viewer judgment per keyframe kind is the risk multiplier.
   - **[~1]** Record-mode editor: drag at non-zero playhead → new keyframe.
+  - **[~⅛]** ⏳ Tier 2 invariant test: viewer-kind keyframes never reach topogen input; spec-kind keyframes always do. Run topogen against a spec containing both, assert generated Go references the spec keyframes and ignores the viewer ones. Promotes the spec-vs-viewer keyframe judgment from per-case decision to enforced contract.
+  - **[~⅛]** ⏳ Tier 3 system-shape test: keyframe + playback + bookmark. At a non-zero bookmark, paused playback must show the interpolated position for keyframed nodes; resuming must continue from that interpolation, not jump to t=0. Catches the master-clock-vs-keyframe-cursor desync bug that's the obvious failure mode of mixing clocks.
+  - **[~⅛]** ⏳ Tier 3 system-shape test: keyframe + record-mode + saved-view. Recording a new keyframe inside a saved view must not affect non-member nodes' keyframes. Locks down the rule that record-mode is scoped to whatever's interactive at the playhead, not the whole spec.
 
-- **Phase 7 — trace replay rejoins the pipeline** **[several, see [trace-replay-plan.md](trace-replay-plan.md)]**
+- **Phase 7 — trace replay rejoins the pipeline** **[several, see [trace-replay-plan.md](trace-replay-plan.md); +~¼ tests]**
   - **[~2–3]** Implement value-flow tracing in the generated Go (per [trace-replay-plan.md](trace-replay-plan.md)). (Dominates; Go edits are token-light.)
   - **[~1]** Editor loads or streams traces; replays observed behavior on the same diagram.
   - **[~1]** Side-by-side: intended animation (from spec) vs. observed animation (from trace). Drift becomes visible.
+  - **[~⅛]** ⏳ Tier 2 invariant test: trace replay never mutates the spec. Load a spec, replay a trace against it, assert `JSON.stringify(spec)` is byte-identical before/after. Promotes the rule "trace is observation, spec is design" from doc to test.
+  - **[~⅛]** ⏳ Tier 3 system-shape test: trace + spec animation in side-by-side. Both panes' master clocks must stay independent (scrubbing one doesn't move the other) but bookmarks must be jumpable from either pane. Catches the obvious failure mode where the side-by-side coupling collapses one clock onto the other.
 
-- **Phase 8 — polish** **[open-ended, ~⅜ saved by React Flow + the AnimatedNode pattern]**
-  - **[~⅛]** Undo / redo over the spec. (Cheaper than the original ~¼: the "mutate spec → rebuild via `specToFlow` → `setNodes`/`setEdges`" pipeline is already proven by id rename's `rerender` callback; an undo stack of spec snapshots plugs into the same callback. Viewer state excluded.) **Substrate:** use [`zundo`](https://github.com/charkour/zundo), the dominant Zustand undo middleware (~2KB, snapshot-based with built-in grouping/diffing). Wraps the spec store in one line; avoids hand-rolling and maintaining a stack.
+- **Phase 8 — polish** **[open-ended, ~⅜ saved by React Flow + the AnimatedNode pattern; +~⅜ tests]**
+  - **[~⅛]** Spec undo / redo. (Cheaper than the original ~¼: the "mutate spec → rebuild via `specToFlow` → `setNodes`/`setEdges`" pipeline is already proven by id rename's `rerender` callback; an undo stack of spec snapshots plugs into the same callback.) **Substrate:** use [`zundo`](https://github.com/charkour/zundo), the dominant Zustand undo middleware (~2KB, snapshot-based with built-in grouping/diffing). Wraps the spec store in one line; avoids hand-rolling and maintaining a stack.
+  - **[~⅛]** Deliberate-viewer undo / redo: folds, saved views, bookmarks. *Not* camera, lastSelectionIds, current playhead, or active-view selection — those are incidental tracking, not deliberate creations, and undoing them is jarring (cf. word processors not undoing scroll position). Same `zundo` substrate, **separate undo stack** so spec and viewer histories are independent: pressing undo with focus in the main pane rolls back spec changes; pressing it with focus in a viewer panel (folds list, saved-views, bookmarks) rolls back that panel's creations. Avoids the surprising case where pressing undo after deleting a saved view also rolls back an unrelated spec edit.
+  - **[~⅛]** Visual rollback affordance for both undo stacks. After an undo, briefly highlight the affected node/edge/fold/view/bookmark using the diff classNames from Phase 5 (`.diff-added` for re-appearing, `.diff-removed` for un-appearing) plus an optional camera pan to frame the change. Reuses Phase 5's vocabulary — same visual idea, different trigger. Without this, undo is "did something happen?"; with it, undo is "I see exactly what happened." Tier 4 nightly should screenshot a few frames mid-affordance to catch regressions in the highlight timing.
   - **[~⅛]** Snap-to-grid; alignment guides. (React Flow has snap-to-grid built in; alignment guides are custom but cheap. Trimmed from ~¼ after the Phase 4 calibration — same shape: library primitive + thin custom layer + no spec touch.)
+  - **[~⅛]** ⏳ Tier 3 system-shape test: spec undo + fold + delete. Apply a sequence (delete a node, fold a selection, rename, re-fold), step the *spec* undo back across the sequence, assert spec returns to its initial bytes; the viewer-state folds stack should be untouched (deleted folds reappear only when the *viewer* undo is exercised). Catches the bug where the two stacks bleed into each other or where a spec rollback leaves a fold pointing at a now-restored node id incoherently.
+  - **[~⅛]** ⏳ Tier 2 invariant test: each undo stack is scoped to its own surface. After a spec undo, viewer-state diffs (folds, views, bookmarks, camera, lastSelectionIds) must be byte-identical to pre-undo. After a viewer undo, the spec must be byte-identical to pre-undo. Stronger than the previous "undo only touches spec" rule — has to police *two* surfaces' independence, not one. Promotes the rule from comment to enforced contract.
   - **[~½]** ⏳ Tier 4 headline edit-to-running-Go test. Success criterion #1 ("under 30 seconds end-to-end") made executable: scripted gesture + topogen + `go build`, latency measured. Nightly, not per-commit. Catches latency regressions (topogen slowdowns, debounce drift) that no other tier sees.
   - *Dropped: SVG export.* The `diagrams/` set is hand-authored to the style guide and the editor itself is the live view — exporting would mean re-implementing the style guide twice (live + export). Revive only when hand-authored diagrams drift from the spec badly enough to hurt; until then, screenshots / recordings cover incidental sharing.
 
@@ -339,19 +380,42 @@ like `expect(result).toBeDefined()` don't count. *If a test
 would still pass after deleting the production code path it
 covers, it's not a test.*
 
+**Per-phase system-shape rule.** Each new feature must contribute
+*one* Tier 3 case that exercises its interaction with an
+existing feature, not just its standalone behavior. Standalone
+gesture tests catch the obvious break; the expensive bugs are
+the multi-mechanism ones (fold + diff, saved-view + camera-sync,
+keyframe + playback) that no per-feature test would surface.
+Each system-shape case is a thin wedge driven into the
+combinatorial M×N space; the space shrinks measurably with each
+one. Concrete cases listed under each phase below. The rule
+exists because without it, the gap between "looks right" and
+"is right" widens monotonically as phases stack.
+
+**Promote invariants from notes to tests.** When a phase entry
+says "X never happens" or "Y must never fire," that's a
+candidate for a failing test. Plan-doc rules erode across cap
+hits and AI sessions; tests don't. Each phase should explicitly
+list which of its invariants are *enforceable* (have a test
+that fails if the invariant is violated) and which are still
+notes-to-self. Closing the gap between the two is part of
+finishing the phase, not optional polish.
+
 **Tier → Phase map and net savings:**
 
 | Tier | Cost | Saved (Phases 3–6) | Net | Lives in |
 |---|---|---|---|---|
 | 1 — contract (round-trip + goldens) | ~1 | ~3–4 | **+2–3** | Phase 3 testing foundation |
-| 2 — bridge units | ~½ | ~1–1.5 | **+½ to +1** | Phase 3 retros; Phase 6 keyframe extension |
-| 3 — gesture (Playwright) | ~⅝ (harness ~¼ actual + 4 cases ~½) | ~1.5–2 | **+1 to +1.5** | end of Phase 3 |
+| 2 — bridge units + invariant promotions | ~¾ (~½ original + ~¼ promotions across Phases 4–8) | ~1.5–2 | **+¾ to +1¼** | Phase 3 retros; per-phase invariant tests |
+| 3 — gesture (Playwright) + system-shape | ~1⅛ (harness ~¼ done + 4 standalone cases ~½ + system-shape cases ~⅜ across Phases 4–8) | ~2–3 | **+1 to +1¾** | end of Phase 3 + per-phase additions |
 | 4 — e2e + visual | ~1 | ~1.5 | **+½** | Phase 8 (e2e); Phase 9 (visual) |
 
 Total saved across the plan: roughly **3–4.5 cap hits net**
 against ~8 remaining for Phases 3–6. Beyond the cap-hit count,
 contracts becoming enforced rather than remembered compounds in
-ways the table doesn't capture.
+ways the table doesn't capture — and the per-phase system-shape
+cases compound *against* the M×N combinatorial-bug surface that
+grows monotonically without them.
 
 **Non-goals.** Unit tests on React Flow internals, coverage
 percentage targets, testing topogen against hand-written Go
@@ -425,7 +489,14 @@ savings against the prior `~13` total.
 - Phase 8: open-ended; React Flow's built-in undo pattern + snap-to-grid
   *and* the proven "mutate spec → `specToFlow` rebuild → `setNodes`/
   `setEdges`" pipeline (used by id rename's `rerender` callback) trim
-  another ~⅛ off the undo line — ~⅜ saved total vs. fully custom.
+  another ~⅛ off the spec-undo line — ~⅜ saved total vs. fully custom.
+  Undo split into three: spec undo (~⅛), deliberate-viewer undo with a
+  separate stack (~⅛), and a visual rollback affordance reusing Phase
+  5's diff classNames (~⅛). The split costs ~¼ more than the original
+  single-line undo entry but resolves the "does undoing a saved-view
+  delete also undo my last spec edit?" surprise that a single shared
+  stack would create. Worth doing right since the undo stack's shape
+  is structural — painful to retrofit later.
 
 Phases 3–6 remaining: **~5.25 cap hits** (Phase 3 ~½ + Phase 5 ~1.5
 + Phase 6 ~2.5, +0.5 for sublabel/undo savings already booked,

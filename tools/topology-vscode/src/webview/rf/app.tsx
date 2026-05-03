@@ -101,20 +101,6 @@ function Inner() {
   }, [rf]);
 
   useEffect(() => {
-    // DIAGNOSTIC: log every contextmenu event reaching the document so we
-    // can tell whether right-click is firing at all, before RF even sees it.
-    const ctxLog = (e: MouseEvent) => {
-      const t = e.target as HTMLElement | null;
-      const nodeWrapper = t?.closest?.(".react-flow__node") as HTMLElement | null;
-      console.info(
-        `[ctx] contextmenu fired; target=${t?.tagName}.${t?.className?.toString().slice(0, 40)} nodeWrapper=${nodeWrapper?.dataset?.id ?? "<none>"}`,
-      );
-    };
-    document.addEventListener("contextmenu", ctxLog, true);
-    return () => document.removeEventListener("contextmenu", ctxLog, true);
-  }, []);
-
-  useEffect(() => {
     const handler = (e: MessageEvent<Msg>) => {
       const msg = e.data;
       if (msg.type === "load") {

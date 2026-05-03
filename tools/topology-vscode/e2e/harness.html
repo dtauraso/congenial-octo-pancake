@@ -42,7 +42,13 @@
               { type: "load", text: window.__wirefold_fixture },
               "*",
             );
-            window.postMessage({ type: "view-load", text: undefined }, "*");
+            // Tests can pre-set viewerState (selection, folds, camera) via
+            // window.__wirefold_view_fixture; falls back to undefined so
+            // existing tests that don't set it keep their old behavior.
+            window.postMessage(
+              { type: "view-load", text: window.__wirefold_view_fixture },
+              "*",
+            );
           }
         },
         setState() {},
