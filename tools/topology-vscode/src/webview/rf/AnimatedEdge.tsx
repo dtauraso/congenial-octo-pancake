@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BaseEdge, getBezierPath, type EdgeProps } from "reactflow";
 import { KIND_COLORS, type EdgeKind } from "../../schema";
-import { subscribe } from "../../sim/runner";
+import { subscribe, subscribeState, getConcurrentEdges } from "../../sim/runner";
 
 type EdgeData = { kind?: EdgeKind };
 
@@ -17,6 +17,13 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   });
 
   const pulseRef = useRef<SVGPathElement | null>(null);
+  const [concurrent, setConcurrent] = useState(() => getConcurrentEdges().has(id));
+
+  useEffect(() => {
+    const update = () => setConcurrent(getConcurrentEdges().has(id));
+    update();
+    return subscribeState(update);
+  }, [id]);
 
   useEffect(() => {
     const path = pulseRef.current;
@@ -44,6 +51,16 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   return (
     <>
       <BaseEdge path={d} style={style} interactionWidth={28} />
+      {concurrent && (
+        <path
+          d={d}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={6}
+          opacity={0.18}
+          pointerEvents="none"
+        />
+      )}
       <path
         ref={pulseRef}
         d={d}

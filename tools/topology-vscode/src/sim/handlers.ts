@@ -180,6 +180,23 @@ export const HANDLERS: Record<string, Record<string, HandlerFn>> = {
   // Generic: no handlers — placeholder type.
 };
 
+// Node types whose handlers buffer-and-wait (joins / latches). Used by
+// the concurrency classifier: these mark serialization barriers, and
+// any node downstream of one is treated as gated. Keep in sync with
+// HANDLERS — adding a new join handler without listing it here will
+// cause its downstream edges to be misclassified as concurrent.
+export const GATE_TYPES: ReadonlySet<string> = new Set([
+  "AndGate",
+  "SyncGate",
+  "ReadGate",
+  "InhibitRightGate",
+  "PatternAnd",
+  "ReadLatch",
+  "DetectorLatch",
+  "StreakBreakDetector",
+  "StreakDetector",
+]);
+
 export function getHandler(
   nodeType: string,
   inputPort: string,

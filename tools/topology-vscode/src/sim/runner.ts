@@ -4,8 +4,16 @@
 // `playback.ts` master clock — there is no global `t` anymore; visible
 // animation is the side-effect of simulator events firing.
 
-import type { Spec, StateValue } from "../schema";
-import { initWorld, replayTo, step, type World, type FireRecord } from "./simulator";
+import type { Spec, StateValue, Edge } from "../schema";
+import {
+  initWorld,
+  replayTo,
+  step,
+  enqueueEmission,
+  type World,
+  type FireRecord,
+} from "./simulator";
+import { classifyConcurrentEdges } from "./concurrency";
 
 export type FireEvent = {
   type: "fire";
@@ -40,6 +48,7 @@ const TICK_MAX = 1500;
 
 let spec: Spec | null = null;
 let world: World | null = null;
+let concurrentEdges: Set<string> = new Set();
 let intervalId: ReturnType<typeof setInterval> | 0 = 0;
 let playing = false;
 const listeners: RunnerListener[] = [];
@@ -61,7 +70,16 @@ export function setTickMs(ms: number): void {
 export function load(next: Spec): void {
   spec = next;
   world = initWorld(next);
+  concurrentEdges = classifyConcurrentEdges(next);
   notifyState();
+}
+
+// Read-only view of the current concurrent-edge classification. The
+// AnimatedEdge component reads this to decide whether to render the
+// concurrency-reveal stroke overlay. Re-runs on every load(); spec
+// edits flow through there.
+export function getConcurrentEdges(): ReadonlySet<string> {
+  return concurrentEdges;
 }
 
 export function reset(): void {
@@ -180,7 +198,7 @@ function tick(): void {
 }
 
 function emitEvents(rec: FireRecord): void {
-  if (!spec) return;
+  if (!spec || !world) return;
   const fireEvent: FireEvent = {
     type: "fire",
     nodeId: rec.nodeId,
@@ -206,6 +224,37 @@ function emitEvents(rec: FireRecord): void {
       }
     }
   }
+  // N1' concurrency-reveal self-pacer: pulse N just arrived at target
+  // via rec.inEdgeId. If that edge is concurrent, fire pulse N+1 from
+  // its source on the same port with the same value, scheduled one
+  // edge-delay ahead. This produces the continuous re-firing loop that
+  // makes parallel regions of the topology visible.
+  if (rec.inEdgeId && concurrentEdges.has(rec.inEdgeId)) {
+    const edge = findEdge(spec, rec.inEdgeId);
+    if (edge) {
+      enqueueEmission(
+        spec,
+        world,
+        edge.source,
+        edge.sourceHandle,
+        rec.inputValue,
+        world.tick + 1,
+      );
+      notify({
+        type: "emit",
+        edgeId: edge.id,
+        fromNodeId: edge.source,
+        toNodeId: edge.target,
+        value: rec.inputValue,
+        tick: world.tick,
+      });
+    }
+  }
+}
+
+function findEdge(s: Spec, id: string): Edge | undefined {
+  for (const e of s.edges) if (e.id === id) return e;
+  return undefined;
 }
 
 function notify(e: RunnerEvent): void {

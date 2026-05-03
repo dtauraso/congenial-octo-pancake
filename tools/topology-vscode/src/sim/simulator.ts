@@ -41,6 +41,11 @@ export type FireRecord = {
   nodeId: string;
   inputPort: string;
   inputValue: StateValue;
+  // Edge that delivered the input pulse, when known. Null for seed
+  // events and for naked queue entries (edge `data.init` priming) where
+  // there's no upstream emission. The runner uses this to wire up the
+  // N1' concurrent-edge self-pacer on arrival.
+  inEdgeId: string | null;
   emissions: { port: string; value: StateValue }[];
 };
 
@@ -265,6 +270,7 @@ export function step(spec: Spec, world: World): World {
       nodeId: head.toNodeId,
       inputPort: head.toPort,
       inputValue: head.value,
+      inEdgeId: head.edgeId,
       emissions: result.emissions.map((e) => ({ port: e.port, value: e.value })),
     },
   ];
@@ -318,6 +324,23 @@ export function runToQuiescent(spec: Spec, world: World = initWorld(spec)): Worl
 // Re-export handler registry through the sim namespace so callers can
 // import `from "./sim"` without reaching back into schema.
 export { HANDLERS, getHandler } from "./handlers";
+
+// Inject a fresh emission into an existing world's queue from outside
+// the step() loop. Used by the runner's concurrent-edge self-pacer to
+// re-fire pulse N+1 when pulse N arrives at the target — mutates the
+// passed world rather than cloning, since the runner owns the world.
+export function enqueueEmission(
+  spec: Spec,
+  world: World,
+  fromNodeId: string,
+  fromPort: string,
+  value: StateValue,
+  atTick: number,
+): void {
+  const idx = indexEdges(spec);
+  scheduleEmission(world, idx, fromNodeId, fromPort, value, atTick);
+  world.queue.sort(orderEvents);
+}
 
 // Helper for seed authoring + tests.
 export function makeSeed(events: SeedEvent[]): SeedEvent[] {

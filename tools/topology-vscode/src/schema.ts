@@ -75,6 +75,10 @@ export type Edge = {
   lane?: number;
   arrowStyle?: ArrowStyle;
   data?: unknown;
+  // Concurrency-reveal override. `undefined` → auto-classify (forward
+  // reachability from gate node types). `true` forces self-pacing
+  // re-emission; `false` suppresses it even if auto-classify says yes.
+  concurrent?: boolean;
 };
 
 export type LegendRow = { kind: EdgeKind; name: string; desc: string };
