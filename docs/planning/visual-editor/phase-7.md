@@ -118,3 +118,7 @@ again before Chunk 4.
 |---|---|---|---|
 | 1 — TS trace contract + replay path | `d371f2e` | $2.11 | $65 orig est (way over); fits Phase 6 band |
 | 2 — Drift indicator + load-trace UI | `ebc6fe5` | $2.82 | $5 revised est, on-target |
+| 3 — Go Trace recorder + emit sites | `a6f298a` | $4.48 | $10 revised est, well under |
+| 4 — `--trace` flag + parity test + resolver | `49288a5` | $2.16 | $4 revised est, well under |
+| 5 — Tier 2 spec-immutability test | `f80248b` | TBD | $1 revised est |
+| **Phase 7 total (chunks 1–5)** | | **$11.57 + ch5** | **$20 revised est** |
