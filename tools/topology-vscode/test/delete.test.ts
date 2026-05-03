@@ -20,18 +20,6 @@ function fixture(): { spec: Spec; vs: ViewerState } {
       { id: "bc", source: "b", sourceHandle: "out", target: "c", targetHandle: "in", kind: "chain" },
       { id: "ac", source: "a", sourceHandle: "out", target: "c", targetHandle: "in", kind: "chain" },
     ],
-    timing: {
-      steps: [
-        {
-          t: 0,
-          event: "fire",
-          fires: ["a", "b", "c"],
-          departs: ["ab", "bc", "ac"],
-          arrives: ["ab", "bc", "ac"],
-          state: { a: { v: 1 }, b: { v: 2 }, c: { v: 3 } },
-        },
-      ],
-    },
   };
   const vs: ViewerState = {
     views: [{ name: "v", viewport: { x: 0, y: 0, w: 100, h: 100 }, nodeIds: ["a", "b", "c"] }],
@@ -49,21 +37,6 @@ describe("applyDelete atomicity", () => {
     expect(spec.edges.map((e) => e.id)).toEqual(["bc"]);
     expect(r.removedEdgeIds.has("ab")).toBe(true);
     expect(r.removedEdgeIds.has("ac")).toBe(true);
-  });
-
-  it("scrubs deleted node from timing.fires and timing.state keys", () => {
-    const { spec, vs } = fixture();
-    applyDelete(spec, vs, ["a"], []);
-    expect(spec.timing!.steps[0].fires).toEqual(["b", "c"]);
-    expect(spec.timing!.steps[0].state!.a).toBeUndefined();
-    expect(Object.keys(spec.timing!.steps[0].state!)).toEqual(["b", "c"]);
-  });
-
-  it("scrubs cascaded edges from timing.departs and timing.arrives", () => {
-    const { spec, vs } = fixture();
-    applyDelete(spec, vs, ["a"], []);
-    expect(spec.timing!.steps[0].departs).toEqual(["bc"]);
-    expect(spec.timing!.steps[0].arrives).toEqual(["bc"]);
   });
 
   it("scrubs deleted node from view.nodeIds, fold.memberIds, lastSelectionIds", () => {
@@ -85,7 +58,6 @@ describe("applyDelete atomicity", () => {
     applyDelete(spec, vs, [], ["ab"]);
     expect(spec.nodes.map((n) => n.id)).toEqual(["a", "b", "c"]);
     expect(spec.edges.map((e) => e.id)).toEqual(["bc", "ac"]);
-    expect(spec.timing!.steps[0].departs).toEqual(["bc", "ac"]);
   });
 
   it("is a no-op when nothing is deleted", () => {

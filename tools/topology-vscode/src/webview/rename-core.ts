@@ -28,15 +28,6 @@ export function applyRename(
     if (e.source === oldId) e.source = newId;
     if (e.target === oldId) e.target = newId;
   }
-  if (spec.timing) {
-    for (const s of spec.timing.steps) {
-      if (s.fires) s.fires = s.fires.map((x) => (x === oldId ? newId : x));
-      if (s.state && Object.prototype.hasOwnProperty.call(s.state, oldId)) {
-        s.state[newId] = s.state[oldId];
-        delete s.state[oldId];
-      }
-    }
-  }
   if (viewerState.views) {
     for (const v of viewerState.views) {
       v.nodeIds = v.nodeIds.map((x) => (x === oldId ? newId : x));

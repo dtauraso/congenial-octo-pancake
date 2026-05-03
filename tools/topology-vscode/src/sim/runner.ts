@@ -3,12 +3,9 @@
 // AnimatedNode / AnimatedEdge subscribe to. Replaces the old
 // `playback.ts` master clock — there is no global `t` anymore; visible
 // animation is the side-effect of simulator events firing.
-//
-// Per-node play/pause (N2 step-debugger) lands in Chunk D as a per-node
-// pause set consulted before scheduling that node's events.
 
 import type { Spec, StateValue } from "../schema";
-import { initWorld, step, type World, type FireRecord } from "./simulator";
+import { initWorld, replayTo, step, type World, type FireRecord } from "./simulator";
 
 export type FireEvent = {
   type: "fire";
@@ -33,7 +30,13 @@ export type EmitEvent = {
 export type RunnerEvent = FireEvent | EmitEvent;
 export type RunnerListener = (e: RunnerEvent) => void;
 
-const TICK_MS = 200;
+// User-tunable tick interval. The user-facing speed slider in
+// timeline.ts writes here; faster topologies still run at the spec's
+// own `delay` cadence — the slider only paces the wall clock between
+// step() calls.
+let tickMs = 400;
+const TICK_MIN = 60;
+const TICK_MAX = 1500;
 
 let spec: Spec | null = null;
 let world: World | null = null;
@@ -41,6 +44,19 @@ let intervalId: ReturnType<typeof setInterval> | 0 = 0;
 let playing = false;
 const listeners: RunnerListener[] = [];
 const stateListeners: Array<() => void> = [];
+
+export function getTickMs(): number {
+  return tickMs;
+}
+
+export function setTickMs(ms: number): void {
+  tickMs = Math.max(TICK_MIN, Math.min(TICK_MAX, Math.round(ms)));
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = setInterval(tick, tickMs);
+  }
+  notifyState();
+}
 
 export function load(next: Spec): void {
   spec = next;
@@ -67,7 +83,37 @@ export function play(): void {
   // Step immediately so the user sees the first event without a 200ms
   // dead beat after pressing play.
   stepOnce();
-  if (playing) intervalId = setInterval(tick, TICK_MS);
+  if (playing) intervalId = setInterval(tick, tickMs);
+  notifyState();
+}
+
+// N2 step-debugger: drive the simulator until the next event arrives at
+// `nodeId`, then stop. Lets the user single-step a particular node
+// without globally pausing/resuming. If no future event reaches that
+// node before the queue drains, returns silently.
+export function stepToNode(nodeId: string): void {
+  if (!spec || !world) return;
+  pause();
+  const target = world.history.length;
+  // Walk events until one delivered to nodeId is processed, or we
+  // drain. Cap to keep runaway topologies from hanging the UI.
+  for (let i = 0; i < 5000; i++) {
+    if (world.queue.length === 0) break;
+    stepOnce();
+    if (!world) break;
+    const fresh = world.history.slice(target);
+    if (fresh.some((r) => r.nodeId === nodeId)) break;
+  }
+}
+
+// Bookmark resume: F1 deterministic replay to `cycle`, then leave the
+// runner paused so the step-debugger can take over. `startNodeId` is
+// recorded for the UI but doesn't change cycle math — bookmarks are
+// just (cycle, focus-node) pairs.
+export function jumpTo(cycle: number, _startNodeId: string): void {
+  if (!spec) return;
+  pause();
+  world = replayTo(spec, cycle);
   notifyState();
 }
 

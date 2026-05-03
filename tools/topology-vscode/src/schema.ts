@@ -77,15 +77,6 @@ export type Edge = {
   data?: unknown;
 };
 
-export type TimingStep = {
-  t: number;
-  event: string;
-  fires?: string[];
-  departs?: string[];
-  arrives?: string[];
-  state?: Record<string, Record<string, StateValue>>;
-};
-
 export type LegendRow = { kind: EdgeKind; name: string; desc: string };
 export type Note = { x: number; y: number; width?: number; height?: number; text: string };
 
@@ -103,10 +94,10 @@ export type Spec = {
   edges: Edge[];
   timing?: {
     duration?: string;
-    steps: TimingStep[];
-    // Phase 5.5: initial events that ignite the simulation. Replaces the
-    // SVG-era `steps[]` master script (kept in parallel for now; full
-    // removal in Chunk D).
+    // Initial events that ignite the simulation. Phase 5.5 replaced
+    // the SVG-era `steps[]` master script with this. Legacy `steps`
+    // fields in older topology.json files are silently dropped at
+    // parse time.
     seed?: SeedEvent[];
   };
   // Cycle counter source. If set, the cycle counter increments each
@@ -319,23 +310,6 @@ function parseEdge(v: unknown, path: string): Edge {
   };
 }
 
-function parseTimingStep(v: unknown, path: string): TimingStep {
-  const o = obj(v, path);
-  return {
-    t: num(o.t, `${path}.t`),
-    event: str(o.event, `${path}.event`),
-    fires: opt(o.fires, (x) => arr(x, `${path}.fires`).map((s, i) => str(s, `${path}.fires[${i}]`))),
-    departs: opt(o.departs, (x) => arr(x, `${path}.departs`).map((s, i) => str(s, `${path}.departs[${i}]`))),
-    arrives: opt(o.arrives, (x) => arr(x, `${path}.arrives`).map((s, i) => str(s, `${path}.arrives[${i}]`))),
-    state: opt(o.state, (x) => {
-      const so = obj(x, `${path}.state`);
-      const out: Record<string, Record<string, StateValue>> = {};
-      for (const k of Object.keys(so)) out[k] = stateMap(so[k], `${path}.state.${k}`);
-      return out;
-    }),
-  };
-}
-
 function parseSeedEvent(v: unknown, path: string): SeedEvent {
   const o = obj(v, path);
   return {
@@ -393,9 +367,11 @@ export function parseSpec(input: unknown): Spec {
     edges: arr(o.edges, "spec.edges").map((e, i) => parseEdge(e, `spec.edges[${i}]`)),
     timing: opt(o.timing, (t) => {
       const to = obj(t, "spec.timing");
+      // Legacy `steps` field is silently dropped — it was the SVG-era
+      // master script, replaced by per-node handlers + seed events in
+      // Phase 5.5.
       return {
         duration: opt(to.duration, (x) => str(x, "spec.timing.duration")),
-        steps: arr(to.steps, "spec.timing.steps").map((s, i) => parseTimingStep(s, `spec.timing.steps[${i}]`)),
         seed: opt(to.seed, (x) =>
           arr(x, "spec.timing.seed").map((e, i) => parseSeedEvent(e, `spec.timing.seed[${i}]`))),
       };

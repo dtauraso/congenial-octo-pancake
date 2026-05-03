@@ -29,7 +29,13 @@ export type Fold = {
   collapsed: boolean;
 };
 
-export type Bookmark = { name: string; t: number };
+// Phase 5.5 Chunk D: bookmarks are now resumption coordinates, not
+// timeline scrubber positions. Click → simulator.replayTo(cycle) with
+// `startNodeId` as the active node, then hand off to the step-debugger
+// in N2-paused state. Legacy `{name, t}` bookmarks are dropped on
+// load (no migration — the global clock they referenced no longer
+// exists).
+export type Bookmark = { name: string; startNodeId: string; cycle: number };
 
 export type ViewerState = {
   camera?: Camera | LegacyCameraBox;
@@ -88,8 +94,9 @@ function parseFold(v: unknown): Fold | undefined {
 }
 
 function parseBookmark(v: unknown): Bookmark | undefined {
-  if (!isObj(v) || !isStr(v.name) || !isNum(v.t)) return undefined;
-  return { name: v.name, t: v.t };
+  if (!isObj(v) || !isStr(v.name)) return undefined;
+  if (!isStr(v.startNodeId) || !isNum(v.cycle)) return undefined;
+  return { name: v.name, startNodeId: v.startNodeId, cycle: v.cycle };
 }
 
 function collect<T>(v: unknown, parse: (x: unknown) => T | undefined): T[] | undefined {

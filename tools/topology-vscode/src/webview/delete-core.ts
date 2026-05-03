@@ -28,17 +28,6 @@ export function applyDelete(
   spec.nodes = spec.nodes.filter((n) => !delNodes.has(n.id));
   spec.edges = spec.edges.filter((e) => !delEdges.has(e.id));
 
-  if (spec.timing) {
-    for (const s of spec.timing.steps) {
-      if (s.fires) s.fires = s.fires.filter((x) => !delNodes.has(x));
-      if (s.departs) s.departs = s.departs.filter((x) => !delEdges.has(x));
-      if (s.arrives) s.arrives = s.arrives.filter((x) => !delEdges.has(x));
-      if (s.state) {
-        for (const id of delNodes) delete s.state[id];
-      }
-    }
-  }
-
   if (viewerState.views) {
     for (const v of viewerState.views) {
       v.nodeIds = v.nodeIds.filter((x) => !delNodes.has(x));

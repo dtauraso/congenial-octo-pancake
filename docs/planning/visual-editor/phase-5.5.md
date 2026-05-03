@@ -40,3 +40,20 @@ The per-node handler formalism is the load-bearing piece. If handlers aren't exp
 ## Estimate breakdown
 
 Response-rule formalism + seed handlers (~½), simulator core + tie-break + tests (~½), N2 per-node UI controls + event-triggered animation rewrite (~½), N1' auto-detection + self-pacing edge loop (~½). Total ~2 caps; risk to ~3 if auto-detection turns flaky and we have to fall back to manual flags + UX for setting them.
+
+## Actuals
+
+Shipped in four commits on `visual-editor`:
+
+| Chunk | Commit | $ | vs est |
+|---|---|---|---|
+| A — handler-registry + props schema | `7e1816e` | $2.63 | $5 est, $9 risk |
+| B — pure simulator | `26023b9` | $1.49 | $6 est, $12 risk |
+| C — runner + event-driven render | `ba41e2d` | $7.52 | $5 est, $9 risk |
+| D — step-debugger + bookmarks + steps[] removal | (pending) | $8.28 | $4 est, $5 risk (over) |
+
+**Note from Chunk C runtime:** the per-event 200ms tick can feel uneven on chains where some handlers fire instantly and others wait on a join — the visible cadence is the *event* rate, not a uniform clock. Chunk D added a tick-speed slider (60–1500ms) so users can pace it. The auto-reseed on quiescence pauses for one tick before re-firing, which is also user-visible as a beat.
+
+**Visual cadence note (carry into N1' follow-up).** The tick-speed slider paces wall-clock time *between* `step()` calls, but a single step can fan into multiple downstream emissions that all flash on the next tick — so chains where one node fans out to several look jumpy at low tick intervals. Polish idea for follow-up: enforce a minimum wall delay per *event* (not per step) by buffering emissions onto a per-edge queue with paced flushes. Out of scope for the N1' concurrency work but adjacent.
+
+**N1' deferred to Phase 5.5 follow-up.** The N2 step-debugger + bookmark UI absorbed Chunk D's budget; the concurrency-reveal mode (auto-detect + self-pacing edge loop) is a self-contained next bite. The hooks are in place — `runner.subscribe` already publishes `EmitEvent` per edge, and adding a "concurrent-edge" set + a re-emission scheduler is the missing piece. Estimated ~$2 follow-up. Manual `edge.concurrent: true` override should land at the same time as the fallback.

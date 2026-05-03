@@ -111,20 +111,66 @@ export function initWorld(spec: Spec): World {
       seed.atTick ?? 0,
     );
   }
+  // Edge channel priming: `edge.data.init: [v0, v1, ...]` mirrors Go's
+  // `ch <- v0; ch <- v1` pre-loading. Each value becomes a naked event
+  // already in flight to the edge's target, ahead of any source fire.
+  // This is what lets a fully-running topology re-enter its quiescent
+  // cycle from a cold start without an explicit seed list.
+  for (const e of spec.edges) {
+    const init = readEdgeInit(e.data);
+    for (const v of init) {
+      world.queue.push({
+        id: world.nextId++,
+        readyAt: 0,
+        edgeId: e.id,
+        fromNodeId: e.source,
+        fromPort: e.sourceHandle,
+        toNodeId: e.target,
+        toPort: e.targetHandle,
+        value: v,
+      });
+    }
+  }
   // Sort so deterministic FIFO is preserved even if seeds list reorders.
   world.queue.sort(orderEvents);
   return world;
 }
 
-// Fallback when the spec has no `timing.seed`: emit one pulse=1 on the
-// `out` port of every Input node. Lets the play button do something
-// visible on any topology that has at least one Input, without the
-// user having to author a seed block by hand. If the topology has no
-// Input nodes, the queue stays empty and play() pauses immediately.
+// Pull `data.init: number[]` off an edge's opaque `data` field. Returns
+// [] for any other shape so unrelated `data` payloads (decoration,
+// labels) don't accidentally seed events.
+function readEdgeInit(data: unknown): StateValue[] {
+  if (!data || typeof data !== "object") return [];
+  const init = (data as { init?: unknown }).init;
+  if (!Array.isArray(init)) return [];
+  return init.filter(
+    (v): v is StateValue => typeof v === "number" || typeof v === "string",
+  );
+}
+
+// Fallback when the spec has no `timing.seed`: feed each Input node's
+// `data.init: [...]` array (matches Go's `<- ch` priming) onto its
+// `out` port, one tick apart. Falls back to a single value=1 pulse if
+// no init array is present, so play does something visible on any
+// topology with at least one Input.
 function defaultSeed(spec: Spec): import("../schema").SeedEvent[] {
-  return spec.nodes
-    .filter((n) => n.type === "Input")
-    .map((n) => ({ nodeId: n.id, outPort: "out", value: 1, atTick: 0 }));
+  const out: import("../schema").SeedEvent[] = [];
+  for (const n of spec.nodes) {
+    if (n.type !== "Input") continue;
+    const init = readNodeInit(n.data);
+    if (init.length === 0) {
+      out.push({ nodeId: n.id, outPort: "out", value: 1, atTick: 0 });
+      continue;
+    }
+    init.forEach((v, i) => {
+      out.push({ nodeId: n.id, outPort: "out", value: v, atTick: i });
+    });
+  }
+  return out;
+}
+
+function readNodeInit(data: unknown): StateValue[] {
+  return readEdgeInit(data);
 }
 
 function orderEvents(a: SimEvent, b: SimEvent): number {

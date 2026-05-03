@@ -18,11 +18,6 @@ function fixture(): { spec: Spec; vs: ViewerState } {
       { id: "e1", source: "old", sourceHandle: "out", target: "other", targetHandle: "in", kind: "chain" },
       { id: "e2", source: "other", sourceHandle: "out", target: "old", targetHandle: "in", kind: "chain" },
     ],
-    timing: {
-      steps: [
-        { t: 0, event: "fire", fires: ["old", "other"], state: { old: { v: 1 }, other: { v: 2 } } },
-      ],
-    },
   };
   const vs: ViewerState = {
     views: [{ name: "v", viewport: { x: 0, y: 0, w: 100, h: 100 }, nodeIds: ["old", "other"] }],
@@ -37,8 +32,6 @@ describe("applyRename atomicity", () => {
   const sites: Site[] = [
     { name: "edge.source", pull: (s) => s.edges.map((e) => e.source) },
     { name: "edge.target", pull: (s) => s.edges.map((e) => e.target) },
-    { name: "timing.fires", pull: (s) => s.timing!.steps.flatMap((x) => x.fires ?? []) },
-    { name: "timing.state keys", pull: (s) => Object.keys(s.timing!.steps[0].state!) },
     { name: "view.nodeIds", pull: (_, v) => v.views!.flatMap((x) => x.nodeIds) },
     { name: "fold.memberIds", pull: (_, v) => v.folds!.flatMap((x) => x.memberIds) },
     { name: "lastSelectionIds", pull: (_, v) => v.lastSelectionIds! },
@@ -74,10 +67,4 @@ describe("applyRename atomicity", () => {
     expect(spec.nodes[0].id).toBe("old");
   });
 
-  it("preserves state values when moving keys", () => {
-    const { spec, vs } = fixture();
-    applyRename(spec, vs, "old", "renamed");
-    expect(spec.timing!.steps[0].state!.renamed).toEqual({ v: 1 });
-    expect(spec.timing!.steps[0].state!.old).toBeUndefined();
-  });
 });

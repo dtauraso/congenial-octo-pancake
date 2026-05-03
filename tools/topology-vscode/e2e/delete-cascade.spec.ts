@@ -1,7 +1,9 @@
-// Tier 3 gesture: delete-selection removes node + incident edges +
-// timing.fires reference. Complement to test/delete.test.ts (which covers
-// the applyDelete contract at unit level) — this asserts the gesture path
-// from key press to spec mutation works in the live webview.
+// Tier 3 gesture: delete-selection removes node + incident edges.
+// Complement to test/delete.test.ts (which covers the applyDelete
+// contract at unit level) — this asserts the gesture path from key
+// press to spec mutation works in the live webview. The legacy
+// `timing.steps[]` scrubbing assertion was dropped in Phase 5.5
+// Chunk D when the field was removed from the spec.
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -27,7 +29,7 @@ declare global {
 }
 
 test.describe("Tier 3 gestures", () => {
-  test("delete-selection cascades incident edges and scrubs timing.fires", async ({ page }) => {
+  test("delete-selection cascades incident edges", async ({ page }) => {
     const fixture = readFileSync(
       resolve(HERE, "fixtures", "three-node-with-edges.json"),
       "utf-8",
@@ -54,12 +56,5 @@ test.describe("Tier 3 gestures", () => {
     const spec = await page.evaluate(() => window.__wirefold_test.getSpec());
     expect(spec.nodes.map((n) => n.id).sort()).toEqual(["i1", "in0"]);
     expect(spec.edges).toEqual([]);
-    // timing.fires must have been scrubbed of the deleted node id; the
-    // remaining "in0" entry stays.
-    const fires = spec.timing?.steps?.[0]?.fires ?? [];
-    expect(fires).toEqual(["in0"]);
-    // departs/arrives referenced the cascaded edge — both should be empty.
-    expect(spec.timing?.steps?.[0]?.departs ?? []).toEqual([]);
-    expect(spec.timing?.steps?.[0]?.arrives ?? []).toEqual([]);
   });
 });

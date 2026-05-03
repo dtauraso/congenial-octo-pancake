@@ -62,10 +62,10 @@ describe("parseViewerState", () => {
   it("malformed camera is dropped, valid sibling fields remain", () => {
     const v = parseViewerState(JSON.stringify({
       camera: { x: "no" },
-      bookmarks: [{ name: "b", t: 0.5 }],
+      bookmarks: [{ name: "b", startNodeId: "n", cycle: 3 }],
     }));
     expect(v.camera).toBeUndefined();
-    expect(v.bookmarks).toEqual([{ name: "b", t: 0.5 }]);
+    expect(v.bookmarks).toEqual([{ name: "b", startNodeId: "n", cycle: 3 }]);
   });
 
   it("views drops malformed entries but keeps valid ones", () => {
@@ -91,14 +91,15 @@ describe("parseViewerState", () => {
     expect(v.folds![0].id).toBe("f1");
   });
 
-  it("bookmarks drops entries with non-finite t", () => {
+  it("bookmarks drops legacy {name, t} entries (Phase 5.5 reshape)", () => {
     const v = parseViewerState(JSON.stringify({
       bookmarks: [
-        { name: "ok", t: 0.1 },
-        { name: "bad", t: "no" },
+        { name: "ok", startNodeId: "n", cycle: 4 },
+        { name: "legacy", t: 0.5 },
+        { name: "bad", startNodeId: "m", cycle: "no" },
       ],
     }));
-    expect(v.bookmarks).toEqual([{ name: "ok", t: 0.1 }]);
+    expect(v.bookmarks).toEqual([{ name: "ok", startNodeId: "n", cycle: 4 }]);
   });
 
   it("lastSelectionIds with non-string entry is dropped", () => {

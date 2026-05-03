@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { KIND_COLORS, type Port } from "../../schema";
-import { subscribe } from "../../sim/runner";
+import { stepToNode, subscribe } from "../../sim/runner";
 
 // Visible port dot. Sized large enough to be a real drag target, colored by
 // the port's edge kind so users can see which kinds connect to which.
@@ -76,6 +76,40 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
 
   const radius = data.shape === "pill" ? data.height / 2 : 4;
 
+  // Per-node step affordance (N2). Visible only when the node is
+  // selected so it doesn't clutter the unfocused canvas. Click drives
+  // the simulator forward until the next event delivered to this node;
+  // useful for "show me what happens next *here*" without globally
+  // playing/pausing the rest of the topology.
+  const stepBtn = selected ? (
+    <button
+      className="node-step-btn"
+      title={`step until next event on ${id}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        stepToNode(id);
+      }}
+      style={{
+        position: "absolute",
+        top: -10,
+        right: -10,
+        width: 18,
+        height: 18,
+        padding: 0,
+        fontSize: 10,
+        lineHeight: "18px",
+        textAlign: "center",
+        borderRadius: 9,
+        border: `1px solid ${data.stroke}`,
+        background: "#fff",
+        cursor: "pointer",
+        zIndex: 2,
+      }}
+    >
+      ⏭
+    </button>
+  ) : null;
+
   return (
     <div
       style={{
@@ -94,6 +128,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         isolation: "isolate",
       }}
     >
+      {stepBtn}
       <div
         ref={flashRef}
         style={{

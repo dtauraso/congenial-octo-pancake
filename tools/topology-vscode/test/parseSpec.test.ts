@@ -73,13 +73,14 @@ describe("parseSpec rejects", () => {
     ).toThrow(/has no output port "nope"/);
   });
 
-  it("timing.steps with non-string fires entry", () => {
-    expect(() =>
-      parseSpec({
-        nodes: [okNode], edges: [],
-        timing: { steps: [{ t: 0, event: "x", fires: [1] }] },
-      }),
-    ).toThrow(/spec\.timing\.steps\[0\]\.fires\[0\]/);
+  it("silently drops legacy timing.steps field (Phase 5.5)", () => {
+    // Older topology.json files with the SVG-era master script. Parse
+    // succeeds and the field is gone from the resulting spec.
+    const s = parseSpec({
+      nodes: [okNode], edges: [],
+      timing: { steps: [{ t: 0, event: "x", fires: ["n"] }] },
+    });
+    expect((s.timing as { steps?: unknown }).steps).toBeUndefined();
   });
 
   it("legend row with bad kind", () => {
