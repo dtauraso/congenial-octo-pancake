@@ -2,7 +2,10 @@
 // spec; topogen ignores them entirely. See drag-to-author-plan.md §"Spec vs
 // viewer state" for the policy.
 
-export type Camera = { x: number; y: number; w: number; h: number };
+// `w`/`h` describe an SVG viewBox (legacy lit-html renderer); `zoom` is
+// React Flow's pan/zoom representation. Both shapes coexist while the
+// migration is in flight; readers pick whichever they understand.
+export type Camera = { x: number; y: number; w: number; h: number; zoom?: number };
 
 export type SavedView = {
   name: string;

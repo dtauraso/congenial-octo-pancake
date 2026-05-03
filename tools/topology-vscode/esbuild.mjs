@@ -1,13 +1,4 @@
 import esbuild from "esbuild";
-import { copyFileSync } from "fs";
-
-const copyCss = () => copyFileSync("src/webview/webview.css", "out/webview.css");
-const cssCopyPlugin = {
-  name: "copy-css",
-  setup(build) {
-    build.onEnd(copyCss);
-  },
-};
 
 const watch = process.argv.includes("--watch");
 
@@ -16,6 +7,7 @@ const common = {
   sourcemap: true,
   target: "es2022",
   logLevel: "info",
+  minify: !watch,
 };
 
 const extension = {
@@ -29,11 +21,13 @@ const extension = {
 
 const webview = {
   ...common,
-  entryPoints: ["src/webview/main.ts"],
+  entryPoints: ["src/webview/main.tsx"],
   outfile: "out/webview.js",
   platform: "browser",
   format: "iife",
-  plugins: [cssCopyPlugin],
+  jsx: "automatic",
+  loader: { ".css": "css" },
+  // Bundled CSS is emitted alongside as out/webview.css automatically.
 };
 
 if (watch) {

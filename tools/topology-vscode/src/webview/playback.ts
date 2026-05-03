@@ -26,14 +26,24 @@ export function getDuration(): number {
   return durMs;
 }
 
-export function registerAnimation(a: Animation) {
+export function registerAnimation(a: Animation): () => void {
   animations.push(a);
   if (!playing) a.pause();
   try {
-    a.currentTime = currentMs;
+    // Use the live clock, not the module-level `currentMs` (which only
+    // updates on pause/seek). Otherwise animations registered after
+    // playback started — e.g. when an edge re-mounts after a node
+    // selection re-render — start at 0 and slip out of sync, so brief
+    // pulses can miss their visible window.
+    a.currentTime = getCurrentMs();
   } catch {
     // Animations not started yet may throw; ignore.
   }
+  return () => {
+    const i = animations.indexOf(a);
+    if (i >= 0) animations.splice(i, 1);
+    try { a.cancel(); } catch { /* ignore */ }
+  };
 }
 
 export function clearAnimations() {

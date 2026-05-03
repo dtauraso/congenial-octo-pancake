@@ -1,3 +1,3 @@
-module github.com/dtauraso/congenial-octo-pancake
+module github.com/dtauraso/wirefold
 
 go 1.21.4

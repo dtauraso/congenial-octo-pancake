@@ -79,7 +79,8 @@ export function flushViewSave() {
   if (viewSaveTimer === undefined) return;
   clearTimeout(viewSaveTimer);
   viewSaveTimer = undefined;
-  viewerState.camera = { x: view.x, y: view.y, w: view.w, h: view.h };
+  // Camera is owned by whoever drives pan/zoom (the renderer). They write
+  // viewerState.camera directly; this function just persists whatever's there.
   const text = serializeViewerState(viewerState);
   if (text === lastViewSyncedText) return;
   lastViewSyncedText = text;

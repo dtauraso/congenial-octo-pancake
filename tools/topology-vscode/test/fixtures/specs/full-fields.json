@@ -1,0 +1,24 @@
+{
+  "nodes": [
+    { "id": "in0", "type": "Input", "x": 0, "y": 0, "sublabel": "feed" },
+    { "id": "i0", "type": "ChainInhibitor", "x": 100, "y": 0 }
+  ],
+  "edges": [
+    {
+      "id": "inToI0",
+      "source": "in0",
+      "sourceHandle": "out",
+      "target": "i0",
+      "targetHandle": "in",
+      "kind": "chain",
+      "label": "inToI0",
+      "valueLabel": "v",
+      "route": "snake",
+      "lane": 1,
+      "arrowStyle": "filled"
+    }
+  ],
+  "notes": [
+    { "x": 200, "y": 200, "width": 120, "height": 40, "text": "behavior note" }
+  ]
+}

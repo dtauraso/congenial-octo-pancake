@@ -6,7 +6,7 @@ type: project
 
 **Two modes, same machinery:**
 - **Self-sustaining mode:** Partitions cycle through their hierarchical data continuously. AND gates bind hierarchies when they detect same timing.
-- **Disruption mode:** External input perturbs the running system. The disruption causes data cascades, contrast changes (XOR), attention conflicts resolved by lateral inhibition.
+- **Disruption mode:** External input perturbs the running system. The disruption causes data cascades, contrast changes (XOR), and timeline conflicts resolved by lateral inhibition.
 
 **Key realization:** The current architecture (cascade inhibitors, AND gate binding, contrast detection, lateral inhibition) is the universal substrate used in both modes. It's not just a pipeline for processing input — it handles both self-sustaining cycling AND disruption from external input.
 

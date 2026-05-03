@@ -2,11 +2,11 @@
 
 ## What this project is
 
-A neural-inspired concurrent dataflow system implemented in Go. The topology IS the logic — behavior emerges from wiring, not procedural code. Goroutines and channels replace conventional control flow.
+A concurrent dataflow system implemented in Go. The topology IS the logic — behavior emerges from wiring, not procedural code. Goroutines and channels replace conventional control flow.
 
-Inspired by formalized neuroscience: lateral inhibition, contrast detection, and competitive binding are implemented as circuit primitives.
+Lateral inhibition, contrast detection, and competitive binding are implemented as circuit primitives.
 
-The long-term goal is constant-time equality, multiplication, and set membership using the same topology — the foundation for level 1 AGI with small integers.
+The long-term goal is constant-time equality, multiplication, and set membership using the same topology.
 
 ## Core concepts
 
@@ -44,7 +44,7 @@ See `docs/latch-backpressure.md` for the full cycle description.
 
 ## Two modes, same machinery
 
-- **Self-sustaining mode:** Partitions cycle through hierarchical data continuously. This is the particle at rest — already running, already bound.
+- **Self-sustaining mode:** Partitions cycle through hierarchical data continuously — already running, already bound.
 - **Disruption mode:** External input perturbs the running system, causing data cascades, XOR contrast changes, and lateral inhibition conflicts.
 
 Build order: get the disruption/response machinery solid first, then add the self-cycling layer on top.
@@ -98,7 +98,8 @@ Project memory lives in `memory/` at the repo root. Files:
 - Build and run before reporting a change as ready; verify output matches previous run
 - Push each commit to the current feature branch (only after the sign-off authorizing it)
 - Channel names encode which two nodes are connected — preserve this convention
+- Before starting a new tool or proposing a major substrate (rendering library, framework, parser, runtime), explicitly ask "what's the dominant choice the rest of the world converged on for this category?" and justify deviating if not adopting it
 
 ## Language / runtime
 
-Go 1.21.4 — `github.com/dtauraso/congenial-octo-pancake`
+Go 1.21.4 — `github.com/dtauraso/wirefold`

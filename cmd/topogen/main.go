@@ -80,12 +80,12 @@ type NodeBind struct {
 
 var REGISTRY = map[string]NodeBind{
 	"Input": {
-		Pkg: "github.com/dtauraso/congenial-octo-pancake/InputNode", Alias: "INN", Struct: "InputNode",
+		Pkg: "github.com/dtauraso/wirefold/InputNode", Alias: "INN", Struct: "InputNode",
 		Outputs:      map[string]PortBind{"out": {Field: "ToNext"}},
 		HasInputChan: true, InputField: "Input",
 	},
 	"ReadGate": {
-		Pkg: "github.com/dtauraso/congenial-octo-pancake/ReadGateNode", Alias: "RGN", Struct: "ReadGateNode",
+		Pkg: "github.com/dtauraso/wirefold/ReadGateNode", Alias: "RGN", Struct: "ReadGateNode",
 		Inputs: map[string]PortBind{
 			"chainIn": {Field: "FromValue"},
 			"ack":     {Field: "FromAck"},
@@ -93,7 +93,7 @@ var REGISTRY = map[string]NodeBind{
 		Outputs: map[string]PortBind{"out": {Field: "ToLatch"}},
 	},
 	"ChainInhibitor": {
-		Pkg: "github.com/dtauraso/congenial-octo-pancake/ChainInhibitorNode", Alias: "CI", Struct: "ChainInhibitorNode",
+		Pkg: "github.com/dtauraso/wirefold/ChainInhibitorNode", Alias: "CI", Struct: "ChainInhibitorNode",
 		Inputs: map[string]PortBind{"in": {Field: "FromPrev"}},
 		Outputs: map[string]PortBind{
 			"out":        {Field: "ToNext"},
@@ -102,7 +102,7 @@ var REGISTRY = map[string]NodeBind{
 		},
 	},
 	"InhibitRightGate": {
-		Pkg: "github.com/dtauraso/congenial-octo-pancake/InhibitRightGateNode", Alias: "IRG", Struct: "InhibitRightGateNode",
+		Pkg: "github.com/dtauraso/wirefold/InhibitRightGateNode", Alias: "IRG", Struct: "InhibitRightGateNode",
 		Inputs:  map[string]PortBind{"left": {Field: "FromLeft"}, "right": {Field: "FromRight"}},
 		Outputs: map[string]PortBind{"out": {Field: "ToOut"}},
 	},
@@ -196,7 +196,7 @@ func generate(spec Spec) (string, error) {
 		bind := REGISTRY[n.Type]
 		imports[bind.Alias] = bind.Pkg
 	}
-	imports["S"] = "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
+	imports["S"] = "github.com/dtauraso/wirefold/SafeWorker"
 	b.WriteString("import (\n")
 	for _, alias := range sortedKeys(imports) {
 		fmt.Fprintf(&b, "\t%s \"%s\"\n", alias, imports[alias])

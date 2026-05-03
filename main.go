@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
-	W "github.com/dtauraso/congenial-octo-pancake/Wiring"
+	S "github.com/dtauraso/wirefold/SafeWorker"
+	W "github.com/dtauraso/wirefold/Wiring"
 )
 
 func RunTest() {

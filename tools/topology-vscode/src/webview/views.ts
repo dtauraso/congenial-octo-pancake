@@ -3,9 +3,10 @@
 // from current viewport (selection model lands in Phase 3).
 
 import { NODE_TYPES } from "../schema";
+import { applyDim as applyDimRf, onPanStart, selectedNodeIds } from "./rf/bridge";
 import { scheduleViewSave } from "./save";
-import { spec, svg, view, viewerState } from "./state";
-import { applyView } from "./view";
+import { spec, view, viewerState } from "./state";
+import { applyView, syncViewFromRenderer } from "./view";
 import type { SavedView } from "./viewerState";
 
 let panel: HTMLDivElement;
@@ -83,8 +84,11 @@ function renderList() {
     const name = document.createElement("button");
     name.className = "views-name";
     name.textContent = v.name;
-    name.title = `${v.nodeIds.length} node${v.nodeIds.length === 1 ? "" : "s"}`;
-    name.addEventListener("click", () => applySavedView(v));
+    name.title = `${v.nodeIds.length} node${v.nodeIds.length === 1 ? "" : "s"} — click again to clear`;
+    name.addEventListener("click", () => {
+      if (v.name === activeViewName) clearActiveView();
+      else applySavedView(v);
+    });
 
     const del = document.createElement("button");
     del.className = "views-del";
@@ -99,10 +103,15 @@ function renderList() {
 }
 
 function saveView(name: string) {
+  syncViewFromRenderer();
+  // Prefer the user's current selection. If nothing is selected, fall back
+  // to nodes fully contained in the current viewport.
+  const sel = selectedNodeIds();
+  const ids = sel.length > 0 ? sel : nodesInViewport();
   const next: SavedView = {
     name,
     viewport: { x: view.x, y: view.y, w: view.w, h: view.h },
-    nodeIds: nodesInViewport(),
+    nodeIds: ids,
   };
   const views = viewerState.views ?? [];
   const existingIdx = views.findIndex((v) => v.name === name);
@@ -144,26 +153,13 @@ export function clearActiveView() {
 }
 
 function applyDim(members: Set<string> | undefined) {
-  const nodes = svg.querySelectorAll<SVGGElement>(".node");
-  const edges = svg.querySelectorAll<SVGGElement>("g[data-edge-id]");
-  if (!members) {
-    nodes.forEach((n) => n.classList.remove("dim"));
-    edges.forEach((e) => e.classList.remove("dim"));
-    return;
-  }
-  nodes.forEach((n) => {
-    const id = n.dataset.id ?? "";
-    n.classList.toggle("dim", !members.has(id));
-  });
-  for (const e of spec.edges) {
-    const el = svg.querySelector<SVGGElement>(`g[data-edge-id="${cssEscape(e.id)}"]`);
-    if (!el) continue;
-    const inView = members.has(e.source) && members.has(e.target);
-    el.classList.toggle("dim", !inView);
-  }
+  applyDimRf(members);
 }
 
 function nodesInViewport(): string[] {
+  // Fully-contained membership (not just intersection): a node counts only if
+  // its whole bbox sits inside the viewport. Otherwise the dim contrast
+  // disappears whenever the user has the full graph in view.
   const x0 = view.x;
   const y0 = view.y;
   const x1 = view.x + view.w;
@@ -171,25 +167,12 @@ function nodesInViewport(): string[] {
   return spec.nodes
     .filter((n) => {
       const def = NODE_TYPES[n.type] ?? NODE_TYPES.Generic;
-      const nx0 = n.x;
-      const ny0 = n.y;
-      const nx1 = n.x + def.width;
-      const ny1 = n.y + def.height;
-      return nx1 >= x0 && nx0 <= x1 && ny1 >= y0 && ny0 <= y1;
+      return n.x >= x0 && n.y >= y0 && n.x + def.width <= x1 && n.y + def.height <= y1;
     })
     .map((n) => n.id);
 }
 
-function cssEscape(s: string): string {
-  return s.replace(/["\\]/g, "\\$&");
-}
-
-// Pan/zoom should drop the dimming — once you move, the framing no longer holds.
-export function attachClearOnPan() {
-  svg.addEventListener("pointerdown", (ev) => {
-    if (ev.target === svg && activeViewName) clearActiveView();
-  });
-  svg.addEventListener("wheel", () => {
-    if (activeViewName) clearActiveView();
-  }, { passive: true });
-}
+// Previously dimmed-on-pan; now panning is free while a view is active so the
+// user can navigate inside the isolated subset. Clear by clicking the active
+// view name again.
+export function attachClearOnPan() { /* no-op */ }

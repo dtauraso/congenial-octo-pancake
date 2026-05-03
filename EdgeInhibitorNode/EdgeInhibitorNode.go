@@ -3,7 +3,7 @@ package EdgeInhibitorNode
 import (
 	"fmt"
 
-	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
+	S "github.com/dtauraso/wirefold/SafeWorker"
 )
 
 type EdgeInhibitorNode struct {

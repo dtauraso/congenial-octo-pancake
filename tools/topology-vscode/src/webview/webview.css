@@ -3,7 +3,12 @@ html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-fami
 .node { cursor: grab; }
 .node.dragging { cursor: grabbing; }
 .node text { pointer-events: none; user-select: none; }
-.toolbar { position: fixed; top: 8px; left: 8px; padding: 6px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; display: flex; gap: 12px; align-items: center; }
+.toolbar { position: fixed; top: 8px; left: 8px; padding: 6px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; display: flex; gap: 12px; align-items: center; z-index: 10; }
+.views-panel { z-index: 10; }
+.timeline-panel { z-index: 10; }
+.rf-anim-overlay { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.react-flow__node.dim { opacity: 0.18; transition: opacity 0.18s ease; }
+.react-flow__edge.dim { opacity: 0.18; transition: opacity 0.18s ease; }
 .dirty { color: #c62828; font-weight: 600; }
 .clean { color: #2e7d32; }
 .topogen-ok { color: #2e7d32; }
@@ -102,9 +107,8 @@ html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-fami
   border: 1px solid #1976d2; border-radius: 4px; padding: 4px 6px;
   font: inherit; outline: none; min-width: 140px;
 }
-.rename-input {
-  border: 1px solid #1976d2; border-radius: 3px; padding: 1px 4px;
-  font: 12px ui-sans-serif, system-ui, sans-serif; outline: none;
-  background: #fff; color: #111; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  z-index: 1000;
+.node-label.rename-active {
+  outline: 1px solid #1976d2; border-radius: 2px;
+  background: #fff; color: #111;
+  cursor: text;
 }

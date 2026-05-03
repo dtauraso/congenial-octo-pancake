@@ -37,8 +37,9 @@ a separate project.
    diagram a durable working surface.
 3. **Replaying the dynamic story** as a refresher dose for "what happens
    when input arrives." Animation is comprehension, not decoration.
-4. **Producing diagram artifacts** (SVG export) for sharing or
-   documentation. Distant fourth.
+4. ~~**Producing diagram artifacts** (SVG export) for sharing or
+   documentation.~~ *Dropped — see Phase 8.* Hand-authored `diagrams/`
+   cover the documentation case; the editor is the live view.
 
 When design conflicts arise, tie-break toward whichever serves design
 throughput best.
@@ -166,16 +167,19 @@ What the tool is judged against:
 - **Errors surface where they happen.** A `topogen` failure highlights
   the offending node/edge, not a wall of stderr.
 
-## What this tool is *not* trying to be
+## What you can do in it
 
-- A general-purpose graph editor.
-- A multi-user collaborative tool.
-- An execution environment (the Go binary runs out-of-band).
-- A presentation tool. Sharing is incidental.
+Things a normal graph editor doesn't do:
+
+- **Edit the diagram and get updated Go within a second.** The diagram *is* the source; `topogen` regenerates code on every save.
+- **Replay the dynamic story** — animate inputs cascading through the topology, with bookmarks on the timeline to jump to interesting moments.
+- **Trust spatial memory across sessions.** Positions never auto-shift; saved views and folds survive reloads exactly as left.
+- **Read role from appearance.** Color = role, shape = role-class, edge style = kind, so the spatial map carries meaning at a glance.
+- **See codegen failures on the offending node/edge** rather than as a wall of stderr (Phase 1 partial — structured error attribution still pending).
 
 ## Rendering substrate: React Flow inside the vscode webview
 
-The previous `tools/topology-editor/` (standalone browser, React Flow) was deleted because it bypassed the codegen pipeline, not because React Flow was the wrong library. Adopting React Flow **inside** the existing vscode webview — with `topogen` still authoritative — replaces large parts of Phases 3, 4, and 8 with library-provided primitives:
+The previous `tools/topology-editor/` (standalone browser, React Flow) was deleted because it lived in a browser — wiring Claude Code chat into it would have been more work than building a vscode plugin (Claude Code's own suggestion). React Flow itself was not the problem. Adopting React Flow **inside** the existing vscode webview — with `topogen` still authoritative — replaces large parts of Phases 3, 4, and 8 with library-provided primitives:
 
 - **Phase 3** selection (click / shift-click / marquee), port-drag edge creation, node palette drag-to-create — all built in.
 - **Phase 4** fold geometry — React Flow's subflow / parent-node primitive covers most of the edge-re-routing work.
@@ -209,8 +213,15 @@ Cap-hit estimates in **[brackets]** at each phase and item. See [Risk and effort
   - **[~1]** Bookmark markers on the animation timeline: bottom timeline with play/pause/scrub, "+ bookmark" pauses and prompts for a name at the current playhead, click marker to jump-and-pause, shift-click to delete. Refactored `animation.ts` onto a master playback clock. **Master clock survives unchanged. Re-port required for how animation drives node visual state: push per-frame node state into React Flow via `setNodes()` instead of mutating SVG attrs directly. Folded into the Phase 3 migration estimate.**
   - **[~½]** One-click "build and run": "▶ run" button in the toolbar spawns `go run .` and streams stdout/stderr to a "topology run" output channel; button toggles to "■ stop" while running, status pill shows running/ok/error/cancelled. **Renderer-independent — survives unchanged.**
 
-- **Phase 3 — structural editing (mental-model sync → code change)** **[~1.5 remaining + ~1.5 React Flow migration = ~3]**
-  - **[~1.5]** ⏳ React Flow migration: replace lit-html SVG renderer with React Flow inside the webview; adapters `topology.json` ↔ React Flow node/edge model. Includes re-porting Phase 1 layout-invariants (pan/zoom save), Phase 2 saved-views frame/dim, and Phase 2 animation-driven node state onto React Flow primitives. Build-and-run, codegen integration, sidecar schema, and master playback clock are renderer-independent and need no changes.
+- **Phase 3 — structural editing (mental-model sync → code change)** **[~1.25 remaining; migration tail came in ~¾ vs. ~½ estimate, testing foundation done]**
+  - 🟢 Testing foundation (Tier 1 contract tests — prerequisite to further Phase 3 / Phase 9 work). See [Testing strategy](#testing-strategy) for the bar. **[~1 total, done]**
+    - **[~¼, done]** ✅ *Spec round-trip* (Vitest, `tools/topology-vscode/test/round-trip.test.ts`). Fixtures under `test/fixtures/specs/`: minimal 2-node, full-fields (every currently-dropped field — `notes`, `route: snake`, `lane`, named ports — marked `it.fails` so the Phase 9 gap is a tracked failing test rather than a paragraph), plus the live `topology.json` read at test time. Round-trip via `specToFlow()` / `flowToSpec()` in `rf/adapter.ts`.
+    - **[~¾, done]** ✅ *Topogen goldens* (Go, `cmd/topogen/testdata/`). Each case is a `spec.json` + `expected/Wiring.go` pair; `TestGolden` diffs against expected, `-update` rewrites. `TestGoldenBuilds` writes generated output into a temp module that `replace`s the parent module and runs `go build ./...` — generated code is guaranteed to compile against the real node packages, not just match bytes. Seed cases: canonical spec (live `topology.json`), renamed-ids spec (locks in the `Name` field wiring), feedback-ack spec.
+    - **[~⅛, done]** ✅ Tier 2 retro: id-rename atomicity unit test (`test/rename.test.ts`, table case across edges / `timing.fires` / `timing.state` keys / view `nodeIds` / fold `memberIds` / `lastSelectionIds`, plus reject-on-clash and reject-on-invalid-ident). Locks down the already-shipped rename feature against partial-overlap regressions. Required extracting `applyRename` into `rename-core.ts` so tests don't pull in DOM imports.
+    - **[~⅛, done]** ✅ Tier 2 retro: legacy `{x,y,w,h}` → RF `{x,y,zoom}` camera conversion table case (`test/camera.test.ts`). Required extracting `viewportToBox` / `boxToViewport` into `rf/camera.ts`.
+  - 🟢 React Flow migration (commits `70356ea`, `e449fcc`).
+    - **[~1.25, done]** ✅ RF substrate inside the webview; spec ↔ RF node/edge adapter; camera persistence in RF-native `{x,y,zoom}` (legacy `{x,y,w,h}` viewBox cameras auto-convert on load); saved-views frame + dim re-ported via a renderer-agnostic bridge (`rf/bridge.ts`) so legacy `view.ts` / `views.ts` stay largely intact; saved-view membership is now selection-first (RF `onSelectionChange` capture) with viewport-containment fallback; pan is free while a view is active; click an active view to clear; edge pulses via a custom `AnimatedEdge` (RF `getBezierPath`) with WAAPI registered against the master playback clock — pulses survive RF re-renders because they live in React's tree, not as foreign DOM children; node id rename re-ported (centered input via RF `onNodeDoubleClick`); esbuild builds JSX, bundles CSS, minifies non-watch (1.4 MB → 353 KB). Removed dead lit-html-only files.
+    - **[~¾, done]** ✅ (estimated ~½, actual ~¾ — frame-mismatch tax: input/label alignment under viewport scale, edge-to-handle gaps, pulse desync after selection re-mounts) Custom `AnimatedNode` owns the per-node flash overlay (WAAPI registered against the master clock) and `state.field=value` text (subscribes to the playback clock). Adapter precomputes `fireTimes` + `stateFields` segments. SVG overlay inside `.react-flow__viewport` removed; `render/animation.ts` trimmed to `resetAnimations`. Rename input rewritten as `contenteditable` directly on the `.node-label` div — same DOM element, same RF transform, no positioning math, so font/scale/zoom can't drift. Handle styling pinned to `left:0` / `right:0` (no `min-width`) so edges meet nodes flush. Nodes use `width:max-content` + `minWidth:data.width` so longer ids grow the box. Stability: `registerAnimation` returns a disposer that splices on cancel (no unbounded growth across re-renders) and seeds `currentTime` from the live `getCurrentMs()` (animations registered mid-playback after a selection-driven re-mount stay in sync — pulses no longer slip out of their visible window).
   - **[~⅛]** ⏳ Selection model (click, shift-click, marquee). (React Flow built-in; cost is wiring it to the spec.)
   - **[~⅛]** ⏳ Delete-to-remove for selected nodes/edges. (React Flow built-in.)
   - **[~½]** ⏳ Port rendering on nodes; drag-from-port-to-port to create edges. (React Flow handles ghost-edge + hit-testing; remaining cost is **channel-type inference** for codegen — that's still custom.)
@@ -218,10 +229,16 @@ Cap-hit estimates in **[brackets]** at each phase and item. See [Risk and effort
   - **[~¼]** ⏳ Node palette with drag-to-create. (React Flow has drag-and-drop pattern; cost is the palette UI itself.)
   - 🟡 In-place text editing for annotation and labels.
     - **[~1, done]** ✅ Node id rename: double-click a node, type new id, Enter to commit. Atomically rewrites edges (source/target), `timing.fires`, `timing.state` keys, and viewer state (saved-view nodeIds, fold memberIds, lastSelectionIds). Validates against topogen's safe-Go-ident regex.
-    - **[~¼]** ⏳ Sublabel / value / annotation note in-place editing.
+    - **[~⅛]** ⏳ Sublabel / value / annotation note in-place editing. (Cheaper than the original ~¼: the contenteditable-on-the-rendered-element pattern from id rename is reusable — sublabel slots into `AnimatedNode` next to `.node-label` the same way, with no new positioning math.)
   - 🟡 Each gesture verified end-to-end. (Folded into each gesture's estimate.)
     - ✅ Verified for id rename: every wired node struct gained a `Name string` field; topogen emits `Name: "<n.id>"`; each node's `Update` prints `n.Name` instead of a hard-coded prefix, so a rename in the editor shows up directly in the run log. (Side benefit: the spec id is now the runtime identity, not just a code-gen variable name.)
     - ⏳ Verification for the remaining gestures lands with each one as it's built.
+  - 🟡 Tier 3 gesture integration tests (Playwright, after the gestures above stabilize — defer until churn slows). **[~1–1.5 total]**
+    - **[~¾]** ⏳ Playwright + vscode-webview harness; first gesture case (pays the harness cost once).
+    - **[~⅛]** ⏳ Port-drag creates edge with inferred channel type; topogen-generated Go contains the new `chan`.
+    - **[~⅛]** ⏳ Delete-selection removes node + incident edges + `timing.fires[id]`.
+    - **[~⅛]** ⏳ Palette-drag at coords persists position across reload.
+    - **[~⅛]** ⏳ Rename to clashing id rejects with inline error.
 
 - **Phase 4 — fold/unfold** **[~1]**
   - **[~½]** Sidecar `folds[]` mapped onto React Flow's subflow / parent-node primitive. Edges crossing the boundary re-route via React Flow's built-in handling; nested folds need manual coordination.
@@ -234,6 +251,7 @@ Cap-hit estimates in **[brackets]** at each phase and item. See [Risk and effort
   - **[~½]** Visual highlight (color tint, badges) for diff items. (Two-pane camera sync UX is the variable part.)
 
 - **Phase 6 — keyframed motion (when a topology actually rewires during its cycle)** **[~2.5, risk to ~4]**
+  - **[~⅛]** ⏳ Tier 1 round-trip coverage extended to `positionKeyframes` / `endpointKeyframes` / `visibility` *before* any UI lands (each new spec field becomes a fixture row; the bridge can't silently drop them).
   - **[~¼]** Schema: `positionKeyframes`, `endpointKeyframes`, `visibility`.
   - **[~¾]** Renderer tweens between keyframes during playback.
   - **[~½]** Decide whether `topogen` reads keyframes (yes if the runtime causes the change; no if it's pure presentation). Spec-vs-viewer judgment per keyframe kind is the risk multiplier.
@@ -244,18 +262,26 @@ Cap-hit estimates in **[brackets]** at each phase and item. See [Risk and effort
   - **[~1]** Editor loads or streams traces; replays observed behavior on the same diagram.
   - **[~1]** Side-by-side: intended animation (from spec) vs. observed animation (from trace). Drift becomes visible.
 
-- **Phase 8 — polish** **[open-ended, ~½ saved by React Flow]**
-  - **[~½]** SVG export. (React Flow has a `toImage` helper but custom-styled output may still need manual SVG rebuild.)
-  - **[~¼]** Undo / redo via React Flow + Zustand history pattern. (Spec history; viewer state excluded. Cheap because React Flow's state model is already command-friendly.)
+- **Phase 8 — polish** **[open-ended, ~⅜ saved by React Flow + the AnimatedNode pattern]**
+  - **[~⅛]** Undo / redo over the spec. (Cheaper than the original ~¼: the "mutate spec → rebuild via `specToFlow` → `setNodes`/`setEdges`" pipeline is already proven by id rename's `rerender` callback; an undo stack of spec snapshots plugs into the same callback. Viewer state excluded.) **Substrate:** use [`zundo`](https://github.com/charkour/zundo), the dominant Zustand undo middleware (~2KB, snapshot-based with built-in grouping/diffing). Wraps the spec store in one line; avoids hand-rolling and maintaining a stack.
   - **[~¼]** Snap-to-grid; alignment guides. (React Flow has snap-to-grid built in; alignment guides are custom but cheap.)
+  - **[~½]** ⏳ Tier 4 headline edit-to-running-Go test. Success criterion #1 ("under 30 seconds end-to-end") made executable: scripted gesture + topogen + `go build`, latency measured. Nightly, not per-commit. Catches latency regressions (topogen slowdowns, debounce drift) that no other tier sees.
+  - *Dropped: SVG export.* The `diagrams/` set is hand-authored to the style guide and the editor itself is the live view — exporting would mean re-implementing the style guide twice (live + export). Revive only when hand-authored diagrams drift from the spec badly enough to hurt; until then, screenshots / recordings cover incidental sharing.
+
+- **Phase 9 — diagram parity with the reference SVGs** **[~1.5 + ~½ visual baselines = ~2]** ⏳ Bring the editor's rendering up to the visual fidelity of `diagrams/topology-chain-cascade.svg` and the rest of the hand-authored set, so the editor and the documentation diagrams agree at a glance. The spec already carries the inputs (`edge.route: line | snake | below`, `edge.lane`, `arrowStyle`, `legend`, `notes`, named ports); the current adapter ignores most of them. Scope: custom RF edge components per `route` kind (orthogonal snake-paths, under/above lanes for `feedback-ack` / `inhibit-in`); per-port `Handle` rendering on nodes (also unblocks Phase 3's port-drag gesture); the house style from [docs/svg-style-guide.md](../svg-style-guide.md) (dashed strokes by kind, marker-end variants, value labels along edges, legend block); custom node bodies for shapes the SVG distinguishes (pill vs rect, internal sub-rows); render `spec.notes[]` as floating annotation boxes in the canvas (the cascade SVG's `behavior-note-*` blocks — spec already carries them, adapter currently drops them). Excluded: choreography beyond `fires` / `departs` / `arrives` (would require extending the spec — out of scope for parity); top-level diagram title / framing background (no spec field today; defer until a `title` field is needed).
+  - **[~½]** ⏳ Tier 4 visual regression: screenshot diffs at fixed cameras, one per `route` kind. Tolerance thresholds + pinned CI image to control flake (font rendering, anti-aliasing). Turns "matches the reference SVGs" from a per-change judgment call into pass/fail.
 
 **Status snapshot (this branch):** Phases 1 and 2 complete. Phase 3
-underway: node id rename ships and is verified end-to-end through
-topogen and the run log. Selection model, delete,
-port-drag wiring, node palette, and sublabel/note editing still
-pending. Phases 4–8 not started. The visual → spec → Go pipeline runs
-on every save with a status indicator, and recall affordances (saved
-views, bookmarks + playback control) are in place.
+underway: React Flow substrate migration complete (commits `70356ea`
++ `e449fcc`) — camera persistence, saved-views frame + dim, edge
+pulses, node id rename, per-node flash + state-text, flush
+edge-to-node anchoring, and width-grows-to-fit-id all re-ported and
+visually verified. The editing gestures (selection persistence to
+spec, delete-to-remove, port-drag wiring with channel-type inference,
+node palette, sublabel/note editing) still pending. Phases 4–8 not
+started. The visual → spec → Go pipeline runs on every save with a
+status indicator, and recall affordances (saved views, bookmarks +
+playback control) are in place.
 
 Phase 1 alone changes the tool from "live preview" to "design surface."
 Phases 2–3 make it a durable design surface you can come back to and
@@ -288,6 +314,49 @@ not appearance.
    replay the trace next to the spec animation; any disagreement is
    visible. Trace replay delivers this.
 
+## Testing strategy
+
+Test work items are folded into the phases above (Phase 3
+prerequisites + retros, Phase 6 keyframe round-trip, Phase 8 e2e,
+Phase 9 visual). This section holds the cross-cutting strategy
+that doesn't belong in any single phase.
+
+**The pipeline shape drives the strategy.** `topology.json` in,
+generated Go out — most regressions to date have been adapter /
+codegen drift, not UI behavior. So: guard the contracts cheaply
+and exhaustively (Tier 1, in Phase 3 prerequisites); add bridge
+unit cases as the bridge grows (Tier 2, retros in Phase 3 +
+extensions in Phase 6); test gestures only once they stop
+changing weekly (Tier 3, end of Phase 3); reserve e2e and visual
+for nightly (Tier 4, Phases 8 + 9).
+
+**Bar for every test:** it must be able to fail for a real bug
+we can name. Round-trip tests that re-encode the same
+`JSON.parse` on both sides, golden tests whose `expected/` was
+written by running the tool itself with no review, or assertions
+like `expect(result).toBeDefined()` don't count. *If a test
+would still pass after deleting the production code path it
+covers, it's not a test.*
+
+**Tier → Phase map and net savings:**
+
+| Tier | Cost | Saved (Phases 3–6) | Net | Lives in |
+|---|---|---|---|---|
+| 1 — contract (round-trip + goldens) | ~1 | ~3–4 | **+2–3** | Phase 3 testing foundation |
+| 2 — bridge units | ~½ | ~1–1.5 | **+½ to +1** | Phase 3 retros; Phase 6 keyframe extension |
+| 3 — gesture (Playwright) | ~1–1.5 | ~1.5–2 | **~0 to +½** | end of Phase 3 |
+| 4 — e2e + visual | ~1 | ~1.5 | **+½** | Phase 8 (e2e); Phase 9 (visual) |
+
+Total saved across the plan: roughly **3–4.5 cap hits net**
+against ~8 remaining for Phases 3–6. Beyond the cap-hit count,
+contracts becoming enforced rather than remembered compounds in
+ways the table doesn't capture.
+
+**Non-goals.** Unit tests on React Flow internals, coverage
+percentage targets, testing topogen against hand-written Go
+(goldens only), snapshot tests of arbitrary serialized output
+(too easy to rubber-stamp on `-update`).
+
 ## Risk and effort
 
 Effort is measured in **Opus 4.7 cap hits** — how many times the
@@ -313,13 +382,20 @@ savings against the prior `~13` total.
 - Phase 1: ~2 cap hits. **Done.** Codegen wiring + sidecar split.
 - Phase 2: ≤2 cap hits. **Done** (actual). Saved views, bookmarks,
   build-and-run, master-clock timeline refactor.
-- Phase 3: ~3 cap hits with React Flow migration (~1.5 migration
-  + ~1.5 remaining gestures), down from a previous ~2.5 estimate
-  *without* the migration but with everything custom. Net wash on
-  Phase 3 alone, but React Flow's value compounds in Phases 4 and 8.
-  Node id rename shipped in ~1 (pre-migration; will need a small
-  re-port). Port-drag, selection, marquee, and edge-edit collapse
-  to library calls; channel-type inference for codegen stays custom.
+- Phase 3: ~3.25 cap hits with React Flow migration (~2 migration —
+  ~1.25 substrate + ~¾ tail, slightly over the ~½ tail estimate due
+  to frame-mismatch debugging across the SVG↔RF transition — plus
+  ~1.25 remaining gestures), down from a previous ~2.5 estimate
+  *without* the migration but with everything custom. Slight overrun
+  on Phase 3 alone, but React Flow's value compounds in Phases 4 and
+  8. Node id rename shipped in ~1 (pre-migration; re-ported during
+  the substrate migration). Port-drag, selection, marquee, and
+  edge-edit collapse to library calls; channel-type inference for
+  codegen stays custom. **Lesson logged for Phases 4 and 6:** when
+  migrating between rendering frames (SVG ↔ RF, keyframe-driven UI),
+  budget extra for things that visually overlay a primitive — they
+  must live in the same DOM frame and transform context as the
+  primitive itself, or alignment / lifecycle / scale drift somewhere.
 - Phase 4: ~1 cap hit (down from ~2). React Flow's subflow primitive
   handles edge re-routing across collapsed boundaries; sidecar
   schema and right-click UX are the remaining work. Nested folds
@@ -332,14 +408,17 @@ savings against the prior `~13` total.
 - Phase 7: as scoped in [trace-replay-plan.md](trace-replay-plan.md);
   several cap hits, dominated by Go-side tracing instrumentation
   (cheaper per cap hit than UI work — Go edits are token-light).
-- Phase 8: open-ended; React Flow's built-in undo pattern and
-  snap-to-grid trim ~½ off vs. fully custom.
+- Phase 8: open-ended; React Flow's built-in undo pattern + snap-to-grid
+  *and* the proven "mutate spec → `specToFlow` rebuild → `setNodes`/
+  `setEdges`" pipeline (used by id rename's `rerender` callback) trim
+  another ~⅛ off the undo line — ~⅜ saved total vs. fully custom.
 
-Phases 3–6 remaining: **~8 cap hits** with React Flow migration
-(down from ~8.5 fully custom; ~13 pre-cleanup). Headline pipeline
-through Phase 3: **~3 more cap hits** from where this branch sits
-(includes the React Flow migration; thereafter Phases 4 and 8 are
-materially cheaper).
+Phases 3–6 remaining: **~7.25 cap hits** (Phase 3 ~1.25 + Phase 4 ~1
++ Phase 5 ~1.5 + Phase 6 ~2.5, +0.5 for sublabel/undo savings already
+booked). Headline pipeline through Phase 3: **~1.25 more cap hits**
+from where this branch sits (substrate + migration tail done;
+remaining is gestures + Tier 3 tests). Phases 4 and 8 stay materially
+cheaper than the pre-RF estimates.
 
 The biggest risks:
 

@@ -1,11 +1,11 @@
 package Line
 
 import (
-	CI "github.com/dtauraso/congenial-octo-pancake/ChainInhibitorNode"
-	IRG "github.com/dtauraso/congenial-octo-pancake/InhibitRightGateNode"
-	INN "github.com/dtauraso/congenial-octo-pancake/InputNode"
-	RGN "github.com/dtauraso/congenial-octo-pancake/ReadGateNode"
-	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
+	CI "github.com/dtauraso/wirefold/ChainInhibitorNode"
+	IRG "github.com/dtauraso/wirefold/InhibitRightGateNode"
+	INN "github.com/dtauraso/wirefold/InputNode"
+	RGN "github.com/dtauraso/wirefold/ReadGateNode"
+	S "github.com/dtauraso/wirefold/SafeWorker"
 )
 
 type Line struct {
