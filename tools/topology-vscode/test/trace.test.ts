@@ -170,6 +170,38 @@ describe("trace: committed fixture pin", () => {
     );
     expect(got).toBe(expected);
   });
+
+  // Phase 8 Chunk 3 — StreakBreakDetector parity. old=1, new=-1 (sign
+  // change) → done=1.
+  it("simulator output matches test/fixtures/streak-break-detector.trace.jsonl", () => {
+    const fixtureSBD: Spec = {
+      nodes: [
+        { id: "srcOld", type: "Input", x: 0, y: 0 },
+        { id: "srcNew", type: "Input", x: 0, y: 1 },
+        { id: "sbd", type: "StreakBreakDetector", x: 1, y: 0 },
+        { id: "sinkDone", type: "Generic", x: 2, y: 0 },
+      ],
+      edges: [
+        edge("srcOldToSbd", "srcOld", "out", "sbd", "old"),
+        edge("srcNewToSbd", "srcNew", "out", "sbd", "new"),
+        edge("sbdDone", "sbd", "done", "sinkDone", "in"),
+      ],
+      timing: {
+        steps: [],
+        seed: [
+          { nodeId: "srcOld", outPort: "out", value: 1, atTick: 0 },
+          { nodeId: "srcNew", outPort: "out", value: -1, atTick: 1 },
+        ],
+      },
+    };
+    const w = runToQuiescent(fixtureSBD, initWorld(fixtureSBD));
+    const got = serializeTrace(historyToTrace(w.history, fixtureSBD));
+    const expected = readFileSync(
+      resolve(__dirname, "fixtures/streak-break-detector.trace.jsonl"),
+      "utf8",
+    );
+    expect(got).toBe(expected);
+  });
 });
 
 describe("trace: runner replay", () => {

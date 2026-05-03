@@ -1,0 +1,4 @@
+{"step":0,"kind":"recv","node":"sbd","port":"old","value":1}
+{"step":1,"kind":"recv","node":"sbd","port":"new","value":-1}
+{"step":2,"kind":"fire","node":"sbd"}
+{"step":3,"kind":"send","edge":"sbdDone","value":1}
