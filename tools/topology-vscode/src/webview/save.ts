@@ -1,4 +1,5 @@
-import { spec } from "./state";
+import { spec, view, viewerState } from "./state";
+import { serializeViewerState } from "./viewerState";
 
 declare function acquireVsCodeApi(): {
   postMessage(msg: unknown): void;
@@ -6,11 +7,14 @@ declare function acquireVsCodeApi(): {
   getState(): unknown;
 };
 
-const vscode = acquireVsCodeApi();
+export const vscode = acquireVsCodeApi();
 const status = document.getElementById("status")!;
+const topogenStatus = document.getElementById("topogen-status")!;
 
 let saveTimer: number | undefined;
+let viewSaveTimer: number | undefined;
 let lastSyncedText: string | undefined;
+let lastViewSyncedText: string | undefined;
 
 export function postReady() {
   vscode.postMessage({ type: "ready" });
@@ -29,6 +33,27 @@ export function setStatus(dirty: boolean) {
   status.className = dirty ? "dirty" : "clean";
 }
 
+export type TopogenStatus =
+  | { state: "running" }
+  | { state: "ok" }
+  | { state: "error"; message: string };
+
+export function setTopogenStatus(s: TopogenStatus) {
+  if (s.state === "running") {
+    topogenStatus.textContent = "codegen …";
+    topogenStatus.className = "topogen-running";
+    topogenStatus.title = "regenerating Go";
+  } else if (s.state === "ok") {
+    topogenStatus.textContent = "codegen ✓";
+    topogenStatus.className = "topogen-ok";
+    topogenStatus.title = "generated Go is up to date";
+  } else {
+    topogenStatus.textContent = "codegen ✗";
+    topogenStatus.className = "topogen-error";
+    topogenStatus.title = s.message;
+  }
+}
+
 export function scheduleSave() {
   setStatus(true);
   if (saveTimer !== undefined) clearTimeout(saveTimer);
@@ -45,7 +70,27 @@ export function flushSave() {
   setStatus(false);
 }
 
-window.addEventListener("pagehide", flushSave);
+export function scheduleViewSave() {
+  if (viewSaveTimer !== undefined) clearTimeout(viewSaveTimer);
+  viewSaveTimer = window.setTimeout(flushViewSave, 400);
+}
+
+export function flushViewSave() {
+  if (viewSaveTimer === undefined) return;
+  clearTimeout(viewSaveTimer);
+  viewSaveTimer = undefined;
+  viewerState.camera = { x: view.x, y: view.y, w: view.w, h: view.h };
+  const text = serializeViewerState(viewerState);
+  if (text === lastViewSyncedText) return;
+  lastViewSyncedText = text;
+  vscode.postMessage({ type: "view-save", text });
+}
+
+export function markViewSynced(text: string) {
+  lastViewSyncedText = text;
+}
+
+window.addEventListener("pagehide", () => { flushSave(); flushViewSave(); });
 window.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") flushSave();
+  if (document.visibilityState === "hidden") { flushSave(); flushViewSave(); }
 });

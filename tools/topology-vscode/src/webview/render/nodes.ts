@@ -1,5 +1,6 @@
 import { svg } from "lit-html";
 import { NODE_TYPES, type Node } from "../../schema";
+import { beginRenameNodeId } from "../rename";
 import { scheduleSave } from "../save";
 import { clientToSvg } from "../view";
 import { staticRender } from "./index";
@@ -18,10 +19,17 @@ export function nodeTemplate(n: Node) {
        @pointerdown=${(ev: PointerEvent) => onDown(ev, n)}
        @pointermove=${(ev: PointerEvent) => onMove(ev, n)}
        @pointerup=${onEnd}
-       @pointercancel=${onEnd}>
+       @pointercancel=${onEnd}
+       @dblclick=${(ev: MouseEvent) => {
+         ev.stopPropagation();
+         const g = ev.currentTarget as SVGGElement;
+         const titleEl = g.querySelector(".node-title") as SVGTextElement | null;
+         if (titleEl) beginRenameNodeId(n.id, titleEl);
+       }}>
       <rect width=${def.width} height=${def.height} rx=${rx}
             fill=${def.fill} stroke=${def.stroke} stroke-width="2"/>
-      <text x=${cx} y="20" text-anchor="middle" font-size="12" font-weight="100" fill=${titleFill} stroke="none">${n.id}</text>
+      <text x=${cx} y="20" text-anchor="middle" font-size="12" font-weight="100" fill=${titleFill} stroke="none"
+            class="node-title">${n.id}</text>
       <text x=${cx} y="36" text-anchor="middle" font-size="11" font-weight="100" fill=${subFill} stroke="none">${n.sublabel ?? n.type}</text>
       ${n.value ? svg`
       <text x=${cx} y="50" text-anchor="middle" font-size="11" font-weight="100" fill=${subFill} stroke="none">${n.value}</text>` : null}

@@ -1,5 +1,14 @@
 import { KIND_COLORS, NODE_TYPES, type Edge, type Node } from "../../schema";
 import { type EdgeGeom, edgeGeom, pathLength } from "../geom";
+import {
+  clearAnimations,
+  getCurrentMs,
+  registerAnimation,
+  resetPlayback,
+  setDuration,
+  startTickLoop,
+  subscribe,
+} from "../playback";
 import { SVG_NS, animationLayer, spec } from "../state";
 
 type StateReg = {
@@ -9,16 +18,17 @@ type StateReg = {
 };
 
 const stateRegistry: StateReg[] = [];
-let rafId = 0;
+let stateUnsub: (() => void) | undefined;
 
 export function registerStateText(reg: StateReg) {
   stateRegistry.push(reg);
 }
 
 export function resetAnimations() {
-  if (rafId) cancelAnimationFrame(rafId);
-  rafId = 0;
+  if (stateUnsub) { stateUnsub(); stateUnsub = undefined; }
   stateRegistry.length = 0;
+  clearAnimations();
+  resetPlayback();
   if (animationLayer) animationLayer.replaceChildren();
 }
 
@@ -32,6 +42,8 @@ function parseDur(s: string | undefined): number {
 
 export function renderAnimation() {
   const durMs = parseDur(spec.timing!.duration);
+  setDuration(durMs);
+  startTickLoop();
   const steps = spec.timing!.steps;
   const fireTimes = new Map<string, number[]>();
   const departAt = new Map<string, number>();
@@ -61,7 +73,7 @@ export function renderAnimation() {
     buildEdgePulse(e, g, td, ta, durMs);
   }
 
-  if (stateRegistry.length) startStateRaf(durMs);
+  if (stateRegistry.length) startStateUpdates();
 }
 
 function buildNodeFlash(n: Node, ts: number[], durMs: number) {
@@ -102,7 +114,8 @@ function buildNodeFlash(n: Node, ts: number[], durMs: number) {
   if ((keyframes[keyframes.length - 1].offset as number) < 1) {
     keyframes.push({ opacity: 0, offset: 1 });
   }
-  rect.animate(keyframes, { duration: durMs, iterations: Infinity });
+  const a = rect.animate(keyframes, { duration: durMs, iterations: Infinity });
+  registerAnimation(a);
 }
 
 function buildEdgePulse(e: Edge, g: EdgeGeom, td: number, ta: number, durMs: number) {
@@ -130,7 +143,7 @@ function buildEdgePulse(e: Edge, g: EdgeGeom, td: number, ta: number, durMs: num
   const eps = 0.001;
   const tdLow = Math.max(0, td - eps);
   const taHigh = Math.min(1, ta + eps);
-  pulse.animate(
+  const a = pulse.animate(
     [
       { strokeDashoffset: "0", opacity: 0, offset: 0 },
       { strokeDashoffset: "0", opacity: 0, offset: tdLow },
@@ -141,12 +154,12 @@ function buildEdgePulse(e: Edge, g: EdgeGeom, td: number, ta: number, durMs: num
     ],
     { duration: durMs, iterations: Infinity }
   );
+  registerAnimation(a);
 }
 
-function startStateRaf(durMs: number) {
-  const start = performance.now();
-  const tick = (now: number) => {
-    const t = ((now - start) % durMs) / durMs;
+function startStateUpdates() {
+  const update = () => {
+    const t = (getCurrentMs() % parseDur(spec.timing!.duration)) / parseDur(spec.timing!.duration);
     for (const r of stateRegistry) {
       let cur = r.segments[0].v;
       for (const s of r.segments) {
@@ -156,7 +169,7 @@ function startStateRaf(durMs: number) {
       const want = `${r.field}=${cur}`;
       if (r.el.textContent !== want) r.el.textContent = want;
     }
-    rafId = requestAnimationFrame(tick);
   };
-  rafId = requestAnimationFrame(tick);
+  stateUnsub = subscribe(update);
+  update();
 }

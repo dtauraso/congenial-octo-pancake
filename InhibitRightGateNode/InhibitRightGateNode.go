@@ -8,6 +8,7 @@ import (
 
 type InhibitRightGateNode struct {
 	Id       int
+	Name     string
 	Left     int
 	HasLeft  bool
 	Right    int
@@ -49,7 +50,7 @@ func (g *InhibitRightGateNode) Update(s *S.SafeWorker) {
 			if g.Left == 1 && g.Right == 0 {
 				result = 1
 			}
-			fmt.Printf("inhibitRightGate%d: left=%d right=%d → %d\n", g.Id, g.Left, g.Right, result)
+			fmt.Printf("%s: left=%d right=%d → %d\n", g.Name, g.Left, g.Right, result)
 			S.Send(g.ToOut, result)
 			g.HasLeft = false
 			g.HasRight = false

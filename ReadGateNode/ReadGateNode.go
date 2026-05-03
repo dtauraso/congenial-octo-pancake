@@ -7,6 +7,7 @@ import (
 
 type ReadGateNode struct {
 	Id        int
+	Name      string
 	Value     int
 	HasValue  bool
 	AckVal    int
@@ -44,7 +45,7 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 		}
 
 		if g.HasValue && g.HasAck {
-			fmt.Printf("readGate: value=%d ack=%d → %d\n", g.Value, g.AckVal, g.Value)
+			fmt.Printf("%s: value=%d ack=%d → %d\n", g.Name, g.Value, g.AckVal, g.Value)
 			S.Send(g.ToLatch, g.Value)
 			g.HasValue = false
 			g.HasAck = false

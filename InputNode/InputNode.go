@@ -7,6 +7,7 @@ import (
 
 type InputNode struct {
 	Id        int
+	Name      string
 	Input     <-chan int
 	ToNext    chan<- int
 	value     int
@@ -29,7 +30,7 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 				n.value = v
 				n.hasValue = true
 				n.sentValue = false
-				fmt.Printf("in%d: sending %d\n", n.Id, n.value)
+				fmt.Printf("%s: sending %d\n", n.Name, n.value)
 			default:
 			}
 		}

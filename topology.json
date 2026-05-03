@@ -5,7 +5,7 @@
       "type": "Input",
       "role": "input",
       "x": 20,
-      "y": 281,
+      "y": 283,
       "sublabel": "Input",
       "value": "[0,1,0]→",
       "data": {
@@ -17,19 +17,19 @@
       }
     },
     {
-      "id": "readGate",
+      "id": "readGate1",
       "type": "ReadGate",
       "role": "and-gate",
-      "x": 267,
-      "y": 292,
+      "x": 253,
+      "y": 287,
       "sublabel": "AND"
     },
     {
-      "id": "i0",
+      "id": "i0Test",
       "type": "ChainInhibitor",
       "role": "inhibitor",
-      "x": 387,
-      "y": 213,
+      "x": 373,
+      "y": 273,
       "index": 0,
       "sublabel": "Chain Inhibitor",
       "state": {
@@ -41,7 +41,7 @@
       "type": "ChainInhibitor",
       "role": "inhibitor",
       "x": 816,
-      "y": 278,
+      "y": 280,
       "index": 1,
       "sublabel": "Chain Inhibitor",
       "state": {
@@ -52,24 +52,24 @@
       "id": "inhibitRight0",
       "type": "InhibitRightGate",
       "role": "inhibit-right-gate",
-      "x": 634,
-      "y": 213,
+      "x": 573,
+      "y": 210,
       "sublabel": "INHIBIT(L=1,R=0)"
     }
   ],
   "edges": [
     {
       "id": "readGate.out->i0.in",
-      "source": "readGate",
+      "source": "readGate1",
       "sourceHandle": "out",
-      "target": "i0",
+      "target": "i0Test",
       "targetHandle": "in",
       "kind": "chain",
       "label": "readGateToI0"
     },
     {
       "id": "i0.out->i1.in",
-      "source": "i0",
+      "source": "i0Test",
       "sourceHandle": "out",
       "target": "i1",
       "targetHandle": "in",
@@ -80,7 +80,7 @@
       "id": "i1.out->readGate.ack",
       "source": "i1",
       "sourceHandle": "out",
-      "target": "readGate",
+      "target": "readGate1",
       "targetHandle": "ack",
       "kind": "feedback-ack",
       "label": "i1AckToReadGate",
@@ -95,14 +95,14 @@
       "id": "in0.out->readGate.chainIn",
       "source": "in0",
       "sourceHandle": "out",
-      "target": "readGate",
+      "target": "readGate1",
       "targetHandle": "chainIn",
       "kind": "chain",
       "label": "inputToReadGate"
     },
     {
       "id": "i0.inhibitOut->inhibitRight0.left",
-      "source": "i0",
+      "source": "i0Test",
       "sourceHandle": "inhibitOut",
       "target": "inhibitRight0",
       "targetHandle": "left",
@@ -160,31 +160,31 @@
       {
         "t": 0.826,
         "event": "inputToReadGate arrives; readGate fires → readGateToI0",
-        "arrives": [
-          "in0.out->readGate.chainIn"
-        ],
         "fires": [
-          "readGate"
+          "readGate1"
         ],
         "departs": [
           "readGate.out->i0.in"
+        ],
+        "arrives": [
+          "in0.out->readGate.chainIn"
         ]
       },
       {
         "t": 0.913,
         "event": "readGateToI0 arrives; i0 fires → i0ToI1 + i0ToInhibitRight depart",
-        "arrives": [
-          "readGate.out->i0.in"
-        ],
         "fires": [
-          "i0"
+          "i0Test"
         ],
         "departs": [
           "i0.out->i1.in",
           "i0.inhibitOut->inhibitRight0.left"
         ],
+        "arrives": [
+          "readGate.out->i0.in"
+        ],
         "state": {
-          "i0": {
+          "i0Test": {
             "held": 1
           }
         }
@@ -192,11 +192,11 @@
       {
         "t": 0.987,
         "event": "i0ToInhibitRight arrives; inhibitRight0 fires",
-        "arrives": [
-          "i0.inhibitOut->inhibitRight0.left"
-        ],
         "fires": [
           "inhibitRight0"
+        ],
+        "arrives": [
+          "i0.inhibitOut->inhibitRight0.left"
         ]
       },
       {
@@ -206,11 +206,11 @@
           "i0.out->i1.in"
         ],
         "state": {
-          "i0": {
-            "held": 0
-          },
           "i1": {
             "held": 1
+          },
+          "i0Test": {
+            "held": 0
           }
         }
       }

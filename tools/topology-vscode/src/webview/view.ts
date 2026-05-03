@@ -1,7 +1,15 @@
-import { svg, view } from "./state";
+import { scheduleViewSave } from "./save";
+import { svg, view, viewerState } from "./state";
 
 export function applyView() {
   svg.setAttribute("viewBox", `${view.x} ${view.y} ${view.w} ${view.h}`);
+}
+
+export function applyCameraFromViewerState() {
+  const c = viewerState.camera;
+  if (!c) return;
+  view.x = c.x; view.y = c.y; view.w = c.w; view.h = c.h;
+  applyView();
 }
 
 export function clientToSvg(cx: number, cy: number) {
@@ -22,6 +30,7 @@ export function attachZoomPan() {
     view.w *= scale;
     view.h *= scale;
     applyView();
+    scheduleViewSave();
   }, { passive: false });
 
   let panning = false;
@@ -47,6 +56,7 @@ export function attachZoomPan() {
     if (!panning) return;
     panning = false;
     svg.releasePointerCapture(ev.pointerId);
+    scheduleViewSave();
   };
   svg.addEventListener("pointerup", endPan);
   svg.addEventListener("pointercancel", endPan);

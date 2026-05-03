@@ -271,6 +271,7 @@ func generate(spec Spec) (string, error) {
 			idx = *n.Index
 		}
 		fields = append(fields, fmt.Sprintf("Id: %d", idx))
+		fields = append(fields, fmt.Sprintf("Name: %q", n.ID))
 		if bind.HasInputChan {
 			fields = append(fields, fmt.Sprintf("%s: %sInput", bind.InputField, n.ID))
 		}

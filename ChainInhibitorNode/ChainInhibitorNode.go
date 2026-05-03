@@ -8,6 +8,7 @@ import (
 
 type ChainInhibitorNode struct {
 	Id         int
+	Name       string
 	HeldValue  int
 	FromPrev   <-chan int
 	ToNext     chan<- int
@@ -31,7 +32,7 @@ func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 
 		select {
 		case value := <-in.FromPrev:
-			fmt.Printf("i%d: received %d (old=%d)\n", in.Id, value, in.HeldValue)
+			fmt.Printf("%s: received %d (old=%d)\n", in.Name, value, in.HeldValue)
 			for _, ch := range in.ToEdge {
 				S.Send(ch, in.HeldValue)
 			}
