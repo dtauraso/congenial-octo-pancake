@@ -1,8 +1,11 @@
 import { spec, view, viewerState } from "./state";
 import { serializeViewerState } from "./viewerState";
+import type { TopogenStatus, WebviewToHostMsg } from "../messages";
+
+export type { TopogenStatus };
 
 declare function acquireVsCodeApi(): {
-  postMessage(msg: unknown): void;
+  postMessage(msg: WebviewToHostMsg): void;
   setState(s: unknown): void;
   getState(): unknown;
 };
@@ -32,11 +35,6 @@ export function setStatus(dirty: boolean) {
   status.textContent = dirty ? "saving…" : "saved";
   status.className = dirty ? "dirty" : "clean";
 }
-
-export type TopogenStatus =
-  | { state: "running" }
-  | { state: "ok" }
-  | { state: "error"; message: string };
 
 export function setTopogenStatus(s: TopogenStatus) {
   if (s.state === "running") {

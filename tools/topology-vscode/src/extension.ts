@@ -5,6 +5,7 @@ import { TopogenRunner } from "./topogenRunner";
 import { BuildAndRunRunner } from "./runCommand";
 import { viewSidecarUri, readSidecar, writeSidecar } from "./sidecar";
 import { loadFileVersion, loadHeadVersion } from "./compareLoader";
+import { parseWebviewToHost, type HostToWebviewMsg } from "./messages";
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -31,11 +32,12 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
     panel.webview.html = this.html(panel.webview);
 
     const sidecarUri = viewSidecarUri(document.uri);
+    const post = (msg: HostToWebviewMsg) => panel.webview.postMessage(msg);
     const topogen = new TopogenRunner((status) =>
-      panel.webview.postMessage({ type: "topogen-status", ...status })
+      post({ type: "topogen-status", ...status })
     );
     const runner = new BuildAndRunRunner((status) =>
-      panel.webview.postMessage({ type: "run-status", ...status })
+      post({ type: "run-status", ...status })
     );
 
     // Suppress the `onDidChangeTextDocument` fire we trigger ourselves by
@@ -44,11 +46,11 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
     // version comparison handles those correctly.
     let lastAppliedVersion = document.version;
     const send = () =>
-      panel.webview.postMessage({ type: "load", text: document.getText() });
+      post({ type: "load", text: document.getText() });
 
     const sendView = async () => {
       const text = await readSidecar(sidecarUri);
-      panel.webview.postMessage({ type: "view-load", text });
+      post({ type: "view-load", text });
     };
 
     const docSub = vscode.workspace.onDidChangeTextDocument((e) => {
@@ -59,7 +61,7 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
 
     const viewStateSub = panel.onDidChangeViewState(() => {
       if (!panel.visible) {
-        panel.webview.postMessage({ type: "flush" });
+        post({ type: "flush" });
       }
     });
 
@@ -79,56 +81,71 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
       runner.dispose();
     });
 
-    panel.webview.onDidReceiveMessage(async (msg) => {
-      if (msg.type === "ready") {
-        send();
-        await sendView();
-      } else if (msg.type === "save") {
-        try {
-          // Bump the suppression watermark synchronously before applyEdit so
-          // the change event (which fires before applyEdit's promise resolves)
-          // is filtered by docSub.
-          lastAppliedVersion = document.version + 1;
-          await applyEdit(document, msg.text);
-          await document.save();
-          // Re-sync in case the actual post-edit version diverged.
-          lastAppliedVersion = document.version;
-          topogen.schedule();
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          panel.webview.postMessage({ type: "save-error", message });
+    panel.webview.onDidReceiveMessage(async (raw: unknown) => {
+      const msg = parseWebviewToHost(raw);
+      if (!msg) {
+        console.warn("topology editor: ignoring malformed webview message", raw);
+        return;
+      }
+      switch (msg.type) {
+        case "ready":
+          send();
+          await sendView();
+          return;
+        case "save":
+          try {
+            // Bump the suppression watermark synchronously before applyEdit so
+            // the change event (which fires before applyEdit's promise resolves)
+            // is filtered by docSub.
+            lastAppliedVersion = document.version + 1;
+            await applyEdit(document, msg.text);
+            await document.save();
+            // Re-sync in case the actual post-edit version diverged.
+            lastAppliedVersion = document.version;
+            topogen.schedule();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            post({ type: "save-error", message });
+          }
+          return;
+        case "view-save":
+          try {
+            await writeSidecar(sidecarUri, msg.text);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            post({ type: "save-error", message });
+          }
+          return;
+        case "run":
+          try {
+            await topogen.write();
+          } catch {
+            return; // topogen already surfaced the error; don't spawn go run.
+          }
+          runner.run();
+          return;
+        case "run-cancel":
+          runner.cancel();
+          return;
+        case "compare-head": {
+          const result = await loadHeadVersion(document.uri);
+          post(
+            result.ok
+              ? { type: "compare-load", source: result.source, text: result.text, label: result.label }
+              : { type: "compare-error", source: result.source, message: result.message }
+          );
+          return;
         }
-      } else if (msg.type === "view-save") {
-        try {
-          await writeSidecar(sidecarUri, msg.text);
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          panel.webview.postMessage({ type: "save-error", message });
+        case "compare-file": {
+          const result = await loadFileVersion(document.uri);
+          if (!result) return; // user cancelled the picker
+          post(
+            result.ok
+              ? { type: "compare-load", source: result.source, text: result.text, label: result.label }
+              : { type: "compare-error", source: result.source, message: result.message }
+          );
+          return;
         }
-      } else if (msg.type === "run") {
-        try {
-          await topogen.write();
-        } catch {
-          return; // topogen already surfaced the error; don't spawn go run.
-        }
-        runner.run();
-      } else if (msg.type === "run-cancel") {
-        runner.cancel();
-      } else if (msg.type === "compare-head") {
-        const result = await loadHeadVersion(document.uri);
-        panel.webview.postMessage(
-          result.ok
-            ? { type: "compare-load", source: result.source, text: result.text, label: result.label }
-            : { type: "compare-error", source: result.source, message: result.message }
-        );
-      } else if (msg.type === "compare-file") {
-        const result = await loadFileVersion(document.uri);
-        if (!result) return; // user cancelled the picker
-        panel.webview.postMessage(
-          result.ok
-            ? { type: "compare-load", source: result.source, text: result.text, label: result.label }
-            : { type: "compare-error", source: result.source, message: result.message }
-        );
       }
     });
   }

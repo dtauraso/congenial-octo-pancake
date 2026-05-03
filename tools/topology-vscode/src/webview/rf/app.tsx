@@ -38,6 +38,7 @@ import { FoldNode } from "./FoldNode";
 import { notifyPanStart, register } from "./bridge";
 import { boxToViewport, viewportToBox } from "./camera";
 import { setDuration, startTickLoop } from "../playback";
+import { parseHostToWebview } from "../../messages";
 
 const EDGE_TYPES = { animated: AnimatedEdge };
 const RF_NODE_TYPES = { animated: AnimatedNode, fold: FoldNode };
@@ -49,14 +50,6 @@ function parseDur(s: string | undefined): number {
   const n = parseFloat(s);
   return Number.isFinite(n) ? n : 27000;
 }
-
-type Msg =
-  | { type: "load"; text: string }
-  | { type: "view-load"; text?: string }
-  | { type: "topogen-status"; [k: string]: unknown }
-  | { type: "run-status"; [k: string]: unknown }
-  | { type: "compare-load"; source: "head" | "file"; text: string; label: string }
-  | { type: "compare-error"; source: "head" | "file"; message: string };
 
 const EDGE_KIND_OPTIONS: EdgeKind[] = [
   "chain", "signal", "feedback-ack", "release", "streak",
@@ -148,8 +141,9 @@ function Inner() {
   }, [rf]);
 
   useEffect(() => {
-    const handler = (e: MessageEvent<Msg>) => {
-      const msg = e.data;
+    const handler = (e: MessageEvent<unknown>) => {
+      const msg = parseHostToWebview(e.data);
+      if (!msg) return;
       if (msg.type === "load") {
         try {
           const next: Spec = parseSpec(JSON.parse(msg.text));

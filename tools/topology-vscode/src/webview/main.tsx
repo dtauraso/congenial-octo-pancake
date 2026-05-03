@@ -2,8 +2,9 @@ import { createRoot } from "react-dom/client";
 import "reactflow/dist/style.css";
 import "./webview.css";
 import App from "./rf/app";
-import { flushSave, flushViewSave, setTopogenStatus, type TopogenStatus } from "./save";
-import { initRunButton, setRunStatus, type RunStatus } from "./run";
+import { flushSave, flushViewSave, setTopogenStatus } from "./save";
+import { initRunButton, setRunStatus } from "./run";
+import { parseHostToWebview } from "../messages";
 import { initTimelinePanel, refreshTimelinePanel } from "./timeline";
 import { attachClearOnPan, initViewsPanel, refreshViewsPanel } from "./views";
 import { getSpec } from "./state";
@@ -33,13 +34,16 @@ initTimelinePanel();
 attachClearOnPan();
 
 window.addEventListener("message", (e) => {
-  const msg = e.data;
+  const msg = parseHostToWebview(e.data);
+  if (!msg) return;
   if (msg.type === "topogen-status") {
-    const { type: _t, ...rest } = msg;
-    setTopogenStatus(rest as TopogenStatus);
+    setTopogenStatus(msg.state === "error"
+      ? { state: "error", message: msg.message ?? "" }
+      : { state: msg.state });
   } else if (msg.type === "run-status") {
-    const { type: _t, ...rest } = msg;
-    setRunStatus(rest as RunStatus);
+    setRunStatus(msg.state === "error"
+      ? { state: "error", message: msg.message ?? "" }
+      : { state: msg.state });
   } else if (msg.type === "flush") {
     // Host requests immediate flush of any pending debounced saves (panel
     // becoming hidden / about to dispose).

@@ -1,11 +1,8 @@
 import * as vscode from "vscode";
 import * as cp from "child_process";
+import type { RunStatus } from "./messages";
 
-export type RunStatus =
-  | { state: "running" }
-  | { state: "ok" }
-  | { state: "error"; message: string }
-  | { state: "cancelled" };
+export type { RunStatus };
 
 export class BuildAndRunRunner {
   private proc: cp.ChildProcess | undefined;

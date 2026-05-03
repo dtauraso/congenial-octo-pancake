@@ -3,12 +3,9 @@
 // running, the button becomes "■ stop" and re-clicking cancels the process.
 
 import { vscode } from "./save";
+import type { RunStatus } from "../messages";
 
-export type RunStatus =
-  | { state: "running" }
-  | { state: "ok" }
-  | { state: "error"; message: string }
-  | { state: "cancelled" };
+export type { RunStatus };
 
 let running = false;
 
