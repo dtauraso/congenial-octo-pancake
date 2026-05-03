@@ -182,8 +182,28 @@ export function specToFlow(
     });
   }
 
+  // spec.notes[] render as RF nodes of type "note" so they pan/zoom
+  // with the canvas. Index-keyed ids (`__note-N`) keep ordering stable
+  // across the round-trip; flowToSpec reads the same prefix back.
+  const NOTE_DEFAULT_W = 160;
+  const NOTE_DEFAULT_H = 60;
+  const noteNodes: RFNode[] = (spec.notes ?? []).map((nt, i) => ({
+    id: `__note-${i}`,
+    type: "note",
+    position: { x: nt.x, y: nt.y },
+    data: {
+      text: nt.text,
+      width: nt.width ?? NOTE_DEFAULT_W,
+      height: nt.height ?? NOTE_DEFAULT_H,
+      hasWidth: nt.width !== undefined,
+      hasHeight: nt.height !== undefined,
+    },
+    draggable: false,
+    selectable: false,
+  }));
+
   // Fold rectangles render *behind* the rest, so emit them first.
-  return { nodes: [...foldNodes, ...memberNodes], edges };
+  return { nodes: [...foldNodes, ...memberNodes, ...noteNodes], edges };
 }
 
 // Reverse of specToFlow: reconstruct a Spec from React Flow's node/edge
@@ -192,8 +212,11 @@ export function specToFlow(
 // cause the round-trip to diverge from the source spec, which is the
 // signal we want.
 export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
-  // Fold nodes are viewer-only and never round-trip into the spec.
-  const specNodes: SpecNode[] = nodes.filter((n) => n.type !== "fold").map((n) => {
+  // Fold nodes are viewer-only; note nodes are spec.notes[] (handled
+  // below). Both are filtered out before mapping the rest to spec.nodes.
+  const specNodes: SpecNode[] = nodes
+    .filter((n) => n.type !== "fold" && n.type !== "note")
+    .map((n) => {
     const d = (n.data ?? {}) as {
       type?: string;
       sublabel?: string;
@@ -239,5 +262,35 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
     };
   });
 
-  return { nodes: specNodes, edges: specEdges };
+  // Reassemble spec.notes[] from RF "note" nodes. Sort by the `__note-N`
+  // suffix so iteration order matches the original spec regardless of how
+  // RF reordered them.
+  const noteNodes = nodes
+    .filter((n) => n.type === "note")
+    .slice()
+    .sort((a, b) => {
+      const ai = parseInt(a.id.replace(/^__note-/, ""), 10);
+      const bi = parseInt(b.id.replace(/^__note-/, ""), 10);
+      return (Number.isFinite(ai) ? ai : 0) - (Number.isFinite(bi) ? bi : 0);
+    });
+  const specNotes = noteNodes.map((n) => {
+    const d = (n.data ?? {}) as {
+      text?: string;
+      width?: number;
+      height?: number;
+      hasWidth?: boolean;
+      hasHeight?: boolean;
+    };
+    return {
+      x: n.position.x,
+      y: n.position.y,
+      ...(d.hasWidth ? { width: d.width } : {}),
+      ...(d.hasHeight ? { height: d.height } : {}),
+      text: d.text ?? "",
+    };
+  });
+
+  const out: Spec = { nodes: specNodes, edges: specEdges };
+  if (specNotes.length > 0) out.notes = specNotes;
+  return out;
 }

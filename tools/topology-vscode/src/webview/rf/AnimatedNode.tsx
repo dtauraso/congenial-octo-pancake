@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { KIND_COLORS, type Port } from "../../schema";
+import { KIND_COLORS, type Port, type StateValue } from "../../schema";
 import { stepToNode, subscribe, getWorld, getTickMs } from "../../sim/runner";
 
 // Visible port dot. Sized large enough to be a real drag target, colored by
@@ -39,6 +39,7 @@ export type AnimatedNodeData = {
   height: number;
   inputs: Port[];
   outputs: Port[];
+  state?: Record<string, StateValue>;
 };
 
 const FLASH_DURATION_MS = 300;
@@ -203,11 +204,28 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         ) : selected ? (
           <div className="node-sublabel node-sublabel-placeholder">+ sublabel</div>
         ) : null}
-        {stateText.map((line, i) => (
-          <div key={i} style={{ fontFamily: "monospace", fontSize: 10 }}>
-            {line}
-          </div>
-        ))}
+        {stateText.length > 0
+          ? stateText.map((line, i) => (
+              <div key={i} style={{ fontFamily: "monospace", fontSize: 10 }}>
+                {line}
+              </div>
+            ))
+          : data.state
+            ? Object.entries(data.state)
+                // dx/dy are presentation (Phase 6 motion). Suppress so
+                // the sub-rows show only domain state (latch slots etc.)
+                // not the rendering offset.
+                .filter(([k]) => k !== "dx" && k !== "dy")
+                .map(([k, v]) => (
+                  <div
+                    key={k}
+                    className="node-state-row"
+                    style={{ fontFamily: "monospace", fontSize: 10, color: "#444" }}
+                  >
+                    {k}={String(v)}
+                  </div>
+                ))
+            : null}
       </div>
     </div>
   );

@@ -54,6 +54,7 @@ import { decorateForCompare, decorateForOnion } from "./diff-decorate";
 import { AnimatedEdge } from "./AnimatedEdge";
 import { AnimatedNode } from "./AnimatedNode";
 import { FoldNode } from "./FoldNode";
+import { NoteNode } from "./NoteNode";
 import { MarkerDefs } from "./MarkerDefs";
 import { LegendPanel } from "./LegendPanel";
 import { notifyPanStart, register } from "./bridge";
@@ -61,7 +62,7 @@ import { boxToViewport, viewportToBox } from "./camera";
 import { parseHostToWebview } from "../../messages";
 
 const EDGE_TYPES = { animated: AnimatedEdge };
-const RF_NODE_TYPES = { animated: AnimatedNode, fold: FoldNode };
+const RF_NODE_TYPES = { animated: AnimatedNode, fold: FoldNode, note: NoteNode };
 
 // Snap-to-grid step matches the Background `gap={24}` so node positions
 // land on the visible dots. Alignment-guide tolerance is in flow units;

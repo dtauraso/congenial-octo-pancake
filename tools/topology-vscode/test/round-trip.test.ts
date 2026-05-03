@@ -69,11 +69,10 @@ describe("spec ↔ React Flow round-trip", () => {
     }
   });
 
-  // Phase 9 gap: route, lane, valueLabel, arrowStyle, notes, and any
-  // top-level fields beyond nodes+edges are dropped by the current adapter.
-  // This test should turn green when those fields are wired through —
-  // until then it's a failing test, not a paragraph.
-  it.fails("preserves every field on the full-fields fixture", () => {
+  // Phase 9 chunks 1–3 wired route, lane, valueLabel, arrowStyle, and
+  // notes through the adapter. This previously-failing test is the
+  // round-trip contract for those fields.
+  it("preserves every field on the full-fields fixture", () => {
     const src = loadFixture("full-fields.json");
     expect(roundTrip(src)).toEqual(src);
   });
