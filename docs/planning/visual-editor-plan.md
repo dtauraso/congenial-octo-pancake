@@ -35,9 +35,9 @@ you're working on.
 | 4 — fold/unfold | ✅ done; nested ⏳ | [phase-4.md](visual-editor/phase-4.md) | — | ~\$3 nested |
 | 4.5 — plugin hardening (audit) | ✅ 4.5.1–4.5.5 done; 4.5.6 opportunistic | [phase-4.5.md](visual-editor/phase-4.5.md) | — | ~\$13.47 actual |
 | 5 — comparison | ✅ done (incl. follow-ups) | [phase-5.md](visual-editor/phase-5.md) | — | ~\$8.05 actual |
-| 5.5 — animation model rewrite | ⏳ gates Phase 6 | [phase-5.5.md](visual-editor/phase-5.5.md) | — | ~\$20 (risk \$35) |
-| 6 — keyframed motion | ⏳ rebudget after 5.5 | [phase-6.md](visual-editor/phase-6.md) | — | ~\$35 (risk \$60) |
-| 7 — trace replay | ⏳ | [phase-7.md](visual-editor/phase-7.md) | — | ~\$45 (risk \$80) |
+| 5.5 — animation model rewrite | ✅ done | [phase-5.5.md](visual-editor/phase-5.5.md) | — | \$21.26 actual |
+| 6 — node motion (state-derived) | ✅ done | [phase-6.md](visual-editor/phase-6.md) | — | \$5.04 actual |
+| 7 — trace replay | ✅ chunks 1–5 done; Phase 8 (per-node parity) chunks 1–11 also done | [phase-7.md](visual-editor/phase-7.md) | — | \$11.57 + \$8.69 actual |
 | 8 — polish (undo, snap, e2e) | ⏳ | [phase-8.md](visual-editor/phase-8.md) | — | ~\$8 |
 | 9 — SVG diagram parity | ⏳ | [phase-9.md](visual-editor/phase-9.md) | — | ~\$18 |
 
@@ -52,18 +52,27 @@ you're working on.
 The most load-bearing remaining work, in priority order. Pick whichever
 matches the budget available and the kind of break you'd most regret.
 
-1. **Phase 5.5 — animation model rewrite [~\$20].** Gates Phase 6.
-   See [phase-5.5.md](visual-editor/phase-5.5.md).
-2. **Phase 4 nested folding follow-up [~\$3].** Single-level folds work;
+1. **Phase 8 — polish [~\$8].** Undo/redo (`zundo` substrate, two
+   independent stacks for spec vs. viewer), snap-to-grid, and three
+   tiers of test coverage including a Tier 4 headline edit-to-running-Go
+   latency test. Mechanical and contained — natural next phase.
+   See [phase-8.md](visual-editor/phase-8.md).
+2. **Phase 9 — SVG diagram parity [~\$18].** Custom RF edge components
+   per `route` kind, per-port handle rendering, style-guide vocabulary,
+   Tier 4 visual regression baselines. UI-iteration heavy.
+   See [phase-9.md](visual-editor/phase-9.md).
+3. **Phase 4 nested folding follow-up [~\$3].** Single-level folds work;
    pick up only when a real topology hits the level-of-nesting wall.
-3. **Phase 3 Tier 3 follow-ups [~\$3].** Three queued cases
+4. **Phase 3 Tier 3 follow-ups [~\$3].** Three queued cases
    (port-drag → chan, palette-drag-position, port-drag mismatched-kinds
    fallback). Opportunistic.
-4. **Phase 4.5.6 — audit lows & nits [opportunistic].** Pick up while
+5. **Phase 4.5.6 — audit lows & nits [opportunistic].** Pick up while
    touching adjacent code; not a planned spend. See [phase-4.5.md](visual-editor/phase-4.5.md).
 
-**Recently shipped:** Phase 5 follow-ups at \$2.40 actual (collapsed-fold
-diff badge + dim halo punch-through). See [phase-5.md](visual-editor/phase-5.md).
+**Recently shipped:** Phase 5.5 (animation model rewrite, \$21.26),
+Phase 6 (state-derived node motion, \$5.04), Phase 7 chunks 1–5 (trace
+replay, \$11.57), and Phase 8 per-node Go↔TS parity chunks 1–11
+(\$8.69, every gate-shaped node now covered).
 
 ## What the tool is for, in priority order
 
