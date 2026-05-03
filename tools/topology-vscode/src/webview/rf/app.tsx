@@ -156,13 +156,19 @@ function Inner() {
           }
           resetAnimations();
           const flow = specToFlow(next, viewerState.folds);
-          const sel = new Set(viewerState.lastSelectionIds ?? []);
+          // Reconcile the persisted selection against the current node set:
+          // ids no longer present (after a delete in another session) are
+          // dropped from selectedRef, not kept as ghosts.
+          const presentIds = new Set(flow.nodes.map((n) => n.id));
+          const sel = new Set(
+            (viewerState.lastSelectionIds ?? []).filter((id) => presentIds.has(id))
+          );
           if (sel.size > 0) {
             flow.nodes = flow.nodes.map((n) =>
               sel.has(n.id) ? { ...n, selected: true } : n
             );
-            selectedRef.current = sel;
           }
+          selectedRef.current = sel;
           setNodes(flow.nodes);
           setEdges(flow.edges);
         } catch (err) {
@@ -195,18 +201,24 @@ function Inner() {
           setNodes(flow.nodes);
           setEdges(flow.edges);
         }
-        if (next.lastSelectionIds && next.lastSelectionIds.length > 0) {
-          const sel = new Set(next.lastSelectionIds);
-          selectedRef.current = sel;
-          setNodes((ns) =>
-            ns.length === 0
-              ? ns
-              : ns.map((n) => {
-                  const want = sel.has(n.id);
-                  return n.selected === want ? n : { ...n, selected: want };
-                })
-          );
-        }
+        // Always reconcile selection on view-load — including the empty case,
+        // so a sidecar without saved selection clears any stale `selected`
+        // flags from a prior render. If nodes haven't arrived yet, just seed
+        // selectedRef; the load handler will filter it against the spec.
+        const savedSel = new Set(next.lastSelectionIds ?? []);
+        setNodes((ns) => {
+          if (ns.length === 0) {
+            selectedRef.current = savedSel;
+            return ns;
+          }
+          const present = new Set(ns.map((n) => n.id));
+          const reconciled = new Set([...savedSel].filter((id) => present.has(id)));
+          selectedRef.current = reconciled;
+          return ns.map((n) => {
+            const want = reconciled.has(n.id);
+            return n.selected === want ? n : { ...n, selected: want };
+          });
+        });
         const c = next.camera;
         if (c && !isLegacyCamera(c)) {
           rf.setViewport({ x: c.x, y: c.y, zoom: c.zoom });
