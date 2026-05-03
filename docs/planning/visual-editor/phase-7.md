@@ -122,3 +122,50 @@ again before Chunk 4.
 | 4 — `--trace` flag + parity test + resolver | `49288a5` | $2.16 | $4 revised est, well under |
 | 5 — Tier 2 spec-immutability test | `f80248b` | TBD | $1 revised est |
 | **Phase 7 total (chunks 1–5)** | | **$11.57 + ch5** | **$20 revised est** |
+
+### Phase 8 (per-node Go ↔ TS parity) — running tally
+
+Tracked here because Phase 8 in [phase-8.md](phase-8.md) is the
+unrelated "polish" phase (undo/redo, snap-to-grid). The parity work
+grew out of Phase 7's drift-indicator surface and lives next to its
+actuals.
+
+| Chunk | Commit | $ | est |
+|---|---|---|---|
+| 1 — AndGate Go node + parity | `fd4a91e` | $1.58 | — |
+| 2 — StreakDetector Go node + parity | `c275666` | $0.61 | — |
+| 3 — StreakBreakDetector Go node + parity | `75ce915` | $0.35 | — |
+| 4 — ReadGate parity (no new Go node) | `e90d55e` | $0.87 | — |
+| 5 — SyncGate Go node + parity | `1875fbc` | $0.40 | — |
+| 6 — Partition Go rewrite + parity | `cde5d1c` | $0.96 | — |
+| 7 — InhibitRightGate parity (no new Go node) | `138fd28` | $0.73 | — |
+| 8 — EdgeNode Go rewrite + parity | ⏳ | TBD | $1.75 ($1.20–$3.00) |
+| **Phase 8 chunks 1–7 total** | | **$5.50** | **$5–15 original band** |
+
+**Chunk 8 — EdgeNode** (proposal signed off 2026-05-03):
+
+- **Scope:** EdgeNode only. DistributeNode deferred — its Go node is a
+  print-only stub with one input and zero outputs, so there is no
+  behavior to mirror; defining TS semantics is a design call for a
+  separate session.
+- **TS port shape:** inputs `left` / `right` (kind `inhibit-in`); three
+  outputs `outInhibitor` / `outPartition` / `outNextEdge` (kind
+  `signal`), all carrying the same XOR result. Mirrors the Go node's
+  three `S.Send` calls so trace parity is per-edge. The unused
+  `FromPrevEdge` input on the Go side is dropped from both sides —
+  pure dead code today; re-add when it gains meaning.
+- **Deliverables:** `NODE_TYPES.EdgeNode` in
+  `tools/topology-vscode/src/schema.ts`; `edgeJoin` handler +
+  registration + `GATE_TYPES` entry in
+  `tools/topology-vscode/src/sim/handlers.ts`; committed fixture
+  `tools/topology-vscode/test/fixtures/edge-node.trace.jsonl`;
+  rewrite `EdgeNode/EdgeNode.go` to the parity-chunk shape (`Name`,
+  named channels, `*Trace` via `S.SafeWorker`, no prints); add
+  `Trace/FixtureParity_EdgeNode_test.go` modeled on
+  `FixtureParity_AndGate_test.go`.
+- **Verify:** `npx tsc --noEmit && npm test` from
+  `tools/topology-vscode/`; `go build ./... && go test ./...` from
+  repo root.
+- **Estimate:** $1.75 (range $1.20–$3.00). Larger than the
+  single-language chunks because it's TS + Go in one chunk with a
+  3-output fan-out; still well under the original $5–15 Phase 8 band.
