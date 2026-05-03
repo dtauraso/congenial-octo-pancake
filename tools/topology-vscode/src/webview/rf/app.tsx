@@ -3,20 +3,26 @@ import ReactFlow, {
   Background,
   Controls,
   ReactFlowProvider,
+  SelectionMode,
   applyNodeChanges,
   applyEdgeChanges,
   useReactFlow,
+  type Connection,
   type Edge as RFEdge,
   type Node as RFNode,
   type NodeChange,
   type EdgeChange,
   type Viewport,
 } from "reactflow";
-import { parseSpec, type Spec } from "../../schema";
+import { NODE_TYPES, parseSpec, type EdgeKind, type Spec } from "../../schema";
+import { IDENT_RE } from "../rename-core";
+import { applyDelete } from "../delete-core";
+import { NodePalette, PALETTE_DATA_TYPE } from "./NodePalette";
 import { resetAnimations } from "../render/animation";
 import { beginRenameNodeId, setRenameRerender } from "../rename";
-import { vscode } from "../save";
-import { setSpec, setViewerState, viewerState } from "../state";
+import { beginEditSublabel, setSublabelRerender } from "../sublabel";
+import { scheduleSave, vscode } from "../save";
+import { setSpec, setViewerState, spec, viewerState } from "../state";
 import {
   parseViewerState,
   serializeViewerState,
@@ -30,7 +36,7 @@ import { boxToViewport, viewportToBox } from "./camera";
 import { setDuration, startTickLoop } from "../playback";
 
 const EDGE_TYPES = { animated: AnimatedEdge };
-const NODE_TYPES = { animated: AnimatedNode };
+const RF_NODE_TYPES = { animated: AnimatedNode };
 
 function parseDur(s: string | undefined): number {
   if (!s) return 27000;
@@ -46,15 +52,22 @@ type Msg =
   | { type: "topogen-status"; [k: string]: unknown }
   | { type: "run-status"; [k: string]: unknown };
 
+const EDGE_KIND_OPTIONS: EdgeKind[] = [
+  "chain", "signal", "feedback-ack", "release", "streak",
+  "pointer", "and-out", "edge-connection", "inhibit-in", "any",
+];
+
 function Inner() {
   const [nodes, setNodes] = useState<RFNode[]>([]);
   const [edges, setEdges] = useState<RFEdge[]>([]);
   const [dimmed, setDimmed] = useState<Set<string> | null>(null);
+  const [edgeMenu, setEdgeMenu] = useState<{ x: number; y: number; edgeId: string } | null>(null);
   const selectedRef = useRef<Set<string>>(new Set());
   const lastSyncedView = useRef<string | undefined>(undefined);
   const viewSaveTimer = useRef<number | undefined>(undefined);
   const paneRef = useRef<HTMLDivElement | null>(null);
   const lastSpec = useRef<Spec | null>(null);
+  const reconnectOk = useRef<boolean>(false);
   const rf = useReactFlow();
 
   // Bridge handlers (camera, dim, selection getter).
@@ -75,13 +88,14 @@ function Inner() {
       setDim: (members) => setDimmed(members ? new Set(members) : null),
       getSelectedNodeIds: () => Array.from(selectedRef.current),
     });
-    setRenameRerender(() => {
-      // Spec was mutated in place by rename; rebuild RF nodes/edges from it.
+    const rerenderFromSpec = () => {
       if (!lastSpec.current) return;
       const flow = specToFlow(lastSpec.current);
       setNodes(flow.nodes);
       setEdges(flow.edges);
-    });
+    };
+    setRenameRerender(rerenderFromSpec);
+    setSublabelRerender(rerenderFromSpec);
   }, [rf]);
 
   useEffect(() => {
@@ -98,6 +112,13 @@ function Inner() {
           }
           resetAnimations();
           const flow = specToFlow(next);
+          const sel = new Set(viewerState.lastSelectionIds ?? []);
+          if (sel.size > 0) {
+            flow.nodes = flow.nodes.map((n) =>
+              sel.has(n.id) ? { ...n, selected: true } : n
+            );
+            selectedRef.current = sel;
+          }
           setNodes(flow.nodes);
           setEdges(flow.edges);
         } catch (err) {
@@ -107,6 +128,18 @@ function Inner() {
         const next: ViewerState = parseViewerState(msg.text);
         setViewerState(next);
         lastSyncedView.current = msg.text ?? serializeViewerState(next);
+        if (next.lastSelectionIds && next.lastSelectionIds.length > 0) {
+          const sel = new Set(next.lastSelectionIds);
+          selectedRef.current = sel;
+          setNodes((ns) =>
+            ns.length === 0
+              ? ns
+              : ns.map((n) => {
+                  const want = sel.has(n.id);
+                  return n.selected === want ? n : { ...n, selected: want };
+                })
+          );
+        }
         const c = next.camera;
         if (c && typeof c.zoom === "number") {
           rf.setViewport({ x: c.x, y: c.y, zoom: c.zoom });
@@ -124,19 +157,23 @@ function Inner() {
     return () => window.removeEventListener("message", handler);
   }, [rf]);
 
-  const persistViewport = useCallback((vp: Viewport) => {
+  const scheduleViewSave = useCallback(() => {
     if (viewSaveTimer.current !== undefined) {
       window.clearTimeout(viewSaveTimer.current);
     }
     viewSaveTimer.current = window.setTimeout(() => {
       viewSaveTimer.current = undefined;
-      viewerState.camera = { x: vp.x, y: vp.y, w: 0, h: 0, zoom: vp.zoom };
       const text = serializeViewerState(viewerState);
       if (text === lastSyncedView.current) return;
       lastSyncedView.current = text;
       vscode.postMessage({ type: "view-save", text });
     }, 400);
   }, []);
+
+  const persistViewport = useCallback((vp: Viewport) => {
+    viewerState.camera = { x: vp.x, y: vp.y, w: 0, h: 0, zoom: vp.zoom };
+    scheduleViewSave();
+  }, [scheduleViewSave]);
 
   const onMoveStart = useCallback(() => { notifyPanStart(); }, []);
   const onMoveEnd = useCallback((_: unknown, vp: Viewport) => {
@@ -153,16 +190,208 @@ function Inner() {
   );
   const onSelectionChange = useCallback(
     ({ nodes: sel }: { nodes: RFNode[] }) => {
-      selectedRef.current = new Set(sel.map((n) => n.id));
+      const ids = sel.map((n) => n.id);
+      selectedRef.current = new Set(ids);
+      const prev = viewerState.lastSelectionIds ?? [];
+      if (prev.length === ids.length && prev.every((v, i) => v === ids[i])) return;
+      viewerState.lastSelectionIds = ids.length > 0 ? ids : undefined;
+      scheduleViewSave();
     },
-    []
+    [scheduleViewSave]
   );
+  const handleDelete = useCallback((nodeIds: string[], edgeIds: string[]) => {
+    if (!lastSpec.current) return;
+    if (nodeIds.length === 0 && edgeIds.length === 0) return;
+    applyDelete(spec, viewerState, nodeIds, edgeIds);
+    lastSpec.current = spec;
+    scheduleSave();
+    scheduleViewSave();
+  }, [scheduleViewSave]);
+
+  const onNodesDelete = useCallback((deleted: RFNode[]) => {
+    handleDelete(deleted.map((n) => n.id), []);
+  }, [handleDelete]);
+  const onEdgesDelete = useCallback((deleted: RFEdge[]) => {
+    handleDelete([], deleted.map((e) => e.id));
+  }, [handleDelete]);
+
+  const onConnect = useCallback((conn: Connection) => {
+    if (!conn.source || !conn.target || !conn.sourceHandle || !conn.targetHandle) return;
+    if (!lastSpec.current) return;
+    const srcNode = spec.nodes.find((n) => n.id === conn.source);
+    const dstNode = spec.nodes.find((n) => n.id === conn.target);
+    if (!srcNode || !dstNode) return;
+    const srcDef = NODE_TYPES[srcNode.type];
+    const dstDef = NODE_TYPES[dstNode.type];
+    const srcPort = srcDef?.outputs.find((p) => p.name === conn.sourceHandle);
+    const dstPort = dstDef?.inputs.find((p) => p.name === conn.targetHandle);
+    if (!srcPort || !dstPort) return;
+    // Input ports are 1-to-1: each target.handle is a single chan field on
+    // the runtime node struct, so two senders into the same port can't be
+    // wired. Reject before the edge is added rather than letting topogen
+    // emit broken Go. (Outputs are allowed to fan out — e.g.
+    // ChainInhibitor.inhibitOut → multiple inhibit gates.)
+    const portTaken = spec.edges.some(
+      (e) => e.target === conn.target && e.targetHandle === conn.targetHandle,
+    );
+    if (portTaken) {
+      console.warn(
+        `wirefold: target port ${conn.target}.${conn.targetHandle} is already wired; refusing duplicate edge`,
+      );
+      return;
+    }
+    // Channel-type inference: edge kind is the source port's kind. If the
+    // target port disagrees, fall back to "any" so validatePorts won't reject
+    // the new edge on reload (kind is informational; the handles carry the
+    // actual port identity).
+    const kind: EdgeKind = srcPort.kind === dstPort.kind ? srcPort.kind : "any";
+    const baseId = `${conn.source}.${conn.sourceHandle}->${conn.target}.${conn.targetHandle}`;
+    let id = baseId;
+    let n = 2;
+    while (spec.edges.some((e) => e.id === id)) id = `${baseId}#${n++}`;
+    // topogen uses edge.label verbatim as the channel variable name and
+    // requires a valid Go identifier (see cmd/topogen/main.go identRE).
+    // Synthesize one from source/target ids; dedupe against existing
+    // labels with a numeric suffix. Users can rename later.
+    const cap = (s: string) => (s.length === 0 ? s : s[0].toUpperCase() + s.slice(1));
+    const baseLabel = `${conn.source}${cap(conn.sourceHandle)}To${cap(conn.target)}${cap(conn.targetHandle)}`
+      .replace(/[^A-Za-z0-9_]/g, "_")
+      .replace(/^([0-9])/, "_$1");
+    let label = baseLabel;
+    let m = 2;
+    while (spec.edges.some((e) => e.label === label)) label = `${baseLabel}_${m++}`;
+    spec.edges.push({
+      id,
+      source: conn.source,
+      sourceHandle: conn.sourceHandle,
+      target: conn.target,
+      targetHandle: conn.targetHandle,
+      kind,
+      label,
+    });
+    lastSpec.current = spec;
+    const flow = specToFlow(spec);
+    setNodes(flow.nodes);
+    setEdges(flow.edges);
+    scheduleSave();
+  }, []);
+
+  const onReconnectStart = useCallback(() => {
+    reconnectOk.current = false;
+  }, []);
+
+  const onReconnect = useCallback((oldEdge: RFEdge, conn: Connection) => {
+    if (!conn.source || !conn.target || !conn.sourceHandle || !conn.targetHandle) return;
+    if (!lastSpec.current) return;
+    const specEdge = spec.edges.find((e) => e.id === oldEdge.id);
+    if (!specEdge) return;
+    const srcNode = spec.nodes.find((n) => n.id === conn.source);
+    const dstNode = spec.nodes.find((n) => n.id === conn.target);
+    if (!srcNode || !dstNode) return;
+    const srcDef = NODE_TYPES[srcNode.type];
+    const dstDef = NODE_TYPES[dstNode.type];
+    const srcPort = srcDef?.outputs.find((p) => p.name === conn.sourceHandle);
+    const dstPort = dstDef?.inputs.find((p) => p.name === conn.targetHandle);
+    if (!srcPort || !dstPort) return;
+    // Same 1-to-1 input invariant as onConnect — but ignore the edge being
+    // rerouted itself (otherwise re-dropping on its existing target would
+    // self-reject).
+    const portTaken = spec.edges.some(
+      (e) => e.id !== oldEdge.id &&
+        e.target === conn.target &&
+        e.targetHandle === conn.targetHandle,
+    );
+    if (portTaken) {
+      console.warn(
+        `wirefold: target port ${conn.target}.${conn.targetHandle} is already wired; refusing reroute`,
+      );
+      return;
+    }
+    specEdge.source = conn.source;
+    specEdge.sourceHandle = conn.sourceHandle;
+    specEdge.target = conn.target;
+    specEdge.targetHandle = conn.targetHandle;
+    specEdge.kind = srcPort.kind === dstPort.kind ? srcPort.kind : "any";
+    reconnectOk.current = true;
+    lastSpec.current = spec;
+    const flow = specToFlow(spec);
+    setNodes(flow.nodes);
+    setEdges(flow.edges);
+    scheduleSave();
+  }, []);
+
+  const onReconnectEnd = useCallback(() => {
+    // Drop-in-empty-space leaves the edge untouched (reroute, not delete).
+    reconnectOk.current = false;
+  }, []);
+
+  const onEdgeContextMenu = useCallback((ev: React.MouseEvent, edge: RFEdge) => {
+    ev.preventDefault();
+    setEdgeMenu({ x: ev.clientX, y: ev.clientY, edgeId: edge.id });
+  }, []);
+
+  const closeEdgeMenu = useCallback(() => setEdgeMenu(null), []);
+
+  const setEdgeKind = useCallback((edgeId: string, kind: EdgeKind) => {
+    if (!lastSpec.current) return;
+    const specEdge = spec.edges.find((e) => e.id === edgeId);
+    if (!specEdge) return;
+    specEdge.kind = kind;
+    lastSpec.current = spec;
+    const flow = specToFlow(spec);
+    setNodes(flow.nodes);
+    setEdges(flow.edges);
+    scheduleSave();
+    setEdgeMenu(null);
+  }, []);
+
+  const onDragOver = useCallback((ev: React.DragEvent) => {
+    if (!Array.from(ev.dataTransfer.types).includes(PALETTE_DATA_TYPE)) return;
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const onDrop = useCallback(
+    (ev: React.DragEvent) => {
+      const type = ev.dataTransfer.getData(PALETTE_DATA_TYPE);
+      if (!type || !NODE_TYPES[type]) return;
+      ev.preventDefault();
+      if (!lastSpec.current) return;
+      const pos = rf.screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
+      // Mint a unique id from the type. Lowercase first char so the id is a
+      // valid Go identifier the first time topogen consumes it; numeric
+      // suffix dedupes against existing ids.
+      const base = type.charAt(0).toLowerCase() + type.slice(1);
+      let n = 0;
+      let id = `${base}${n}`;
+      while (spec.nodes.some((nd) => nd.id === id)) {
+        n += 1;
+        id = `${base}${n}`;
+      }
+      if (!IDENT_RE.test(id)) return;
+      spec.nodes.push({ id, type, x: pos.x, y: pos.y });
+      lastSpec.current = spec;
+      const flow = specToFlow(spec);
+      setNodes(flow.nodes);
+      setEdges(flow.edges);
+      scheduleSave();
+    },
+    [rf]
+  );
+
   const onNodeDoubleClick = useCallback(
     (ev: React.MouseEvent, node: RFNode) => {
       // Anchor the input over the node wrapper, not whichever inner element
       // happened to receive the click (label / state-text divs are smaller
       // than the node and would offset the input).
       const t = ev.target as HTMLElement | null;
+      // Sublabel area gets its own editor; falls through to id rename
+      // otherwise.
+      const sublabelEl = t?.closest<HTMLElement>(".node-sublabel");
+      if (sublabelEl) {
+        beginEditSublabel(node.id, sublabelEl);
+        return;
+      }
       const wrapper =
         t?.closest<HTMLElement>(".react-flow__node") ??
         (ev.currentTarget as HTMLElement);
@@ -186,7 +415,12 @@ function Inner() {
     : edges;
 
   return (
-    <div ref={paneRef} style={{ position: "absolute", inset: 0 }}>
+    <div
+      ref={paneRef}
+      style={{ position: "absolute", inset: 0 }}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
       <ReactFlow
         nodes={styledNodes}
         edges={styledEdges}
@@ -196,17 +430,54 @@ function Inner() {
         onMoveEnd={onMoveEnd}
         onSelectionChange={onSelectionChange}
         onNodeDoubleClick={onNodeDoubleClick}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
+        onConnect={onConnect}
+        onEdgeUpdate={onReconnect}
+        onEdgeUpdateStart={onReconnectStart}
+        onEdgeUpdateEnd={onReconnectEnd}
+        onEdgeContextMenu={onEdgeContextMenu}
+        onPaneClick={closeEdgeMenu}
         minZoom={0.1}
         maxZoom={4}
         fitView
-        deleteKeyCode={null}
-        nodesConnectable={false}
+        deleteKeyCode={["Delete", "Backspace"]}
+        nodesConnectable={true}
+        selectionMode={SelectionMode.Partial}
+        selectionOnDrag={true}
+        panOnDrag={[1, 2]}
+        panOnScroll={true}
         edgeTypes={EDGE_TYPES}
-        nodeTypes={NODE_TYPES}
+        nodeTypes={RF_NODE_TYPES}
       >
         <Background gap={24} />
         <Controls />
       </ReactFlow>
+      <NodePalette />
+      {edgeMenu && (
+        <div
+          className="edge-context-menu"
+          style={{ position: "absolute", left: edgeMenu.x, top: edgeMenu.y, zIndex: 10 }}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <div className="edge-context-menu-header">edge kind</div>
+          {(() => {
+            const currentKind = spec.edges.find((e) => e.id === edgeMenu.edgeId)?.kind;
+            return EDGE_KIND_OPTIONS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                className={
+                  "edge-context-menu-item" + (k === currentKind ? " active" : "")
+                }
+                onClick={() => setEdgeKind(edgeMenu.edgeId, k)}
+              >
+                {k}
+              </button>
+            ));
+          })()}
+        </div>
+      )}
     </div>
   );
 }

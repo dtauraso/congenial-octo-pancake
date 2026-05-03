@@ -213,7 +213,7 @@ Cap-hit estimates in **[brackets]** at each phase and item. See [Risk and effort
   - **[~1]** Bookmark markers on the animation timeline: bottom timeline with play/pause/scrub, "+ bookmark" pauses and prompts for a name at the current playhead, click marker to jump-and-pause, shift-click to delete. Refactored `animation.ts` onto a master playback clock. **Master clock survives unchanged. Re-port required for how animation drives node visual state: push per-frame node state into React Flow via `setNodes()` instead of mutating SVG attrs directly. Folded into the Phase 3 migration estimate.**
   - **[~½]** One-click "build and run": "▶ run" button in the toolbar spawns `go run .` and streams stdout/stderr to a "topology run" output channel; button toggles to "■ stop" while running, status pill shows running/ok/error/cancelled. **Renderer-independent — survives unchanged.**
 
-- **Phase 3 — structural editing (mental-model sync → code change)** **[~1.25 remaining; migration tail came in ~¾ vs. ~½ estimate, testing foundation done]**
+- **Phase 3 — structural editing (mental-model sync → code change)** **[~½ remaining; migration tail came in ~¾ vs. ~½ estimate, testing foundation done, Tier 3 harness came in ~¼ vs. ~¾ estimate]**
   - 🟢 Testing foundation (Tier 1 contract tests — prerequisite to further Phase 3 / Phase 9 work). See [Testing strategy](#testing-strategy) for the bar. **[~1 total, done]**
     - **[~¼, done]** ✅ *Spec round-trip* (Vitest, `tools/topology-vscode/test/round-trip.test.ts`). Fixtures under `test/fixtures/specs/`: minimal 2-node, full-fields (every currently-dropped field — `notes`, `route: snake`, `lane`, named ports — marked `it.fails` so the Phase 9 gap is a tracked failing test rather than a paragraph), plus the live `topology.json` read at test time. Round-trip via `specToFlow()` / `flowToSpec()` in `rf/adapter.ts`.
     - **[~¾, done]** ✅ *Topogen goldens* (Go, `cmd/topogen/testdata/`). Each case is a `spec.json` + `expected/Wiring.go` pair; `TestGolden` diffs against expected, `-update` rewrites. `TestGoldenBuilds` writes generated output into a temp module that `replace`s the parent module and runs `go build ./...` — generated code is guaranteed to compile against the real node packages, not just match bytes. Seed cases: canonical spec (live `topology.json`), renamed-ids spec (locks in the `Name` field wiring), feedback-ack spec.
@@ -222,20 +222,20 @@ Cap-hit estimates in **[brackets]** at each phase and item. See [Risk and effort
   - 🟢 React Flow migration (commits `70356ea`, `e449fcc`).
     - **[~1.25, done]** ✅ RF substrate inside the webview; spec ↔ RF node/edge adapter; camera persistence in RF-native `{x,y,zoom}` (legacy `{x,y,w,h}` viewBox cameras auto-convert on load); saved-views frame + dim re-ported via a renderer-agnostic bridge (`rf/bridge.ts`) so legacy `view.ts` / `views.ts` stay largely intact; saved-view membership is now selection-first (RF `onSelectionChange` capture) with viewport-containment fallback; pan is free while a view is active; click an active view to clear; edge pulses via a custom `AnimatedEdge` (RF `getBezierPath`) with WAAPI registered against the master playback clock — pulses survive RF re-renders because they live in React's tree, not as foreign DOM children; node id rename re-ported (centered input via RF `onNodeDoubleClick`); esbuild builds JSX, bundles CSS, minifies non-watch (1.4 MB → 353 KB). Removed dead lit-html-only files.
     - **[~¾, done]** ✅ (estimated ~½, actual ~¾ — frame-mismatch tax: input/label alignment under viewport scale, edge-to-handle gaps, pulse desync after selection re-mounts) Custom `AnimatedNode` owns the per-node flash overlay (WAAPI registered against the master clock) and `state.field=value` text (subscribes to the playback clock). Adapter precomputes `fireTimes` + `stateFields` segments. SVG overlay inside `.react-flow__viewport` removed; `render/animation.ts` trimmed to `resetAnimations`. Rename input rewritten as `contenteditable` directly on the `.node-label` div — same DOM element, same RF transform, no positioning math, so font/scale/zoom can't drift. Handle styling pinned to `left:0` / `right:0` (no `min-width`) so edges meet nodes flush. Nodes use `width:max-content` + `minWidth:data.width` so longer ids grow the box. Stability: `registerAnimation` returns a disposer that splices on cancel (no unbounded growth across re-renders) and seeds `currentTime` from the live `getCurrentMs()` (animations registered mid-playback after a selection-driven re-mount stay in sync — pulses no longer slip out of their visible window).
-  - **[~⅛]** ⏳ Selection model (click, shift-click, marquee). (React Flow built-in; cost is wiring it to the spec.)
-  - **[~⅛]** ⏳ Delete-to-remove for selected nodes/edges. (React Flow built-in.)
-  - **[~½]** ⏳ Port rendering on nodes; drag-from-port-to-port to create edges. (React Flow handles ghost-edge + hit-testing; remaining cost is **channel-type inference** for codegen — that's still custom.)
-  - **[~⅛]** ⏳ Edit existing edges: drag an endpoint to a different port/node to reroute; change edge kind/role via context menu. (React Flow built-in.)
-  - **[~¼]** ⏳ Node palette with drag-to-create. (React Flow has drag-and-drop pattern; cost is the palette UI itself.)
-  - 🟡 In-place text editing for annotation and labels.
+  - **[~⅛, done]** ✅ Selection model (click, shift-click, marquee). RF's built-in selection wired to the viewer-state sidecar (`lastSelectionIds`) so selection survives reload. Tuned to `SelectionMode.Partial` so marquee selects on intersection, not full containment — fixes the "box clips a node and misses it" inconsistency. Pan stays on left-drag (default), marquee on shift+drag.
+  - **[~⅛, done]** ✅ Delete-to-remove for selected nodes/edges. `applyDelete` in [delete-core.ts](../../tools/topology-vscode/src/webview/delete-core.ts) cascades incident edges and scrubs every reference site (`timing.fires`/`departs`/`arrives`/`state` keys, `view.nodeIds`, `fold.memberIds`, `lastSelectionIds`); Tier 2 retro [test/delete.test.ts](../../tools/topology-vscode/test/delete.test.ts) locks the contract. Delete key = `Delete` only (Backspace excluded so it doesn't fight the rename contenteditable). End-to-end manual verification unblocked by the node-palette landing alongside it (select → delete → re-add via palette → confirm codegen + saved-view membership stay coherent).
+  - **[~½, done]** ✅ Port rendering on nodes; drag-from-port-to-port to create edges. `AnimatedNode` renders one `<Handle>` per declared input/output from `NODE_TYPES[type]`, distributed along the left/right edge and colored by `KIND_COLORS[port.kind]`. Adapter stops dropping `sourceHandle`/`targetHandle` so edges anchor to the named ports. `onConnect` infers edge `kind` from the source port (falls back to `"any"` on mismatch), rejects duplicate target-port wires (1-to-1 input invariant; outputs may still fan out), mints a unique edge id, and synthesizes a Go-ident `label` so topogen can use it as the channel variable name. Edge hit-targets widened to `interactionWidth={28}` plus hover/selected stroke-bumps in CSS so users can actually click thin bezier curves.
+  - **[~⅛, done]** ✅ Edit existing edges: drag an endpoint to a different port/node to reroute (RF `onEdgeUpdate`/`Start`/`End`); same duplicate-target-port check as `onConnect`, with the edge being rerouted excluded so re-dropping on its own port doesn't self-reject; drop-in-empty-space leaves the edge intact. Right-click an edge for a context menu of the 10 `EdgeKind` options (current kind highlighted with ✓). Reroute updates `source`/`sourceHandle`/`target`/`targetHandle` and re-infers `kind` from the new source port; menu updates `kind` only. `id` and `label` stay stable. Verified topogen end-to-end on a rerouted spec.
+  - **[~¼, done]** ✅ Node palette with drag-to-create. Left-side `NodePalette` lists every entry in `NODE_TYPES` with a color-swatch preview keyed by each type's `fill`/`stroke`/`shape`. HTML5 drag carries the type via a private mime (`application/wirefold-node-type`); pane `onDrop` resolves the screen point to flow coords via RF's `screenToFlowPosition`, mints a unique id (`<typeLowercase><n>`, validated against `IDENT_RE` from `rename-core`), pushes to `spec.nodes`, rebuilds via `specToFlow`, and triggers the debounced save so topogen picks it up. New nodes render immediately with their declared ports + default fill/stroke/shape because the spec→flow path is already keyed off `NODE_TYPES[type]`. Closes the destructive-delete loop on the previous entry (delete is now reversible via re-add).
+  - 🟢 In-place text editing for annotation and labels.
     - **[~1, done]** ✅ Node id rename: double-click a node, type new id, Enter to commit. Atomically rewrites edges (source/target), `timing.fires`, `timing.state` keys, and viewer state (saved-view nodeIds, fold memberIds, lastSelectionIds). Validates against topogen's safe-Go-ident regex.
-    - **[~⅛]** ⏳ Sublabel / value / annotation note in-place editing. (Cheaper than the original ~¼: the contenteditable-on-the-rendered-element pattern from id rename is reusable — sublabel slots into `AnimatedNode` next to `.node-label` the same way, with no new positioning math.)
+    - **[~⅛, done]** ✅ Sublabel in-place editing. `node-sublabel` div in `AnimatedNode` becomes contenteditable on double-click (routed by `onNodeDoubleClick` checking `target.closest('.node-sublabel')` so id-rename still wins on the label); Enter commits, Esc cancels. Empty sublabel renders a faint `+ sublabel` placeholder when the node is selected, so adding one has the same affordance as editing one. `sublabel.ts` mirrors `rename.ts`; commit trims and treats empty as `delete node.sublabel` to keep the spec clean (no IDENT_RE check — it's free text). Verified end-to-end: topogen never reads `sublabel`, so editing one produces a byte-for-byte identical `Wiring.go` (diff against baseline is empty); round-trip test still passes (`sublabel` was already a tracked field). **`spec.notes[]` editing deferred to Phase 9** — the adapter currently drops notes entirely, so wiring note editing would also need adapter + render work, exceeding ~⅛; Phase 9 already lists `notes` rendering, so note editing lands there once notes are visible at all.
   - 🟡 Each gesture verified end-to-end. (Folded into each gesture's estimate.)
     - ✅ Verified for id rename: every wired node struct gained a `Name string` field; topogen emits `Name: "<n.id>"`; each node's `Update` prints `n.Name` instead of a hard-coded prefix, so a rename in the editor shows up directly in the run log. (Side benefit: the spec id is now the runtime identity, not just a code-gen variable name.)
     - ⏳ Verification for the remaining gestures lands with each one as it's built.
-  - 🟡 Tier 3 gesture integration tests (Playwright, after the gestures above stabilize — defer until churn slows). **[~1–1.5 total]**
-    - **[~¾]** ⏳ Playwright + vscode-webview harness; first gesture case (pays the harness cost once).
-    - **[~⅛]** ⏳ Port-drag creates edge with inferred channel type; topogen-generated Go contains the new `chan`.
+  - 🟡 Tier 3 gesture integration tests (Playwright, after the gestures above stabilize — defer until churn slows). **[~⅝ total — was ~1–1.5; harness landed in ~¼ vs. ~¾ estimate, so the four follow-ups (~⅛ each = ~½) dominate what's left]**
+    - **[~¾ est / ~¼ actual, done]** ✅ Playwright + vscode-webview harness; first gesture case (port-drag-creates-edge). The harness was the load-bearing risk — option (a) (standalone HTML + stubbed `acquireVsCodeApi`) collapsed cleanly because esbuild already emits a self-contained `out/webview.{js,css}` bundle, so the harness is ~50 lines of HTML and the test runs in ~3s with no vscode dependency. The ~¾ estimate reserved budget for a `@vscode/test-electron` fallback that didn't end up needed. **Recalibration:** future Tier 3 cases should be ~⅛ each as planned — but if a case touches host-side fidelity (real workspaceEdit, real sidecar) the option (a) path won't reach it, and (b) reappears at the original ~¾ cost. None of the four queued follow-ups need that. Standalone HTML shell ([e2e/harness.html](../../tools/topology-vscode/e2e/harness.html)) loads the same `out/webview.{js,css}` bundle the real extension does, with `acquireVsCodeApi` stubbed to record posted messages and replay `{type:"load"}` after `ready`. Webview exposes `window.__wirefold_test.{getSpec,getSent}` so tests assert both the live spec mutation and that a save was posted to the host. Tradeoff: gives up host-side workspaceEdit / sidecar fidelity (already covered by Tier 1 round-trip + topogen goldens); keeps gesture-to-spec edge cheap and fast (~3s for the seed test, no vscode download). `npm test` (Vitest) stays the default and unchanged; `npm run test:e2e` is opt-in. Browsers install once via `npx playwright install chromium`. Four follow-up cases stubbed as TODO comments in [e2e/port-drag-creates-edge.spec.ts](../../tools/topology-vscode/e2e/port-drag-creates-edge.spec.ts).
+    - **[~⅛]** ⏳ Port-drag creates edge with inferred channel type; topogen-generated Go contains the new `chan`. (The seed case in the harness sub-bullet above already asserts the spec-mutation half — kind inference, handle ids, save round-trip; this entry stays ⏳ until it also asserts the `chan` materializes in the generated Go.)
     - **[~⅛]** ⏳ Delete-selection removes node + incident edges + `timing.fires[id]`.
     - **[~⅛]** ⏳ Palette-drag at coords persists position across reload.
     - **[~⅛]** ⏳ Rename to clashing id rejects with inline error.
@@ -344,7 +344,7 @@ covers, it's not a test.*
 |---|---|---|---|---|
 | 1 — contract (round-trip + goldens) | ~1 | ~3–4 | **+2–3** | Phase 3 testing foundation |
 | 2 — bridge units | ~½ | ~1–1.5 | **+½ to +1** | Phase 3 retros; Phase 6 keyframe extension |
-| 3 — gesture (Playwright) | ~1–1.5 | ~1.5–2 | **~0 to +½** | end of Phase 3 |
+| 3 — gesture (Playwright) | ~⅝ (harness ~¼ actual + 4 cases ~½) | ~1.5–2 | **+1 to +1.5** | end of Phase 3 |
 | 4 — e2e + visual | ~1 | ~1.5 | **+½** | Phase 8 (e2e); Phase 9 (visual) |
 
 Total saved across the plan: roughly **3–4.5 cap hits net**
@@ -382,13 +382,18 @@ savings against the prior `~13` total.
 - Phase 1: ~2 cap hits. **Done.** Codegen wiring + sidecar split.
 - Phase 2: ≤2 cap hits. **Done** (actual). Saved views, bookmarks,
   build-and-run, master-clock timeline refactor.
-- Phase 3: ~3.25 cap hits with React Flow migration (~2 migration —
+- Phase 3: ~2.75 cap hits with React Flow migration (~2 migration —
   ~1.25 substrate + ~¾ tail, slightly over the ~½ tail estimate due
   to frame-mismatch debugging across the SVG↔RF transition — plus
-  ~1.25 remaining gestures), down from a previous ~2.5 estimate
-  *without* the migration but with everything custom. Slight overrun
-  on Phase 3 alone, but React Flow's value compounds in Phases 4 and
-  8. Node id rename shipped in ~1 (pre-migration; re-ported during
+  ~¼ Tier 3 harness already landed, plus ~½ for the four queued
+  Tier 3 follow-ups), down from a previous ~3.25 estimate after the
+  Tier 3 harness came in at ~¼ vs. the ~¾ reserve. The standalone-
+  HTML harness option (a) eliminated the vscode-test-electron tail
+  that the original budget reserved for. **Lesson:** when an
+  estimate carries a fork between a cheap path and an expensive
+  fallback, anchor the estimate on the cheap path *if* you can
+  cheaply spike it first; only widen the budget if the cheap path
+  fails. Here the cheap path won outright. Node id rename shipped in ~1 (pre-migration; re-ported during
   the substrate migration). Port-drag, selection, marquee, and
   edge-edit collapse to library calls; channel-type inference for
   codegen stays custom. **Lesson logged for Phases 4 and 6:** when
@@ -413,11 +418,12 @@ savings against the prior `~13` total.
   `setEdges`" pipeline (used by id rename's `rerender` callback) trim
   another ~⅛ off the undo line — ~⅜ saved total vs. fully custom.
 
-Phases 3–6 remaining: **~7.25 cap hits** (Phase 3 ~1.25 + Phase 4 ~1
+Phases 3–6 remaining: **~6.5 cap hits** (Phase 3 ~½ + Phase 4 ~1
 + Phase 5 ~1.5 + Phase 6 ~2.5, +0.5 for sublabel/undo savings already
-booked). Headline pipeline through Phase 3: **~1.25 more cap hits**
-from where this branch sits (substrate + migration tail done;
-remaining is gestures + Tier 3 tests). Phases 4 and 8 stay materially
+booked, −¾ from the Tier 3 harness underrun). Headline pipeline
+through Phase 3: **~½ more cap hits** from where this branch sits
+(substrate + migration tail done, Tier 3 harness done; remaining is
+the four Tier 3 follow-up cases). Phases 4 and 8 stay materially
 cheaper than the pre-RF estimates.
 
 The biggest risks:

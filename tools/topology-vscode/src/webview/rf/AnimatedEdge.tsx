@@ -43,7 +43,7 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
 
   return (
     <>
-      <BaseEdge path={d} style={style} />
+      <BaseEdge path={d} style={style} interactionWidth={28} />
       {data?.pulse && (
         <path
           ref={pulseRef}

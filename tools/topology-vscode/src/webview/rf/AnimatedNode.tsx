@@ -1,8 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import type { StateValue } from "../../schema";
+import { KIND_COLORS, type Port, type StateValue } from "../../schema";
 import { getCurrentMs, getDuration, registerAnimation, subscribe } from "../playback";
 
+// Visible port dot. Sized large enough to be a real drag target, colored by
+// the port's edge kind so users can see which kinds connect to which.
+function portStyle(side: "left" | "right", topPct: number, color: string): React.CSSProperties {
+  return {
+    width: 8, height: 8, minWidth: 0, minHeight: 0,
+    [side]: -4, top: `${topPct}%`,
+    transform: "translate(0, -50%)",
+    background: color, border: "1px solid #fff",
+    borderRadius: 4,
+  };
+}
+
+// Fallback (centered, invisible) handles for nodes with no declared ports —
+// keeps edges that target the default RF handle from disappearing.
 const HANDLE_STYLE_LEFT: React.CSSProperties = {
   width: 1, height: 1, minWidth: 0, minHeight: 0,
   left: 0, top: "50%",
@@ -29,6 +43,8 @@ export type AnimatedNodeData = {
   height: number;
   fireTimes?: number[];
   stateFields?: { field: string; segments: StateSeg[] }[];
+  inputs: Port[];
+  outputs: Port[];
 };
 
 const FLASH_HALF_WIDTH = 0.015;
@@ -125,7 +141,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         fontSize: 11,
         padding: "4px 8px",
         boxSizing: "border-box",
-        overflow: "hidden",
+        overflow: "visible",
         isolation: "isolate",
       }}
     >
@@ -143,8 +159,34 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
           }}
         />
       )}
-      <Handle type="target" position={Position.Left} style={HANDLE_STYLE_LEFT} isConnectable={false} />
-      <Handle type="source" position={Position.Right} style={HANDLE_STYLE_RIGHT} isConnectable={false} />
+      {data.inputs.length === 0 ? (
+        <Handle type="target" position={Position.Left} style={HANDLE_STYLE_LEFT} isConnectable={false} />
+      ) : (
+        data.inputs.map((p, i) => (
+          <Handle
+            key={`in-${p.name}`}
+            id={p.name}
+            type="target"
+            position={Position.Left}
+            style={portStyle("left", ((i + 1) * 100) / (data.inputs.length + 1), KIND_COLORS[p.kind] ?? "#888")}
+            title={`${p.name} (${p.kind})`}
+          />
+        ))
+      )}
+      {data.outputs.length === 0 ? (
+        <Handle type="source" position={Position.Right} style={HANDLE_STYLE_RIGHT} isConnectable={false} />
+      ) : (
+        data.outputs.map((p, i) => (
+          <Handle
+            key={`out-${p.name}`}
+            id={p.name}
+            type="source"
+            position={Position.Right}
+            style={portStyle("right", ((i + 1) * 100) / (data.outputs.length + 1), KIND_COLORS[p.kind] ?? "#888")}
+            title={`${p.name} (${p.kind})`}
+          />
+        ))
+      )}
       <div
         style={{
           position: "relative",
@@ -158,7 +200,11 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         }}
       >
         <div className="node-label" style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{data.label}</div>
-        {data.sublabel && <div>{data.sublabel}</div>}
+        {data.sublabel ? (
+          <div className="node-sublabel">{data.sublabel}</div>
+        ) : selected ? (
+          <div className="node-sublabel node-sublabel-placeholder">+ sublabel</div>
+        ) : null}
         {stateText.map((line, i) => (
           <div key={i} style={{ fontFamily: "monospace", fontSize: 10 }}>
             {line}

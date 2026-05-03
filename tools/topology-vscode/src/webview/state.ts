@@ -4,6 +4,9 @@ import { DEFAULT_VIEWER_STATE, type ViewerState } from "./viewerState";
 export const SVG_NS = "http://www.w3.org/2000/svg";
 
 export let spec: Spec = { nodes: [], edges: [] };
+export function getSpec(): Spec {
+  return spec;
+}
 export function setSpec(next: Spec) {
   spec = next;
   nodeById.clear();

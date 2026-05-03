@@ -6,6 +6,17 @@ import { setTopogenStatus, type TopogenStatus } from "./save";
 import { initRunButton, setRunStatus, type RunStatus } from "./run";
 import { initTimelinePanel, refreshTimelinePanel } from "./timeline";
 import { attachClearOnPan, initViewsPanel, refreshViewsPanel } from "./views";
+import { getSpec } from "./state";
+
+// Test-only hook for the Playwright e2e harness. The harness stub of
+// acquireVsCodeApi populates window.__wirefold_sent with every postMessage
+// call from the webview, so a test can assert both the live spec and that a
+// save was posted.
+(window as unknown as { __wirefold_test: unknown }).__wirefold_test = {
+  getSpec,
+  getSent: () =>
+    (window as unknown as { __wirefold_sent?: unknown[] }).__wirefold_sent ?? [],
+};
 
 const app = document.getElementById("app")!;
 createRoot(app).render(<App />);

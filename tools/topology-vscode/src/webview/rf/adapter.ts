@@ -70,13 +70,12 @@ export function specToFlow(spec: Spec): { nodes: RFNode[]; edges: RFEdge[] } {
         height,
         fireTimes: ft,
         stateFields,
+        inputs: def?.inputs ?? [],
+        outputs: def?.outputs ?? [],
       },
     };
   });
 
-  // Until per-port Handles land (next slice), RF can't resolve named handles
-  // like "out" / "in". Drop sourceHandle/targetHandle so RF uses its default
-  // handles and the edge actually renders.
   const departAt = new Map<string, number>();
   const arriveAt = new Map<string, number>();
   for (const s of spec.timing?.steps ?? []) {
@@ -92,6 +91,8 @@ export function specToFlow(spec: Spec): { nodes: RFNode[]; edges: RFEdge[] } {
       id: e.id,
       source: e.source,
       target: e.target,
+      sourceHandle: e.sourceHandle,
+      targetHandle: e.targetHandle,
       type: "animated",
       label: e.label,
       style: { stroke: KIND_COLORS[e.kind] ?? "#888", strokeWidth: 1.5 },
