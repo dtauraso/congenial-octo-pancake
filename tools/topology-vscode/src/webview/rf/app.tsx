@@ -31,6 +31,7 @@ import {
   type ViewerState,
 } from "../viewerState";
 import { specToFlow } from "./adapter";
+import { decorateForCompare, decorateForOnion } from "./diff-decorate";
 import { AnimatedEdge } from "./AnimatedEdge";
 import { AnimatedNode } from "./AnimatedNode";
 import { FoldNode } from "./FoldNode";
@@ -74,6 +75,37 @@ function Inner() {
   const [comparisonLabel, setComparisonLabel] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState<CompareMode>("off");
   const [compareError, setCompareError] = useState<string | null>(null);
+  // Mirror of compareMode for gesture handlers — they read it to short-
+  // circuit when the comparison side is showing (read-only). Kept as a ref
+  // so we don't have to re-create every useCallback when the mode flips.
+  const compareModeRef = useRef<CompareMode>("off");
+  useEffect(() => { compareModeRef.current = compareMode; }, [compareMode]);
+  const isReadOnlyView = () => compareModeRef.current === "A-other";
+  // Spacebar held → swap z-order of ghost vs live in onion mode.
+  const [ghostFront, setGhostFront] = useState(false);
+  useEffect(() => {
+    if (compareMode !== "B-onion") return;
+    const isSpace = (e: KeyboardEvent) => e.code === "Space" || e.key === " ";
+    const isTextTarget = (t: EventTarget | null) =>
+      t instanceof HTMLElement &&
+      (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+    const down = (e: KeyboardEvent) => {
+      if (!isSpace(e) || e.repeat || isTextTarget(e.target)) return;
+      e.preventDefault();
+      setGhostFront(true);
+    };
+    const up = (e: KeyboardEvent) => {
+      if (!isSpace(e)) return;
+      setGhostFront(false);
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+      setGhostFront(false);
+    };
+  }, [compareMode]);
   const selectedRef = useRef<Set<string>>(new Set());
   const paneRef = useRef<HTMLDivElement | null>(null);
   const lastSpec = useRef<Spec | null>(null);
@@ -234,6 +266,7 @@ function Inner() {
   }, []);
 
   const handleDelete = useCallback((nodeIds: string[], edgeIds: string[]) => {
+    if (isReadOnlyView()) return;
     if (!lastSpec.current) return;
     if (nodeIds.length === 0 && edgeIds.length === 0) return;
     applyDelete(spec, viewerState, nodeIds, edgeIds);
@@ -265,6 +298,7 @@ function Inner() {
   }, [handleDelete]);
 
   const onConnect = useCallback((conn: Connection) => {
+    if (isReadOnlyView()) return;
     if (!conn.source || !conn.target || !conn.sourceHandle || !conn.targetHandle) return;
     if (!lastSpec.current) return;
     const srcNode = spec.nodes.find((n) => n.id === conn.source);
@@ -330,6 +364,7 @@ function Inner() {
   }, []);
 
   const onReconnect = useCallback((oldEdge: RFEdge, conn: Connection) => {
+    if (isReadOnlyView()) return;
     if (!conn.source || !conn.target || !conn.sourceHandle || !conn.targetHandle) return;
     if (!lastSpec.current) return;
     const specEdge = spec.edges.find((e) => e.id === oldEdge.id);
@@ -382,6 +417,7 @@ function Inner() {
   const closeEdgeMenu = useCallback(() => setEdgeMenu(null), []);
 
   const setEdgeKind = useCallback((edgeId: string, kind: EdgeKind) => {
+    if (isReadOnlyView()) return;
     if (!lastSpec.current) return;
     const specEdge = spec.edges.find((e) => e.id === edgeId);
     if (!specEdge) return;
@@ -409,6 +445,7 @@ function Inner() {
 
   const onDrop = useCallback(
     (ev: React.DragEvent) => {
+      if (isReadOnlyView()) return;
       const type = ev.dataTransfer.getData(PALETTE_DATA_TYPE);
       if (!type || !NODE_TYPES[type]) return;
       ev.preventDefault();
@@ -437,6 +474,7 @@ function Inner() {
 
   const onNodeDoubleClick = useCallback(
     (ev: React.MouseEvent, node: RFNode) => {
+      if (isReadOnlyView()) return;
       // Fold placeholder → toggle collapsed state. Expanded folds aren't
       // selectable, so dbl-click never fires on them; collapsing again uses
       // the right-click "fold selection" path on regular nodes.
@@ -474,6 +512,7 @@ function Inner() {
 
   const onNodeDragStop = useCallback(
     (_ev: React.MouseEvent, node: RFNode) => {
+      if (isReadOnlyView()) return;
       if (node.type === "fold") {
         // Persist fold-placeholder drags back into viewerState.folds so the
         // position survives reload (folds live in the sidecar).
@@ -497,6 +536,7 @@ function Inner() {
   );
 
   const foldCurrentSelection = useCallback(() => {
+    if (isReadOnlyView()) return;
     const sel = selectedRef.current;
     const memberIds = Array.from(sel).filter((id) => spec.nodes.some((n) => n.id === id));
     if (memberIds.length < 2) {
@@ -552,19 +592,47 @@ function Inner() {
     [foldCurrentSelection]
   );
 
+  // Compose dim + diff decoration. When compareMode is "off", the live
+  // nodes/edges state drives RF directly. In A-live we keep the live state
+  // and layer diff classes (and ghost-injected items) on top. In A-other we
+  // re-derive nodes/edges from the comparison spec and decorate against
+  // live; gesture handlers early-return so no save fires.
+  let baseNodes = nodes;
+  let baseEdges = edges;
+  if (comparisonSpec && (compareMode === "A-live" || compareMode === "A-other")) {
+    const visible = compareMode === "A-live" ? lastSpec.current : comparisonSpec;
+    const other = compareMode === "A-live" ? comparisonSpec : lastSpec.current;
+    if (visible && other) {
+      const decorated = decorateForCompare(visible, other, viewerState.folds ?? []);
+      baseNodes = decorated.nodes;
+      baseEdges = decorated.edges;
+    }
+  } else if (comparisonSpec && compareMode === "B-onion" && lastSpec.current) {
+    const decorated = decorateForOnion(lastSpec.current, comparisonSpec, viewerState.folds ?? []);
+    baseNodes = decorated.nodes;
+    baseEdges = decorated.edges;
+  }
   const styledNodes = dimmed
-    ? nodes.map((n) => ({ ...n, className: dimmed.has(n.id) ? "" : "dim" }))
-    : nodes;
+    ? baseNodes.map((n) => {
+        const dimClass = dimmed.has(n.id) ? "" : "dim";
+        if (!dimClass && !n.className) return n;
+        const merged = [n.className, dimClass].filter(Boolean).join(" ");
+        return { ...n, className: merged };
+      })
+    : baseNodes;
   const styledEdges = dimmed
-    ? edges.map((e) => ({
-        ...e,
-        className: dimmed.has(e.source) && dimmed.has(e.target) ? "" : "dim",
-      }))
-    : edges;
+    ? baseEdges.map((e) => {
+        const dimClass = dimmed.has(e.source) && dimmed.has(e.target) ? "" : "dim";
+        if (!dimClass && !e.className) return e;
+        const merged = [e.className, dimClass].filter(Boolean).join(" ");
+        return { ...e, className: merged };
+      })
+    : baseEdges;
 
   return (
     <div
       ref={paneRef}
+      className={ghostFront ? "ghost-front" : undefined}
       style={{ position: "absolute", inset: 0 }}
       onDragOver={onDragOver}
       onDrop={onDrop}

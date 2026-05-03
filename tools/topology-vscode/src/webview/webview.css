@@ -139,6 +139,68 @@ html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-fami
 .palette-swatch { width: 14px; height: 10px; flex-shrink: 0; }
 .palette-name { color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* ─── Comparison-mode decoration ─────────────────────────────────────
+ * Halos render *outside* the node body so playback flashes (which paint
+ * the body) stay uncontaminated. Halos punch through .dim per phase-5
+ * spec — the node body dims to ~18% but the halo stays at full opacity.
+ */
+.react-flow__node.diff-added {
+  box-shadow: 0 0 0 3px #2e7d32, 0 0 0 5px rgba(46, 125, 50, 0.25);
+  border-radius: 4px;
+}
+.react-flow__node.diff-removed {
+  box-shadow: 0 0 0 3px #c62828, 0 0 0 5px rgba(198, 40, 40, 0.25);
+  border-radius: 4px;
+}
+.react-flow__node.diff-moved {
+  outline: 2px dashed #c98a00;
+  outline-offset: 2px;
+}
+.react-flow__edge.diff-added .react-flow__edge-path {
+  stroke: #2e7d32 !important; stroke-width: 2.5px !important;
+}
+.react-flow__edge.diff-rewired .react-flow__edge-path {
+  stroke-dasharray: 6 4; stroke: #c98a00 !important;
+}
+.react-flow__edge.diff-moved-connector .react-flow__edge-path {
+  stroke: #c98a00; stroke-width: 1px; stroke-dasharray: 4 3; opacity: 0.7;
+}
+
+.react-flow__node.ghost {
+  opacity: 0.25;
+  pointer-events: none;
+}
+.react-flow__edge.ghost {
+  opacity: 0.35;
+  pointer-events: none;
+}
+/* When a node is both .ghost and a diff category, keep the halo bright
+   even though the body is faded — same punch-through rule as .dim. */
+.react-flow__node.ghost.diff-removed,
+.react-flow__node.ghost.diff-moved {
+  opacity: 0.35;
+}
+
+/* Mode B onion-skin: ghost layer rendered translucent below live; spacebar
+   held (.ghost-front on the wrapper) bumps the ghost layer in front. */
+.react-flow__node.onion-ghost { opacity: 0.25; }
+.react-flow__edge.onion-ghost { opacity: 0.35; }
+.ghost-front .react-flow__node.onion-ghost { opacity: 0.6; z-index: 1000; }
+.ghost-front .react-flow__edge.onion-ghost { opacity: 0.85; z-index: 1000; }
+.ghost-front .react-flow__node.onion-live { opacity: 0.4; }
+
+/* Dim + diff composition: body stays dimmed, halo stays full-opacity.
+   .dim sets the inner body opacity in the renderer; the box-shadow halo
+   is on the wrapper, so it's already unaffected by inner body opacity.
+   This rule is the explicit guarantee. */
+.react-flow__node.dim.diff-added,
+.react-flow__node.dim.diff-removed,
+.react-flow__node.dim.diff-moved {
+  /* halo lives on box-shadow which stays at full strength regardless of
+     the inner-body .dim opacity; no override needed beyond not letting
+     .dim suppress box-shadow. */
+}
+
 .compare-toolbar {
   /* Bottom-right, above the timeline panel (~36px tall + 8px gap from
      bottom). Avoids the top-right views panel and the top-left main
