@@ -3,6 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <title>wirefold webview test harness</title>
+  <!--
+    Mirror the production CSP closely so any prod-CSP bug (e.g. RF needing
+    inline style attrs, an unexpected fetch under default-src 'none') fails
+    in Playwright instead of leaking past until install.
+
+    Deviations from prod:
+    - script-src adds 'unsafe-inline' so the harness's bootstrap script
+      below can run without a nonce; prod uses nonce-based scripts. The
+      bundle itself doesn't inject scripts at runtime, so this is harmless
+      for what the harness is meant to detect.
+    - sources are 'self' (file:// origin) instead of vscode-resource://.
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'" />
   <link rel="stylesheet" href="../out/webview.css" />
   <style>
     html, body { margin: 0; padding: 0; height: 100%; width: 100%; }
