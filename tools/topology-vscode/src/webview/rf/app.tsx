@@ -24,7 +24,7 @@ import { resetAnimations } from "../render/animation";
 import { beginRenameNodeId, setRenameRerender } from "../rename";
 import { beginEditSublabel, setSublabelRerender } from "../sublabel";
 import { flushViewSave, markViewSynced, scheduleSave, scheduleViewSave, vscode } from "../save";
-import { setSpec, setViewerState, spec, viewerState } from "../state";
+import { mutateSpec, setSpec, setViewerState, spec, viewerState } from "../state";
 import {
   isLegacyCamera,
   parseViewerState,
@@ -282,8 +282,8 @@ function Inner() {
     if (isReadOnlyView()) return;
     if (!lastSpec.current) return;
     if (nodeIds.length === 0 && edgeIds.length === 0) return;
-    applyDelete(spec, viewerState, nodeIds, edgeIds);
-    lastSpec.current = spec;
+    const next = mutateSpec((s) => { applyDelete(s, viewerState, nodeIds, edgeIds); });
+    lastSpec.current = next;
     // applyDelete cascades (e.g. drops edges incident to deleted nodes) —
     // RF only removed the items its own change set named, so rebuild from
     // the post-delete spec to flush stale visuals before the host save
@@ -361,17 +361,19 @@ function Inner() {
     let label = baseLabel;
     let m = 2;
     while (spec.edges.some((e) => e.label === label)) label = `${baseLabel}_${m++}`;
-    spec.edges.push({
-      id,
-      source: conn.source,
-      sourceHandle: conn.sourceHandle,
-      target: conn.target,
-      targetHandle: conn.targetHandle,
-      kind,
-      label,
+    const next = mutateSpec((s) => {
+      s.edges.push({
+        id,
+        source: conn.source!,
+        sourceHandle: conn.sourceHandle!,
+        target: conn.target!,
+        targetHandle: conn.targetHandle!,
+        kind,
+        label,
+      });
     });
-    lastSpec.current = spec;
-    const flow = specToFlow(spec, viewerState.folds);
+    lastSpec.current = next;
+    const flow = specToFlow(next, viewerState.folds);
     setNodes(flow.nodes);
     setEdges(flow.edges);
     scheduleSave();
@@ -409,14 +411,19 @@ function Inner() {
       );
       return;
     }
-    specEdge.source = conn.source;
-    specEdge.sourceHandle = conn.sourceHandle;
-    specEdge.target = conn.target;
-    specEdge.targetHandle = conn.targetHandle;
-    specEdge.kind = srcPort.kind === dstPort.kind ? srcPort.kind : "any";
+    const newKind: EdgeKind = srcPort.kind === dstPort.kind ? srcPort.kind : "any";
+    const next = mutateSpec((s) => {
+      const e = s.edges.find((x) => x.id === oldEdge.id);
+      if (!e) return;
+      e.source = conn.source!;
+      e.sourceHandle = conn.sourceHandle!;
+      e.target = conn.target!;
+      e.targetHandle = conn.targetHandle!;
+      e.kind = newKind;
+    });
     reconnectOk.current = true;
-    lastSpec.current = spec;
-    const flow = specToFlow(spec, viewerState.folds);
+    lastSpec.current = next;
+    const flow = specToFlow(next, viewerState.folds);
     setNodes(flow.nodes);
     setEdges(flow.edges);
     scheduleSave();
@@ -437,11 +444,13 @@ function Inner() {
   const setEdgeKind = useCallback((edgeId: string, kind: EdgeKind) => {
     if (isReadOnlyView()) return;
     if (!lastSpec.current) return;
-    const specEdge = spec.edges.find((e) => e.id === edgeId);
-    if (!specEdge) return;
-    specEdge.kind = kind;
-    lastSpec.current = spec;
-    const flow = specToFlow(spec, viewerState.folds);
+    if (!spec.edges.some((e) => e.id === edgeId)) return;
+    const next = mutateSpec((s) => {
+      const e = s.edges.find((x) => x.id === edgeId);
+      if (e) e.kind = kind;
+    });
+    lastSpec.current = next;
+    const flow = specToFlow(next, viewerState.folds);
     setNodes(flow.nodes);
     setEdges(flow.edges);
     scheduleSave();
@@ -480,9 +489,11 @@ function Inner() {
         id = `${base}${n}`;
       }
       if (!IDENT_RE.test(id)) return;
-      spec.nodes.push({ id, type, x: pos.x, y: pos.y });
-      lastSpec.current = spec;
-      const flow = specToFlow(spec, viewerState.folds);
+      const next = mutateSpec((s) => {
+        s.nodes.push({ id, type, x: pos.x, y: pos.y });
+      });
+      lastSpec.current = next;
+      const flow = specToFlow(next, viewerState.folds);
       setNodes(flow.nodes);
       setEdges(flow.edges);
       scheduleSave();
@@ -545,9 +556,13 @@ function Inner() {
       const sn = spec.nodes.find((n) => n.id === node.id);
       if (!sn) return;
       if (sn.x === node.position.x && sn.y === node.position.y) return;
-      sn.x = node.position.x;
-      sn.y = node.position.y;
-      lastSpec.current = spec;
+      const next = mutateSpec((s) => {
+        const target = s.nodes.find((n) => n.id === node.id);
+        if (!target) return;
+        target.x = node.position.x;
+        target.y = node.position.y;
+      });
+      lastSpec.current = next;
       scheduleSave();
     },
     []

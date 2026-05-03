@@ -13,6 +13,18 @@ export function setSpec(next: Spec) {
   for (const n of next.nodes) nodeById.set(n.id, n);
 }
 
+// Treat the live spec as immutable: every edit produces a fresh top-level
+// object via structuredClone, mutators run on the clone, then setSpec swaps
+// the module reference. This keeps reference equality changing on every
+// edit so future React useEffect([spec]) hooks fire correctly, and rules
+// out the entire class of "stale pointer into the old spec" bugs.
+export function mutateSpec(fn: (s: Spec) => void): Spec {
+  const next = structuredClone(spec);
+  fn(next);
+  setSpec(next);
+  return next;
+}
+
 export const view = { x: 0, y: 0, w: 1380, h: 740 };
 
 export let viewerState: ViewerState = { ...DEFAULT_VIEWER_STATE };

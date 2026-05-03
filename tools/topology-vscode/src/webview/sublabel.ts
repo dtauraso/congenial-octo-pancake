@@ -4,7 +4,7 @@
 // topogen ignores it), so no IDENT_RE check; trim and treat empty as
 // "remove the field" so the spec stays clean.
 
-import { spec } from "./state";
+import { mutateSpec, spec } from "./state";
 import { scheduleSave } from "./save";
 
 let activeEl: HTMLElement | null = null;
@@ -40,8 +40,12 @@ export function beginEditSublabel(nodeId: string, el: HTMLElement | null) {
     el.classList.remove("sublabel-active", "nodrag", "nopan");
     activeEl = null;
     if (commit && next !== original) {
-      if (next === "") delete node.sublabel;
-      else node.sublabel = next;
+      mutateSpec((s) => {
+        const target = s.nodes.find((n) => n.id === nodeId);
+        if (!target) return;
+        if (next === "") delete target.sublabel;
+        else target.sublabel = next;
+      });
       rerender();
       scheduleSave();
     } else {
