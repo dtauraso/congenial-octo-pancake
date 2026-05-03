@@ -1,0 +1,4 @@
+{"step":0,"kind":"recv","node":"rg","port":"chainIn","value":7}
+{"step":1,"kind":"recv","node":"rg","port":"ack","value":1}
+{"step":2,"kind":"fire","node":"rg"}
+{"step":3,"kind":"send","edge":"rgOut","value":7}
