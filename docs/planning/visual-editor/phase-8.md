@@ -14,7 +14,8 @@
 | Chunk | Commit | $ | est |
 |---|---|---|---|
 | 1 — Spec undo/redo MVP + Tier 2 invariant | `8ef693f` | $0.73 | $1.20 est, under |
-| 2 — Viewer undo + scope routing + diff-added affordance | _pending_ | $2.08 | $1.50 est, slightly over |
+| 2 — Viewer undo + scope routing + diff-added affordance | `f2cd717` | $2.08 | $1.50 est, slightly over |
+| 3 — Snap-to-grid + alignment guides + Tier 3 system-shape | _pending_ | $1.88 | $1.20 est, over |
 
 **Chunk 1 — Spec undo/redo MVP** (proposal signed off 2026-05-03):
 hand-rolled snapshot stacks (cap 50) wired into `mutateSpec` in
@@ -49,5 +50,28 @@ content *and* depth untouched. `.diff-removed` flash and the
 optional camera pan from phase-8.md were left unimplemented — items
 removed by undo no longer render (no surface to decorate without a
 ghost-render pass) and the camera pan is marked optional in the doc.
+
+**Chunk 3 — Snap-to-grid + alignment guides + Tier 3 system-shape**
+(proposal signed off 2026-05-03): RF's `snapToGrid` + `snapGrid={[24,24]}`
+matches the Background `gap={24}`. Alignment guides are a thin custom
+layer: an `onNodeDrag` matcher walks current node centers (flow units,
+4-unit tolerance), and two absolutely-positioned `.align-guide` divs
+project the match into screen space via the live RF viewport. Cleared
+on drag stop. Multi-node selection drags don't get per-node guides
+(MVP).
+
+Tier 3 system-shape test (`spec-undo-system-shape.test.ts`) crosses
+spec and viewer mutations — edge-kind edit → fold-create → edge-kind
+edit → fold-delete — and walks each scope's undo stack independently,
+asserting the *other* surface stays byte-identical at every step.
+Second case guards against fold memberIds dangling after a spec-only
+undo. Sequence intentionally avoids rename and node-delete: both
+gestures mutate spec **and** viewerState atomically in one pass and
+the current two-stack design doesn't capture cross-surface undo.
+Documented as a follow-up gap.
+
+**Phase 8 in-phase bullets done at $4.69 actual** ($8 estimate; well
+under). Tier 4 nightly headline edit-to-running-Go latency test
+remains deferred per the chunk-2 sign-off.
 
 - *Dropped: SVG export.* The `diagrams/` set is hand-authored to the style guide and the editor itself is the live view — exporting would mean re-implementing the style guide twice (live + export). Revive only when hand-authored diagrams drift from the spec badly enough to hurt; until then, screenshots / recordings cover incidental sharing.
