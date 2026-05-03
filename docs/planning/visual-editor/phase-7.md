@@ -142,7 +142,16 @@ actuals.
 | 8 — EdgeNode Go rewrite + parity | `8f7b07e` | $0.99 | $1.75 est, under |
 | 9a — delete unused DistributeNode stub | `5cac4a4` | (in 9b) | — |
 | 9b — ChainInhibitor cross-language parity | `7a5e55d` | $1.00 | $1.35 est combined, on-target |
-| **Phase 8 chunks 1–9 total** | | **$7.49** | **$5–15 original band** |
+| 10 — InputNode cross-language parity | `237e213` | $0.48 | $0.50 est ($0.30–$0.90), on-target |
+| **Phase 8 chunks 1–10 total** | | **$7.97** | **$5–15 original band** |
+
+**Chunk 10 — InputNode** (proposal signed off 2026-05-03): last live
+wired node without parity coverage. Drop unused `ready` output from
+TS `NODE_TYPES.Input` (Go never sends it) and stray `fmt.Printf` from
+the Go node. Fixture `input-node.trace.jsonl` (3 seed values 0,1,0
+mirroring Wiring.go) + `FixtureParity_InputNode_test.go`. Every node
+currently flowing in the chain-cascade fixture now has cross-language
+parity coverage.
 
 **Chunk 9 — DistributeNode deletion + ChainInhibitor parity**
 (proposal signed off 2026-05-03):
