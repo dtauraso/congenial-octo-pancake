@@ -38,10 +38,10 @@ type Event struct {
 	Kind  string `json:"kind"`
 	Node  string `json:"node"`
 	Port  string `json:"port,omitempty"`  // recv: input port; send: output port
+	Edge  string `json:"edge,omitempty"`  // canonical send only; set by Resolve
 	Value int    `json:"value,omitempty"` // recv/send only; fire omits
-	// noValue is set for fire (and for recv/send with value 0, which
-	// would otherwise be omitted by the omitempty tag). Marshaled
-	// manually below to keep the JSON shape stable.
+	// hasValue tracked but currently unused; reserved for distinguishing
+	// "value 0" from "no value" if a future event kind needs it.
 	hasValue bool
 }
 
@@ -143,13 +143,29 @@ func (t *Trace) Events() []Event {
 }
 
 // WriteJSONL serializes all recorded events as JSON-lines (one
-// object per line, trailing newline) onto w. Mirrors the TS-side
-// serializeTrace shape. Call after Close.
+// object per line, trailing newline) onto w. Emits raw form: send
+// events carry node+port. For canonical (edge-keyed) output, run
+// the events through Resolve first then call WriteCanonicalJSONL.
+// Call after Close.
 func (t *Trace) WriteJSONL(w io.Writer) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	for _, e := range t.events {
-		b, err := marshalEvent(e)
+	return writeAll(t.events, w, marshalEvent)
+}
+
+// WriteCanonicalJSONL emits the chunk-1 canonical wire format: send
+// events use the `edge` field instead of node+port. Caller must have
+// run events through Resolve first; send events without an Edge will
+// produce malformed output. Standalone function (not a method)
+// because the canonical events are typically the *result* of
+// Resolve, not the trace's own buffer.
+func WriteCanonicalJSONL(events []Event, w io.Writer) error {
+	return writeAll(events, w, marshalCanonicalEvent)
+}
+
+func writeAll(events []Event, w io.Writer, marshal func(Event) ([]byte, error)) error {
+	for _, e := range events {
+		b, err := marshal(e)
 		if err != nil {
 			return err
 		}
@@ -202,4 +218,42 @@ func marshalEvent(e Event) ([]byte, error) {
 	default:
 		return json.Marshal(recvOrSend{Step: e.Step, Kind: e.Kind, Node: e.Node, Port: e.Port, Value: e.Value})
 	}
+}
+
+// marshalCanonicalEvent emits the chunk-1 wire-format shape:
+//
+//	{"step":N,"kind":"recv","node":"X","port":"Y","value":V}
+//	{"step":N,"kind":"fire","node":"X"}
+//	{"step":N,"kind":"send","edge":"E","value":V}
+//
+// Send events carry `edge` (set by Resolve) and drop `node`/`port`.
+// recv and fire are identical to the raw form.
+func marshalCanonicalEvent(e Event) ([]byte, error) {
+	type recv struct {
+		Step  int    `json:"step"`
+		Kind  string `json:"kind"`
+		Node  string `json:"node"`
+		Port  string `json:"port"`
+		Value int    `json:"value"`
+	}
+	type fire struct {
+		Step int    `json:"step"`
+		Kind string `json:"kind"`
+		Node string `json:"node"`
+	}
+	type send struct {
+		Step  int    `json:"step"`
+		Kind  string `json:"kind"`
+		Edge  string `json:"edge"`
+		Value int    `json:"value"`
+	}
+	switch e.Kind {
+	case KindRecv:
+		return json.Marshal(recv{Step: e.Step, Kind: e.Kind, Node: e.Node, Port: e.Port, Value: e.Value})
+	case KindFire:
+		return json.Marshal(fire{Step: e.Step, Kind: e.Kind, Node: e.Node})
+	case KindSend:
+		return json.Marshal(send{Step: e.Step, Kind: e.Kind, Edge: e.Edge, Value: e.Value})
+	}
+	return json.Marshal(e)
 }
