@@ -139,6 +139,36 @@ html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-fami
 .palette-swatch { width: 14px; height: 10px; flex-shrink: 0; }
 .palette-name { color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.compare-toolbar {
+  /* Bottom-right, above the timeline panel (~36px tall + 8px gap from
+     bottom). Avoids the top-right views panel and the top-left main
+     toolbar / palette. */
+  position: fixed; bottom: 56px; right: 8px; z-index: 10;
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px; background: #fff; border: 1px solid #ddd; border-radius: 6px;
+  font-size: 12px;
+}
+.compare-btn {
+  padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px;
+  background: #fafafa; cursor: pointer; font-size: 12px;
+}
+.compare-btn:hover { background: #f0f0f0; }
+.compare-close { color: #666; }
+.compare-label {
+  color: #444; font-style: italic;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.compare-mode-group { display: flex; gap: 0; }
+.compare-mode {
+  padding: 4px 8px; border: 1px solid #ccc; background: #fafafa;
+  cursor: pointer; font-size: 12px;
+}
+.compare-mode + .compare-mode { border-left: none; }
+.compare-mode:first-child { border-radius: 4px 0 0 4px; }
+.compare-mode:last-child { border-radius: 0 4px 4px 0; }
+.compare-mode.active { background: #1976d2; color: #fff; border-color: #1976d2; }
+.compare-error { color: #b00020; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .edge-context-menu {
   background: #fff; border: 1px solid #ccc; border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15); padding: 4px 0;

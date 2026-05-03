@@ -19,6 +19,7 @@ import { IDENT_RE } from "../rename-core";
 import { applyDelete } from "../delete-core";
 import { createFold, toggleFold } from "../fold-core";
 import { NodePalette, PALETTE_DATA_TYPE } from "./NodePalette";
+import { CompareToolbar, type CompareMode } from "./CompareToolbar";
 import { resetAnimations } from "../render/animation";
 import { beginRenameNodeId, setRenameRerender } from "../rename";
 import { beginEditSublabel, setSublabelRerender } from "../sublabel";
@@ -52,7 +53,9 @@ type Msg =
   | { type: "load"; text: string }
   | { type: "view-load"; text?: string }
   | { type: "topogen-status"; [k: string]: unknown }
-  | { type: "run-status"; [k: string]: unknown };
+  | { type: "run-status"; [k: string]: unknown }
+  | { type: "compare-load"; source: "head" | "file"; text: string; label: string }
+  | { type: "compare-error"; source: "head" | "file"; message: string };
 
 const EDGE_KIND_OPTIONS: EdgeKind[] = [
   "chain", "signal", "feedback-ack", "release", "streak",
@@ -64,6 +67,13 @@ function Inner() {
   const [edges, setEdges] = useState<RFEdge[]>([]);
   const [dimmed, setDimmed] = useState<Set<string> | null>(null);
   const [edgeMenu, setEdgeMenu] = useState<{ x: number; y: number; edgeId: string } | null>(null);
+  // Comparison pane state. Held in memory only — never written through
+  // save.ts, never sent back as {type:"save"}. The Tier 2 invariant test
+  // (step 7) pins this contract down.
+  const [comparisonSpec, setComparisonSpec] = useState<Spec | null>(null);
+  const [comparisonLabel, setComparisonLabel] = useState<string | null>(null);
+  const [compareMode, setCompareMode] = useState<CompareMode>("off");
+  const [compareError, setCompareError] = useState<string | null>(null);
   const selectedRef = useRef<Set<string>>(new Set());
   const paneRef = useRef<HTMLDivElement | null>(null);
   const lastSpec = useRef<Spec | null>(null);
@@ -131,6 +141,19 @@ function Inner() {
         } catch (err) {
           console.error("invalid topology.json", err);
         }
+      } else if (msg.type === "compare-load") {
+        try {
+          const next: Spec = parseSpec(JSON.parse(msg.text));
+          setComparisonSpec(next);
+          setComparisonLabel(msg.label);
+          setCompareError(null);
+          setCompareMode("A-live");
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          setCompareError(`could not parse ${msg.label}: ${message}`);
+        }
+      } else if (msg.type === "compare-error") {
+        setCompareError(msg.message);
       } else if (msg.type === "view-load") {
         const next: ViewerState = parseViewerState(msg.text);
         setViewerState(next);
@@ -371,6 +394,13 @@ function Inner() {
     setEdgeMenu(null);
   }, []);
 
+  const closeCompare = useCallback(() => {
+    setComparisonSpec(null);
+    setComparisonLabel(null);
+    setCompareMode("off");
+    setCompareError(null);
+  }, []);
+
   const onDragOver = useCallback((ev: React.DragEvent) => {
     if (!Array.from(ev.dataTransfer.types).includes(PALETTE_DATA_TYPE)) return;
     ev.preventDefault();
@@ -576,6 +606,13 @@ function Inner() {
         <Controls />
       </ReactFlow>
       <NodePalette />
+      <CompareToolbar
+        mode={compareMode}
+        label={comparisonLabel}
+        error={compareError}
+        onSetMode={setCompareMode}
+        onClose={closeCompare}
+      />
       {edgeMenu && (
         <div
           className="edge-context-menu"

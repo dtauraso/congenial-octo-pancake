@@ -4,6 +4,7 @@ import * as crypto from "crypto";
 import { TopogenRunner } from "./topogenRunner";
 import { BuildAndRunRunner } from "./runCommand";
 import { viewSidecarUri, readSidecar, writeSidecar } from "./sidecar";
+import { loadFileVersion, loadHeadVersion } from "./compareLoader";
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -113,6 +114,21 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
         runner.run();
       } else if (msg.type === "run-cancel") {
         runner.cancel();
+      } else if (msg.type === "compare-head") {
+        const result = await loadHeadVersion(document.uri);
+        panel.webview.postMessage(
+          result.ok
+            ? { type: "compare-load", source: result.source, text: result.text, label: result.label }
+            : { type: "compare-error", source: result.source, message: result.message }
+        );
+      } else if (msg.type === "compare-file") {
+        const result = await loadFileVersion(document.uri);
+        if (!result) return; // user cancelled the picker
+        panel.webview.postMessage(
+          result.ok
+            ? { type: "compare-load", source: result.source, text: result.text, label: result.label }
+            : { type: "compare-error", source: result.source, message: result.message }
+        );
       }
     });
   }
