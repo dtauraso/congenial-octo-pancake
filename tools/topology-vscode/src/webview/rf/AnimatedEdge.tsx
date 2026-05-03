@@ -1,9 +1,35 @@
 import { useEffect, useRef, useState } from "react";
 import { BaseEdge, getBezierPath, type EdgeProps } from "reactflow";
-import { KIND_COLORS, type EdgeKind } from "../../schema";
+import { KIND_COLORS, type ArrowStyle, type EdgeKind, type EdgeRoute } from "../../schema";
 import { subscribe, subscribeState, getConcurrentEdges, getTickMs } from "../../sim/runner";
 
-type EdgeData = { kind?: EdgeKind };
+type EdgeData = {
+  kind?: EdgeKind;
+  route?: EdgeRoute;
+  lane?: number;
+  arrowStyle?: ArrowStyle;
+  valueLabel?: string;
+};
+
+// Manhattan path computation per route. `lane` displaces the bend so
+// parallel edges (read-pair old/new, sibling feedback-acks) don't
+// overlap. Reference: docs/svg-style-guide.md §6.
+function routePath(
+  route: EdgeRoute,
+  sx: number, sy: number,
+  tx: number, ty: number,
+  lane: number,
+): string {
+  if (route === "snake") {
+    const midX = (sx + tx) / 2 + lane;
+    return `M ${sx},${sy} L ${midX},${sy} L ${midX},${ty} L ${tx},${ty}`;
+  }
+  if (route === "below") {
+    const corridorY = Math.max(sy, ty) + 40 + lane;
+    return `M ${sx},${sy} L ${sx},${corridorY} L ${tx},${corridorY} L ${tx},${ty}`;
+  }
+  return `M ${sx},${sy} L ${tx},${ty}`;
+}
 
 // Pulse traversal time, paced relative to the runner's tick interval so
 // fan-out flashes don't all complete in 600ms regardless of how slow
@@ -21,9 +47,13 @@ function pulseDurationMs(): number {
 // continuous WAAPI loop of the old playback model.
 export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, data } = props;
-  const [d] = getBezierPath({
-    sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition,
-  });
+  const route: EdgeRoute = data?.route ?? "line";
+  const lane = data?.lane ?? 0;
+  // `line` keeps the existing bezier (RF default look) so unmarked
+  // edges don't shift visually. `snake` / `below` switch to Manhattan.
+  const d = route === "line"
+    ? getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })[0]
+    : routePath(route, sourceX, sourceY, targetX, targetY, lane);
 
   const pulseRef = useRef<SVGPathElement | null>(null);
   const [concurrent, setConcurrent] = useState(() => getConcurrentEdges().has(id));

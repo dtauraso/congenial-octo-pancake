@@ -166,7 +166,15 @@ export function specToFlow(
       type: "animated",
       label: e.label,
       style: { stroke: KIND_COLORS[e.kind] ?? "#888", strokeWidth: 1.5 },
-      data: { kind: e.kind, sourceHandle: e.sourceHandle, targetHandle: e.targetHandle },
+      data: {
+        kind: e.kind,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+        route: e.route,
+        lane: e.lane,
+        arrowStyle: e.arrowStyle,
+        valueLabel: e.valueLabel,
+      },
     });
   }
 
@@ -204,6 +212,10 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       kind?: EdgeKind;
       sourceHandle?: string;
       targetHandle?: string;
+      route?: SpecEdge["route"];
+      lane?: number;
+      arrowStyle?: SpecEdge["arrowStyle"];
+      valueLabel?: string;
     };
     return {
       id: e.id,
@@ -213,6 +225,10 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       targetHandle: d.targetHandle ?? "",
       kind: d.kind ?? "any",
       ...(typeof e.label === "string" ? { label: e.label } : {}),
+      ...(d.valueLabel !== undefined ? { valueLabel: d.valueLabel } : {}),
+      ...(d.route !== undefined ? { route: d.route } : {}),
+      ...(d.lane !== undefined ? { lane: d.lane } : {}),
+      ...(d.arrowStyle !== undefined ? { arrowStyle: d.arrowStyle } : {}),
     };
   });
 
