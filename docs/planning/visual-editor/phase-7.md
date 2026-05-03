@@ -139,8 +139,25 @@ actuals.
 | 5 — SyncGate Go node + parity | `1875fbc` | $0.40 | — |
 | 6 — Partition Go rewrite + parity | `cde5d1c` | $0.96 | — |
 | 7 — InhibitRightGate parity (no new Go node) | `138fd28` | $0.73 | — |
-| 8 — EdgeNode Go rewrite + parity | (this commit) | $0.99 | $1.75 est, under |
-| **Phase 8 chunks 1–8 total** | | **$6.49** | **$5–15 original band** |
+| 8 — EdgeNode Go rewrite + parity | `8f7b07e` | $0.99 | $1.75 est, under |
+| 9a — delete unused DistributeNode stub | `5cac4a4` | (in 9b) | — |
+| 9b — ChainInhibitor cross-language parity | `7a5e55d` | $1.00 | $1.35 est combined, on-target |
+| **Phase 8 chunks 1–9 total** | | **$7.49** | **$5–15 original band** |
+
+**Chunk 9 — DistributeNode deletion + ChainInhibitor parity**
+(proposal signed off 2026-05-03):
+
+- **9a:** DistributeNode was an unused 23-line print-only stub (one
+  input chan, zero outputs, zero callers in `Wiring.go`). Defining
+  semantics would be design work, not parity work — deleted instead
+  of invented. Re-add when a real consumer exists.
+- **9b:** ChainInhibitor TS handler/schema previously emitted a
+  `readOld` port the Go node never sent, and listed outputs in a
+  different order from the Go send sequence. Aligned both sides on
+  the Go order (inhibitOut, readNew, out, ack); dropped `readOld`
+  (zero references in any `topology.json`); added `ack` to schema
+  outputs (was emitted but unschematized). New fixture
+  `chain-inhibitor.trace.jsonl` + `FixtureParity_ChainInhibitor_test.go`.
 
 **Chunk 8 — EdgeNode** (proposal signed off 2026-05-03):
 
