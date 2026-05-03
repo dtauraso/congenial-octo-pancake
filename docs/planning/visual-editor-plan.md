@@ -29,7 +29,7 @@ you're working on.
 | 2 — recall affordances | ✅ done | [phase-2.md](visual-editor/phase-2.md) | ≤2 | ≤\$120 |
 | 3 — structural editing | 🟡 ~½ remaining (3 Tier-3 follow-ups) | [phase-3.md](visual-editor/phase-3.md) | — | ~\$3 left |
 | 4 — fold/unfold | ✅ done; nested ⏳ | [phase-4.md](visual-editor/phase-4.md) | — | ~\$3 nested |
-| 4.5 — plugin hardening (audit) | 🟡 4.5.1 done; 4.5.2–4.5.6 ⏳ | [phase-4.5.md](visual-editor/phase-4.5.md) | — | ~\$15 left |
+| 4.5 — plugin hardening (audit) | ✅ 4.5.1–4.5.5 done; 4.5.6 opportunistic | [phase-4.5.md](visual-editor/phase-4.5.md) | — | ~\$13.47 actual |
 | 5 — comparison | ✅ done | [phase-5.md](visual-editor/phase-5.md) | — | ~\$5.65 actual |
 | 5.5 — animation model rewrite | ⏳ gates Phase 6 | [phase-5.5.md](visual-editor/phase-5.5.md) | — | ~\$20 (risk \$35) |
 | 6 — keyframed motion | ⏳ rebudget after 5.5 | [phase-6.md](visual-editor/phase-6.md) | — | ~\$35 (risk \$60) |
@@ -39,7 +39,7 @@ you're working on.
 
 **Cap-hit column dropped.** Phase 5 came in at ~\$5.65 against a \$110 estimate (~5% of midpoint, ~18× overestimate). The cap-hit unit was calibrated against an older model and a less mature codebase; with Opus 4.7 + the existing harness/adapter/save infrastructure, mechanical phases run roughly an order of magnitude under the original budget. \$ figures above are the post-Phase-5 recalibration; cap-hit estimates are no longer load-bearing. See [risk-and-effort.md](visual-editor/risk-and-effort.md) for the methodology.
 
-**\$ totals (remaining):** ~\$150 midpoint to ship Phases 3 → 9 + Phase 4.5 hardening, range ~\$100–\$280 depending on whether the refactor/exploratory phases (5.5, 6, 7) hit their risk-case multipliers. Mechanical phases (3-leftover, 4-nested, 4.5, 8, 9) scaled at ~10% of original estimate; refactor (5.5, 6) and exploratory (7) at ~15–20% with wider risk bands since the Phase-5 efficiency factor may not generalize fully to less-scoped work.
+**\$ totals (remaining):** ~\$135 midpoint to ship Phases 3 → 9 (Phase 4.5 now done at \$13.47 actual), range ~\$90–\$265 depending on whether the refactor/exploratory phases (5.5, 6, 7) hit their risk-case multipliers. Mechanical phases (3-leftover, 4-nested, 8, 9) scaled at ~10% of original estimate; hardening (4.5) landed at ~12% (audit work has more codebase exploration than pure-function authoring); refactor (5.5, 6) and exploratory (7) at ~15–20% with wider risk bands since the Phase-5 efficiency factor may not generalize fully to less-scoped work.
 | Cross-cutting — testing strategy | — | [testing-strategy.md](visual-editor/testing-strategy.md) | — |
 | Cross-cutting — risk & effort | — | [risk-and-effort.md](visual-editor/risk-and-effort.md) | — |
 
@@ -48,22 +48,20 @@ you're working on.
 The most load-bearing remaining work, in priority order. Pick whichever
 matches the budget available and the kind of break you'd most regret.
 
-1. **Phase 4.5.2+ — plugin hardening continuation [~\$15].** 4.5.1 (data-loss bugs)
-   shipped; remaining bands are correctness, packaging, hygiene, test
-   coverage. See [phase-4.5.md](visual-editor/phase-4.5.md). The remaining
-   audit findings are now the largest unaddressed risk surface.
-2. **Phase 5 follow-ups [~\$3].** Two known gaps from Phase 5: (a) the
+1. **Phase 5 follow-ups [~\$3].** Two known gaps from Phase 5: (a) the
    collapsed-fold diff badge with category counts (`diff-decorate.ts` +
    `FoldNode.tsx`); (b) the `.dim` wrapper opacity dimming the halo —
    move dim's opacity onto the inner body so halos punch through at full
    opacity. See [phase-5.md](visual-editor/phase-5.md).
-3. **Phase 5.5 — animation model rewrite [~\$20].** Gates Phase 6.
+2. **Phase 5.5 — animation model rewrite [~\$20].** Gates Phase 6.
    See [phase-5.5.md](visual-editor/phase-5.5.md).
-4. **Phase 4 nested folding follow-up [~\$3].** Single-level folds work;
+3. **Phase 4 nested folding follow-up [~\$3].** Single-level folds work;
    pick up only when a real topology hits the level-of-nesting wall.
-5. **Phase 3 Tier 3 follow-ups [~\$3].** Three queued cases
+4. **Phase 3 Tier 3 follow-ups [~\$3].** Three queued cases
    (port-drag → chan, palette-drag-position, port-drag mismatched-kinds
    fallback). Opportunistic.
+5. **Phase 4.5.6 — audit lows & nits [opportunistic].** Pick up while
+   touching adjacent code; not a planned spend. See [phase-4.5.md](visual-editor/phase-4.5.md).
 
 ## What the tool is for, in priority order
 
@@ -199,9 +197,13 @@ timeline + bookmarks, keyframed motion + record-mode editor, trace replay.
 
 ## Status snapshot (this branch)
 
-Phases 1, 2, 4, and 5 complete. Phase 3 substrate migration done; remaining
-is three Tier-3 e2e follow-ups. Phase 4.5.1 (data-loss bugs) shipped;
-4.5.2–4.5.6 ⏳. Phase 5 shipped at ~\$5.65 actual against \$110 estimate
+Phases 1, 2, 4, 4.5, and 5 complete. Phase 3 substrate migration done;
+remaining is three Tier-3 e2e follow-ups. Phase 4.5 hardening shipped
+at \$13.47 actual against ~\$15 post-recalibration estimate (~12% of the
+original \$210 audit estimate; mechanical-phase factor is ~10%, hardening
+ran slightly higher because audit work involves more codebase
+exploration than pure-function authoring). 4.5.6 lows & nits remain
+opportunistic. Phase 5 shipped at ~\$5.65 actual against \$110 estimate
 (see commits `74e6abc`, `153c74d`); two known follow-ups (collapsed-fold
 diff badge, dim+diff CSS punch-through). The visual → spec → Go pipeline
 runs on every save with a status indicator; recall affordances (saved
