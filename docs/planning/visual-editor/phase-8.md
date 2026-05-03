@@ -9,4 +9,24 @@
 - **[~⅛]** ⏳ Tier 3 system-shape test: spec undo + fold + delete. Apply a sequence (delete a node, fold a selection, rename, re-fold), step the *spec* undo back across the sequence, assert spec returns to its initial bytes; the viewer-state folds stack should be untouched (deleted folds reappear only when the *viewer* undo is exercised). Catches the bug where the two stacks bleed into each other or where a spec rollback leaves a fold pointing at a now-restored node id incoherently.
 - **[~⅛]** ⏳ Tier 2 invariant test: each undo stack is scoped to its own surface. After a spec undo, viewer-state diffs (folds, views, bookmarks, camera, lastSelectionIds) must be byte-identical to pre-undo. After a viewer undo, the spec must be byte-identical to pre-undo. Stronger than the previous "undo only touches spec" rule — has to police *two* surfaces' independence, not one. Promotes the rule from comment to enforced contract.
 - **[~½]** ⏳ Tier 4 headline edit-to-running-Go test. Success criterion #1 ("under 30 seconds end-to-end") made executable: scripted gesture + topogen + `go build`, latency measured. Nightly, not per-commit. Catches latency regressions (topogen slowdowns, debounce drift) that no other tier sees.
+## Running tally
+
+| Chunk | Commit | $ | est |
+|---|---|---|---|
+| 1 — Spec undo/redo MVP + Tier 2 invariant | _pending_ | $0.73 | $1.20 est, under |
+
+**Chunk 1 — Spec undo/redo MVP** (proposal signed off 2026-05-03):
+hand-rolled snapshot stacks (cap 50) wired into `mutateSpec` in
+`state.ts` rather than the doc's original `zundo` substrate —
+Zustand isn't installed and `mutateSpec` already produces a fresh
+top-level reference per edit, so pushing the prior reference is
+zero-cost. Cmd/Ctrl-Z and Cmd/Ctrl-Shift-Z (plus Ctrl-Y) walk the
+stacks via the existing `specToFlow → setNodes/setEdges` pipeline.
+Skipped while a text input is focused or in the read-only
+comparison view; fresh spec loads clear history. Tier 2 invariant
+test (`spec-undo-invariant.test.ts`) pins: undo restores
+byte-for-byte, redo replays, fresh mutation clears redo, viewer
+state is byte-identical across undo/redo, empty-stack undo no-ops.
+Visual rollback affordance and viewer-side undo deferred to chunk 2.
+
 - *Dropped: SVG export.* The `diagrams/` set is hand-authored to the style guide and the editor itself is the live view — exporting would mean re-implementing the style guide twice (live + export). Revive only when hand-authored diagrams drift from the spec badly enough to hurt; until then, screenshots / recordings cover incidental sharing.
