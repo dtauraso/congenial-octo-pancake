@@ -70,6 +70,17 @@ gestures mutate spec **and** viewerState atomically in one pass and
 the current two-stack design doesn't capture cross-surface undo.
 Documented as a follow-up gap.
 
+**Closeout — cross-surface undo.** Resolved post-Phase-9. Added a
+`mutateBoth(fn)` primitive in `state.ts` that pushes paired entries
+on the spec and viewer undo stacks tagged with a shared monotonic
+`txnId`; `undoSpec`/`undoViewer` cascade the sibling pop when txnIds
+match, so a single Cmd-Z reverses the whole user action. Rename and
+node-delete now route through `mutateBoth`. Single-surface mutators
+are unchanged — entries default to `txnId: undefined` so the existing
+"never bleed" invariants still hold (covered by
+`spec-undo-invariant.test.ts` and `spec-undo-system-shape.test.ts`).
+New cases live in `cross-surface-undo.test.ts`.
+
 **Phase 8 in-phase bullets done at $4.69 actual** ($8 estimate; well
 under). Tier 4 nightly headline edit-to-running-Go latency test
 remains deferred per the chunk-2 sign-off.

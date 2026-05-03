@@ -6,7 +6,7 @@
 // as the Go variable name, so a rename here shows up directly in the
 // regenerated Go output.
 
-import { setSpec, spec, viewerState } from "./state";
+import { mutateBoth, spec, viewerState } from "./state";
 import { scheduleSave } from "./save";
 import { applyRename } from "./rename-core";
 
@@ -40,16 +40,16 @@ export function beginRenameNodeId(oldId: string, labelEl: HTMLElement | null) {
     labelEl.classList.remove("rename-active", "nodrag", "nopan");
     activeLabel = null;
     if (commit && next && next !== oldId) {
-      // Run on a clone so a rejected rename leaves the live spec reference
-      // untouched (no churn on rejection, no half-applied mutations).
-      const clone = structuredClone(spec);
-      const err = applyRename(clone, viewerState, oldId, next);
-      if (err) {
-        window.alert(`rename rejected: ${err}`);
+      // Validate first against a throwaway clone so a rejected rename
+      // pushes nothing onto either undo stack and leaves both surfaces
+      // untouched.
+      const probeErr = applyRename(structuredClone(spec), structuredClone(viewerState), oldId, next);
+      if (probeErr) {
+        window.alert(`rename rejected: ${probeErr}`);
         labelEl.textContent = oldId;
         return;
       }
-      setSpec(clone);
+      mutateBoth((s, v) => { applyRename(s, v, oldId, next); });
       rerender();
       scheduleSave();
     } else {

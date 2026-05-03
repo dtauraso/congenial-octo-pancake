@@ -32,6 +32,7 @@ import {
   canUndoViewer,
   clearSpecHistory,
   clearViewerHistory,
+  mutateBoth,
   mutateSpec,
   mutateViewer,
   redoSpec,
@@ -414,7 +415,11 @@ function Inner() {
     if (isReadOnlyView()) return;
     if (!lastSpec.current) return;
     if (nodeIds.length === 0 && edgeIds.length === 0) return;
-    const next = mutateSpec((s) => { applyDelete(s, viewerState, nodeIds, edgeIds); });
+    // mutateBoth: applyDelete patches both spec and viewerState (orphan
+    // cleanup in views/folds/lastSelectionIds). Cmd-Z must restore both
+    // surfaces in one step.
+    let next = lastSpec.current;
+    mutateBoth((s, v) => { applyDelete(s, v, nodeIds, edgeIds); next = s; });
     lastSpec.current = next;
     // applyDelete cascades (e.g. drops edges incident to deleted nodes) —
     // RF only removed the items its own change set named, so rebuild from
