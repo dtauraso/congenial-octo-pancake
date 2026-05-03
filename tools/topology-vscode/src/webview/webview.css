@@ -7,7 +7,10 @@ html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-fami
 .views-panel { z-index: 10; }
 .timeline-panel { z-index: 10; }
 .rf-anim-overlay { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
-.react-flow__node.dim { opacity: 0.18; transition: opacity 0.18s ease; }
+/* Dim the inner body, not the wrapper, so box-shadow / outline halos
+   (diff-added / diff-removed / diff-moved) keep full opacity even when
+   the node is dimmed by a saved-view focus. */
+.react-flow__node.dim > * { opacity: 0.18; transition: opacity 0.18s ease; }
 .react-flow__edge.dim { opacity: 0.18; transition: opacity 0.18s ease; }
 .react-flow__edge.selected .react-flow__edge-path { stroke-width: 3 !important; }
 .react-flow__edge:hover .react-flow__edge-path { stroke-width: 2.5; }
@@ -188,18 +191,6 @@ html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-fami
 .ghost-front .react-flow__node.onion-ghost { opacity: 0.6; z-index: 1000; }
 .ghost-front .react-flow__edge.onion-ghost { opacity: 0.85; z-index: 1000; }
 .ghost-front .react-flow__node.onion-live { opacity: 0.4; }
-
-/* Dim + diff composition: body stays dimmed, halo stays full-opacity.
-   .dim sets the inner body opacity in the renderer; the box-shadow halo
-   is on the wrapper, so it's already unaffected by inner body opacity.
-   This rule is the explicit guarantee. */
-.react-flow__node.dim.diff-added,
-.react-flow__node.dim.diff-removed,
-.react-flow__node.dim.diff-moved {
-  /* halo lives on box-shadow which stays at full strength regardless of
-     the inner-body .dim opacity; no override needed beyond not letting
-     .dim suppress box-shadow. */
-}
 
 .compare-toolbar {
   /* Bottom-right, above the timeline panel (~36px tall + 8px gap from
