@@ -14,9 +14,8 @@ Then open this folder in VS Code and press **F5**. A second VS Code window opens
 
 ## Architecture
 
-- `src/extension.ts` — `CustomTextEditorProvider` for the `topology.editor` viewType, registered against `topology.json`. Streams document text into the webview, applies webview saves via `WorkspaceEdit`, kicks off `topogen`.
-- `src/webview/main.ts` — renders nodes/edges from the JSON spec into inline SVG, handles pointer drag with `setPointerCapture` + `getScreenCTM().inverse()`, debounced save back to the host.
-- `src/schema.ts` — ported verbatim from `tools/topology-editor/src/schema.ts`. Node-type registry / edge-kind colors.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the file map (extension side,
+webview side, message protocol, spec-vs-viewer split).
 
 ## Package
 
