@@ -1,0 +1,41 @@
+{
+  "name": "topology-vscode",
+  "displayName": "Topology Editor",
+  "description": "Drag-and-drop editor for topology.json (congenial-octo-pancake)",
+  "version": "0.0.1",
+  "publisher": "dtauraso",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "topology.editor",
+        "displayName": "Topology Editor",
+        "selector": [
+          {
+            "filenamePattern": "topology.json"
+          }
+        ],
+        "priority": "default"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "lit-html": "^3.3.2"
+  }
+}

@@ -1,0 +1,8 @@
+html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-family: ui-sans-serif, system-ui, sans-serif; }
+#app { width: 100vw; height: 100vh; }
+.node { cursor: grab; }
+.node.dragging { cursor: grabbing; }
+.node text { pointer-events: none; user-select: none; }
+.toolbar { position: fixed; top: 8px; left: 8px; padding: 6px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
+.dirty { color: #c62828; font-weight: 600; }
+.clean { color: #2e7d32; }

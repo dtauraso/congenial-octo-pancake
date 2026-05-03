@@ -1,0 +1,344 @@
+// Node-type registry. Single source of truth for ports and visual styling.
+// `kind` values must match SVG edge classes from docs/svg-style-guide.md §5.
+
+export type EdgeKind =
+  | "chain"
+  | "signal"
+  | "feedback-ack"
+  | "release"
+  | "streak"
+  | "pointer"
+  | "and-out"
+  | "edge-connection"
+  | "inhibit-in"
+  | "any";
+
+const EDGE_KINDS: readonly EdgeKind[] = [
+  "chain", "signal", "feedback-ack", "release", "streak",
+  "pointer", "and-out", "edge-connection", "inhibit-in", "any",
+];
+
+export type Port = { name: string; kind: EdgeKind };
+export type StateValue = string | number;
+
+export type Node = {
+  id: string;
+  type: string;
+  role?: string;
+  x: number;
+  y: number;
+  index?: number;
+  sublabel?: string;
+  value?: string;
+  state?: Record<string, StateValue>;
+  data?: unknown;
+};
+
+export type EdgeRoute = "line" | "snake" | "below";
+export type ArrowStyle = "filled" | "open";
+
+export type Edge = {
+  id: string;
+  source: string;
+  sourceHandle: string;
+  target: string;
+  targetHandle: string;
+  kind: EdgeKind;
+  label?: string;
+  valueLabel?: string;
+  route?: EdgeRoute;
+  lane?: number;
+  arrowStyle?: ArrowStyle;
+  data?: unknown;
+};
+
+export type TimingStep = {
+  t: number;
+  event: string;
+  fires?: string[];
+  departs?: string[];
+  arrives?: string[];
+  state?: Record<string, Record<string, StateValue>>;
+};
+
+export type LegendRow = { kind: EdgeKind; name: string; desc: string };
+export type Note = { x: number; y: number; width?: number; height?: number; text: string };
+
+export type Spec = {
+  nodes: Node[];
+  edges: Edge[];
+  timing?: { duration?: string; steps: TimingStep[] };
+  legend?: LegendRow[];
+  notes?: Note[];
+};
+
+export type NodeTypeDef = {
+  role: string;
+  inputs: Port[];
+  outputs: Port[];
+  shape: "rect" | "pill";
+  fill: string;
+  stroke: string;
+  width: number;
+  height: number;
+};
+
+export const NODE_TYPES: Record<string, NodeTypeDef> = {
+  Generic: {
+    role: "generic",
+    inputs: [],
+    outputs: [],
+    shape: "rect", fill: "#ffffff", stroke: "#888", width: 110, height: 60,
+  },
+  Input: {
+    role: "input",
+    inputs: [],
+    outputs: [
+      { name: "out", kind: "chain" },
+      { name: "ready", kind: "signal" },
+    ],
+    shape: "rect", fill: "#e0e0e0", stroke: "#666", width: 80, height: 60,
+  },
+  ReadLatch: {
+    role: "latch",
+    inputs: [{ name: "in", kind: "chain" }, { name: "release", kind: "release" }],
+    outputs: [{ name: "out", kind: "chain" }, { name: "ack", kind: "feedback-ack" }],
+    shape: "rect", fill: "#e0f7fa", stroke: "#00838f", width: 90, height: 50,
+  },
+  ChainInhibitor: {
+    role: "inhibitor",
+    inputs: [{ name: "in", kind: "chain" }],
+    outputs: [
+      { name: "out", kind: "chain" },
+      { name: "readOld", kind: "edge-connection" },
+      { name: "readNew", kind: "edge-connection" },
+      { name: "inhibitOut", kind: "inhibit-in" },
+    ],
+    shape: "rect", fill: "#fff3e0", stroke: "#e65100", width: 90, height: 60,
+  },
+  InhibitRightGate: {
+    role: "inhibit-right-gate",
+    inputs: [
+      { name: "left", kind: "inhibit-in" },
+      { name: "right", kind: "inhibit-in" },
+    ],
+    outputs: [{ name: "out", kind: "and-out" }],
+    shape: "rect", fill: "#fce4ec", stroke: "#880e4f", width: 110, height: 36,
+  },
+  DetectorLatch: {
+    role: "latch",
+    inputs: [{ name: "in", kind: "chain" }, { name: "release", kind: "release" }],
+    outputs: [{ name: "out", kind: "chain" }, { name: "ack", kind: "feedback-ack" }],
+    shape: "rect", fill: "#e0f7fa", stroke: "#00838f", width: 90, height: 50,
+  },
+  StreakBreakDetector: {
+    role: "sbd",
+    inputs: [
+      { name: "old", kind: "edge-connection" },
+      { name: "new", kind: "edge-connection" },
+    ],
+    outputs: [{ name: "done", kind: "signal" }],
+    shape: "pill", fill: "#ffebee", stroke: "#c62828", width: 110, height: 40,
+  },
+  StreakDetector: {
+    role: "sd",
+    inputs: [
+      { name: "old", kind: "edge-connection" },
+      { name: "new", kind: "edge-connection" },
+    ],
+    outputs: [{ name: "done", kind: "signal" }, { name: "streak", kind: "streak" }],
+    shape: "pill", fill: "#e8f5e9", stroke: "#2e7d32", width: 100, height: 40,
+  },
+  AndGate: {
+    role: "and-gate",
+    inputs: [{ name: "a", kind: "signal" }, { name: "b", kind: "signal" }],
+    outputs: [{ name: "out", kind: "and-out" }],
+    shape: "rect", fill: "#f3e5f5", stroke: "#7b1fa2", width: 70, height: 40,
+  },
+  PatternAnd: {
+    role: "pattern-and",
+    inputs: [{ name: "a", kind: "signal" }, { name: "b", kind: "signal" }],
+    outputs: [{ name: "out", kind: "and-out" }],
+    shape: "rect", fill: "#e8eaf6", stroke: "#283593", width: 70, height: 40,
+  },
+  SyncGate: {
+    role: "sync-gate",
+    inputs: [{ name: "a", kind: "signal" }, { name: "b", kind: "signal" }],
+    outputs: [{ name: "release", kind: "release" }],
+    shape: "rect", fill: "#f3e5f5", stroke: "#7b1fa2", width: 70, height: 40,
+  },
+  ReadGate: {
+    role: "and-gate",
+    inputs: [{ name: "chainIn", kind: "chain" }, { name: "ack", kind: "feedback-ack" }],
+    outputs: [{ name: "out", kind: "chain" }],
+    shape: "rect", fill: "#f3e5f5", stroke: "#7b1fa2", width: 70, height: 40,
+  },
+  Partition: {
+    role: "partition",
+    inputs: [{ name: "in", kind: "chain" }],
+    outputs: [{ name: "out", kind: "chain" }],
+    shape: "rect", fill: "#fce4ec", stroke: "#ad1457", width: 90, height: 50,
+  },
+};
+
+export const KIND_COLORS: Record<EdgeKind, string> = {
+  "chain": "#333",
+  "signal": "#7b1fa2",
+  "feedback-ack": "#7b1fa2",
+  "release": "#00838f",
+  "streak": "#2e7d32",
+  "pointer": "#e65100",
+  "and-out": "#283593",
+  "edge-connection": "#2266aa",
+  "inhibit-in": "#880e4f",
+  "any": "#888",
+};
+
+class ParseError extends Error {}
+const fail = (path: string, msg: string): never => {
+  throw new ParseError(`${path}: ${msg}`);
+};
+
+const isObj = (v: unknown): v is Record<string, unknown> =>
+  v !== null && typeof v === "object" && !Array.isArray(v);
+
+const str = (v: unknown, path: string): string =>
+  typeof v === "string" ? v : fail(path, `expected string, got ${typeof v}`);
+const num = (v: unknown, path: string): number =>
+  typeof v === "number" ? v : fail(path, `expected number, got ${typeof v}`);
+const obj = (v: unknown, path: string): Record<string, unknown> =>
+  isObj(v) ? v : fail(path, `expected object, got ${Array.isArray(v) ? "array" : typeof v}`);
+const arr = (v: unknown, path: string): unknown[] =>
+  Array.isArray(v) ? v : fail(path, `expected array, got ${typeof v}`);
+
+const opt = <T>(v: unknown, fn: (v: unknown) => T): T | undefined =>
+  v === undefined ? undefined : fn(v);
+
+const oneOf = <T extends string>(v: unknown, allowed: readonly T[], path: string): T =>
+  typeof v === "string" && (allowed as readonly string[]).includes(v)
+    ? (v as T)
+    : fail(path, `expected one of ${allowed.join("|")}, got ${JSON.stringify(v)}`);
+
+const stateValue = (v: unknown, path: string): StateValue =>
+  typeof v === "string" || typeof v === "number"
+    ? v
+    : fail(path, `expected string|number, got ${typeof v}`);
+
+const stateMap = (v: unknown, path: string): Record<string, StateValue> => {
+  const o = obj(v, path);
+  const out: Record<string, StateValue> = {};
+  for (const k of Object.keys(o)) out[k] = stateValue(o[k], `${path}.${k}`);
+  return out;
+};
+
+function parseNode(v: unknown, path: string): Node {
+  const o = obj(v, path);
+  return {
+    id: str(o.id, `${path}.id`),
+    type: str(o.type, `${path}.type`),
+    role: opt(o.role, (x) => str(x, `${path}.role`)),
+    x: num(o.x, `${path}.x`),
+    y: num(o.y, `${path}.y`),
+    index: opt(o.index, (x) => num(x, `${path}.index`)),
+    sublabel: opt(o.sublabel, (x) => str(x, `${path}.sublabel`)),
+    value: opt(o.value, (x) => str(x, `${path}.value`)),
+    state: opt(o.state, (x) => stateMap(x, `${path}.state`)),
+    data: o.data,
+  };
+}
+
+function parseEdge(v: unknown, path: string): Edge {
+  const o = obj(v, path);
+  return {
+    id: str(o.id, `${path}.id`),
+    source: str(o.source, `${path}.source`),
+    sourceHandle: str(o.sourceHandle, `${path}.sourceHandle`),
+    target: str(o.target, `${path}.target`),
+    targetHandle: str(o.targetHandle, `${path}.targetHandle`),
+    kind: oneOf(o.kind, EDGE_KINDS, `${path}.kind`),
+    label: opt(o.label, (x) => str(x, `${path}.label`)),
+    valueLabel: opt(o.valueLabel, (x) => str(x, `${path}.valueLabel`)),
+    route: opt(o.route, (x) => oneOf(x, ["line", "snake", "below"] as const, `${path}.route`)),
+    lane: opt(o.lane, (x) => num(x, `${path}.lane`)),
+    arrowStyle: opt(o.arrowStyle, (x) => oneOf(x, ["filled", "open"] as const, `${path}.arrowStyle`)),
+    data: o.data,
+  };
+}
+
+function parseTimingStep(v: unknown, path: string): TimingStep {
+  const o = obj(v, path);
+  return {
+    t: num(o.t, `${path}.t`),
+    event: str(o.event, `${path}.event`),
+    fires: opt(o.fires, (x) => arr(x, `${path}.fires`).map((s, i) => str(s, `${path}.fires[${i}]`))),
+    departs: opt(o.departs, (x) => arr(x, `${path}.departs`).map((s, i) => str(s, `${path}.departs[${i}]`))),
+    arrives: opt(o.arrives, (x) => arr(x, `${path}.arrives`).map((s, i) => str(s, `${path}.arrives[${i}]`))),
+    state: opt(o.state, (x) => {
+      const so = obj(x, `${path}.state`);
+      const out: Record<string, Record<string, StateValue>> = {};
+      for (const k of Object.keys(so)) out[k] = stateMap(so[k], `${path}.state.${k}`);
+      return out;
+    }),
+  };
+}
+
+function parseLegendRow(v: unknown, path: string): LegendRow {
+  const o = obj(v, path);
+  return {
+    kind: oneOf(o.kind, EDGE_KINDS, `${path}.kind`),
+    name: str(o.name, `${path}.name`),
+    desc: str(o.desc, `${path}.desc`),
+  };
+}
+
+function parseNote(v: unknown, path: string): Note {
+  const o = obj(v, path);
+  return {
+    x: num(o.x, `${path}.x`),
+    y: num(o.y, `${path}.y`),
+    width: opt(o.width, (x) => num(x, `${path}.width`)),
+    height: opt(o.height, (x) => num(x, `${path}.height`)),
+    text: str(o.text, `${path}.text`),
+  };
+}
+
+function validatePorts(s: Spec): void {
+  const byId = new Map(s.nodes.map((n) => [n.id, n]));
+  const issues: string[] = [];
+  for (const e of s.edges) {
+    const src = byId.get(e.source);
+    const dst = byId.get(e.target);
+    if (!src) { issues.push(`edge ${e.id}: unknown source ${e.source}`); continue; }
+    if (!dst) { issues.push(`edge ${e.id}: unknown target ${e.target}`); continue; }
+    const srcDef = NODE_TYPES[src.type];
+    const dstDef = NODE_TYPES[dst.type];
+    if (srcDef && e.sourceHandle && !srcDef.outputs.some((p) => p.name === e.sourceHandle)) {
+      issues.push(`edge ${e.id}: ${src.type} has no output port "${e.sourceHandle}"`);
+    }
+    if (dstDef && e.targetHandle && !dstDef.inputs.some((p) => p.name === e.targetHandle)) {
+      issues.push(`edge ${e.id}: ${dst.type} has no input port "${e.targetHandle}"`);
+    }
+  }
+  if (issues.length) throw new ParseError(issues.join("\n"));
+}
+
+export function parseSpec(input: unknown): Spec {
+  const o = obj(input, "spec");
+  const spec: Spec = {
+    nodes: arr(o.nodes, "spec.nodes").map((n, i) => parseNode(n, `spec.nodes[${i}]`)),
+    edges: arr(o.edges, "spec.edges").map((e, i) => parseEdge(e, `spec.edges[${i}]`)),
+    timing: opt(o.timing, (t) => {
+      const to = obj(t, "spec.timing");
+      return {
+        duration: opt(to.duration, (x) => str(x, "spec.timing.duration")),
+        steps: arr(to.steps, "spec.timing.steps").map((s, i) => parseTimingStep(s, `spec.timing.steps[${i}]`)),
+      };
+    }),
+    legend: opt(o.legend, (l) =>
+      arr(l, "spec.legend").map((r, i) => parseLegendRow(r, `spec.legend[${i}]`))),
+    notes: opt(o.notes, (l) =>
+      arr(l, "spec.notes").map((n, i) => parseNote(n, `spec.notes[${i}]`))),
+  };
+  validatePorts(spec);
+  return spec;
+}

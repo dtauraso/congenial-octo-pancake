@@ -5,19 +5,18 @@ import (
 	"sync"
 	"time"
 
-	L "github.com/dtauraso/congenial-octo-pancake/Line"
 	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
+	W "github.com/dtauraso/congenial-octo-pancake/Wiring"
 )
 
 func RunTest() {
-	l := L.Line{}
-	l.Setup()
+	nodes := W.Wire()
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)
-	wg.Add(len(l.Line))
+	wg.Add(len(nodes))
 	s := S.SafeWorker{Ctx: ctx, Wg: wg}
 
-	for _, node := range l.Line {
+	for _, node := range nodes {
 		go node.Update(&s)
 	}
 	time.Sleep(100 * time.Millisecond)
