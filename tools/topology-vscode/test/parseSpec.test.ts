@@ -107,4 +107,21 @@ describe("parseSpec accepts", () => {
     expect(s.nodes).toHaveLength(1);
     expect(s.edges).toHaveLength(0);
   });
+
+  it("preserves node.props when present", () => {
+    const s = parseSpec({
+      nodes: [{ ...okNode, props: { delay: 2, label: "x" } }],
+      edges: [],
+    });
+    expect(s.nodes[0].props).toEqual({ delay: 2, label: "x" });
+  });
+
+  it("rejects non-scalar values inside node.props", () => {
+    expect(() =>
+      parseSpec({
+        nodes: [{ ...okNode, props: { delay: { nested: 1 } } }],
+        edges: [],
+      }),
+    ).toThrow(/spec\.nodes\[0\]\.props\.delay/);
+  });
 });

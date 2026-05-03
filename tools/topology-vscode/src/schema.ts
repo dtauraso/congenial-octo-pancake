@@ -31,8 +31,33 @@ export type Node = {
   sublabel?: string;
   value?: string;
   state?: Record<string, StateValue>;
+  // Per-instance config consumed by simulator handlers (e.g. delay,
+  // inputCount). Defaults come from NODE_TYPES[type].defaultProps; spec
+  // only stores overrides.
+  props?: Record<string, StateValue>;
   data?: unknown;
 };
+
+// Simulator handler formalism (Phase 5.5). A handler is a pure function
+// (state, input, props) → (state', emissions). Registered per node-type
+// per input-port in src/sim/handlers.ts. Animation behavior is derived
+// from these handlers running in the simulator, not from a global clock.
+export type Emission = {
+  port: string;
+  value: StateValue;
+  // Ticks until the emission becomes visible at the destination. Defaults
+  // to 1 if omitted.
+  delay?: number;
+};
+
+export type HandlerState = Record<string, StateValue>;
+export type HandlerInput = { port: string; value: StateValue };
+export type HandlerResult = { state: HandlerState; emissions: Emission[] };
+export type HandlerFn = (
+  state: HandlerState,
+  input: HandlerInput,
+  props: Record<string, StateValue>,
+) => HandlerResult;
 
 export type EdgeRoute = "line" | "snake" | "below";
 export type ArrowStyle = "filled" | "open";
@@ -81,6 +106,9 @@ export type NodeTypeDef = {
   stroke: string;
   width: number;
   height: number;
+  // Defaults for spec.nodes[i].props. Spec only stores overrides; the
+  // simulator merges defaults under the override at handler-call time.
+  defaultProps?: Record<string, StateValue>;
 };
 
 export const NODE_TYPES: Record<string, NodeTypeDef> = {
@@ -104,6 +132,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     inputs: [{ name: "in", kind: "chain" }, { name: "release", kind: "release" }],
     outputs: [{ name: "out", kind: "chain" }, { name: "ack", kind: "feedback-ack" }],
     shape: "rect", fill: "#e0f7fa", stroke: "#00838f", width: 90, height: 50,
+    defaultProps: { delay: 1 },
   },
   ChainInhibitor: {
     role: "inhibitor",
@@ -130,6 +159,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     inputs: [{ name: "in", kind: "chain" }, { name: "release", kind: "release" }],
     outputs: [{ name: "out", kind: "chain" }, { name: "ack", kind: "feedback-ack" }],
     shape: "rect", fill: "#e0f7fa", stroke: "#00838f", width: 90, height: 50,
+    defaultProps: { delay: 1 },
   },
   StreakBreakDetector: {
     role: "sbd",
@@ -154,6 +184,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     inputs: [{ name: "a", kind: "signal" }, { name: "b", kind: "signal" }],
     outputs: [{ name: "out", kind: "and-out" }],
     shape: "rect", fill: "#f3e5f5", stroke: "#7b1fa2", width: 70, height: 40,
+    defaultProps: { inputCount: 2 },
   },
   PatternAnd: {
     role: "pattern-and",
@@ -243,6 +274,7 @@ function parseNode(v: unknown, path: string): Node {
     sublabel: opt(o.sublabel, (x) => str(x, `${path}.sublabel`)),
     value: opt(o.value, (x) => str(x, `${path}.value`)),
     state: opt(o.state, (x) => stateMap(x, `${path}.state`)),
+    props: opt(o.props, (x) => stateMap(x, `${path}.props`)),
     data: o.data,
   };
 }
