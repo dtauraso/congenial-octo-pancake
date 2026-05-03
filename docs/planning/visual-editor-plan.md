@@ -38,8 +38,8 @@ you're working on.
 | 5.5 — animation model rewrite | ✅ done | [phase-5.5.md](visual-editor/phase-5.5.md) | — | \$21.26 actual |
 | 6 — node motion (state-derived) | ✅ done | [phase-6.md](visual-editor/phase-6.md) | — | \$5.04 actual |
 | 7 — trace replay | ✅ chunks 1–5 done; Phase 8 (per-node parity) chunks 1–11 also done | [phase-7.md](visual-editor/phase-7.md) | — | \$11.57 + \$8.69 actual |
-| 8 — polish (undo, snap, e2e) | ⏳ | [phase-8.md](visual-editor/phase-8.md) | — | ~\$8 |
-| 9 — SVG diagram parity | ⏳ | [phase-9.md](visual-editor/phase-9.md) | — | ~\$18 |
+| 8 — polish (undo, snap, e2e) | ✅ chunks 1–3 done; Tier 4 nightly latency deferred | [phase-8.md](visual-editor/phase-8.md) | — | \$4.69 actual |
+| 9 — SVG diagram parity | ✅ done | [phase-9.md](visual-editor/phase-9.md) | — | \$4.93 actual |
 
 **Cap-hit column dropped.** Phase 5 came in at ~\$5.65 against a \$110 estimate (~5% of midpoint, ~18× overestimate). The cap-hit unit was calibrated against an older model and a less mature codebase; with Opus 4.7 + the existing harness/adapter/save infrastructure, mechanical phases run roughly an order of magnitude under the original budget. \$ figures above are the post-Phase-5 recalibration; cap-hit estimates are no longer load-bearing. See [risk-and-effort.md](visual-editor/risk-and-effort.md) for the methodology.
 
@@ -52,15 +52,13 @@ you're working on.
 The most load-bearing remaining work, in priority order. Pick whichever
 matches the budget available and the kind of break you'd most regret.
 
-1. **Phase 8 — polish [~\$8].** Undo/redo (`zundo` substrate, two
-   independent stacks for spec vs. viewer), snap-to-grid, and three
-   tiers of test coverage including a Tier 4 headline edit-to-running-Go
-   latency test. Mechanical and contained — natural next phase.
-   See [phase-8.md](visual-editor/phase-8.md).
-2. **Phase 9 — SVG diagram parity [~\$18].** Custom RF edge components
-   per `route` kind, per-port handle rendering, style-guide vocabulary,
-   Tier 4 visual regression baselines. UI-iteration heavy.
-   See [phase-9.md](visual-editor/phase-9.md).
+1. **Phase 8 documented gap — rename + node-delete vs undo.** Surfaced
+   at Phase 8 chunk 3: rename and node-delete mutate spec and
+   viewerState atomically and aren't captured by the two-stack undo
+   design. Trust property; closest-to-load-bearing of the open items.
+2. **Phase 8 deferred — Tier 4 nightly latency test.** Headline
+   edit-to-running-Go latency test was deferred at Phase 8 chunk 2
+   sign-off. Natural Phase 8 closeout.
 3. **Phase 4 nested folding follow-up [~\$3].** Single-level folds work;
    pick up only when a real topology hits the level-of-nesting wall.
 4. **Phase 3 Tier 3 follow-ups [~\$3].** Three queued cases
@@ -71,8 +69,12 @@ matches the budget available and the kind of break you'd most regret.
 
 **Recently shipped:** Phase 5.5 (animation model rewrite, \$21.26),
 Phase 6 (state-derived node motion, \$5.04), Phase 7 chunks 1–5 (trace
-replay, \$11.57), and Phase 8 per-node Go↔TS parity chunks 1–11
-(\$8.69, every gate-shaped node now covered).
+replay, \$11.57), Phase 8 per-node Go↔TS parity chunks 1–11 (\$8.69,
+every gate-shaped node now covered), Phase 8 polish chunks 1–3
+(\$4.69; Tier 4 nightly deferred), and Phase 9 SVG diagram parity
+(\$4.93 across chunks `6a2316e` / `bc1ff39` / `edd80b8` / `f0477c8` —
+edge route dispatch, house-style vocabulary, notes round-trip, Tier 4
+visual baselines).
 
 ## What the tool is for, in priority order
 
