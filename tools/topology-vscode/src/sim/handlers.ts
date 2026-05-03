@@ -33,17 +33,18 @@ const clear = (state: HandlerState, ports: string[]): HandlerState => {
 };
 const noEmit = (state: HandlerState): HandlerResult => ({ state, emissions: [] });
 
-// ChainInhibitor: `in` arrives → emit held value on out / readOld /
-// inhibitOut, emit new value on readNew, ack, then store new as held.
+// ChainInhibitor: `in` arrives → emit held value on inhibitOut, new
+// value on readNew, held on out, ack=1, then store new as held. Order
+// mirrors ChainInhibitorNode/ChainInhibitorNode.go (ToEdge sends, then
+// ToEdgeNew, then ToNext, then ToAck) so trace projection matches.
 const chainInhibitorIn: HandlerFn = (state, input) => {
   const held = state.held ?? 0;
   return {
     state: { ...state, held: input.value },
     emissions: [
-      { port: "out", value: held },
-      { port: "readOld", value: held },
-      { port: "readNew", value: input.value },
       { port: "inhibitOut", value: held },
+      { port: "readNew", value: input.value },
+      { port: "out", value: held },
       { port: "ack", value: 1 },
     ],
   };

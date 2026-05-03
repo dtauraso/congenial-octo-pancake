@@ -155,10 +155,10 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     role: "inhibitor",
     inputs: [{ name: "in", kind: "chain" }],
     outputs: [
-      { name: "out", kind: "chain" },
-      { name: "readOld", kind: "edge-connection" },
-      { name: "readNew", kind: "edge-connection" },
       { name: "inhibitOut", kind: "inhibit-in" },
+      { name: "readNew", kind: "edge-connection" },
+      { name: "out", kind: "chain" },
+      { name: "ack", kind: "feedback-ack" },
     ],
     shape: "rect", fill: "#fff3e0", stroke: "#e65100", width: 90, height: 60,
   },

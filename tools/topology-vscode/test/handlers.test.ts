@@ -28,11 +28,15 @@ describe("HANDLERS coverage", () => {
 });
 
 describe("ChainInhibitor", () => {
-  it("emits held on out/readOld/inhibitOut, value on readNew, ack=1; updates held", () => {
+  it("emits held on inhibitOut/out, value on readNew, ack=1; updates held", () => {
     const r = run("ChainInhibitor", "in", 7, { held: 3 });
     expect(r.state.held).toBe(7);
-    const byPort = Object.fromEntries(r.emissions.map((e) => [e.port, e.value]));
-    expect(byPort).toEqual({ out: 3, readOld: 3, readNew: 7, inhibitOut: 3, ack: 1 });
+    expect(r.emissions).toEqual([
+      { port: "inhibitOut", value: 3 },
+      { port: "readNew", value: 7 },
+      { port: "out", value: 3 },
+      { port: "ack", value: 1 },
+    ]);
   });
 
   it("treats missing held as 0 on first arrival", () => {
