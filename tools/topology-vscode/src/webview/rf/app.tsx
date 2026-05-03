@@ -25,7 +25,7 @@ import { MOTION_TYPES } from "../../sim/handlers";
 import { beginRenameNodeId, setRenameRerender } from "../rename";
 import { beginEditSublabel, setSublabelRerender } from "../sublabel";
 import { flushViewSave, markViewSynced, scheduleSave, scheduleViewSave, vscode } from "../save";
-import { mutateSpec, setSpec, setViewerState, spec, viewerState } from "../state";
+import { clearSpecHistory, mutateSpec, redoSpec, setSpec, setViewerState, spec, undoSpec, viewerState } from "../state";
 import {
   isLegacyCamera,
   parseViewerState,
@@ -98,6 +98,36 @@ function Inner() {
   const reconnectOk = useRef<boolean>(false);
   const rf = useReactFlow();
 
+  // Spec undo/redo. Cmd/Ctrl-Z and Cmd/Ctrl-Shift-Z (also Ctrl-Y) walk the
+  // snapshot stack maintained in state.ts, then push the restored spec
+  // through the same rerender path as a normal edit. Skipped while a text
+  // input is focused (let the browser's native undo win) and while the
+  // comparison pane is read-only.
+  useEffect(() => {
+    const isTextTarget = (t: EventTarget | null) =>
+      t instanceof HTMLElement &&
+      (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const k = e.key.toLowerCase();
+      const isUndo = k === "z" && !e.shiftKey;
+      const isRedo = (k === "z" && e.shiftKey) || k === "y";
+      if (!isUndo && !isRedo) return;
+      if (isTextTarget(e.target)) return;
+      if (compareModeRef.current === "A-other") return;
+      e.preventDefault();
+      const next = isUndo ? undoSpec() : redoSpec();
+      if (!next) return;
+      lastSpec.current = next;
+      const flow = specToFlow(next, viewerState.folds);
+      setNodes(flow.nodes);
+      setEdges(flow.edges);
+      scheduleSave();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   // Bridge handlers (camera, dim, selection getter).
   useEffect(() => {
     register({
@@ -141,6 +171,9 @@ function Inner() {
         try {
           const next: Spec = parseSpec(JSON.parse(msg.text));
           setSpec(next);
+          // Fresh load drops history — undoing into a previous file's spec
+          // would be incoherent (ids may not even exist there).
+          clearSpecHistory();
           lastSpec.current = next;
           loadRunner(next);
           resetRunner();
