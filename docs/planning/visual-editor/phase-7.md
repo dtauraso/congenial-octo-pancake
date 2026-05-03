@@ -35,12 +35,15 @@ deeper design.
   stays correct. Committed fixture `chain-cascade.trace.jsonl` is
   pinned by a test. No UI surface yet.
 
-- **Chunk 2 — side-by-side spec-sim vs trace-replay UI** ⏳.
-  Two-pane viewer: left runs the live simulator, right replays a
-  loaded trace. Independent step/play controls per pane. Drift
-  indicator computes the §Decisions projection on each event and
-  highlights the first divergent index. "Load trace" command on the
-  webview that calls `runner.loadTrace`.
+- **Chunk 2 — drift indicator + load-trace UI (DONE, `ebc6fe5`, $2.82).**
+  `src/sim/drift.ts`: pure projection comparator. Webview gains a
+  "load trace" button that opens a `*.trace.jsonl`, switches the
+  runner into replay mode, runs the simulator silently to project
+  history, and reports drift in the timeline status bar. Schema
+  bugfix on the side: `parseEdge` was dropping the `concurrent`
+  override, breaking the runner-play-pause e2e via the N1' loop.
+  Two-pane diagram **dropped from scope** — see "Two-pane: dropped"
+  below.
 
 - **Chunk 3 — Go: Trace recorder + value-flow emission** ⏳.
   `Trace` struct + drain goroutine + JSONL writer. Thread `*Trace`
@@ -54,10 +57,38 @@ deeper design.
   match against `chain-cascade.trace.jsonl` (same fixture pinned in
   Chunk 1).
 
-- **Chunk 5 — Tier 2/3 tests** ⏳. Tier 2: `JSON.stringify(spec)` is
-  byte-identical before/after a `loadTrace + step-to-end` cycle.
-  Tier 3: scrubbing one side-by-side pane doesn't move the other,
-  but bookmarks are jumpable from either pane.
+- **Chunk 5 — Tier 2 test** ⏳. `JSON.stringify(spec)` is byte-
+  identical before/after a `loadTrace + step-to-end` cycle. Promotes
+  the rule "trace is observation, spec is design" from doc to test.
+  Tier 3 side-by-side scrubbing-independence test is removed along
+  with two-pane.
+
+## Two-pane: dropped
+
+Original Chunk 2 plan was a literal two-pane viewer (left = simulator,
+right = trace replay) so divergence would be visible at the *node*
+level on the diagram. We dropped this after recognizing that drift
+should be mechanically impossible if the TS handler library mirrors
+the Go nodes correctly. The only legitimate drift sources are:
+
+1. **Concurrent interleaving** — Go's scheduler picks a real
+   interleaving from many legal ones; the TS simulator is
+   deterministic FIFO. Both executions are correct; the orderings
+   just differ. Not a bug.
+2. **Handler-registry rot** — a Go node's behavior changed without
+   the matching TS handler being updated (or vice versa). Real bug,
+   but rare and caught by the status-line drift indicator.
+
+Two-pane was solving for an everyday visual debugging surface for a
+problem (sim vs Go disagreement) that should rarely occur. The
+status-line indicator from Chunk 2 is the right amount of UI for an
+event that signals handler-library maintenance, not runtime bugs.
+
+The primary value of trace replay is **the trace IS the ground truth
+of a Go run** — the editor becomes a player for "what actually
+happened" instead of a hand-authored cartoon. Drift detection is a
+side benefit. That value lands in Chunks 3–4 (Go emission), not in a
+two-pane visualization.
 
 ## Recalibrated estimate
 
@@ -69,11 +100,11 @@ unprecedented in this codebase.
 | Chunk | Scope | Revised est | Range |
 |---|---|---|---|
 | 1 | TS trace contract + replay path | done | $2.11 actual |
-| 2 | Side-by-side UI + drift indicator | $5 | $3–10 |
+| 2 | Drift indicator + load-trace UI | done | $2.82 actual |
 | 3 | Go Trace recorder + Wiring.go emission | $10 | $5–20 |
 | 4 | Go `--trace` flag + parity test | $4 | $2–8 |
-| 5 | Tier 2/3 tests | $2 | $1–4 |
-| **Total** | | **~$23** | **$13–44** |
+| 5 | Tier 2 test | $1 | $0.50–2 |
+| **Total** | | **~$20** | **$10–37** |
 
 Down from original $315. Phase 5.5 / Phase 6 averages ($1.68–$4.25
 per chunk) are the better prior than the original cap-rate model.
@@ -86,3 +117,4 @@ again before Chunk 4.
 | Chunk | Commit | $ | vs revised est |
 |---|---|---|---|
 | 1 — TS trace contract + replay path | `d371f2e` | $2.11 | $65 orig est (way over); fits Phase 6 band |
+| 2 — Drift indicator + load-trace UI | `ebc6fe5` | $2.82 | $5 revised est, on-target |
