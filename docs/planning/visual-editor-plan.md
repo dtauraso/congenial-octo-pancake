@@ -17,6 +17,10 @@ Editing the diagram is editing the spec; editing the spec regenerates code.
 Trace replay ([trace-replay-plan.md](trace-replay-plan.md)) is the rightmost
 arrow; deferred until the visual → spec → Go loop runs smoothly.
 
+**Opus 4.7 effort level: Low** for the entire visual-editor plan. All
+per-phase / per-chunk $ estimates and actuals throughout this plan and
+its phase docs assume that setting.
+
 ## How this doc is organized
 
 This index covers cross-cutting decisions and a phase table. Each phase has
