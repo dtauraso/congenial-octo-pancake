@@ -6,7 +6,33 @@ export type FoldNodeData = {
   memberCount: number;
   width: number;
   height: number;
+  diffCounts?: { added: number; removed: number; moved: number };
 };
+
+function DiffBadge({ counts }: { counts: { added: number; removed: number; moved: number } }) {
+  const parts: Array<{ text: string; color: string }> = [];
+  if (counts.added) parts.push({ text: `+${counts.added}`, color: "#2e7d32" });
+  if (counts.removed) parts.push({ text: `−${counts.removed}`, color: "#c62828" });
+  if (counts.moved) parts.push({ text: `~${counts.moved}`, color: "#c98a00" });
+  if (parts.length === 0) return null;
+  return (
+    <div
+      style={{
+        position: "absolute", top: -8, right: -6,
+        display: "flex", gap: 3,
+        background: "#fff", border: "1px solid #bbb", borderRadius: 8,
+        padding: "1px 5px", fontSize: 9, fontWeight: 700,
+        boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
+        pointerEvents: "none",
+      }}
+      title="members differ vs. comparison spec"
+    >
+      {parts.map((p, i) => (
+        <span key={i} style={{ color: p.color }}>{p.text}</span>
+      ))}
+    </div>
+  );
+}
 
 const HANDLE_HIDDEN: React.CSSProperties = {
   width: 1, height: 1, minWidth: 0, minHeight: 0,
@@ -33,6 +59,7 @@ export function FoldNode(props: NodeProps<FoldNodeData>) {
           color: "#5a4a14",
           boxSizing: "border-box",
           cursor: "pointer",
+          position: "relative",
         }}
       >
         <Handle type="target" position={Position.Left} style={HANDLE_HIDDEN} />
@@ -40,6 +67,7 @@ export function FoldNode(props: NodeProps<FoldNodeData>) {
         <div style={{ fontWeight: 600 }}>{data.label || "fold"}</div>
         <div style={{ opacity: 0.7 }}>{data.memberCount} nodes</div>
         <div style={{ fontSize: 9, opacity: 0.6, marginTop: 2 }}>double-click to expand</div>
+        {data.diffCounts && <DiffBadge counts={data.diffCounts} />}
       </div>
     );
   }

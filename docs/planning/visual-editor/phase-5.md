@@ -2,9 +2,9 @@
 
 **Status:** ✅ done. **Actual:** ~\$5.65 (vs. ~\$110 estimate; ~5% / ~18× overestimate). Shipped in 7 steps across commits `74e6abc` (steps 1–3: diff-core + compare loaders + compare toolbar) and `153c74d` (steps 4–7: diff decoration + onion-skin + Tier 2/3 tests).
 
-**Known follow-ups (not blocking):**
-1. Collapsed-fold diff badge with category counts. When a folded region's members differ between live and other, the placeholder currently shows no indicator. `decorateForCompare` would need to compute a per-fold member-diff and attach it to the fold node; `FoldNode.tsx` would render the badge. ~\$3.
-2. `.dim` + diff halo punch-through. The phase spec calls for halos to render at full opacity even when the body is dimmed, but `.dim` currently puts opacity on the wrapper, which dims the box-shadow halo too. CSS refactor: move dim's opacity off the wrapper and onto the inner body content. ~\$3.
+**Follow-ups: ✅ shipped.** Both Phase 5 follow-ups landed in a single sub-band; see commit log on `visual-editor`.
+1. ~~Collapsed-fold diff badge with category counts.~~ `decorateForCompare` now tallies added/removed/moved members per collapsed fold and attaches `diffCounts` to the fold node's `data`; `FoldNode` renders a small `+N −N ~N` badge on the placeholder. Tier 2 unit test in `test/diff-decorate.test.ts`.
+2. ~~`.dim` + diff halo punch-through.~~ CSS refactored: `.react-flow__node.dim > *` dims the inner body, so the wrapper's `box-shadow` / `outline` halos stay at full opacity. The aspirational comment-block guarantee at the bottom of the comparison-mode CSS section was removed (it was claiming a behavior the rule didn't actually produce).
 
 ## Open questions resolved
 

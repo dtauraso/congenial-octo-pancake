@@ -48,20 +48,19 @@ you're working on.
 The most load-bearing remaining work, in priority order. Pick whichever
 matches the budget available and the kind of break you'd most regret.
 
-1. **Phase 5 follow-ups [~\$3].** Two known gaps from Phase 5: (a) the
-   collapsed-fold diff badge with category counts (`diff-decorate.ts` +
-   `FoldNode.tsx`); (b) the `.dim` wrapper opacity dimming the halo —
-   move dim's opacity onto the inner body so halos punch through at full
-   opacity. See [phase-5.md](visual-editor/phase-5.md).
-2. **Phase 5.5 — animation model rewrite [~\$20].** Gates Phase 6.
+1. **Phase 5.5 — animation model rewrite [~\$20].** Gates Phase 6.
    See [phase-5.5.md](visual-editor/phase-5.5.md).
-3. **Phase 4 nested folding follow-up [~\$3].** Single-level folds work;
+2. **Phase 4 nested folding follow-up [~\$3].** Single-level folds work;
    pick up only when a real topology hits the level-of-nesting wall.
-4. **Phase 3 Tier 3 follow-ups [~\$3].** Three queued cases
+3. **Phase 3 Tier 3 follow-ups [~\$3].** Three queued cases
    (port-drag → chan, palette-drag-position, port-drag mismatched-kinds
    fallback). Opportunistic.
-5. **Phase 4.5.6 — audit lows & nits [opportunistic].** Pick up while
+4. **Phase 4.5.6 — audit lows & nits [opportunistic].** Pick up while
    touching adjacent code; not a planned spend. See [phase-4.5.md](visual-editor/phase-4.5.md).
+
+**Recently shipped:** Phase 5 follow-ups (collapsed-fold diff badge + dim
+halo punch-through) — small CSS / data-flow changes, see
+[phase-5.md](visual-editor/phase-5.md).
 
 ## What the tool is for, in priority order
 

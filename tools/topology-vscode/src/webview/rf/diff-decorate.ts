@@ -63,8 +63,28 @@ export function decorateForCompare(
   const rewiredEdges = new Set(diff.edges.rewired);
   const removedEdgeIds = new Set(diff.edges.removed);
 
+  // Per-fold diff tally: when a fold is collapsed, its members are absent
+  // from the rendered flow, so add/remove/move signals inside the fold
+  // are otherwise invisible. Surface as counts on the fold's data so the
+  // collapsed placeholder can render a badge.
+  const foldCounts = new Map<string, { added: number; removed: number; moved: number }>();
+  for (const f of folds) {
+    if (!f.collapsed) continue;
+    let added = 0, removed = 0, moved = 0;
+    for (const id of f.memberIds) {
+      if (addedNodes.has(id)) added++;
+      if (removedNodes.has(id)) removed++;
+      if (movedNodes.has(id)) moved++;
+    }
+    if (added || removed || moved) foldCounts.set(f.id, { added, removed, moved });
+  }
+
   const nodes: RFNode[] = flow.nodes.map((n) => {
-    if (n.type === "fold") return n;
+    if (n.type === "fold") {
+      const counts = foldCounts.get(n.id);
+      if (!counts) return n;
+      return { ...n, data: { ...n.data, diffCounts: counts } };
+    }
     const cls: string[] = [];
     if (addedNodes.has(n.id)) cls.push("diff-added");
     if (movedNodes.has(n.id)) cls.push("diff-moved");
