@@ -83,6 +83,26 @@ const inhibitRightJoin = makeJoin(["left", "right"], "out", (l, r) =>
   Number(l) === 1 && Number(r) === 0 ? 1 : 0,
 );
 
+// EdgeNode: XOR contrast detector between adjacent inhibitor values.
+// Buffer left/right; on both present emit l^r identically on three
+// outputs (current inhibitor, partition, next edge), mirroring the
+// three S.Send calls in EdgeNode/EdgeNode.go.
+const edgeJoin: HandlerFn = (state, input) => {
+  const next = buffer(state, input.port, input.value);
+  if (has(next, "left") && has(next, "right")) {
+    const xor = Number(next.left) ^ Number(next.right);
+    return {
+      state: clear(next, ["left", "right"]),
+      emissions: [
+        { port: "outInhibitor", value: xor },
+        { port: "outPartition", value: xor },
+        { port: "outNextEdge", value: xor },
+      ],
+    };
+  }
+  return noEmit(next);
+};
+
 // Latches (ReadLatch, DetectorLatch): buffer `in` until `release`
 // arrives, then emit out + ack and clear.
 const latchHandlers: Record<string, HandlerFn> = {
@@ -187,6 +207,7 @@ export const HANDLERS: Record<string, Record<string, HandlerFn>> = {
   StreakBreakDetector: { old: sbdJoin, new: sbdJoin },
   StreakDetector: { old: sdJoin, new: sdJoin },
   Partition: { in: partitionIn },
+  EdgeNode: { left: edgeJoin, right: edgeJoin },
   // Input: no handlers — driven by spec.timing.seed in Chunk B.
   // Generic: no handlers — placeholder type.
 };
@@ -215,6 +236,7 @@ export const GATE_TYPES: ReadonlySet<string> = new Set([
   "DetectorLatch",
   "StreakBreakDetector",
   "StreakDetector",
+  "EdgeNode",
 ]);
 
 export function getHandler(

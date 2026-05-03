@@ -139,8 +139,8 @@ actuals.
 | 5 — SyncGate Go node + parity | `1875fbc` | $0.40 | — |
 | 6 — Partition Go rewrite + parity | `cde5d1c` | $0.96 | — |
 | 7 — InhibitRightGate parity (no new Go node) | `138fd28` | $0.73 | — |
-| 8 — EdgeNode Go rewrite + parity | ⏳ | TBD | $1.75 ($1.20–$3.00) |
-| **Phase 8 chunks 1–7 total** | | **$5.50** | **$5–15 original band** |
+| 8 — EdgeNode Go rewrite + parity | (this commit) | $0.99 | $1.75 est, under |
+| **Phase 8 chunks 1–8 total** | | **$6.49** | **$5–15 original band** |
 
 **Chunk 8 — EdgeNode** (proposal signed off 2026-05-03):
 

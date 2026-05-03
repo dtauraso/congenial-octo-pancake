@@ -1,25 +1,37 @@
+// Phase 8 Chunk 8 — EdgeNode on the Go side.
+//
+// Mirrors the TS handler in src/sim/handlers.ts (edgeJoin):
+//   buffer one input on `left` or `right`; when both buffered, emit
+//   xor = left ^ right identically on three outputs (current
+//   inhibitor, partition, next edge) and clear. Trace emits recv per
+//   arrival, fire+three sends on the second arrival that completes
+//   the join.
+//
+// Patterned on AndGateNode/SyncGateNode: non-blocking polled selects
+// on each input, S.Send for outputs. The previous version had a
+// FromPrevEdge channel that was drained but never used; dropped here
+// to match the TS contract (re-add when it gains meaning).
+
 package EdgeNode
 
 import (
-	"fmt"
 	S "github.com/dtauraso/wirefold/SafeWorker"
 )
 
 type EdgeNode struct {
-	Id                   int
-	LeftValue            int
-	HasLeft              bool
-	RightValue           int
-	HasRight             bool
-	FromCurrentInhibitor <-chan int
-	ToCurrentInhibitor   chan<- int
-	FromNextInhibitor    <-chan int
-	ToPartition          chan<- int
-	FromPrevEdge         <-chan int
-	ToNextEdge           chan<- int
+	Id              int
+	Name            string
+	FromLeft        <-chan int
+	FromRight       <-chan int
+	ToInhibitor     chan<- int
+	ToPartition     chan<- int
+	ToNextEdge      chan<- int
+
+	left, right       int
+	hasLeft, hasRight bool
 }
 
-func (en *EdgeNode) Update(s *S.SafeWorker) {
+func (e *EdgeNode) Update(s *S.SafeWorker) {
 	defer s.Wg.Done()
 	for {
 		select {
@@ -28,36 +40,37 @@ func (en *EdgeNode) Update(s *S.SafeWorker) {
 		default:
 		}
 
-		select {
-		case value := <-en.FromCurrentInhibitor:
-			fmt.Printf("edn%d: received %d from current\n", en.Id, value)
-			en.LeftValue = value
-			en.HasLeft = true
-		default:
+		if !e.hasLeft {
+			select {
+			case v := <-e.FromLeft:
+				e.left = v
+				e.hasLeft = true
+				s.Trace.Recv(e.Name, "left", v)
+			default:
+			}
 		}
 
-		select {
-		case value := <-en.FromNextInhibitor:
-			fmt.Printf("edn%d: received %d from next\n", en.Id, value)
-			en.RightValue = value
-			en.HasRight = true
-		default:
+		if !e.hasRight {
+			select {
+			case v := <-e.FromRight:
+				e.right = v
+				e.hasRight = true
+				s.Trace.Recv(e.Name, "right", v)
+			default:
+			}
 		}
 
-		select {
-		case value := <-en.FromPrevEdge:
-			fmt.Printf("edn%d: received %d from prev edge\n", en.Id, value)
-		default:
-		}
-
-		if en.HasLeft && en.HasRight {
-			result := en.LeftValue ^ en.RightValue
-			fmt.Printf("edn%d: %d XOR %d = %d\n", en.Id, en.LeftValue, en.RightValue, result)
-			S.Send(en.ToCurrentInhibitor, result)
-			S.Send(en.ToPartition, result)
-			S.Send(en.ToNextEdge, result)
-			en.HasLeft = false
-			en.HasRight = false
+		if e.hasLeft && e.hasRight {
+			xor := e.left ^ e.right
+			s.Trace.Fire(e.Name)
+			S.Send(e.ToInhibitor, xor)
+			s.Trace.Send(e.Name, "outInhibitor", xor)
+			S.Send(e.ToPartition, xor)
+			s.Trace.Send(e.Name, "outPartition", xor)
+			S.Send(e.ToNextEdge, xor)
+			s.Trace.Send(e.Name, "outNextEdge", xor)
+			e.hasLeft = false
+			e.hasRight = false
 		}
 	}
 }
