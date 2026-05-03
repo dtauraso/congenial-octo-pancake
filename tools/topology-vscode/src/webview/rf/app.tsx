@@ -54,6 +54,8 @@ import { decorateForCompare, decorateForOnion } from "./diff-decorate";
 import { AnimatedEdge } from "./AnimatedEdge";
 import { AnimatedNode } from "./AnimatedNode";
 import { FoldNode } from "./FoldNode";
+import { MarkerDefs } from "./MarkerDefs";
+import { LegendPanel } from "./LegendPanel";
 import { notifyPanStart, register } from "./bridge";
 import { boxToViewport, viewportToBox } from "./camera";
 import { parseHostToWebview } from "../../messages";
@@ -913,6 +915,8 @@ function Inner() {
           </>
         );
       })()}
+      <MarkerDefs />
+      <LegendPanel rows={spec.legend ?? []} />
       <NodePalette />
       <CompareToolbar
         mode={compareMode}

@@ -164,7 +164,10 @@ export function specToFlow(
       sourceHandle,
       targetHandle,
       type: "animated",
-      label: e.label,
+      // `label` is rendered as SVG <text> by AnimatedEdge so the
+      // style-guide font-weight / fill / stroke="none" rules apply
+      // (RF's default label renders via foreignObject, which the
+      // guide's text exceptions don't reach). Carried in data only.
       style: { stroke: KIND_COLORS[e.kind] ?? "#888", strokeWidth: 1.5 },
       data: {
         kind: e.kind,
@@ -174,6 +177,7 @@ export function specToFlow(
         lane: e.lane,
         arrowStyle: e.arrowStyle,
         valueLabel: e.valueLabel,
+        label: e.label,
       },
     });
   }
@@ -216,6 +220,7 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       lane?: number;
       arrowStyle?: SpecEdge["arrowStyle"];
       valueLabel?: string;
+      label?: string;
     };
     return {
       id: e.id,
@@ -224,7 +229,9 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       target: e.target,
       targetHandle: d.targetHandle ?? "",
       kind: d.kind ?? "any",
-      ...(typeof e.label === "string" ? { label: e.label } : {}),
+      ...(typeof d.label === "string"
+        ? { label: d.label }
+        : typeof e.label === "string" ? { label: e.label } : {}),
       ...(d.valueLabel !== undefined ? { valueLabel: d.valueLabel } : {}),
       ...(d.route !== undefined ? { route: d.route } : {}),
       ...(d.lane !== undefined ? { lane: d.lane } : {}),

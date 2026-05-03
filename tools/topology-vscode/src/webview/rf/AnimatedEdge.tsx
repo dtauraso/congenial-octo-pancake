@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { BaseEdge, getBezierPath, type EdgeProps } from "reactflow";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind, type EdgeRoute } from "../../schema";
 import { subscribe, subscribeState, getConcurrentEdges, getTickMs } from "../../sim/runner";
+import { markerEndUrl } from "./MarkerDefs";
+import { dashForKind } from "./edge-style";
 
 type EdgeData = {
   kind?: EdgeKind;
@@ -9,7 +11,24 @@ type EdgeData = {
   lane?: number;
   arrowStyle?: ArrowStyle;
   valueLabel?: string;
+  label?: string;
 };
+
+// Midpoint for a route — used to anchor label / valueLabel text.
+function midpoint(
+  route: EdgeRoute,
+  sx: number, sy: number, tx: number, ty: number, lane: number,
+): { x: number; y: number } {
+  if (route === "snake") {
+    const midX = (sx + tx) / 2 + lane;
+    return { x: midX, y: (sy + ty) / 2 };
+  }
+  if (route === "below") {
+    const corridorY = Math.max(sy, ty) + 40 + lane;
+    return { x: (sx + tx) / 2, y: corridorY };
+  }
+  return { x: (sx + tx) / 2, y: (sy + ty) / 2 };
+}
 
 // Manhattan path computation per route. `lane` displaces the bend so
 // parallel edges (read-pair old/new, sibling feedback-acks) don't
@@ -85,11 +104,25 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
     return unsub;
   }, [id, d]);
 
-  const stroke = KIND_COLORS[data?.kind ?? "any"] ?? "#888";
+  const kind = data?.kind ?? "any";
+  const stroke = KIND_COLORS[kind] ?? "#888";
+  const dash = dashForKind(kind);
+  const baseStyle: React.CSSProperties = {
+    ...style,
+    ...(dash ? { strokeDasharray: dash } : {}),
+  };
+  const markerEnd = markerEndUrl(kind, data?.arrowStyle);
+
+  const label = data?.label;
+  const valueLabel = data?.valueLabel;
+  const showText = label || valueLabel;
+  const mid = showText
+    ? midpoint(route, sourceX, sourceY, targetX, targetY, lane)
+    : null;
 
   return (
     <>
-      <BaseEdge path={d} style={style} interactionWidth={28} />
+      <BaseEdge path={d} style={baseStyle} markerEnd={markerEnd} interactionWidth={28} />
       {concurrent && (
         <path
           d={d}
@@ -111,6 +144,34 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
         opacity={0}
         pointerEvents="none"
       />
+      {mid && label && (
+        <text
+          x={mid.x}
+          y={mid.y - 6}
+          textAnchor="middle"
+          fontSize={12}
+          fontWeight={kind === "feedback-ack" ? 600 : 300}
+          fill="#111"
+          stroke="none"
+          pointerEvents="none"
+        >
+          {kind === "feedback-ack" ? `↻ ${label}` : label}
+        </text>
+      )}
+      {mid && valueLabel && (
+        <text
+          x={mid.x}
+          y={mid.y + (label ? 10 : -6)}
+          textAnchor="middle"
+          fontSize={12}
+          fontWeight={300}
+          fill={stroke}
+          stroke="none"
+          pointerEvents="none"
+        >
+          {valueLabel}
+        </text>
+      )}
     </>
   );
 }
