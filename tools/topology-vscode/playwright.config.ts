@@ -14,6 +14,18 @@ export default defineConfig({
     viewport: { width: 1280, height: 800 },
     actionTimeout: 5000,
   },
+  // Tier 4 visual regression tolerance. Anti-aliasing and font rendering
+  // produce a few-pixel jitter even on the same machine; the threshold
+  // catches real layout regressions while absorbing that noise. The
+  // pinned-CI-image part of the brief is a harness concern (Playwright's
+  // own Docker tag, e.g. mcr.microsoft.com/playwright:v1.59.1-jammy) —
+  // see e2e/README.md.
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.01,
+      animations: "disabled",
+    },
+  },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],

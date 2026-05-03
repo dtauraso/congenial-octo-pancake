@@ -1,0 +1,25 @@
+{
+  "nodes": [
+    { "id": "a", "type": "ChainInhibitor", "x": 100, "y": 200 },
+    { "id": "b", "type": "ReadLatch", "x": 400, "y": 200 }
+  ],
+  "edges": [
+    {
+      "id": "e",
+      "source": "b",
+      "sourceHandle": "ack",
+      "target": "a",
+      "targetHandle": "in",
+      "kind": "feedback-ack",
+      "label": "ack",
+      "route": "below",
+      "lane": 20
+    }
+  ],
+  "notes": [
+    { "x": 120, "y": 360, "width": 200, "height": 32, "text": "feedback-ack closes the loop" }
+  ],
+  "legend": [
+    { "kind": "feedback-ack", "name": "feedback-ack", "desc": "backpressure cycle" }
+  ]
+}
