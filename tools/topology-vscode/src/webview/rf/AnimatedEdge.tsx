@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BaseEdge, type EdgeProps } from "reactflow";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind, type EdgeRoute } from "../../schema";
-import { subscribe, subscribeState, getConcurrentEdges, getTickMs, getWorld } from "../../sim/runner";
+import { subscribe, subscribeState, getConcurrentEdges, getTickMs, getWorld, isPlaying } from "../../sim/runner";
 import { getPendingCount } from "../../sim/simulator";
 import { vscode } from "../save";
 import { markerEndUrl } from "./MarkerDefs";
@@ -396,7 +396,7 @@ function PulseInstance({
     const svgArc = path.getTotalLength();
     if (svgArc <= 0) return;
 
-    const swapStart = performance.now();
+    let swapStart = performance.now();
     const startArc = Math.min(arcTraveledRef.current, svgArc);
     const remainingArc = svgArc - startArc;
     if (remainingArc <= 0) {
@@ -406,6 +406,7 @@ function PulseInstance({
     const remainingMs = remainingArc / speedPxPerMs;
 
     let rafId = 0;
+    let pauseStart: number | null = null;
     const probeOn = pulseProbeEnabled();
     let probeWorst: ProbeWorst | null = null;
 
@@ -540,11 +541,31 @@ function PulseInstance({
         doneRef.current();
       }
     };
-    rafId = requestAnimationFrame(frame);
+    if (isPlaying()) rafId = requestAnimationFrame(frame);
+    else pauseStart = performance.now();
+
+    // Gate the rAF loop on runner play-state so pressing pause freezes
+    // in-flight pulses in place and pressing play resumes from the same
+    // arc. Without this, pulses run to completion regardless of pause —
+    // the "pulse keeps flying after pause" decoupling.
+    const unsubState = subscribeState(() => {
+      const playing = isPlaying();
+      if (!playing && rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+        pauseStart = performance.now();
+      } else if (playing && pauseStart !== null) {
+        swapStart += performance.now() - pauseStart;
+        pauseStart = null;
+        rafId = requestAnimationFrame(frame);
+      }
+    });
 
     return () => {
-      cancelAnimationFrame(rafId);
-      const elapsed = performance.now() - swapStart;
+      unsubState();
+      if (rafId) cancelAnimationFrame(rafId);
+      const reference = pauseStart ?? performance.now();
+      const elapsed = reference - swapStart;
       const localT = Math.min(1, elapsed / remainingMs);
       arcTraveledRef.current = startArc + localT * remainingArc;
     };
