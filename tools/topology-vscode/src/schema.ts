@@ -21,6 +21,16 @@ const EDGE_KINDS: readonly EdgeKind[] = [
 export type Port = { name: string; kind: EdgeKind };
 export type StateValue = string | number;
 
+// Inline node spec. AI-authored prose describing the node's logic in the
+// user's preferred natural language. Math symbols (≤ ≠ × → …) live inside
+// `text` segments as Unicode. `outputRef` segments name an outgoing edge id;
+// the renderer resolves them to the live edge color so renaming an edge
+// recolors the prose automatically. Control-flow atoms with no named output
+// emit zero `outputRef` segments. Humans never type this directly — `notes`
+// is the human-authored field.
+export type SpecSegment = { text: string } | { outputRef: string };
+export type NodeSpec = { lang: string; segments: SpecSegment[] };
+
 export type Node = {
   id: string;
   type: string;
@@ -35,6 +45,8 @@ export type Node = {
   // inputCount). Defaults come from NODE_TYPES[type].defaultProps; spec
   // only stores overrides.
   props?: Record<string, StateValue>;
+  spec?: NodeSpec;
+  notes?: string;
   data?: unknown;
 };
 
@@ -294,6 +306,22 @@ const stateMap = (v: unknown, path: string): Record<string, StateValue> => {
   return out;
 };
 
+function parseSpecSegment(v: unknown, path: string): SpecSegment {
+  const o = obj(v, path);
+  if ("text" in o) return { text: str(o.text, `${path}.text`) };
+  if ("outputRef" in o) return { outputRef: str(o.outputRef, `${path}.outputRef`) };
+  return fail(path, `expected {text} or {outputRef}, got ${JSON.stringify(o)}`);
+}
+
+function parseNodeSpec(v: unknown, path: string): NodeSpec {
+  const o = obj(v, path);
+  return {
+    lang: str(o.lang, `${path}.lang`),
+    segments: arr(o.segments, `${path}.segments`).map((s, i) =>
+      parseSpecSegment(s, `${path}.segments[${i}]`)),
+  };
+}
+
 function parseNode(v: unknown, path: string): Node {
   const o = obj(v, path);
   return {
@@ -307,6 +335,8 @@ function parseNode(v: unknown, path: string): Node {
     value: opt(o.value, (x) => str(x, `${path}.value`)),
     state: opt(o.state, (x) => stateMap(x, `${path}.state`)),
     props: opt(o.props, (x) => stateMap(x, `${path}.props`)),
+    spec: opt(o.spec, (x) => parseNodeSpec(x, `${path}.spec`)),
+    notes: opt(o.notes, (x) => str(x, `${path}.notes`)),
     data: o.data,
   };
 }
