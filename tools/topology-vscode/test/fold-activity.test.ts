@@ -1,107 +1,70 @@
-// Unit tests for the pure halo state-machine and boundary helpers
-// extracted from FoldNode. These guard the spec the user laid out:
-//   1. halo turns on at first member fire
-//   2. stays on continuously while members keep firing
-//   3. turns off after `decayMs` of silence after the last fire
-//   4. flash/glow only triggers on edges that cross the fold boundary
-//      (member ↔ outside) — pure internal cascades don't animate
+// Halo predicate + boundary helper. Halo = "simulator queue contains
+// pending events for at least one member" — a state projection of the
+// queue, not an event-stream reduction.
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  createFoldActivityTracker,
+  foldHasPendingEvents,
+  firstPendingMember,
   isFoldBoundaryEmit,
 } from "../src/webview/rf/fold-activity";
+import type { World, SimEvent } from "../src/sim/simulator";
 
-describe("createFoldActivityTracker", () => {
-  it("turns on at first fire", () => {
-    const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange);
-    expect(tracker.isActive()).toBe(false);
-    tracker.noteFire(0);
-    expect(tracker.isActive()).toBe(true);
-    expect(onChange).toHaveBeenCalledWith(true);
-    expect(onChange).toHaveBeenCalledTimes(1);
+function w(queue: SimEvent[]): World {
+  return {
+    tick: 0,
+    cycle: 0,
+    wasQuiescent: true,
+    queue,
+    state: {},
+    history: [],
+    inFlight: new Map(),
+    deferred: [],
+  } as unknown as World;
+}
+
+function ev(toNodeId: string, id = 1): SimEvent {
+  return { id, readyAt: 0, edgeId: null, fromNodeId: "x", fromPort: "out", toNodeId, toPort: "in", value: 1 };
+}
+
+describe("foldHasPendingEvents", () => {
+  it("false when world is null", () => {
+    expect(foldHasPendingEvents(["a"], null)).toBe(false);
   });
 
-  it("does not re-emit on repeated fires while already active", () => {
-    const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange);
-    tracker.noteFire(0);
-    tracker.noteFire(10);
-    tracker.noteFire(20);
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(tracker.isActive()).toBe(true);
+  it("false when queue has no events for any member", () => {
+    expect(foldHasPendingEvents(["a", "b"], w([ev("other")]))).toBe(false);
   });
 
-  it("stays on while fires arrive within the decay window", () => {
-    const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange);
-    tracker.noteFire(0);
-    tracker.tick(60);
-    tracker.noteFire(60); // refresh
-    tracker.tick(120); // 60ms since refresh — still active
-    expect(tracker.isActive()).toBe(true);
-    expect(onChange).toHaveBeenCalledTimes(1);
+  it("true when one queued event targets a member", () => {
+    expect(foldHasPendingEvents(["a", "b"], w([ev("other"), ev("a")]))).toBe(true);
   });
 
-  it("turns off after decay window with no fires", () => {
-    const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange);
-    tracker.noteFire(0);
-    tracker.tick(99);
-    expect(tracker.isActive()).toBe(true);
-    tracker.tick(101); // crosses 100ms threshold
-    expect(tracker.isActive()).toBe(false);
-    expect(onChange).toHaveBeenLastCalledWith(false);
+  it("false on empty queue", () => {
+    expect(foldHasPendingEvents(["a"], w([]))).toBe(false);
   });
 
-  it("can re-arm after going inactive", () => {
-    const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange);
-    tracker.noteFire(0);
-    tracker.tick(150);
-    expect(tracker.isActive()).toBe(false);
-    tracker.noteFire(150);
-    expect(tracker.isActive()).toBe(true);
-    expect(onChange.mock.calls.map((c) => c[0])).toEqual([true, false, true]);
+  it("works with large member lists (Set fast path)", () => {
+    const members = Array.from({ length: 20 }, (_, i) => `m${i}`);
+    expect(foldHasPendingEvents(members, w([ev("m17")]))).toBe(true);
+    expect(foldHasPendingEvents(members, w([ev("nope")]))).toBe(false);
+  });
+});
+
+describe("firstPendingMember", () => {
+  it("null when nothing pending for members", () => {
+    expect(firstPendingMember(["a"], w([ev("other")]))).toBeNull();
   });
 
-  it("tick is a no-op when inactive (no spurious off events)", () => {
-    const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange);
-    tracker.tick(0);
-    tracker.tick(500);
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it("freezes when sim time freezes (the play/pause guarantee)", () => {
-    // Sim time stops advancing while the runner is paused, so calling
-    // tick() repeatedly with the same `now` must not flip the halo off
-    // even past the decay window — this is the property that replaces
-    // the old pause()/resume() bookkeeping.
-    const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange);
-    tracker.noteFire(0);
-    tracker.tick(40);
-    // Pretend the runner pauses here. Sim time stays at 40 forever.
-    for (let i = 0; i < 50; i++) tracker.tick(40);
-    expect(tracker.isActive()).toBe(true);
-    expect(onChange).toHaveBeenCalledTimes(1);
+  it("returns the toNodeId of the first matching queue entry", () => {
+    expect(firstPendingMember(["a", "b"], w([ev("b", 1), ev("a", 2)]))).toBe("b");
   });
 });
 
 describe("isFoldBoundaryEmit", () => {
   const members = new Set(["a", "b", "c"]);
-  it("true when emit enters the fold (outside → member)", () => {
-    expect(isFoldBoundaryEmit(members, "x", "a")).toBe(true);
-  });
-  it("true when emit leaves the fold (member → outside)", () => {
-    expect(isFoldBoundaryEmit(members, "b", "y")).toBe(true);
-  });
-  it("false for pure internal emit (member → member)", () => {
-    expect(isFoldBoundaryEmit(members, "a", "b")).toBe(false);
-  });
-  it("false for pure external emit (outside → outside)", () => {
-    expect(isFoldBoundaryEmit(members, "x", "y")).toBe(false);
-  });
+  it("true outside → member", () => { expect(isFoldBoundaryEmit(members, "x", "a")).toBe(true); });
+  it("true member → outside", () => { expect(isFoldBoundaryEmit(members, "b", "y")).toBe(true); });
+  it("false member → member", () => { expect(isFoldBoundaryEmit(members, "a", "b")).toBe(false); });
+  it("false outside → outside", () => { expect(isFoldBoundaryEmit(members, "x", "y")).toBe(false); });
 });

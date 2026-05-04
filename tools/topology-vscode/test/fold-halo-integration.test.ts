@@ -1,22 +1,13 @@
-// Integration test: drive the real simulator over a small spec, route
-// member fires into the activity tracker, and assert the halo timeline
-// matches the spec the user gave:
-//   - on at first member fire
-//   - on continuously while members keep firing within the decay window
-//   - off after decay-window of silence
-//
-// This catches regressions in the seam between the simulator's fire
-// stream and the fold-halo tracker — neither side can drift without
-// breaking this contract.
+// Integration: drive the real simulator and assert the queue-based
+// halo predicate (`foldHasPendingEvents`) tracks data residence —
+// off at idle, on while pulses are in flight toward members, off after
+// the cascade drains.
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { initWorld, step, type World } from "../src/sim/simulator";
 import type { Spec } from "../src/schema";
-import { createFoldActivityTracker } from "../src/webview/rf/fold-activity";
+import { foldHasPendingEvents } from "../src/webview/rf/fold-activity";
 
-// ChainInhibitor cascade: inA → ci1 → ci2. ci1 + ci2 are the fold's
-// members; inA is outside. Seeding one pulse drives a couple of fires
-// through the members.
 const cascadeSpec: Spec = {
   nodes: [
     { id: "inA", type: "Input", x: 0, y: 0 },
@@ -33,65 +24,32 @@ const cascadeSpec: Spec = {
   },
 };
 
-describe("fold-halo integration: simulator → activity tracker", () => {
-  const memberIds = new Set(["ci1", "ci2"]);
-
-  it("activates on first member fire from the live simulator", () => {
-    const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(600, onChange);
-    let simNow = 0;
-    let w = initWorld(cascadeSpec);
-
+function drain(spec: Spec, w: World, maxSteps = 50): World {
+  for (let i = 0; i < maxSteps; i++) {
     const before = w.history.length;
-    w = step(cascadeSpec, w);
-    const memberFires = w.history.slice(before).filter((h) => memberIds.has(h.nodeId));
-    expect(memberFires.length).toBeGreaterThan(0);
-    memberFires.forEach(() => tracker.noteFire(simNow));
-    expect(tracker.isActive()).toBe(true);
-    expect(onChange).toHaveBeenCalledWith(true);
+    w = step(spec, w);
+    if (w.history.length === before) break;
+  }
+  return w;
+}
+
+describe("fold-halo predicate vs live simulator", () => {
+  const memberIds = ["ci1", "ci2"];
+
+  it("turns on while pulses are pending for members", () => {
+    let world = initWorld(cascadeSpec);
+    let sawOn = false;
+    for (let i = 0; i < 20; i++) {
+      const before = world.history.length;
+      world = step(cascadeSpec, world);
+      if (foldHasPendingEvents(memberIds, world)) sawOn = true;
+      if (world.history.length === before) break;
+    }
+    expect(sawOn).toBe(true);
   });
 
-  it("stays on across the cascade without flickering", () => {
-    const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(600, onChange);
-    let simNow = 0;
-    let w = initWorld(cascadeSpec);
-
-    for (let tick = 0; tick < 5; tick++) {
-      const before = w.history.length;
-      w = step(cascadeSpec, w);
-      const memberFires = w.history.slice(before).filter((h) => memberIds.has(h.nodeId));
-      if (memberFires.length === 0) break;
-      memberFires.forEach(() => tracker.noteFire(simNow));
-      tracker.tick(simNow);
-      expect(tracker.isActive()).toBe(true);
-      simNow += 400;
-    }
-    const calls = onChange.mock.calls.map((c) => c[0]);
-    expect(calls).toEqual([true]);
-  });
-
-  it("decays off when the simulator stops feeding member fires", () => {
-    const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(600, onChange);
-    let simNow = 0;
-    let w = initWorld(cascadeSpec);
-
-    let drained = false;
-    for (let i = 0; i < 20 && !drained; i++) {
-      const before = w.history.length;
-      w = step(cascadeSpec, w);
-      const memberFires = w.history.slice(before).filter((h) => memberIds.has(h.nodeId));
-      memberFires.forEach(() => tracker.noteFire(simNow));
-      if (w.history.length === before) drained = true;
-      simNow += 100;
-      tracker.tick(simNow);
-    }
-    expect(tracker.isActive()).toBe(true);
-
-    simNow += 700;
-    tracker.tick(simNow);
-    expect(tracker.isActive()).toBe(false);
-    expect(onChange).toHaveBeenLastCalledWith(false);
+  it("off after the cascade drains", () => {
+    const world = drain(cascadeSpec, initWorld(cascadeSpec));
+    expect(foldHasPendingEvents(memberIds, world)).toBe(false);
   });
 });

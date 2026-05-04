@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { subscribe, subscribeState, getTickMs, getSimTime } from "../../sim/runner";
+import { subscribeState, getWorld } from "../../sim/runner";
 import { recordFoldHaloEvent } from "./fold-halo-probe";
-import { createFoldActivityTracker, isFoldBoundaryEmit } from "./fold-activity";
+import { foldHasPendingEvents, firstPendingMember, isFoldBoundaryEmit } from "./fold-activity";
 
 const FOLD_STROKE = "#b89a3c";
 const FOLD_HALO_BOX_SHADOW = `0 0 0 2px ${FOLD_STROKE}`;
@@ -25,51 +25,31 @@ export type FoldNodeData = {
 // (where the halo lives in the DOM) and this slice evolve independently.
 
 function useFoldHaloState(foldId: string, memberIds: string[]): { buffered: boolean } {
-  // "active" = any member has fired within `decayMs`. Each member fire
-  // refreshes the timeout; when it expires, the halo turns off. The
-  // earlier flash + glow overlays were dropped — at typical tick rates
-  // they re-fired faster than they faded, producing a strobe that
-  // competed with the persistent halo. The port-dot halo is the single
-  // authoritative on/off signal now.
-  const [buffered, setBuffered] = useState<boolean>(false);
+  // Halo is a pure projection of the simulator queue: on iff there is
+  // at least one pending event whose receiver is a fold member. "Data
+  // is in the fold" = pulses are in flight toward members. Pause/resume
+  // is free — the queue can't change while paused. No timer, no decay
+  // window, no fire-event reduction. Backpressure-only fires (ReadGate,
+  // SyncGate) on internal scaffolding don't enqueue cross-member events
+  // unless data is actually moving, so they don't move the predicate.
+  const compute = () => foldHasPendingEvents(memberIds, getWorld());
+  const [buffered, setBuffered] = useState<boolean>(compute);
   useEffect(() => {
-    recordFoldHaloEvent(foldId, "mount", foldId, memberIds, false);
-    const ids = new Set(memberIds);
-    // pendingTrigger carries the firing member's id into the tracker's
-    // onChange callback so the "start" probe entry names the actual
-    // node that lit the halo (instead of the placeholder "(fire)").
-    // That's the diagnostic for "halo turned on before any pulse should
-    // have reached a member" — the trigger id either confirms a real
-    // member or names a node that shouldn't be in this fold.
-    let pendingTrigger = "(init)";
-    const tracker = createFoldActivityTracker(
-      Math.round(getTickMs() * 1.5),
-      (active) => {
-        recordFoldHaloEvent(foldId, active ? "start" : "end", active ? pendingTrigger : "(decay)", memberIds);
-        setBuffered(active);
-      },
-    );
-    // Decay reads sim time, which freezes on pause for free — no
-    // pause/resume bookkeeping. Every runner event/state change drives
-    // tick(), which deactivates when sim-time silence exceeds decayMs.
-    const unsub = subscribe((ev) => {
-      if (ev.type === "fire" && ids.has(ev.nodeId)) {
-        const wasActive = tracker.isActive();
-        pendingTrigger = ev.nodeId;
-        tracker.noteFire(getSimTime());
-        if (wasActive) recordFoldHaloEvent(foldId, "fire", ev.nodeId, memberIds);
-      } else {
-        tracker.tick(getSimTime());
+    let prev = compute();
+    recordFoldHaloEvent(foldId, "mount", foldId, memberIds, prev);
+    setBuffered(prev);
+    const unsubState = subscribeState(() => {
+      const world = getWorld();
+      const next = foldHasPendingEvents(memberIds, world);
+      if (next !== prev) {
+        const trigger =
+          next ? (firstPendingMember(memberIds, world) ?? "(unknown)") : "(drained)";
+        recordFoldHaloEvent(foldId, next ? "start" : "end", trigger, memberIds);
+        prev = next;
+        setBuffered(next);
       }
     });
-    const unsubState = subscribeState(() => {
-      tracker.tick(getSimTime());
-    });
-    return () => {
-      unsubState();
-      tracker.dispose();
-      unsub();
-    };
+    return unsubState;
   }, [foldId, memberIds]);
   return { buffered };
 }

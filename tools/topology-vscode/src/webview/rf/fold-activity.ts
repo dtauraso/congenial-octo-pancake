@@ -1,57 +1,53 @@
-// Pure helpers for fold-halo activity. Extracted from FoldNode so the
-// state-machine and boundary-detection logic can be unit-tested without
-// React or a runner. The hook wires runner events into these.
+// Halo predicate + boundary helper. Halo means "data is in the fold,"
+// expressed as: the simulator queue contains at least one pending event
+// whose receiver is a fold member. That's "forward-looking" activity —
+// off when there's nothing coming for any member, on while pulses are
+// in flight toward members. Pause/resume falls out for free: the queue
+// can't change while paused, so the predicate freezes.
+//
+// This deliberately ignores `world.state` (which holds `__has_<port>`
+// only on join nodes — too narrow — and `held` forever on inhibitors —
+// too broad).
 
-export type FoldActivityListener = (active: boolean) => void;
+import type { SimEvent, World } from "../../sim/simulator";
 
-export type FoldActivityTracker = {
-  // Member fired at sim time `now`. Activates the halo (idempotent) and
-  // refreshes the decay deadline.
-  noteFire(now: number): void;
-  // Drives decay. The hook calls this on every runner event/state tick
-  // with the current sim time. When `now - lastFire > decayMs` the halo
-  // turns off. Pause/resume falls out for free: sim time stops
-  // advancing while paused, so `tick` is a no-op until play resumes.
-  tick(now: number): void;
-  isActive(): boolean;
-  dispose(): void;
-};
-
-export function createFoldActivityTracker(
-  decayMs: number,
-  onChange: FoldActivityListener,
-): FoldActivityTracker {
-  let active = false;
-  let lastFire = 0;
-  return {
-    noteFire(now: number): void {
-      lastFire = now;
-      if (!active) {
-        active = true;
-        onChange(true);
-      }
-    },
-    tick(now: number): void {
-      if (!active) return;
-      if (now - lastFire > decayMs) {
-        active = false;
-        onChange(false);
-      }
-    },
-    isActive(): boolean {
-      return active;
-    },
-    dispose(): void {
-      active = false;
-    },
-  };
+export function foldHasPendingEvents(
+  memberIds: readonly string[],
+  world: World | null | undefined,
+): boolean {
+  if (!world) return false;
+  const members = memberIds.length < 8 ? null : new Set(memberIds);
+  for (const ev of world.queue) {
+    if (members ? members.has(ev.toNodeId) : memberIds.includes(ev.toNodeId)) return true;
+  }
+  return false;
 }
 
 /**
+ * Like {@link foldHasPendingEvents} but returns the receiver id of the
+ * first pending event targeting a member (or null). Used by the probe
+ * to name the member responsible for an off→on transition.
+ */
+export function firstPendingMember(
+  memberIds: readonly string[],
+  world: World | null | undefined,
+): string | null {
+  if (!world) return null;
+  const members = memberIds.length < 8 ? null : new Set(memberIds);
+  for (const ev of world.queue) {
+    if (members ? members.has(ev.toNodeId) : memberIds.includes(ev.toNodeId)) return ev.toNodeId;
+  }
+  return null;
+}
+
+// Re-export for any caller still importing this name; not used by the
+// new halo path but kept so other surfaces (boundary-emit detection)
+// don't break on the rewrite.
+export { type SimEvent };
+
+/**
  * True when an emit from `fromId` to `toId` crosses the fold boundary —
- * i.e. exactly one of the two endpoints is a member of the fold. Pure
- * member-to-member emissions and pure outside-to-outside emissions are
- * not boundary crossings.
+ * i.e. exactly one of the two endpoints is a member of the fold.
  */
 export function isFoldBoundaryEmit(
   members: ReadonlySet<string>,
