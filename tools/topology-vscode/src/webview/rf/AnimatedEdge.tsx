@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BaseEdge, type EdgeProps } from "reactflow";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind, type EdgeRoute } from "../../schema";
-import { subscribe, subscribeState, getConcurrentEdges, getTickMs, getWorld, isPlaying } from "../../sim/runner";
+import { subscribe, subscribeState, getConcurrentEdges, getTickMs, getWorld, isPlaying, getSimTime } from "../../sim/runner";
 import { getPendingCount } from "../../sim/simulator";
 import { vscode } from "../save";
 import { markerEndUrl } from "./MarkerDefs";
@@ -396,7 +396,11 @@ function PulseInstance({
     const svgArc = path.getTotalLength();
     if (svgArc <= 0) return;
 
-    let swapStart = performance.now();
+    // Progress is measured in sim time so a paused simulator freezes
+    // the pulse mid-flight automatically — sim time stops advancing,
+    // `elapsed` stops growing, the dot stops moving. No swapStart
+    // rebasing needed.
+    const swapStart = getSimTime();
     const startArc = Math.min(arcTraveledRef.current, svgArc);
     const remainingArc = svgArc - startArc;
     if (remainingArc <= 0) {
@@ -406,12 +410,11 @@ function PulseInstance({
     const remainingMs = remainingArc / speedPxPerMs;
 
     let rafId = 0;
-    let pauseStart: number | null = null;
     const probeOn = pulseProbeEnabled();
     let probeWorst: ProbeWorst | null = null;
 
     const frame = () => {
-      const elapsed = performance.now() - swapStart;
+      const elapsed = getSimTime() - swapStart;
       const localT = Math.min(1, elapsed / remainingMs);
       const arcTraveled = startArc + localT * remainingArc;
       arcTraveledRef.current = arcTraveled;
@@ -542,21 +545,17 @@ function PulseInstance({
       }
     };
     if (isPlaying()) rafId = requestAnimationFrame(frame);
-    else pauseStart = performance.now();
 
-    // Gate the rAF loop on runner play-state so pressing pause freezes
-    // in-flight pulses in place and pressing play resumes from the same
-    // arc. Without this, pulses run to completion regardless of pause —
-    // the "pulse keeps flying after pause" decoupling.
+    // Pause/resume the rAF loop with play state — sim time alone would
+    // freeze the math, but rAF would still tick uselessly. This avoids
+    // the wasted frames; the visual freeze is already correct because
+    // `elapsed` is sim-time-based.
     const unsubState = subscribeState(() => {
       const playing = isPlaying();
       if (!playing && rafId) {
         cancelAnimationFrame(rafId);
         rafId = 0;
-        pauseStart = performance.now();
-      } else if (playing && pauseStart !== null) {
-        swapStart += performance.now() - pauseStart;
-        pauseStart = null;
+      } else if (playing && !rafId) {
         rafId = requestAnimationFrame(frame);
       }
     });
@@ -564,8 +563,7 @@ function PulseInstance({
     return () => {
       unsubState();
       if (rafId) cancelAnimationFrame(rafId);
-      const reference = pauseStart ?? performance.now();
-      const elapsed = reference - swapStart;
+      const elapsed = getSimTime() - swapStart;
       const localT = Math.min(1, elapsed / remainingMs);
       arcTraveledRef.current = startArc + localT * remainingArc;
     };

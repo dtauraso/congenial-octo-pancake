@@ -54,6 +54,20 @@ let world: World | null = null;
 let concurrentEdges: Set<string> = new Set();
 let intervalId: ReturnType<typeof setInterval> | 0 = 0;
 let playing = false;
+// Unified sim clock. Advances with wall time while playing, frozen on
+// pause. All animation/decay timing reads `getSimTime()` instead of
+// `Date.now()`/`performance.now()`, so a single play-state transition
+// freezes/resumes every animation in lockstep — replaces the per-site
+// pauseStart/pausedRemainingMs bookkeeping that AnimatedEdge and
+// fold-activity each reinvented.
+let simAccumMs = 0;
+let simSegmentStartWall = 0;
+function nowWall(): number {
+  return typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+export function getSimTime(): number {
+  return playing ? simAccumMs + (nowWall() - simSegmentStartWall) : simAccumMs;
+}
 let replayEvents: TraceEvent[] | null = null;
 let replayIndex = 0;
 const listeners: RunnerListener[] = [];
@@ -134,6 +148,7 @@ export function play(): void {
     world = initWorld(spec);
   }
   playing = true;
+  simSegmentStartWall = nowWall();
   // Step immediately so the user sees the first event without a 200ms
   // dead beat after pressing play. Wrap so a thrown handler doesn't
   // leave us in playing=true with no interval set (the "stuck pause"
@@ -182,6 +197,7 @@ export function jumpTo(cycle: number, _startNodeId: string): void {
 
 export function pause(): void {
   if (!playing) return;
+  simAccumMs += nowWall() - simSegmentStartWall;
   playing = false;
   if (intervalId) {
     clearInterval(intervalId);

@@ -1,24 +1,11 @@
 import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { subscribe, getTickMs } from "../../sim/runner";
+import { subscribe, subscribeState, getTickMs, getSimTime } from "../../sim/runner";
 import { recordFoldHaloEvent } from "./fold-halo-probe";
 import { createFoldActivityTracker, isFoldBoundaryEmit } from "./fold-activity";
 
 const FOLD_STROKE = "#b89a3c";
-
-// Mirror AnimatedNode's portStyle: 8x8 colored dot, half-protruding past
-// the edge. The buffered halo (boxShadow) goes on the input dot only,
-// matching how member nodes show their per-port "input X waiting" ring.
-function foldPortStyle(side: "left" | "right", buffered = false): React.CSSProperties {
-  return {
-    width: 8, height: 8, minWidth: 0, minHeight: 0,
-    [side]: -4, top: "50%",
-    transform: "translate(0, -50%)",
-    background: FOLD_STROKE, border: "1px solid #fff",
-    borderRadius: 4,
-    ...(buffered ? { boxShadow: `0 0 0 2px ${FOLD_STROKE}` } : {}),
-  };
-}
+const FOLD_HALO_BOX_SHADOW = `0 0 0 2px ${FOLD_STROKE}`;
 
 export type FoldNodeData = {
   label: string;
@@ -55,13 +42,23 @@ function useFoldHaloState(foldId: string, memberIds: string[]): { buffered: bool
         setBuffered(active);
       },
     );
+    // Decay reads sim time, which freezes on pause for free — no
+    // pause/resume bookkeeping. Every runner event/state change drives
+    // tick(), which deactivates when sim-time silence exceeds decayMs.
     const unsub = subscribe((ev) => {
-      if (ev.type !== "fire" || !ids.has(ev.nodeId)) return;
-      const wasActive = tracker.isActive();
-      tracker.noteFire();
-      if (wasActive) recordFoldHaloEvent(foldId, "fire", ev.nodeId, memberIds);
+      if (ev.type === "fire" && ids.has(ev.nodeId)) {
+        const wasActive = tracker.isActive();
+        tracker.noteFire(getSimTime());
+        if (wasActive) recordFoldHaloEvent(foldId, "fire", ev.nodeId, memberIds);
+      } else {
+        tracker.tick(getSimTime());
+      }
+    });
+    const unsubState = subscribeState(() => {
+      tracker.tick(getSimTime());
     });
     return () => {
+      unsubState();
       tracker.dispose();
       unsub();
     };
@@ -123,10 +120,11 @@ export function FoldNode(props: NodeProps<FoldNodeData>) {
           boxSizing: "border-box",
           cursor: "pointer",
           position: "relative",
+          ...(buffered ? { boxShadow: FOLD_HALO_BOX_SHADOW } : {}),
         }}
       >
-        <Handle type="target" position={Position.Left} style={foldPortStyle("left", buffered)} />
-        <Handle type="source" position={Position.Right} style={foldPortStyle("right", false)} />
+        <Handle type="target" position={Position.Left} style={HANDLE_HIDDEN} />
+        <Handle type="source" position={Position.Right} style={HANDLE_HIDDEN} />
         <div style={{ fontWeight: 600, position: "relative", zIndex: 1 }}>{data.label || "fold"}</div>
         <div style={{ opacity: 0.7, position: "relative", zIndex: 1 }}>{data.memberCount} nodes</div>
         <div style={{ fontSize: 9, opacity: 0.6, marginTop: 2, position: "relative", zIndex: 1 }}>double-click to expand</div>
@@ -145,6 +143,7 @@ export function FoldNode(props: NodeProps<FoldNodeData>) {
         borderRadius: 8,
         boxSizing: "border-box",
         pointerEvents: "none",
+        ...(buffered ? { boxShadow: FOLD_HALO_BOX_SHADOW } : {}),
       }}
     >
       <div

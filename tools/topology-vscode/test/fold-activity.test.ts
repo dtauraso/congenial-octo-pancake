@@ -12,121 +12,81 @@ import {
   isFoldBoundaryEmit,
 } from "../src/webview/rf/fold-activity";
 
-function makeFakeTimer() {
-  let now = 0;
-  type Pending = { at: number; fn: () => void; cancelled: boolean };
-  const pending: Pending[] = [];
-  let nextHandle = 1;
-  const handles = new Map<number, Pending>();
-  return {
-    set: (fn: () => void, ms: number) => {
-      const handle = nextHandle++;
-      const entry = { at: now + ms, fn, cancelled: false };
-      pending.push(entry);
-      handles.set(handle, entry);
-      return handle;
-    },
-    clear: (h: unknown) => {
-      const entry = handles.get(h as number);
-      if (entry) entry.cancelled = true;
-    },
-    advance(ms: number) {
-      now += ms;
-      // Fire any due, non-cancelled timers in chronological order.
-      pending
-        .filter((p) => !p.cancelled && p.at <= now)
-        .sort((a, b) => a.at - b.at)
-        .forEach((p) => {
-          p.cancelled = true; // single-shot
-          p.fn();
-        });
-    },
-  };
-}
-
 describe("createFoldActivityTracker", () => {
   it("turns on at first fire", () => {
-    const t = makeFakeTimer();
     const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange, t);
+    const tracker = createFoldActivityTracker(100, onChange);
     expect(tracker.isActive()).toBe(false);
-    tracker.noteFire();
+    tracker.noteFire(0);
     expect(tracker.isActive()).toBe(true);
     expect(onChange).toHaveBeenCalledWith(true);
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 
   it("does not re-emit on repeated fires while already active", () => {
-    const t = makeFakeTimer();
     const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange, t);
-    tracker.noteFire();
-    tracker.noteFire();
-    tracker.noteFire();
+    const tracker = createFoldActivityTracker(100, onChange);
+    tracker.noteFire(0);
+    tracker.noteFire(10);
+    tracker.noteFire(20);
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(tracker.isActive()).toBe(true);
   });
 
   it("stays on while fires arrive within the decay window", () => {
-    const t = makeFakeTimer();
     const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange, t);
-    tracker.noteFire();
-    t.advance(60);
-    tracker.noteFire(); // refresh: timer reset, should not expire at t=100
-    t.advance(60); // total 120 since first fire, but only 60 since refresh
+    const tracker = createFoldActivityTracker(100, onChange);
+    tracker.noteFire(0);
+    tracker.tick(60);
+    tracker.noteFire(60); // refresh
+    tracker.tick(120); // 60ms since refresh — still active
     expect(tracker.isActive()).toBe(true);
-    expect(onChange).toHaveBeenCalledTimes(1); // only the initial true
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 
   it("turns off after decay window with no fires", () => {
-    const t = makeFakeTimer();
     const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange, t);
-    tracker.noteFire();
-    t.advance(99);
+    const tracker = createFoldActivityTracker(100, onChange);
+    tracker.noteFire(0);
+    tracker.tick(99);
     expect(tracker.isActive()).toBe(true);
-    t.advance(2); // crosses the 100ms threshold
+    tracker.tick(101); // crosses 100ms threshold
     expect(tracker.isActive()).toBe(false);
     expect(onChange).toHaveBeenLastCalledWith(false);
   });
 
   it("can re-arm after going inactive", () => {
-    const t = makeFakeTimer();
     const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange, t);
-    tracker.noteFire();
-    t.advance(150);
+    const tracker = createFoldActivityTracker(100, onChange);
+    tracker.noteFire(0);
+    tracker.tick(150);
     expect(tracker.isActive()).toBe(false);
-    tracker.noteFire();
+    tracker.noteFire(150);
     expect(tracker.isActive()).toBe(true);
-    // 4 transitions: on, off, on (3 onChange calls)
     expect(onChange.mock.calls.map((c) => c[0])).toEqual([true, false, true]);
   });
 
-  it("dispose cancels pending decay so no spurious off after unmount", () => {
-    const t = makeFakeTimer();
+  it("tick is a no-op when inactive (no spurious off events)", () => {
     const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(100, onChange, t);
-    tracker.noteFire();
-    tracker.dispose();
-    t.advance(500);
-    expect(onChange).toHaveBeenCalledTimes(1); // only the initial true
+    const tracker = createFoldActivityTracker(100, onChange);
+    tracker.tick(0);
+    tracker.tick(500);
+    expect(onChange).not.toHaveBeenCalled();
   });
-});
 
-describe("default setTimer binding", () => {
-  // Regression: assigning setTimeout/clearTimeout as object methods
-  // loses their global-this binding and throws "Illegal invocation"
-  // in browsers. Default `setTimer` must wrap them so noteFire() works
-  // when callers don't pass a custom timer (i.e. in production).
-  it("noteFire and decay run without 'Illegal invocation' on real timers", async () => {
+  it("freezes when sim time freezes (the play/pause guarantee)", () => {
+    // Sim time stops advancing while the runner is paused, so calling
+    // tick() repeatedly with the same `now` must not flip the halo off
+    // even past the decay window — this is the property that replaces
+    // the old pause()/resume() bookkeeping.
     const onChange = vi.fn();
-    const tracker = createFoldActivityTracker(20, onChange);
-    expect(() => tracker.noteFire()).not.toThrow();
-    await new Promise((r) => setTimeout(r, 60));
-    expect(onChange.mock.calls.map((c) => c[0])).toEqual([true, false]);
-    tracker.dispose();
+    const tracker = createFoldActivityTracker(100, onChange);
+    tracker.noteFire(0);
+    tracker.tick(40);
+    // Pretend the runner pauses here. Sim time stays at 40 forever.
+    for (let i = 0; i < 50; i++) tracker.tick(40);
+    expect(tracker.isActive()).toBe(true);
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 });
 

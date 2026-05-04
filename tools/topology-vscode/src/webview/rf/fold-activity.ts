@@ -5,57 +5,44 @@
 export type FoldActivityListener = (active: boolean) => void;
 
 export type FoldActivityTracker = {
-  noteFire(): void;
+  // Member fired at sim time `now`. Activates the halo (idempotent) and
+  // refreshes the decay deadline.
+  noteFire(now: number): void;
+  // Drives decay. The hook calls this on every runner event/state tick
+  // with the current sim time. When `now - lastFire > decayMs` the halo
+  // turns off. Pause/resume falls out for free: sim time stops
+  // advancing while paused, so `tick` is a no-op until play resumes.
+  tick(now: number): void;
   isActive(): boolean;
   dispose(): void;
 };
 
-/**
- * Halo activity is on while members are firing and goes off after
- * `decayMs` of silence. Each `noteFire()` flips the state on (if not
- * already) and resets the decay timer; the timer firing flips it off.
- *
- * `setTimer` defaults to setTimeout/clearTimeout but is injectable so
- * tests can use fake timers without polluting global state.
- */
 export function createFoldActivityTracker(
   decayMs: number,
   onChange: FoldActivityListener,
-  setTimer: {
-    set: (fn: () => void, ms: number) => unknown;
-    clear: (h: unknown) => void;
-    // setTimeout/clearTimeout from the global object require `this`
-    // bound to the global; assigning them as object methods loses that
-    // binding and throws "Illegal invocation" in browsers. Wrap.
-  } = {
-    set: (fn, ms) => setTimeout(fn, ms),
-    clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
-  },
 ): FoldActivityTracker {
   let active = false;
-  let timer: unknown = null;
+  let lastFire = 0;
   return {
-    noteFire(): void {
+    noteFire(now: number): void {
+      lastFire = now;
       if (!active) {
         active = true;
         onChange(true);
       }
-      if (timer !== null) setTimer.clear(timer);
-      timer = setTimer.set(() => {
-        timer = null;
-        if (!active) return;
+    },
+    tick(now: number): void {
+      if (!active) return;
+      if (now - lastFire > decayMs) {
         active = false;
         onChange(false);
-      }, decayMs);
+      }
     },
     isActive(): boolean {
       return active;
     },
     dispose(): void {
-      if (timer !== null) {
-        setTimer.clear(timer);
-        timer = null;
-      }
+      active = false;
     },
   };
 }
