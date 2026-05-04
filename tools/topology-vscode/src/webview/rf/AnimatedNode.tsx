@@ -62,6 +62,11 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
     return { dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) };
   });
   const [tweenMs, setTweenMs] = useState<number>(getTickMs());
+  // Held-value tint: SMIL reference cycles inhibitor fill color across
+  // the loop to show which value is currently held (#ffab40 for +1,
+  // #66bb6a for −1, neutral otherwise). Drive that from runner state
+  // (state.held) instead of a baked time loop.
+  const [held, setHeld] = useState<StateValue | undefined>(() => getWorld()?.state?.[id]?.held);
 
   useEffect(() => {
     const unsub = subscribe((ev) => {
@@ -84,11 +89,18 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
       const s = getWorld()?.state?.[id];
       setOffset({ dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) });
       setTweenMs(getTickMs());
+      setHeld(s?.held);
     });
     return unsub;
   }, [id]);
 
   const radius = data.shape === "pill" ? data.height / 2 : 4;
+  const heldNum = typeof held === "number" ? held : Number(held);
+  const heldFill =
+    heldNum === 1 ? "#ffab40" :
+    heldNum === -1 ? "#66bb6a" :
+    null;
+  const fill = heldFill ?? data.fill;
 
   // Per-node step affordance (N2). Visible only when the node is
   // selected so it doesn't clutter the unfocused canvas. Click drives
@@ -131,7 +143,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         minWidth: data.width,
         width: "max-content",
         height: data.height,
-        background: data.fill,
+        background: fill,
         color: "#1a1a1a",
         border: `${selected ? 2 : 1}px solid ${data.stroke}`,
         borderRadius: radius,
@@ -141,7 +153,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         overflow: "visible",
         isolation: "isolate",
         transform: `translate(${offset.dx}px, ${offset.dy}px)`,
-        transition: `transform ${tweenMs}ms linear`,
+        transition: `transform ${tweenMs}ms linear, background-color ${tweenMs}ms linear`,
         willChange: "transform",
       }}
     >
