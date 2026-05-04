@@ -474,3 +474,37 @@ Key cross-references with the deferrals memo:
 Audit doc is the spec for a future session; nothing landed here.
 Suggested cluster order: state→zustand (R1-R3) → panels→React
 (R4-R7) → geometry/routing (R14-R18, blocks on lib choice).
+
+
+### 2026-05-04 — Node-timing audit (event-driven vs SMIL global clock)
+
+Companion to the SMIL-parity audit (commits ed2987d..ba5f74b). That
+audit closed visual mismatches but explicitly tagged cross-edge timing
+as "correct — different model": SMIL encodes every edge phase in one
+16.902s keyTimes envelope; the JS port has no compiled cross-edge
+schedule, just a stepped event queue. This audit asks where that
+difference introduces friction.
+
+| # | Aspect | Runner/editor behavior | SMIL/spec invariant | Verdict | Notes (file:line) |
+|---|--------|------------------------|----------------------|---------|-------------------|
+| 1 | Cross-edge cadence / backpressure slack | Gates buffer first input, fire immediately on second arrival. No idle-wait visible. | readGate ack waits t=0.331→0.826s in cascade SVG; slack is observable. | friction | [runner.ts:324-344](../../../tools/topology-vscode/src/sim/runner.ts#L324-L344), [handlers.ts:56-74](../../../tools/topology-vscode/src/sim/handlers.ts#L56-L74) |
+| 2 | Tick interval vs animation duration | `pulseSpeedPxPerMs = (400/tickMs)*0.08`. Long edge + fast tick: downstream emit at tick+1 lands while upstream pulse still animating. | SMIL: edge traversals locked into 16.902s envelope; downstream scheduled after upstream completes. | friction | [AnimatedEdge.tsx:257-259, 399-415](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx#L257-L259) |
+| 3 | Concurrent self-pacer offset | Re-fires unconditionally at `world.tick + 1`, no edge-traversal or queue-load compensation. | SMIL schedules downstream relative to *arrival*, not wall-clock tick. | bug-risk | [runner.ts:333](../../../tools/topology-vscode/src/sim/runner.ts#L333) — re-fire can outrun previous pulse on long edges or under backlog |
+| 4 | Latch + AND gate ack visibility | Handler buffers ack, fires when input arrives — same tick. No render signal for "ack buffered, waiting." | SMIL shows ack pause on-screen (495ms slack) before input arrives. | friction | [handlers.ts:20-33](../../../tools/topology-vscode/src/sim/handlers.ts#L20-L33), [simulator.ts:252-261](../../../tools/topology-vscode/src/sim/simulator.ts#L252-L261) |
+| 5 | Self-sustaining mode event ordering | Same-`readyAt` events tie-broken by insertion-order `id`. Deterministic but non-commutative across cycles. | Spec: repeated cycles must not depend on schedule call order. | bug-risk | [simulator.ts:181-184](../../../tools/topology-vscode/src/sim/simulator.ts#L181-L184) |
+| 6 | stepToNode / per-node step | Pauses, runs `stepOnce` up to 5000 until target fires, leaves paused. Stops on *first* arrival. | No SMIL analog. Stepping must preserve free-running semantics. | correct — different model | [runner.ts:148-160](../../../tools/topology-vscode/src/sim/runner.ts#L148-L160), [AnimatedNode.tsx:123-155](../../../tools/topology-vscode/src/webview/rf/AnimatedNode.tsx#L123-L155) |
+
+**Key takeaways:**
+- Runner is logically correct. Friction is animation/visibility, not handler logic — except #3 (hardcoded `tick+1`) and #5 (insertion-order ties), which are latent bug-risks under long edges, backlog, or repeated cycles.
+- Backpressure slack is invisible. The whole point of the latch+AND pattern is the wait — the runner collapses it visually. Most user-impactful finding.
+- Pulse animation and event firing are async. No invariant guarantees a pulse finishes animating before downstream emits.
+
+**Branches opened from this audit:**
+- `task/edge-data-delay-support` — addresses row #3 (per-edge delay override so self-pacer can compensate for edge length).
+- `task/validate-self-pacer-under-backlog` — pins the FIFO ordering invariant flagged in row #3 with a regression test.
+- `task/deterministic-cycle-ordering` (row #5) — dropped: current `(readyAt, id)` is already deterministic; the non-commutativity concern needs an explicit ord-per-event design discussion before any change.
+
+**Recommended branches (not yet opened, need design input):**
+- `task/visualize-gate-buffer-state` (row #4) — render "waiting on second input" affordance.
+- `task/backpressure-slack-envelope` (row #1) — animate the ack-wait interval.
+- `task/stepping-semantics-doc` (row #6) — clarify "step one fire" vs "step one cycle" in self-sustaining mode.
