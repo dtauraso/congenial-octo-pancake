@@ -1,4 +1,4 @@
-import { spec, view, viewerState } from "./state";
+import { spec, viewerState } from "./state";
 import { serializeViewerState } from "./viewerState";
 import type { TopogenStatus, WebviewToHostMsg } from "../messages";
 
@@ -14,10 +14,20 @@ export const vscode = acquireVsCodeApi();
 const status = document.getElementById("status")!;
 const topogenStatus = document.getElementById("topogen-status")!;
 
-let saveTimer: number | undefined;
-let viewSaveTimer: number | undefined;
 let lastSyncedText: string | undefined;
 let lastViewSyncedText: string | undefined;
+
+// Debounced timing lives in <SaveLifecycle /> (useDebouncedCallback).
+// schedule()/flush() bridge module-level callers to the component's
+// debouncer; null until the component mounts.
+type Saver = { schedule: () => void; flush: () => void };
+let saveImpl: Saver | null = null;
+let viewSaveImpl: Saver | null = null;
+
+export function registerSavers(save: Saver, viewSave: Saver) {
+  saveImpl = save;
+  viewSaveImpl = viewSave;
+}
 
 export function postReady() {
   vscode.postMessage({ type: "ready" });
@@ -52,44 +62,39 @@ export function setTopogenStatus(s: TopogenStatus) {
   }
 }
 
-export function scheduleSave() {
-  setStatus(true);
-  if (saveTimer !== undefined) clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(flushSave, 250);
-}
-
-export function flushSave() {
-  if (saveTimer === undefined) return;
-  clearTimeout(saveTimer);
-  saveTimer = undefined;
+// Pure send-now helpers — invoked by the debouncer in <SaveLifecycle />
+// after the trailing edge fires, or directly via flushSave/flushViewSave.
+export function performSave() {
   const text = JSON.stringify(spec, null, 2) + "\n";
   lastSyncedText = text;
   vscode.postMessage({ type: "save", text });
   setStatus(false);
 }
 
-export function scheduleViewSave() {
-  if (viewSaveTimer !== undefined) clearTimeout(viewSaveTimer);
-  viewSaveTimer = window.setTimeout(flushViewSave, 400);
-}
-
-export function flushViewSave() {
-  if (viewSaveTimer === undefined) return;
-  clearTimeout(viewSaveTimer);
-  viewSaveTimer = undefined;
-  // Camera is owned by whoever drives pan/zoom (the renderer). They write
-  // viewerState.camera directly; this function just persists whatever's there.
+export function performViewSave() {
   const text = serializeViewerState(viewerState);
   if (text === lastViewSyncedText) return;
   lastViewSyncedText = text;
   vscode.postMessage({ type: "view-save", text });
 }
 
+export function scheduleSave() {
+  setStatus(true);
+  saveImpl?.schedule();
+}
+
+export function flushSave() {
+  saveImpl?.flush();
+}
+
+export function scheduleViewSave() {
+  viewSaveImpl?.schedule();
+}
+
+export function flushViewSave() {
+  viewSaveImpl?.flush();
+}
+
 export function markViewSynced(text: string) {
   lastViewSyncedText = text;
 }
-
-window.addEventListener("pagehide", () => { flushSave(); flushViewSave(); });
-window.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") { flushSave(); flushViewSave(); }
-});

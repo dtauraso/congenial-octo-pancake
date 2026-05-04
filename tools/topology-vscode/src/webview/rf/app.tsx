@@ -45,6 +45,7 @@ import {
   useDimmed,
   viewerState,
 } from "../state";
+import { SaveLifecycle } from "../SaveLifecycle";
 import { RunButton } from "../panels/RunButton";
 import { ViewsPanel } from "../panels/ViewsPanel";
 import { TimelinePanel } from "../panels/TimelinePanel";
@@ -937,6 +938,7 @@ function Inner() {
 export default function App() {
   return (
     <ReactFlowProvider>
+      <SaveLifecycle />
       <Inner />
       <RunButton />
       <ViewsPanel />
