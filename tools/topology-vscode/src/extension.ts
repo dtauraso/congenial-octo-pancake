@@ -15,24 +15,6 @@ export function activate(context: vscode.ExtensionContext) {
       { webviewOptions: { retainContextWhenHidden: true } }
     )
   );
-  // Dev-loop convenience: reload the window when out/extension.js changes
-  // (paired with `npm run watch`). Webview-only changes are picked up by
-  // the per-panel bundleWatcher; extension-host code needs a full reload.
-  if (context.extensionMode === vscode.ExtensionMode.Development) {
-    const extJs = path.join(context.extensionPath, "out", "extension.js");
-    const watcher = vscode.workspace.createFileSystemWatcher(extJs);
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const schedule = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = null;
-        vscode.commands.executeCommand("workbench.action.reloadWindow");
-      }, 400);
-    };
-    watcher.onDidChange(schedule);
-    watcher.onDidCreate(schedule);
-    context.subscriptions.push(watcher);
-  }
 }
 
 class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
