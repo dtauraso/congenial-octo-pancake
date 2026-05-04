@@ -23,8 +23,7 @@ import { NodePalette, PALETTE_DATA_TYPE } from "./NodePalette";
 import { CompareToolbar, type CompareMode } from "./CompareToolbar";
 import { isPlaying as isRunnerPlaying, load as loadRunner, reset as resetRunner } from "../../sim/runner";
 import { MOTION_TYPES } from "../../sim/handlers";
-import { beginRenameNodeId, setRenameRerender } from "../rename";
-import { beginEditSublabel, setSublabelRerender } from "../sublabel";
+import { beginEditSublabel, beginRenameNodeId, setInlineEditRerender } from "../inline-edit";
 import { flushViewSave, markViewSynced, scheduleSave, scheduleViewSave, vscode } from "../save";
 import {
   clearSpecHistory,
@@ -273,8 +272,7 @@ function Inner() {
       setNodes(flow.nodes);
       setEdges(flow.edges);
     };
-    setRenameRerender(rerenderFromSpec);
-    setSublabelRerender(rerenderFromSpec);
+    setInlineEditRerender(rerenderFromSpec);
   }, []);
 
   useEffect(() => {
