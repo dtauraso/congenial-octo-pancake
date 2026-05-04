@@ -1,10 +1,10 @@
 ---
-name: Scan for industry bug-classes before the user finds them
+name: Name and check the bug class before declaring a change ready
 description: When touching code in a known bug-prone category (animation/timing/state, IPC, persistence, concurrency), name the well-known bug class first and check against it
 type: feedback
 ---
 
-When code I'm writing falls into a category with a known catalog of "everyone hits this" bugs, name the bug class out loud and check the change against it *before* the user has to repro and report.
+When code I'm writing falls into a category with a known catalog of "everyone hits this" bugs, name the bug class out loud and check the change against it *before* declaring it ready.
 
 > **Top-level rule.** If I find myself building infrastructure (clock / queue / diff / layout / parser / cache / scheduler / state-machine / backpressure / event bus / serializer / undo stack), pause and survey 3+ niches' solved versions before rolling my own. This is the single highest-leverage check in this file — most "didn't know the industry solved it" rounds come from skipping it.
 
@@ -24,7 +24,7 @@ These compose. Run them at the start of meaningful work, not as a ritual on ever
 
 6. **Collaborative peer framing.** Imagine a peer from niche X — different specialization, not higher-ranked — working with me on this code. What standard solution from their experience would they bring in? What structure from their field would they reach for? Peers have different knowledge sets, not better ones; the move is to invite their specialization into the work as a complement to mine, not as a yardstick I'm being measured against. Especially useful when a problem feels novel: the framing is "what would they bring to this?", not "what would they think of me?" Niches to rotate through depending on the work: game dev (animation/timing), DBA (caching/persistence), kernel (concurrency), DSP (filters/sampling), networking (clock skew/lag), compiler (transformation correctness), OS (scheduling/resource accounting).
 
-**Why:** the user has only been exposed to a few of these via lived experience. The deeper structural problem they named: "the industry is so niched that their solution organizing system doesn't scale" — every niche files the same underlying bug class under its own vocabulary (game dev: "fix your timestep"; DES: "logical vs physical clock"; UI: "implicit animations"; distributed systems: "vector clocks"). None of them index against each other. A non-niche-insider can't look up the class under any of those names because each name presupposes its niche. The asymmetry is mine to close — I have the catalog, they don't.
+**Why:** the catalog spans more niches than any single practitioner's lived path crosses. The deeper structural problem the user named: "the industry is so niched that their solution organizing system doesn't scale" — every niche files the same underlying bug class under its own vocabulary (game dev: "fix your timestep"; DES: "logical vs physical clock"; UI: "implicit animations"; distributed systems: "vector clocks"). None of them index against each other; each name presupposes its niche, so a query in one vocabulary won't surface the others. Surfacing the cross-niche aliases is what I bring to the collaboration.
 
 **How to apply:** when starting or reviewing a change, classify it. If it falls in any of these buckets, do the scan *before* declaring the change ready. State the class + the specific check in the working text so the user sees the reasoning, not just the patch. If no bucket matches, skip — this is a filter, not a ritual.
 
