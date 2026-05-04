@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { subscribeState, getWorld } from "../../sim/runner";
+import { subscribe } from "../../sim/runner";
 import { recordFoldHaloEvent } from "./fold-halo-probe";
-import { foldHasPendingEvents, firstPendingMember, isFoldBoundaryEmit } from "./fold-activity";
+import { applyFoldBoundaryEmit, isFoldBoundaryEmit } from "./fold-activity";
 
 const FOLD_STROKE = "#b89a3c";
 const FOLD_HALO_BOX_SHADOW = `0 0 0 2px ${FOLD_STROKE}`;
@@ -25,31 +25,36 @@ export type FoldNodeData = {
 // (where the halo lives in the DOM) and this slice evolve independently.
 
 function useFoldHaloState(foldId: string, memberIds: string[]): { buffered: boolean } {
-  // Halo is a pure projection of the simulator queue: on iff there is
-  // at least one pending event whose receiver is a fold member. "Data
-  // is in the fold" = pulses are in flight toward members. Pause/resume
-  // is free — the queue can't change while paused. No timer, no decay
-  // window, no fire-event reduction. Backpressure-only fires (ReadGate,
-  // SyncGate) on internal scaffolding don't enqueue cross-member events
-  // unless data is actually moving, so they don't move the predicate.
-  const compute = () => foldHasPendingEvents(memberIds, getWorld());
-  const [buffered, setBuffered] = useState<boolean>(compute);
+  // Halo as boundary-flow accumulator. The fold is a black box; halo
+  // means "stuff is inside, not yet released." Counts +1 on every emit
+  // that crosses inward (outside → member), -1 on every emit that
+  // crosses outward (member → outside). Internal and external emits
+  // are no-ops. Halo on iff count > 0; clamped at 0 so a fold that
+  // emits before it ever receives (initial held values) doesn't go
+  // negative. Pause/resume is free — emits stop while paused.
+  const [buffered, setBuffered] = useState<boolean>(false);
   useEffect(() => {
-    let prev = compute();
-    recordFoldHaloEvent(foldId, "mount", foldId, memberIds, prev);
-    setBuffered(prev);
-    const unsubState = subscribeState(() => {
-      const world = getWorld();
-      const next = foldHasPendingEvents(memberIds, world);
-      if (next !== prev) {
-        const trigger =
-          next ? (firstPendingMember(memberIds, world) ?? "(unknown)") : "(drained)";
-        recordFoldHaloEvent(foldId, next ? "start" : "end", trigger, memberIds);
-        prev = next;
+    const members = new Set(memberIds);
+    let count = 0;
+    let active = false;
+    recordFoldHaloEvent(foldId, "mount", foldId, memberIds, false);
+    return subscribe((ev) => {
+      if (ev.type !== "emit") return;
+      if (!isFoldBoundaryEmit(members, ev.fromNodeId, ev.toNodeId)) return;
+      const inward = members.has(ev.toNodeId);
+      count = applyFoldBoundaryEmit(members, count, ev.fromNodeId, ev.toNodeId);
+      const next = count > 0;
+      if (next !== active) {
+        active = next;
+        recordFoldHaloEvent(
+          foldId,
+          next ? "start" : "end",
+          inward ? ev.toNodeId : ev.fromNodeId,
+          memberIds,
+        );
         setBuffered(next);
       }
     });
-    return unsubState;
   }, [foldId, memberIds]);
   return { buffered };
 }

@@ -1,49 +1,9 @@
-// Halo predicate + boundary helper. Halo means "data is in the fold,"
-// expressed as: the simulator queue contains at least one pending event
-// whose receiver is a fold member. That's "forward-looking" activity —
-// off when there's nothing coming for any member, on while pulses are
-// in flight toward members. Pause/resume falls out for free: the queue
-// can't change while paused, so the predicate freezes.
+// Fold-halo activity helpers.
 //
-// This deliberately ignores `world.state` (which holds `__has_<port>`
-// only on join nodes — too narrow — and `held` forever on inhibitors —
-// too broad).
-
-import type { SimEvent, World } from "../../sim/simulator";
-
-export function foldHasPendingEvents(
-  memberIds: readonly string[],
-  world: World | null | undefined,
-): boolean {
-  if (!world) return false;
-  const members = memberIds.length < 8 ? null : new Set(memberIds);
-  for (const ev of world.queue) {
-    if (members ? members.has(ev.toNodeId) : memberIds.includes(ev.toNodeId)) return true;
-  }
-  return false;
-}
-
-/**
- * Like {@link foldHasPendingEvents} but returns the receiver id of the
- * first pending event targeting a member (or null). Used by the probe
- * to name the member responsible for an off→on transition.
- */
-export function firstPendingMember(
-  memberIds: readonly string[],
-  world: World | null | undefined,
-): string | null {
-  if (!world) return null;
-  const members = memberIds.length < 8 ? null : new Set(memberIds);
-  for (const ev of world.queue) {
-    if (members ? members.has(ev.toNodeId) : memberIds.includes(ev.toNodeId)) return ev.toNodeId;
-  }
-  return null;
-}
-
-// Re-export for any caller still importing this name; not used by the
-// new halo path but kept so other surfaces (boundary-emit detection)
-// don't break on the rewrite.
-export { type SimEvent };
+// Halo semantics: the fold is a black box; halo on means "stuff is
+// inside, not yet released." Each `emit` event that crosses the fold's
+// boundary in/out increments/decrements an accumulator. Halo on iff
+// the accumulator is > 0. Internal and external emits are no-ops.
 
 /**
  * True when an emit from `fromId` to `toId` crosses the fold boundary —
@@ -55,4 +15,21 @@ export function isFoldBoundaryEmit(
   toId: string,
 ): boolean {
   return members.has(fromId) !== members.has(toId);
+}
+
+/**
+ * Apply one emit to the accumulator. Returns the new count, clamped at
+ * 0 so a fold that emits before it ever receives (initial held values
+ * etc.) doesn't go negative. Returns `count` unchanged for non-boundary
+ * emits.
+ */
+export function applyFoldBoundaryEmit(
+  members: ReadonlySet<string>,
+  count: number,
+  fromId: string,
+  toId: string,
+): number {
+  if (!isFoldBoundaryEmit(members, fromId, toId)) return count;
+  const inward = members.has(toId);
+  return Math.max(0, count + (inward ? 1 : -1));
 }
