@@ -40,7 +40,12 @@ function useFoldHaloState(foldId: string, memberIds: string[]): { buffered: bool
   // anim-start/anim-end don't fire while paused.
   const [buffered, setBuffered] = useState<boolean>(false);
   useEffect(() => {
-    const members = new Set(memberIds);
+    // Include foldId itself in the membership set: when the fold is
+    // collapsed, the adapter rewrites boundary edges so their source/
+    // target become the fold placeholder's id, not the original member.
+    // The placeholder is the visual stand-in for the members, so an
+    // anim event with foldId on one side IS a boundary crossing.
+    const members = new Set([...memberIds, foldId]);
     let active = false;
     recordFoldHaloEvent(foldId, "mount", foldId, memberIds, false);
     return subscribeAnim((ev) => {
