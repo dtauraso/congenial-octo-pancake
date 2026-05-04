@@ -3,6 +3,7 @@ import { Handle, Position, type NodeProps } from "reactflow";
 import { KIND_COLORS, type NodeSpec, type Port, type StateValue } from "../../schema";
 import { stepToNode, subscribe, getWorld, getTickMs } from "../../sim/runner";
 import { mutateSpec, useSpec } from "../state";
+import { outgoingEdgeColors } from "./spec-colors";
 
 // Visible port dot. Sized large enough to be a real drag target, colored by
 // the port's edge kind so users can see which kinds connect to which.
@@ -164,13 +165,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   // persisted, so it never drifts spec semantics.
   const [expanded, setExpanded] = useState(false);
   const spec = useSpec();
-  const edgeColorById = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const e of spec.edges) {
-      if (e.source === id) m.set(e.id, KIND_COLORS[e.kind] ?? "#888");
-    }
-    return m;
-  }, [spec.edges, id]);
+  const edgeColorById = useMemo(() => outgoingEdgeColors(spec, id), [spec, id]);
   const hasContent = (data.spec && data.spec.segments.length > 0) || !!data.notes;
   const chevronBtn = (
     <button
