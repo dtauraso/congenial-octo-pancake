@@ -588,9 +588,22 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   );
   const d = geom.d;
 
-  const [pulses, setPulses] = useState<Pulse[]>([]);
+  // Two parallel pulse lanes for concurrent edges; the runner emits a
+  // second pulse one tick ahead via concurrentEdges, and the SMIL
+  // reference renders each as its own paint layer. Within a lane,
+  // pulses still queue serially so an in-flight pulse runs to
+  // completion before the next on that lane begins. Non-concurrent
+  // edges only ever populate lane 0.
+  const [pulses0, setPulses0] = useState<Pulse[]>([]);
+  const [pulses1, setPulses1] = useState<Pulse[]>([]);
+  const len0Ref = useRef(0);
+  const len1Ref = useRef(0);
+  len0Ref.current = pulses0.length;
+  len1Ref.current = pulses1.length;
   const pulseKeyRef = useRef(0);
   const [concurrent, setConcurrent] = useState(() => getConcurrentEdges().has(id));
+  const concurrentRef = useRef(concurrent);
+  concurrentRef.current = concurrent;
 
   useEffect(() => {
     const update = () => setConcurrent(getConcurrentEdges().has(id));
@@ -602,13 +615,23 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
     const unsub = subscribe((ev) => {
       if (ev.type !== "emit" || ev.edgeId !== id) return;
       const key = ++pulseKeyRef.current;
-      setPulses((cur) => [...cur, { key, value: formatRidingValue(ev.value) }]);
+      const pulse = { key, value: formatRidingValue(ev.value) };
+      if (concurrentRef.current && len1Ref.current < len0Ref.current) {
+        len1Ref.current += 1;
+        setPulses1((cur) => [...cur, pulse]);
+      } else {
+        len0Ref.current += 1;
+        setPulses0((cur) => [...cur, pulse]);
+      }
     });
     return unsub;
   }, [id]);
 
-  const advanceQueue = useCallback(() => {
-    setPulses((cur) => cur.slice(1));
+  const advanceLane0 = useCallback(() => {
+    setPulses0((cur) => cur.slice(1));
+  }, []);
+  const advanceLane1 = useCallback(() => {
+    setPulses1((cur) => cur.slice(1));
   }, []);
 
   const kind = data?.kind ?? "any";
@@ -632,26 +655,28 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   return (
     <>
       <BaseEdge path={d} style={baseStyle} markerEnd={markerEnd} interactionWidth={28} />
-      {concurrent && (
-        <path
-          d={d}
-          fill="none"
-          stroke={stroke}
-          strokeWidth={6}
-          opacity={0.18}
-          pointerEvents="none"
-        />
-      )}
-      {pulses[0] && (
+      {pulses0[0] && (
         <PulseInstance
-          key={pulses[0].key}
+          key={`l0-${pulses0[0].key}`}
           edgeId={id}
           geom={geom}
           route={route}
           stroke={stroke}
-          value={pulses[0].value}
+          value={pulses0[0].value}
           speedPxPerMs={speed}
-          onDone={advanceQueue}
+          onDone={advanceLane0}
+        />
+      )}
+      {concurrent && pulses1[0] && (
+        <PulseInstance
+          key={`l1-${pulses1[0].key}`}
+          edgeId={id}
+          geom={geom}
+          route={route}
+          stroke={stroke}
+          value={pulses1[0].value}
+          speedPxPerMs={speed}
+          onDone={advanceLane1}
         />
       )}
       {mid && label && (
