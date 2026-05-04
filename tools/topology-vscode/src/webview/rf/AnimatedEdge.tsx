@@ -465,7 +465,13 @@ function PulseInstance({
         const lx = point.x + nx * PULSE_LABEL_NORMAL_PX;
         const ly = point.y + ny * PULSE_LABEL_NORMAL_PX;
         label.setAttribute("transform", `translate(${lx}, ${ly})`);
-        label.style.opacity = String(opacity);
+        // Label opacity is keyed to the label's own arc progress, not
+        // the dot's. The label sits PULSE_DASH_PX/2 ahead of the dot,
+        // so sharing the dot's envelope makes the label fade while it
+        // is still short of the arrow tip.
+        const labelOverall = labelArcSvg / svgArc;
+        const labelOpacity = labelOverall < 0.95 ? 1 : Math.max(0, (1 - labelOverall) / 0.05);
+        label.style.opacity = String(labelOpacity);
 
         if (probeOn) {
           // Local-coords bbox of the rendered text, plus the
