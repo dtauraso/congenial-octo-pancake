@@ -244,3 +244,23 @@ ones a typical graph-editor user expects on first contact.
   before opening branches.
 - Items 9–10 stay dormant per post-v0 friction-driven posture.
 
+### Addendum — patterns missed in the first pass
+
+Surveyed after the quick-wins shipped; not in the original matrix.
+
+| Pattern | Have it? | Notes | Effort |
+|---|---|---|---|
+| Export to PNG / SVG | **No** | Universal in yEd/draw.io/RF examples; `react-flow` has `toPng`/`toSvg` helpers | XS |
+| Tooltips on hover | **No** | Long ids / truncated sublabels have no hover reveal | XS |
+| Bend points / waypoints on orthogonal edges | **No** | draw.io's signature gesture; our `route` is one of three presets, no per-edge waypoints | M-L |
+| Node resizing handles | **No** (intentional) | Sizes encode node role; deviation from yEd/draw.io is probably correct here | — |
+| Snap to other nodes' edges (not just centers) | **No** | Guides match centers within `ALIGN_TOL`; edge-flush snapping is common | S |
+| Outline / structure panel | **No** | yEd-style tree of nodes; probably overkill at our scale | — |
+| Z-order controls (send to front/back) | **No** | Not needed until nodes overlap meaningfully | — |
+| Properties inspector sidebar | **No** | Editing arbitrary `props` is piecemeal (rename, sublabel only) | M |
+
+**Triage:** export and tooltips are the only clean "everyone has
+this, it's cheap" gaps. Holding both per friction-driven posture;
+neither has caused observed pain yet.
+
+

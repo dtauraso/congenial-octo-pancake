@@ -27,6 +27,19 @@ deferred per the post-v0 friction-driven posture.
   logged as friction.
 - *Auto-layout (dagre / ELK one-shot)* (M-L). Surface when a
   larger spec generates complaints about hand-placement.
+- *Export to PNG / SVG* (XS, `react-flow` `toPng`/`toSvg`).
+  Surface when the user wants to share a topology image, paste
+  into a doc, or attach to an issue.
+- *Hover tooltips* (XS). Surface when the user squints at a
+  truncated sublabel or asks "what's the full id of that node?"
+- *Edge bend points / waypoints* (M-L, draw.io-style). Surface
+  when a user wants to manually reroute one specific edge around
+  an obstacle and the three preset routes don't suffice.
+- *Snap to other nodes' edges* (S). Surface when alignment guides
+  catch centers but the user is trying to flush left/right edges.
+- *Properties inspector sidebar* (M). Surface when editing
+  arbitrary `props` beyond rename/sublabel becomes a real
+  workflow, not a one-off.
 
 **Why:** the review identified these as real gaps vs. industry
 norms, but the post-v0 rule is don't open branches preemptively —
