@@ -338,6 +338,22 @@ function scheduleProbeDump(): void {
     window.__pulseProbeDump?.();
   }, PROBE_DUMP_DEBOUNCE_MS);
 }
+// Heartbeat: every PROBE_HEARTBEAT_MS, dump the log if any pulse rendered
+// since the last dump. Guarantees a refreshed file on the disk for
+// external readers — clean runs (no drift entries) still produce a file
+// with `entries: []`, which is the positive "things look fine" signal.
+const PROBE_HEARTBEAT_MS = 5000;
+let probePulsedSinceDump = false;
+function noteProbePulse(): void {
+  probePulsedSinceDump = true;
+}
+if (typeof window !== "undefined") {
+  setInterval(() => {
+    if (!probePulsedSinceDump) return;
+    probePulsedSinceDump = false;
+    window.__pulseProbeDump?.();
+  }, PROBE_HEARTBEAT_MS);
+}
 
 const PULSE_PROBE_DRIFT_PX = 1.5;
 const PULSE_PROBE_TANGENT_PX = 1.5;
@@ -461,6 +477,7 @@ function PulseInstance({
       if (localT < 1) {
         rafId = requestAnimationFrame(frame);
       } else {
+        if (probeOn) noteProbePulse();
         if (probeOn && probeWorst &&
             (probeWorst.drift > PULSE_PROBE_DRIFT_PX ||
              probeWorst.tangentSlip > PULSE_PROBE_TANGENT_PX)) {
