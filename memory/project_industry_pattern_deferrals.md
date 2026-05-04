@@ -38,3 +38,20 @@ of the bullets above (e.g. "I keep redoing the same wiring",
 "which channel is this edge?", "this drag took five undos"), name
 the matching deferred item and offer to open the corresponding
 task branch. Don't volunteer the list unprompted.
+
+**The quick wins themselves are re-evaluation candidates, not
+load-bearing.** Per `feedback_visuals_scrutiny.md`, expect the
+unified solutions to replace them:
+
+- Rounded snake/below corners in `AnimatedEdge.tsx` (segs stay
+  straight, dot cuts corner by ≤ `r` px) — subsumed by adopting a
+  real router. Delete the rounding branch then.
+- `flashRejectedHandle` in `app.tsx` (DOM querySelector + class
+  toggle on one failure mode) — subsumed by a general validation /
+  user-feedback channel. Replace, don't extend, when that lands.
+- `f` / `shift+f` keybindings hardcoded in the cmd-z effect —
+  fold into a keybinding registry once a third+ shortcut shows up.
+- MiniMap is the one likely to survive as-is.
+
+When the unified work starts, name these explicitly as "removing,
+not preserving" so the diff is clean.
