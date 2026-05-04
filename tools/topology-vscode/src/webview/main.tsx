@@ -2,6 +2,11 @@ import { createRoot } from "react-dom/client";
 import "reactflow/dist/style.css";
 import "./webview.css";
 import App from "./rf/app";
+// Eagerly install fold-halo probe globals (window.__foldHaloDump etc.) so
+// they exist on every webview load even before a fold is rendered, and a
+// fresh `.probe/fold-halo-last.json` is written by the heartbeat. Mirrors
+// the pulse-probe lifecycle (loaded transitively via AnimatedEdge).
+import "./rf/fold-halo-probe";
 import { flushSave, flushViewSave, setTopogenStatus } from "./save";
 import { parseHostToWebview } from "../messages";
 import { handleTraceLoaded, handleTraceError } from "./panels/TimelinePanel";
