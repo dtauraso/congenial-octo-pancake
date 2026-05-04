@@ -6,3 +6,5 @@
 - [project_backpressure_pattern.md](project_backpressure_pattern.md) — Latch + AND gate backpressure pattern: latches hold values, AND gates control release, ack signals prevent overwrite
 - [feedback_open_files.md](feedback_open_files.md) — Always open files in VS Code (`code <path>`), not Safari or other apps
 - [feedback_workflow_post_v0.md](feedback_workflow_post_v0.md) — Post-v0 workflow: commit freely on task branches, ≥$5 cost-marker rule, friction-driven, audit registry, no AI-system lock-in
+- [feedback_visuals_scrutiny.md](feedback_visuals_scrutiny.md) — Visual fixes should use general mechanisms over point patches; expect re-evaluation against later observations
+- [feedback_branch_cleanup.md](feedback_branch_cleanup.md) — Delete task branches locally and on remote once merged into main, without re-asking
