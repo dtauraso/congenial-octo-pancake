@@ -147,7 +147,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   const stepBtn = selected ? (
     <button
       className="node-step-btn"
-      title={`step until next event on ${id}`}
+      title={`Step until next fire at ${id} (stops on first arrival; in concurrent topologies this may be mid-cycle)`}
       onClick={(e) => {
         e.stopPropagation();
         stepToNode(id);
