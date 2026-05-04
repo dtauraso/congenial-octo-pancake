@@ -323,6 +323,20 @@ function probeLog(): ProbeLogEntry[] {
   }
   return window.__pulseProbeLog;
 }
+// Auto-dump the probe log to disk after a short quiet period whenever
+// new entries arrive. Lets external readers (CLI, AI agents) tail
+// .probe/pulse-last.json without anyone running a console call.
+const PROBE_DUMP_DEBOUNCE_MS = 500;
+let probeDumpTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleProbeDump(): void {
+  if (typeof window === "undefined") return;
+  if (probeDumpTimer !== null) clearTimeout(probeDumpTimer);
+  probeDumpTimer = setTimeout(() => {
+    probeDumpTimer = null;
+    window.__pulseProbeDump?.();
+  }, PROBE_DUMP_DEBOUNCE_MS);
+}
+
 const PULSE_PROBE_DRIFT_PX = 1.5;
 const PULSE_PROBE_TANGENT_PX = 1.5;
 function pulseProbeEnabled(): boolean {
@@ -458,6 +472,7 @@ function PulseInstance({
             angleDeg: probeWorst.measuredAngleDeg,
             arcFrac: probeWorst.arcFrac,
           });
+          scheduleProbeDump();
           // eslint-disable-next-line no-console
           console.warn(
             `[pulse-probe] edge=${edgeId} worst-drift=${probeWorst.drift.toFixed(2)}px ` +
