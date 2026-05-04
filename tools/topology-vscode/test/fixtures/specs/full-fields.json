@@ -1,7 +1,21 @@
 {
   "nodes": [
     { "id": "in0", "type": "Input", "x": 0, "y": 0, "sublabel": "feed" },
-    { "id": "i0", "type": "ChainInhibitor", "x": 100, "y": 0 }
+    {
+      "id": "i0",
+      "type": "ChainInhibitor",
+      "x": 100,
+      "y": 0,
+      "spec": {
+        "lang": "en",
+        "segments": [
+          { "text": "emit on " },
+          { "outputRef": "inToI0" },
+          { "text": " when input ≠ 0" }
+        ]
+      },
+      "notes": "human-authored note"
+    }
   ],
   "edges": [
     {

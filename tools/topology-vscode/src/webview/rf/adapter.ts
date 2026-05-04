@@ -137,6 +137,8 @@ export function specToFlow(
         // spec field is the seed, not the live value.
         state: n.state,
         props: n.props,
+        spec: n.spec,
+        notes: n.notes,
       },
     };
   });
@@ -222,6 +224,8 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       sublabel?: string;
       state?: SpecNode["state"];
       props?: SpecNode["props"];
+      spec?: SpecNode["spec"];
+      notes?: SpecNode["notes"];
     };
     return {
       id: n.id,
@@ -231,6 +235,8 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       ...(d.sublabel !== undefined ? { sublabel: d.sublabel } : {}),
       ...(d.state !== undefined ? { state: d.state } : {}),
       ...(d.props !== undefined ? { props: d.props } : {}),
+      ...(d.spec !== undefined ? { spec: d.spec } : {}),
+      ...(d.notes !== undefined ? { notes: d.notes } : {}),
     };
   });
 
