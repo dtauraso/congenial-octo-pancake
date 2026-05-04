@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    { "id": "in", "type": "Input", "x": 0, "y": 0 },
+    { "id": "ci", "type": "ChainInhibitor", "x": 200, "y": 0 },
+    { "id": "ci2", "type": "ChainInhibitor", "x": 400, "y": 0 }
+  ],
+  "edges": [
+    {
+      "id": "inToCi",
+      "source": "in",
+      "sourceHandle": "out",
+      "target": "ci",
+      "targetHandle": "in",
+      "kind": "chain"
+    },
+    {
+      "id": "ciToCi2",
+      "source": "ci",
+      "sourceHandle": "out",
+      "target": "ci2",
+      "targetHandle": "in",
+      "kind": "chain"
+    }
+  ],
+  "timing": {
+    "steps": [],
+    "seed": [
+      { "nodeId": "in", "outPort": "out", "value": 7, "atTick": 0 }
+    ]
+  }
+}

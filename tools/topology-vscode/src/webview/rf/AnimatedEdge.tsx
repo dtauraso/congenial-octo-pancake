@@ -4,6 +4,20 @@ import { KIND_COLORS, type ArrowStyle, type EdgeKind, type EdgeRoute } from "../
 import { subscribe, subscribeState, getConcurrentEdges, getTickMs } from "../../sim/runner";
 import { markerEndUrl } from "./MarkerDefs";
 import { dashForKind } from "./edge-style";
+import { sampleRidingKeyframes } from "./riding-keyframes";
+
+// Truncation budget for in-flight value labels. Long string values
+// (rare today; StateValue is number|string) would otherwise smear
+// across the route. 8 chars + ellipsis matches the SVG vocabulary's
+// terse held-value text ("1", "Growing", etc).
+const MAX_RIDING_LABEL_CHARS = 8;
+function formatRidingValue(v: unknown): string {
+  if (typeof v === "number") return String(v);
+  const s = String(v);
+  return s.length > MAX_RIDING_LABEL_CHARS
+    ? s.slice(0, MAX_RIDING_LABEL_CHARS) + "…"
+    : s;
+}
 
 type EdgeData = {
   kind?: EdgeKind;
@@ -75,6 +89,8 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
     : routePath(route, sourceX, sourceY, targetX, targetY, lane);
 
   const pulseRef = useRef<SVGPathElement | null>(null);
+  const ridingRef = useRef<SVGTextElement | null>(null);
+  const [ridingValue, setRidingValue] = useState<string | null>(null);
   const [concurrent, setConcurrent] = useState(() => getConcurrentEdges().has(id));
 
   useEffect(() => {
@@ -89,6 +105,7 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
     const unsub = subscribe((ev) => {
       if (ev.type !== "emit" || ev.edgeId !== id) return;
       const len = path.getTotalLength();
+      const duration = pulseDurationMs();
       // Cancel an in-flight pulse before retriggering so concurrent-edge
       // mode (Chunk D) restarts cleanly instead of compositing.
       path.getAnimations().forEach((a) => a.cancel());
@@ -98,8 +115,24 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
           { strokeDashoffset: `${-len}`, opacity: 1, offset: 0.95 },
           { strokeDashoffset: `${-len}`, opacity: 0, offset: 1 },
         ],
-        { duration: pulseDurationMs() },
+        { duration },
       );
+      // Riding value label: a co-animated <text> that travels with
+      // the dot, mirroring the SVG vocabulary in
+      // diagrams/topology-animated.svg. Keyframes are sampled from
+      // the same path so position is locked to the dot.
+      setRidingValue(formatRidingValue(ev.value));
+      const text = ridingRef.current;
+      if (text) {
+        text.getAnimations().forEach((a) => a.cancel());
+        const frames = sampleRidingKeyframes(
+          (t) => path.getPointAtLength(t * len),
+          24,
+          -10,
+        );
+        const anim = text.animate(frames, { duration });
+        anim.onfinish = () => setRidingValue((cur) => (cur === null ? cur : null));
+      }
     });
     return unsub;
   }, [id, d]);
@@ -133,6 +166,19 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
           pointerEvents="none"
         />
       )}
+      <text
+        ref={ridingRef}
+        textAnchor="middle"
+        fontSize={11}
+        fontWeight={400}
+        fill={stroke}
+        stroke="none"
+        pointerEvents="none"
+        opacity={ridingValue === null ? 0 : 1}
+        data-testid={`riding-label-${id}`}
+      >
+        {ridingValue ?? ""}
+      </text>
       <path
         ref={pulseRef}
         d={d}
