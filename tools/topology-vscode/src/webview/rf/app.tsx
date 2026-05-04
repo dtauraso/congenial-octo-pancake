@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
+  MiniMap,
   ReactFlowProvider,
   SelectionMode,
   applyNodeChanges,
@@ -70,6 +71,19 @@ const RF_NODE_TYPES = { animated: AnimatedNode, fold: FoldNode, note: NoteNode }
 // 4 covers off-grid drag noise without firing on every near-miss.
 const GRID = 24;
 const ALIGN_TOL = 4;
+
+function flashRejectedHandle(nodeId: string, handleId: string) {
+  const el = document.querySelector<HTMLElement>(
+    `.react-flow__node[data-id="${CSS.escape(nodeId)}"] .react-flow__handle[data-handleid="${CSS.escape(handleId)}"]`,
+  );
+  if (!el) return;
+  el.classList.remove("handle-reject-flash");
+  // Reflow so re-adding the class restarts the animation when a user
+  // double-drops onto the same already-wired port.
+  void el.offsetWidth;
+  el.classList.add("handle-reject-flash");
+  window.setTimeout(() => el.classList.remove("handle-reject-flash"), 700);
+}
 
 const EDGE_KIND_OPTIONS: EdgeKind[] = [
   "chain", "signal", "feedback-ack", "release", "streak",
@@ -226,14 +240,31 @@ function Inner() {
         scheduleSave();
       }
     };
+    const onFitKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key !== "f" && e.key !== "F") return;
+      if (isTextTarget(e.target)) return;
+      e.preventDefault();
+      if (e.shiftKey && selectedRef.current.size > 0) {
+        const set = selectedRef.current;
+        const sel = rf.getNodes().filter((n) => set.has(n.id));
+        if (sel.length > 0) {
+          rf.fitView({ nodes: sel, padding: 0.4, duration: 250, maxZoom: 1.2 });
+          return;
+        }
+      }
+      rf.fitView({ padding: 0.2, duration: 250 });
+    };
     window.addEventListener("mousedown", onMouseDown, true);
     window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onFitKey);
     return () => {
       window.removeEventListener("mousedown", onMouseDown, true);
       window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onFitKey);
       if (flashTimerRef.current !== null) window.clearTimeout(flashTimerRef.current);
     };
-  }, []);
+  }, [rf]);
 
   // Bridge handlers (camera, dim, selection getter).
   useEffect(() => {
@@ -478,6 +509,7 @@ function Inner() {
       console.warn(
         `wirefold: target port ${conn.target}.${conn.targetHandle} is already wired; refusing duplicate edge`,
       );
+      flashRejectedHandle(conn.target, conn.targetHandle);
       return;
     }
     // Channel-type inference: edge kind is the source port's kind. If the
@@ -548,6 +580,7 @@ function Inner() {
       console.warn(
         `wirefold: target port ${conn.target}.${conn.targetHandle} is already wired; refusing reroute`,
       );
+      flashRejectedHandle(conn.target, conn.targetHandle);
       return;
     }
     const newKind: EdgeKind = srcPort.kind === dstPort.kind ? srcPort.kind : "any";
@@ -901,6 +934,7 @@ function Inner() {
       >
         <Background gap={24} />
         <Controls />
+        <MiniMap pannable zoomable />
       </ReactFlow>
       {(guides.vx !== null || guides.hy !== null) && (() => {
         const vp = rf.getViewport();
