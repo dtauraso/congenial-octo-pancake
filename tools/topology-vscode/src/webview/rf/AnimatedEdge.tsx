@@ -263,6 +263,14 @@ function pulseSpeedPxPerMs(): number {
 type Pulse = {
   key: number;
   value: string;
+  // Sim time at which this emit fired. Captured under fix-a's
+  // step-pinned simTime so every pulse from one logical step shares
+  // an emit timestamp. PulseInstance uses this as its animation
+  // start so position = f(simNow - simStart), not f(simNow - mount).
+  // Pulses on the same edge animate concurrently; the visible
+  // arrival moment now tracks model time instead of "previous pulse
+  // finished and React ran the next render."
+  simStart: number;
 };
 
 // Visual invariant probe. On by default so drift is always being
@@ -371,7 +379,7 @@ type ProbeWorst = {
 };
 
 function PulseInstance({
-  edgeId, fromNodeId, toNodeId, geom, route, stroke, value, speedPxPerMs, onDone,
+  edgeId, fromNodeId, toNodeId, geom, route, stroke, value, speedPxPerMs, simStart, onDone,
 }: {
   edgeId: string;
   fromNodeId: string;
@@ -381,8 +389,15 @@ function PulseInstance({
   stroke: string;
   value: string;
   speedPxPerMs: number;
+  simStart: number;
   onDone: () => void;
 }) {
+  // Track whether this is the first run of the effect (initial mount)
+  // vs. a re-run from a geom/speed change. On first run, the rAF math
+  // is rooted at simStart (the emit timestamp) so the dot's position
+  // reflects model time, not mount time. On a re-run, we rebase to
+  // getSimTime() because arcTraveledRef holds where we already were.
+  const firstRunRef = useRef(true);
   const pathRef = useRef<SVGPathElement | null>(null);
   const labelRef = useRef<SVGTextElement | null>(null);
   const doneRef = useRef(onDone);
@@ -401,9 +416,15 @@ function PulseInstance({
 
     // Progress is measured in sim time so a paused simulator freezes
     // the pulse mid-flight automatically — sim time stops advancing,
-    // `elapsed` stops growing, the dot stops moving. No swapStart
-    // rebasing needed.
-    const swapStart = getSimTime();
+    // `elapsed` stops growing, the dot stops moving. On first mount,
+    // anchor at simStart (the emit's step-pinned timestamp) so the
+    // dot's arc-traveled = (simNow - emitTime) * speed; this means a
+    // pulse mounted late (React render tick after emit) immediately
+    // jumps to the correct simulated position rather than starting
+    // from arc=0. On geom/speed re-run, anchor at the current sim
+    // time and resume from arcTraveledRef.
+    const swapStart = firstRunRef.current ? simStart : getSimTime();
+    firstRunRef.current = false;
     const startArc = Math.min(arcTraveledRef.current, svgArc);
     const remainingArc = svgArc - startArc;
     if (remainingArc <= 0) {
@@ -653,7 +674,11 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
     const unsub = subscribe((ev) => {
       if (ev.type !== "emit" || ev.edgeId !== id) return;
       const key = ++pulseKeyRef.current;
-      const pulse = { key, value: formatRidingValue(ev.value) };
+      const pulse: Pulse = {
+        key,
+        value: formatRidingValue(ev.value),
+        simStart: getSimTime(),
+      };
       if (concurrentRef.current && len1Ref.current < len0Ref.current) {
         len1Ref.current += 1;
         setPulses1((cur) => [...cur, pulse]);
@@ -665,11 +690,19 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
     return unsub;
   }, [id]);
 
-  const advanceLane0 = useCallback(() => {
-    setPulses0((cur) => cur.slice(1));
+  // Drop-by-key, not slice(1): pulses now animate concurrently, and a
+  // shorter-arc geometry change could in principle let a later pulse
+  // finish first. Keying by pulse.key keeps removal correct under any
+  // completion ordering. Each completion also decrements the lane's
+  // length ref so concurrent-edge balancing in the emit subscription
+  // sees the right counts.
+  const advanceLane0 = useCallback((key: number) => {
+    setPulses0((cur) => cur.filter((p) => p.key !== key));
+    if (len0Ref.current > 0) len0Ref.current -= 1;
   }, []);
-  const advanceLane1 = useCallback(() => {
-    setPulses1((cur) => cur.slice(1));
+  const advanceLane1 = useCallback((key: number) => {
+    setPulses1((cur) => cur.filter((p) => p.key !== key));
+    if (len1Ref.current > 0) len1Ref.current -= 1;
   }, []);
 
   const kind = data?.kind ?? "any";
@@ -693,34 +726,36 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   return (
     <>
       <BaseEdge path={d} style={baseStyle} markerEnd={markerEnd} interactionWidth={28} />
-      {pulses0[0] && (
+      {pulses0.map((p) => (
         <PulseInstance
-          key={`l0-${pulses0[0].key}`}
+          key={`l0-${p.key}`}
           edgeId={id}
           fromNodeId={source}
           toNodeId={target}
           geom={geom}
           route={route}
           stroke={stroke}
-          value={pulses0[0].value}
+          value={p.value}
           speedPxPerMs={speed}
-          onDone={advanceLane0}
+          simStart={p.simStart}
+          onDone={() => advanceLane0(p.key)}
         />
-      )}
-      {concurrent && pulses1[0] && (
+      ))}
+      {concurrent && pulses1.map((p) => (
         <PulseInstance
-          key={`l1-${pulses1[0].key}`}
+          key={`l1-${p.key}`}
           edgeId={id}
           fromNodeId={source}
           toNodeId={target}
           geom={geom}
           route={route}
           stroke={stroke}
-          value={pulses1[0].value}
+          value={p.value}
           speedPxPerMs={speed}
-          onDone={advanceLane1}
+          simStart={p.simStart}
+          onDone={() => advanceLane1(p.key)}
         />
-      )}
+      ))}
       {mid && label && (
         <text
           x={mid.x}
