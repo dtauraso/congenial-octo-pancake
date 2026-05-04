@@ -47,6 +47,7 @@ const FLASH_DURATION_MS = 300;
 export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   const { id, data, selected } = props;
   const flashRef = useRef<HTMLDivElement | null>(null);
+  const glowRef = useRef<HTMLDivElement | null>(null);
 
   // Subscribe to runner fire events for this node id; play one-shot
   // flash. State-text updates piggyback on the same event channel — we
@@ -81,6 +82,23 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
             { opacity: 0 },
             { opacity: 0.5, offset: 0.5 },
             { opacity: 0 },
+          ],
+          { duration: FLASH_DURATION_MS },
+        );
+      }
+      // Outline glow pulse — SMIL p0 used stroke-width 0;0;0;0;2;1;0;0
+      // and opacity 0;0;0;0;0.8;0.4;0;0 to mark partition activation.
+      // Drive the same shape from runner fire events instead of a time
+      // loop, applied to every node so any activation reads visually.
+      const gl = glowRef.current;
+      if (gl) {
+        gl.getAnimations().forEach((a) => a.cancel());
+        gl.animate(
+          [
+            { boxShadow: `0 0 0 0 ${data.stroke}00`, opacity: 0 },
+            { boxShadow: `0 0 0 4px ${data.stroke}cc`, opacity: 0.8, offset: 0.4 },
+            { boxShadow: `0 0 0 2px ${data.stroke}66`, opacity: 0.4, offset: 0.7 },
+            { boxShadow: `0 0 0 0 ${data.stroke}00`, opacity: 0 },
           ],
           { duration: FLASH_DURATION_MS },
         );
@@ -158,6 +176,17 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
       }}
     >
       {stepBtn}
+      <div
+        ref={glowRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: radius,
+          pointerEvents: "none",
+          opacity: 0,
+          zIndex: -1,
+        }}
+      />
       <div
         ref={flashRef}
         style={{
