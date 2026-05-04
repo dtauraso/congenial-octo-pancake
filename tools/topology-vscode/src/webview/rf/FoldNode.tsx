@@ -35,10 +35,17 @@ function useFoldHaloState(foldId: string, memberIds: string[]): { buffered: bool
   useEffect(() => {
     recordFoldHaloEvent(foldId, "mount", foldId, memberIds, false);
     const ids = new Set(memberIds);
+    // pendingTrigger carries the firing member's id into the tracker's
+    // onChange callback so the "start" probe entry names the actual
+    // node that lit the halo (instead of the placeholder "(fire)").
+    // That's the diagnostic for "halo turned on before any pulse should
+    // have reached a member" — the trigger id either confirms a real
+    // member or names a node that shouldn't be in this fold.
+    let pendingTrigger = "(init)";
     const tracker = createFoldActivityTracker(
       Math.round(getTickMs() * 1.5),
       (active) => {
-        recordFoldHaloEvent(foldId, active ? "start" : "end", active ? "(fire)" : "(decay)", memberIds);
+        recordFoldHaloEvent(foldId, active ? "start" : "end", active ? pendingTrigger : "(decay)", memberIds);
         setBuffered(active);
       },
     );
@@ -48,6 +55,7 @@ function useFoldHaloState(foldId: string, memberIds: string[]): { buffered: bool
     const unsub = subscribe((ev) => {
       if (ev.type === "fire" && ids.has(ev.nodeId)) {
         const wasActive = tracker.isActive();
+        pendingTrigger = ev.nodeId;
         tracker.noteFire(getSimTime());
         if (wasActive) recordFoldHaloEvent(foldId, "fire", ev.nodeId, memberIds);
       } else {
