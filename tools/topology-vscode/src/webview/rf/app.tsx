@@ -69,10 +69,8 @@ import { parseHostToWebview } from "../../messages";
 const EDGE_TYPES = { animated: AnimatedEdge };
 const RF_NODE_TYPES = { animated: AnimatedNode, fold: FoldNode, note: NoteNode };
 
-// Snap-to-grid step matches the Background `gap={24}` so node positions
-// land on the visible dots. Alignment-guide tolerance is in flow units;
-// 4 covers off-grid drag noise without firing on every near-miss.
-const GRID = 24;
+// Alignment-guide tolerance is in flow units; 4 covers off-grid drag
+// noise without firing on every near-miss.
 const ALIGN_TOL = 4;
 
 const EDGE_KIND_OPTIONS: EdgeKind[] = [
@@ -850,8 +848,6 @@ function Inner() {
         onSelectionContextMenu={onSelectionContextMenu}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
-        snapToGrid={true}
-        snapGrid={[GRID, GRID]}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
         onConnect={onConnect}
