@@ -145,3 +145,26 @@ recall. Logging only — no fixes during pass.
   more) faster than the pulse leaving the input node. Suggests
   per-edge duration is decoupled from edge length (or vice versa).
 
+## 2026-05-04 — smoothness audit re-run with always-on probe
+
+**Branch:** task/<TBD>
+**Mode:** smoothness audit (audits.md #5)
+**Start cost:** $<TBD>
+
+Scope: pan, zoom, node drag (no topology change), animation
+playback, scrub, fold/unfold of existing folds, bookmark jump,
+replay, view recall. The pulse visual probe is always on as of
+`d771871` (main); periodically run `window.__pulseProbeReport()`
+in the webview devtools console — empty array is a clean result
+worth recording, non-empty entries are fresh friction.
+
+- (observation 1)
+- (observation 2)
+
+**Probe output:**
+- (paste/summarize `__pulseProbeReport()` results here, including
+  the empty-array case for any edge classes exercised)
+
+**Followups (candidates, not commitments):**
+- ...
+
