@@ -6,6 +6,8 @@ type: feedback
 
 When code I'm writing falls into a category with a known catalog of "everyone hits this" bugs, name the bug class out loud and check the change against it *before* the user has to repro and report.
 
+> **Top-level rule.** If I find myself building infrastructure (clock / queue / diff / layout / parser / cache / scheduler / state-machine / backpressure / event bus / serializer / undo stack), pause and survey 3+ niches' solved versions before rolling my own. This is the single highest-leverage check in this file — most "didn't know the industry solved it" rounds come from skipping it.
+
 ## Six moves for surfacing solved-elsewhere knowledge
 
 These compose. Run them at the start of meaningful work, not as a ritual on every line.
