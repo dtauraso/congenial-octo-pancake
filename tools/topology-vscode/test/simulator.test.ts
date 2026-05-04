@@ -12,6 +12,7 @@ import {
   step,
   runToQuiescent,
   replayTo,
+  enqueueEmission,
   type World,
 } from "../src/sim/simulator";
 import type { Spec, Edge } from "../src/schema";
@@ -276,6 +277,62 @@ describe("simulator: per-edge data.delay", () => {
     };
     const w = initWorld(spec);
     expect(w.queue[0].readyAt).toBe(3);
+  });
+});
+
+describe("simulator: self-pacer under backlog (audit row #3)", () => {
+  // Mirrors runner.ts's N1' concurrent-edge self-pacer: on each arrival
+  // at the target, re-enqueue the same value at world.tick+1. Pin that
+  // pulses arrive in the order they were re-fired and that none are
+  // dropped, even when the downstream node is slow/backlogged.
+  const spec: Spec = {
+    nodes: [
+      { id: "in", type: "Input", x: 0, y: 0 },
+      { id: "ci", type: "ChainInhibitor", x: 1, y: 0 },
+    ],
+    edges: [edge("inToCi", "in", "out", "ci", "in", "chain")],
+    timing: { seed: [{ nodeId: "in", outPort: "out", value: 1, atTick: 0 }] },
+  };
+
+  it("re-fires preserve FIFO arrival order at the target", () => {
+    let w = initWorld(spec);
+    const arrivals: number[] = [];
+    let nextValue = 1;
+    // Drive the runner's self-pacer pattern by hand for N rounds.
+    for (let i = 0; i < 10; i++) {
+      if (w.queue.length === 0) break;
+      const before = w.history.length;
+      w = step(spec, w);
+      const fresh = w.history.slice(before);
+      for (const rec of fresh) {
+        if (rec.nodeId === "ci") {
+          arrivals.push(rec.inputValue as number);
+          // Self-pacer: re-emit a fresh value to detect any reordering.
+          nextValue += 1;
+          enqueueEmission(spec, w, "in", "out", nextValue, w.tick + 1);
+        }
+      }
+    }
+    expect(arrivals.length).toBeGreaterThan(3);
+    // Arrivals must be strictly increasing — any reorder/drop breaks this.
+    for (let i = 1; i < arrivals.length; i++) {
+      expect(arrivals[i]).toBe(arrivals[i - 1] + 1);
+    }
+  });
+
+  it("queue stays sorted by (readyAt, id) after every re-enqueue", () => {
+    let w = initWorld(spec);
+    for (let i = 0; i < 20; i++) {
+      if (w.queue.length === 0) break;
+      w = step(spec, w);
+      enqueueEmission(spec, w, "in", "out", 1, w.tick + 1);
+      for (let j = 1; j < w.queue.length; j++) {
+        const a = w.queue[j - 1];
+        const b = w.queue[j];
+        const ok = a.readyAt < b.readyAt || (a.readyAt === b.readyAt && a.id < b.id);
+        expect(ok).toBe(true);
+      }
+    }
   });
 });
 
