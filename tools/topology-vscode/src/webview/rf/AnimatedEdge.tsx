@@ -299,8 +299,8 @@ declare global {
 }
 // Install probe globals eagerly at module load so external callers see
 // __pulseProbeDump / __pulseProbeReport even before the first pulse fires.
-if (typeof window !== "undefined" && !window.__pulseProbeLog) {
-  window.__pulseProbeLog = [];
+if (typeof window !== "undefined") {
+  if (!window.__pulseProbeLog) window.__pulseProbeLog = [];
   window.__pulseProbeReport = (opts) => {
     const log = window.__pulseProbeLog ?? [];
     const snapshot = log.slice();
