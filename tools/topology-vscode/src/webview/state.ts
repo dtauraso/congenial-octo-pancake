@@ -2,9 +2,21 @@ import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { produce } from "immer";
 import type { Node, Spec } from "../schema";
+import type { RunStatus } from "../messages";
+
+// Webview-local: idle is the pre-first-run default. The wire RunStatus has
+// no idle variant (the host only emits running/ok/error/cancelled).
+export type RunStatusUI = RunStatus | { state: "idle" };
+import type { TraceEvent } from "../sim/trace";
 import { DEFAULT_VIEWER_STATE, type ViewerState } from "./viewerState";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
+
+export type TraceState = {
+  loaded: TraceEvent[] | null;
+  name: string;
+  drift: string;
+};
 
 // Bounded snapshot stacks. Spec/viewer are treated as immutable (immer
 // produces a fresh tree per edit), so pushing the prior reference is
@@ -27,6 +39,9 @@ interface Store {
   viewerRedoStack: ViewerEntry[];
   nextTxnId: number;
   lastScope: Scope;
+  dimmed: Set<string> | null;
+  runStatus: RunStatusUI;
+  trace: TraceState;
 }
 
 export const useStore = create<Store>(() => ({
@@ -39,6 +54,9 @@ export const useStore = create<Store>(() => ({
   viewerRedoStack: [],
   nextTxnId: 1,
   lastScope: "spec",
+  dimmed: null,
+  runStatus: { state: "idle" },
+  trace: { loaded: null, name: "", drift: "" },
 }));
 
 // Live module-level bindings kept in sync with the store. Non-React
@@ -95,6 +113,24 @@ export function setView(next: View) {
 }
 export function setLastScope(scope: Scope) {
   if (useStore.getState().lastScope !== scope) useStore.setState({ lastScope: scope });
+}
+
+export const useDimmed = (): Set<string> | null => useStore((s) => s.dimmed);
+export function setDimmed(next: Set<string> | null) {
+  useStore.setState({ dimmed: next });
+}
+
+export const useRunStatus = (): RunStatusUI => useStore((s) => s.runStatus);
+export function setRunStatus(next: RunStatusUI) {
+  useStore.setState({ runStatus: next });
+}
+
+export const useTrace = (): TraceState => useStore(useShallow((s) => s.trace));
+export function setTrace(next: TraceState) {
+  useStore.setState({ trace: next });
+}
+export function patchTrace(part: Partial<TraceState>) {
+  useStore.setState((s) => ({ trace: { ...s.trace, ...part } }));
 }
 
 // History-bypassing patch for incidental viewer fields (camera, selection,

@@ -3,12 +3,9 @@ import "reactflow/dist/style.css";
 import "./webview.css";
 import App from "./rf/app";
 import { flushSave, flushViewSave, setTopogenStatus } from "./save";
-import { initRunButton, setRunStatus } from "./run";
 import { parseHostToWebview } from "../messages";
-import { initTimelinePanel, onTraceLoaded, onTraceError, refreshTimelinePanel } from "./timeline";
-import { attachClearOnPan, initViewsPanel, refreshViewsPanel } from "./views";
-import { getSpec } from "./state";
-import { applyDim } from "./rf/bridge";
+import { handleTraceLoaded, handleTraceError } from "./panels/TimelinePanel";
+import { getSpec, setDimmed, setRunStatus } from "./state";
 
 // Test-only hook for the Playwright e2e harness. The harness stub of
 // acquireVsCodeApi populates window.__wirefold_sent with every postMessage
@@ -22,16 +19,11 @@ import { applyDim } from "./rf/bridge";
   // the saved-views panel. Pass a string[] of member ids to dim everything
   // *not* in the set; pass undefined to clear.
   applyDim: (members: string[] | undefined) =>
-    applyDim(members ? new Set(members) : undefined),
+    setDimmed(members ? new Set(members) : null),
 };
 
 const app = document.getElementById("app")!;
 createRoot(app).render(<App />);
-
-initRunButton();
-initViewsPanel();
-initTimelinePanel();
-attachClearOnPan();
 
 window.addEventListener("message", (e) => {
   const msg = parseHostToWebview(e.data);
@@ -50,14 +42,10 @@ window.addEventListener("message", (e) => {
     flushSave();
     flushViewSave();
   } else if (msg.type === "trace-loaded") {
-    onTraceLoaded(msg.text, msg.label);
+    handleTraceLoaded(msg.text, msg.label);
   } else if (msg.type === "trace-error") {
-    onTraceError(msg.message);
-  } else if (msg.type === "view-load") {
-    // App handles the camera; we refresh the panels that depend on the sidecar.
-    queueMicrotask(() => {
-      refreshViewsPanel();
-      refreshTimelinePanel();
-    });
+    handleTraceError(msg.message);
   }
+  // view-load is fully handled inside App's message effect now that the
+  // panels read their state from the zustand store directly.
 });
