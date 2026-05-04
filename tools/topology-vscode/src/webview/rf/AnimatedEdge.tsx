@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BaseEdge, type EdgeProps } from "reactflow";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind, type EdgeRoute } from "../../schema";
 import { subscribe, subscribeState, getConcurrentEdges, getTickMs } from "../../sim/runner";
+import { vscode } from "../save";
 import { markerEndUrl } from "./MarkerDefs";
 import { dashForKind } from "./edge-style";
 
@@ -293,6 +294,7 @@ declare global {
     __pulseProbe?: boolean;
     __pulseProbeLog?: ProbeLogEntry[];
     __pulseProbeReport?: (opts?: { clear?: boolean }) => ProbeLogEntry[];
+    __pulseProbeDump?: () => number;
   }
 }
 function probeLog(): ProbeLogEntry[] {
@@ -304,6 +306,19 @@ function probeLog(): ProbeLogEntry[] {
       const snapshot = log.slice();
       if (opts?.clear !== false) window.__pulseProbeLog = [];
       return snapshot;
+    };
+    // Posts the current log to the extension host, which writes it to
+    // <workspaceRoot>/.probe/pulse-last.json. Always clears the in-memory
+    // log after dumping — the file is the durable record.
+    window.__pulseProbeDump = () => {
+      const log = window.__pulseProbeLog ?? [];
+      const snapshot = log.slice();
+      window.__pulseProbeLog = [];
+      vscode.postMessage({
+        type: "pulse-probe-dump",
+        json: JSON.stringify({ ts: Date.now(), entries: snapshot }, null, 2),
+      });
+      return snapshot.length;
     };
   }
   return window.__pulseProbeLog;

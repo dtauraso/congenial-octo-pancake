@@ -189,6 +189,28 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
           // work needed; included in the message vocab so the user-side
           // log is uniform with trace-load.
           return;
+        case "pulse-probe-dump": {
+          // Persist the in-memory probe log to a workspace file so external
+          // readers (CLI, AI agents) can pick it up without devtools access.
+          // Anchored on the document's workspace folder, falling back to
+          // the document's directory if no folder is open.
+          const folder = vscode.workspace.getWorkspaceFolder(document.uri);
+          const baseDir = folder
+            ? folder.uri.fsPath
+            : path.dirname(document.uri.fsPath);
+          const dir = path.join(baseDir, ".probe");
+          const file = path.join(dir, "pulse-last.json");
+          try {
+            await vscode.workspace.fs.createDirectory(vscode.Uri.file(dir));
+            await vscode.workspace.fs.writeFile(
+              vscode.Uri.file(file),
+              new TextEncoder().encode(msg.json)
+            );
+          } catch (err) {
+            console.warn("topology editor: pulse-probe-dump write failed", err);
+          }
+          return;
+        }
       }
     });
   }
