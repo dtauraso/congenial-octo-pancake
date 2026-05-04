@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import ReactFlow, {
   Background,
   Controls,
@@ -98,28 +99,18 @@ function Inner() {
   const isReadOnlyView = () => compareModeRef.current === "A-other";
   // Spacebar held → swap z-order of ghost vs live in onion mode.
   const [ghostFront, setGhostFront] = useState(false);
+  useHotkeys(
+    "space",
+    (e) => { e.preventDefault(); setGhostFront(true); },
+    { enabled: compareMode === "B-onion", keydown: true, keyup: false },
+  );
+  useHotkeys(
+    "space",
+    () => setGhostFront(false),
+    { enabled: compareMode === "B-onion", keydown: false, keyup: true },
+  );
   useEffect(() => {
-    if (compareMode !== "B-onion") return;
-    const isSpace = (e: KeyboardEvent) => e.code === "Space" || e.key === " ";
-    const isTextTarget = (t: EventTarget | null) =>
-      t instanceof HTMLElement &&
-      (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
-    const down = (e: KeyboardEvent) => {
-      if (!isSpace(e) || e.repeat || isTextTarget(e.target)) return;
-      e.preventDefault();
-      setGhostFront(true);
-    };
-    const up = (e: KeyboardEvent) => {
-      if (!isSpace(e)) return;
-      setGhostFront(false);
-    };
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
-    return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
-      setGhostFront(false);
-    };
+    if (compareMode !== "B-onion") setGhostFront(false);
   }, [compareMode]);
   const paneRef = useRef<HTMLDivElement | null>(null);
   const lastSpec = useRef<Spec | null>(null);
@@ -151,12 +142,25 @@ function Inner() {
       const scoped = t?.closest?.<HTMLElement>("[data-undo-scope]");
       setLastScope((scoped?.dataset.undoScope as "spec" | "viewer") ?? "spec");
     };
-    const isTextTarget = (t: EventTarget | null) =>
-      t instanceof HTMLElement &&
-      (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
-    const flash = (ids: Set<string>) => {
-      if (ids.size === 0) return;
-      flashIdsRef.current = ids;
+    window.addEventListener("mousedown", onMouseDown, true);
+    return () => {
+      window.removeEventListener("mousedown", onMouseDown, true);
+      if (flashTimerRef.current !== null) window.clearTimeout(flashTimerRef.current);
+    };
+  }, []);
+
+  const rebuildWithFlash = useCallback((flashSet: Set<string>) => {
+    if (!lastSpec.current) return;
+    const flow = specToFlow(lastSpec.current, viewerState.folds);
+    if (flashSet.size > 0) {
+      const tag = (cn: string | undefined) => [cn, "diff-added"].filter(Boolean).join(" ");
+      flow.nodes = flow.nodes.map((n) =>
+        flashSet.has(n.id) ? { ...n, className: tag(n.className) } : n,
+      );
+      flow.edges = flow.edges.map((e) =>
+        flashSet.has(e.id) ? { ...e, className: tag(e.className) } : e,
+      );
+      flashIdsRef.current = flashSet;
       if (flashTimerRef.current !== null) window.clearTimeout(flashTimerRef.current);
       flashTimerRef.current = window.setTimeout(() => {
         flashIdsRef.current = new Set();
@@ -167,27 +171,12 @@ function Inner() {
           setEdges(f.edges);
         }
       }, 1500);
-    };
-    const decorate = (flow: ReturnType<typeof specToFlow>, ids: Set<string>) => {
-      if (ids.size === 0) return flow;
-      const tag = (cn: string | undefined) =>
-        [cn, "diff-added"].filter(Boolean).join(" ");
-      flow.nodes = flow.nodes.map((n) =>
-        ids.has(n.id) ? { ...n, className: tag(n.className) } : n,
-      );
-      flow.edges = flow.edges.map((e) =>
-        ids.has(e.id) ? { ...e, className: tag(e.className) } : e,
-      );
-      return flow;
-    };
-    const rebuildWithFlash = (flashSet: Set<string>) => {
-      if (!lastSpec.current) return;
-      const flow = specToFlow(lastSpec.current, viewerState.folds);
-      const decorated = decorate(flow, flashSet);
-      setNodes(decorated.nodes);
-      setEdges(decorated.edges);
-      flash(flashSet);
-    };
+    }
+    setNodes(flow.nodes);
+    setEdges(flow.edges);
+  }, []);
+
+  const undoRedo = useCallback((isUndo: boolean) => {
     const idsOf = (s: Spec | null): Set<string> => {
       const out = new Set<string>();
       if (!s) return out;
@@ -195,43 +184,61 @@ function Inner() {
       for (const e of s.edges) out.add(e.id);
       return out;
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return;
-      const k = e.key.toLowerCase();
-      const isUndo = k === "z" && !e.shiftKey;
-      const isRedo = (k === "z" && e.shiftKey) || k === "y";
-      if (!isUndo && !isRedo) return;
-      if (isTextTarget(e.target)) return;
-      if (compareModeRef.current === "A-other") return;
+    if (getLastScope() === "viewer") {
+      const beforeFolds = new Set((viewerState.folds ?? []).map((f) => f.id));
+      const next = isUndo ? undoViewer() : redoViewer();
+      if (!next) return;
+      const afterFolds = new Set((next.folds ?? []).map((f) => f.id));
+      const reappeared = new Set<string>();
+      for (const id of afterFolds) if (!beforeFolds.has(id)) reappeared.add(id);
+      rebuildWithFlash(reappeared);
+      scheduleViewSave();
+    } else {
+      const before = idsOf(lastSpec.current);
+      const next = isUndo ? undoSpec() : redoSpec();
+      if (!next) return;
+      lastSpec.current = next;
+      const after = idsOf(next);
+      const reappeared = new Set<string>();
+      for (const id of after) if (!before.has(id)) reappeared.add(id);
+      rebuildWithFlash(reappeared);
+      scheduleSave();
+    }
+  }, [rebuildWithFlash]);
+
+  // Cmd/Ctrl-Z (undo), Cmd/Ctrl-Shift-Z and Cmd/Ctrl-Y (redo). `mod`
+  // resolves to Cmd on macOS and Ctrl elsewhere. Skipped while a text
+  // input is focused (browser's native undo wins) and while the
+  // comparison pane is read-only.
+  const hotkeysEnabled = compareMode !== "A-other";
+  useHotkeys(
+    "mod+z",
+    (e) => { e.preventDefault(); undoRedo(true); },
+    { enabled: hotkeysEnabled, enableOnContentEditable: false },
+  );
+  useHotkeys(
+    "mod+shift+z, mod+y",
+    (e) => { e.preventDefault(); undoRedo(false); },
+    { enabled: hotkeysEnabled, enableOnContentEditable: false },
+  );
+
+  // f → fit-view all; shift+f → fit-view selection. Lowercase only —
+  // capital F (shift+F) is the selection variant.
+  useHotkeys(
+    "f",
+    (e) => {
       e.preventDefault();
-      if (getLastScope() === "viewer") {
-        const beforeFolds = new Set((viewerState.folds ?? []).map((f) => f.id));
-        const next = isUndo ? undoViewer() : redoViewer();
-        if (!next) return;
-        const afterFolds = new Set((next.folds ?? []).map((f) => f.id));
-        const reappeared = new Set<string>();
-        for (const id of afterFolds) if (!beforeFolds.has(id)) reappeared.add(id);
-        rebuildWithFlash(reappeared);
-        scheduleViewSave();
-      } else {
-        const before = idsOf(lastSpec.current);
-        const next = isUndo ? undoSpec() : redoSpec();
-        if (!next) return;
-        lastSpec.current = next;
-        const after = idsOf(next);
-        const reappeared = new Set<string>();
-        for (const id of after) if (!before.has(id)) reappeared.add(id);
-        rebuildWithFlash(reappeared);
-        scheduleSave();
-      }
-    };
-    const onFitKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key !== "f" && e.key !== "F") return;
-      if (isTextTarget(e.target)) return;
+      rf.fitView({ padding: 0.2, duration: 250 });
+    },
+    { enableOnContentEditable: false },
+    [rf],
+  );
+  useHotkeys(
+    "shift+f",
+    (e) => {
       e.preventDefault();
       const selIds = viewerState.lastSelectionIds ?? [];
-      if (e.shiftKey && selIds.length > 0) {
+      if (selIds.length > 0) {
         const set = new Set(selIds);
         const sel = rf.getNodes().filter((n) => set.has(n.id));
         if (sel.length > 0) {
@@ -240,17 +247,10 @@ function Inner() {
         }
       }
       rf.fitView({ padding: 0.2, duration: 250 });
-    };
-    window.addEventListener("mousedown", onMouseDown, true);
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("keydown", onFitKey);
-    return () => {
-      window.removeEventListener("mousedown", onMouseDown, true);
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("keydown", onFitKey);
-      if (flashTimerRef.current !== null) window.clearTimeout(flashTimerRef.current);
-    };
-  }, [rf]);
+    },
+    { enableOnContentEditable: false },
+    [rf],
+  );
 
   useEffect(() => {
     const rerenderFromSpec = () => {
