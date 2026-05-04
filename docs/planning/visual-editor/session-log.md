@@ -74,9 +74,9 @@ pass.
     user to capture screenshots; revisit with a real repro rather
     than another speculative patch. Four iterations already spent
     on this observation; pausing further changes per audit posture.
-  - Evidence captured: three screenshots in repo top-level
-    (`Screenshot 2026-05-03 at 20.20.30.png`, `...20.20.53.png`,
-    `...20.21.04.png`), bezier edge into `readGate1`. Shot 3 shows
+  - Evidence captured: three screenshots under
+    [screenshots/](screenshots/) — `2026-05-03-pulse-label-end-bezier-1.png`
+    through `-3.png`, bezier edge into `readGate1`. Shot 3 shows
     the label ~25–30px above-left of the dot at the target handle,
     visibly farther than the configured 10px parallel offset —
     real position discrepancy, not a parallel-curve perception.
