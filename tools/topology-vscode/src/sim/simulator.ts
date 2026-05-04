@@ -61,6 +61,23 @@ export type World = {
   history: FireRecord[];
   nextId: number;
   nextOrd: number;
+  // Per-edge slot occupancy. An edge with `data.slots: N` (Go's
+  // `make(chan, N)`) blocks the source from scheduling another emission
+  // once N pulses are in flight. Occupancy includes (a) events in
+  // `queue` whose `edgeId` matches and (b) values held in a downstream
+  // node's join buffer (see nodeBufferedEdges). Edges without a `slots`
+  // override stay unbounded — entries here are absent or unused.
+  edgeOccupancy: Record<string, number>;
+  // Emissions that couldn't enter the queue because their edge was at
+  // capacity. Released FIFO when the slot frees. readyAt is recomputed
+  // on release using the current tick + edge delay.
+  edgePending: Record<string, SimEvent[]>;
+  // For each node, the edges whose pulses currently sit in the node's
+  // join buffer (handler returned noEmit). Slot stays occupied on those
+  // edges until the node fires, mirroring the latch+ack handshake in
+  // the Go topology where the upstream channel can't accept another
+  // value until the receiver has cleared its buffer.
+  nodeBufferedEdges: Record<string, string[]>;
 };
 
 // Edges keyed by (sourceNode, sourcePort) for fast lookup at emit time.
@@ -101,6 +118,9 @@ export function initWorld(spec: Spec): World {
     history: [],
     nextId: 0,
     nextOrd: 0,
+    edgeOccupancy: {},
+    edgePending: {},
+    nodeBufferedEdges: {},
   };
   const idx = indexEdges(spec);
   // Explicit empty array means "seed nothing on purpose" — only fall
@@ -124,8 +144,9 @@ export function initWorld(spec: Spec): World {
   // cycle from a cold start without an explicit seed list.
   for (const e of spec.edges) {
     const init = readEdgeInit(e.data);
+    const slots = readEdgeSlots(e.data);
     for (const v of init) {
-      world.queue.push({
+      const ev: SimEvent = {
         id: world.nextId++,
         readyAt: 0,
         edgeId: e.id,
@@ -134,7 +155,15 @@ export function initWorld(spec: Spec): World {
         toNodeId: e.target,
         toPort: e.targetHandle,
         value: v,
-      });
+      };
+      if (slots !== undefined && (world.edgeOccupancy[e.id] ?? 0) >= slots) {
+        const arr = world.edgePending[e.id] ?? [];
+        arr.push(ev);
+        world.edgePending[e.id] = arr;
+      } else {
+        world.queue.push(ev);
+        world.edgeOccupancy[e.id] = (world.edgeOccupancy[e.id] ?? 0) + 1;
+      }
     }
   }
   // Sort so deterministic FIFO is preserved even if seeds list reorders.
@@ -153,6 +182,16 @@ function readEdgeDelay(data: unknown): number | undefined {
   if (!data || typeof data !== "object") return undefined;
   const d = (data as { delay?: unknown }).delay;
   return typeof d === "number" && d >= 0 ? d : undefined;
+}
+
+// Per-edge slot capacity. Mirrors `make(chan T, N)` — once N pulses
+// are in flight on the edge (queued or held in the receiver's buffer),
+// the source blocks. Unset means unbounded (preserves prior behavior
+// for edges that haven't opted in).
+function readEdgeSlots(data: unknown): number | undefined {
+  if (!data || typeof data !== "object") return undefined;
+  const s = (data as { slots?: unknown }).slots;
+  return typeof s === "number" && s >= 1 ? Math.floor(s) : undefined;
 }
 
 function readEdgeInit(data: unknown): StateValue[] {
@@ -211,7 +250,8 @@ function scheduleEmission(
   const edges = idx.get(edgeKey(fromNodeId, fromPort)) ?? [];
   for (const e of edges) {
     const d = readEdgeDelay(e.data) ?? defaultDelay;
-    world.queue.push({
+    const slots = readEdgeSlots(e.data);
+    const ev: SimEvent = {
       id: world.nextId++,
       readyAt: baseTick + d,
       edgeId: e.id,
@@ -220,8 +260,40 @@ function scheduleEmission(
       toNodeId: e.target,
       toPort: e.targetHandle,
       value,
-    });
+    };
+    if (slots !== undefined && (world.edgeOccupancy[e.id] ?? 0) >= slots) {
+      const arr = world.edgePending[e.id] ?? [];
+      arr.push(ev);
+      world.edgePending[e.id] = arr;
+    } else {
+      world.queue.push(ev);
+      world.edgeOccupancy[e.id] = (world.edgeOccupancy[e.id] ?? 0) + 1;
+    }
   }
+}
+
+// Decrement an edge's occupancy and, if pending events were waiting
+// for the slot, release one onto the queue with a recomputed readyAt
+// (current tick + edge delay) so the wait shows up as a delivery
+// happening *now*, not at the originally-scheduled tick.
+function freeEdgeSlot(
+  world: World,
+  edgeId: string,
+  spec: Spec,
+  nowTick: number,
+): void {
+  const cur = world.edgeOccupancy[edgeId] ?? 0;
+  if (cur > 0) world.edgeOccupancy[edgeId] = cur - 1;
+  const pending = world.edgePending[edgeId];
+  if (!pending || pending.length === 0) return;
+  const released = pending.shift()!;
+  if (pending.length === 0) delete world.edgePending[edgeId];
+  const e = spec.edges.find((x) => x.id === edgeId);
+  const d = e ? (readEdgeDelay(e.data) ?? 1) : 1;
+  released.readyAt = nowTick + d;
+  released.id = world.nextId++;
+  world.queue.push(released);
+  world.edgeOccupancy[edgeId] = (world.edgeOccupancy[edgeId] ?? 0) + 1;
 }
 
 // Pop the next ready event, run its handler, schedule resulting
@@ -235,6 +307,9 @@ export function step(spec: Spec, world: World): World {
     state: { ...world.state },
     queue: [...world.queue],
     history: world.history,
+    edgeOccupancy: { ...world.edgeOccupancy },
+    edgePending: { ...world.edgePending },
+    nodeBufferedEdges: { ...world.nodeBufferedEdges },
   };
 
   if (next.queue.length === 0) {
@@ -255,6 +330,7 @@ export function step(spec: Spec, world: World): World {
   if (!handler) {
     // No handler — silently absorb (e.g. dead-end ack on terminal
     // ChainInhibitor). Recurse to make progress on this tick.
+    if (head.edgeId !== null) freeEdgeSlot(next, head.edgeId, spec, next.tick);
     next.wasQuiescent = false;
     return step(spec, next);
   }
@@ -263,6 +339,25 @@ export function step(spec: Spec, world: World): World {
   const props = resolveProps(spec, head.toNodeId);
   const result = handler(prevState, { port: head.toPort, value: head.value }, props);
   next.state[head.toNodeId] = result.state;
+
+  // Slot bookkeeping. Emissions = fire: free this arrival's edge plus
+  // every previously-buffered edge on this node, then drop the buffered
+  // list. Empty emissions = the handler stored the input as a buffered
+  // value (join half-arrival, latch `in` waiting for `release`); slot
+  // stays occupied and we record which edge fed which port so a later
+  // fire can free it.
+  if (result.emissions.length > 0) {
+    if (head.edgeId !== null) freeEdgeSlot(next, head.edgeId, spec, next.tick);
+    const buffered = next.nodeBufferedEdges[head.toNodeId];
+    if (buffered) {
+      for (const eid of buffered) freeEdgeSlot(next, eid, spec, next.tick);
+      delete next.nodeBufferedEdges[head.toNodeId];
+    }
+  } else if (head.edgeId !== null) {
+    const arr = next.nodeBufferedEdges[head.toNodeId] ?? [];
+    arr.push(head.edgeId);
+    next.nodeBufferedEdges[head.toNodeId] = arr;
+  }
 
   for (const em of result.emissions) {
     scheduleEmission(
@@ -361,4 +456,12 @@ export function enqueueEmission(
 // Helper for seed authoring + tests.
 export function makeSeed(events: SeedEvent[]): SeedEvent[] {
   return events;
+}
+
+// Number of source-side emissions held back on `edgeId` because the
+// edge was at slot capacity. AnimatedEdge reads this to render the
+// parked-at-source dot when an edge is opted into slot capacity and
+// has held emissions waiting.
+export function getPendingCount(world: World, edgeId: string): number {
+  return world.edgePending[edgeId]?.length ?? 0;
 }
