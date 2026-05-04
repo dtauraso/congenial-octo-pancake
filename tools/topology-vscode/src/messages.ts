@@ -26,7 +26,8 @@ export type WebviewToHostMsg =
   | { type: "trace-load" }
   | { type: "trace-clear" }
   | { type: "pulse-probe-dump"; json: string }
-  | { type: "fold-halo-dump"; json: string };
+  | { type: "fold-halo-dump"; json: string }
+  | { type: "runner-errors-dump"; json: string };
 
 export type HostToWebviewMsg =
   | { type: "load"; text: string }
@@ -42,7 +43,7 @@ export type HostToWebviewMsg =
 
 export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new Set([
   "ready", "save", "view-save", "run", "run-cancel", "compare-head", "compare-file",
-  "trace-load", "trace-clear", "pulse-probe-dump", "fold-halo-dump",
+  "trace-load", "trace-clear", "pulse-probe-dump", "fold-halo-dump", "runner-errors-dump",
 ]);
 
 export const HOST_TO_WEBVIEW_TYPES: ReadonlySet<HostToWebviewMsg["type"]> = new Set([
@@ -65,6 +66,7 @@ export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {
       return typeof m.text === "string" ? (m as unknown as WebviewToHostMsg) : undefined;
     case "pulse-probe-dump":
     case "fold-halo-dump":
+    case "runner-errors-dump":
       return typeof m.json === "string" ? (m as unknown as WebviewToHostMsg) : undefined;
     default:
       return m as unknown as WebviewToHostMsg;

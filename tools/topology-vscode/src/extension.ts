@@ -190,7 +190,8 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
           // log is uniform with trace-load.
           return;
         case "pulse-probe-dump":
-        case "fold-halo-dump": {
+        case "fold-halo-dump":
+        case "runner-errors-dump": {
           // Persist a webview probe log to a workspace file so external
           // readers (CLI, AI agents) can pick it up without devtools access.
           // Anchored on the document's workspace folder, falling back to
@@ -200,7 +201,10 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
             ? folder.uri.fsPath
             : path.dirname(document.uri.fsPath);
           const dir = path.join(baseDir, ".probe");
-          const fname = msg.type === "pulse-probe-dump" ? "pulse-last.json" : "fold-halo-last.json";
+          const fname =
+            msg.type === "pulse-probe-dump" ? "pulse-last.json" :
+            msg.type === "fold-halo-dump" ? "fold-halo-last.json" :
+            "runner-errors-last.json";
           const file = path.join(dir, fname);
           try {
             await vscode.workspace.fs.createDirectory(vscode.Uri.file(dir));
