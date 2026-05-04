@@ -8,7 +8,7 @@
 - **[~⅛]** Snap-to-grid; alignment guides. (React Flow has snap-to-grid built in; alignment guides are custom but cheap. Trimmed from ~¼ after the Phase 4 calibration — same shape: library primitive + thin custom layer + no spec touch.)
 - **[~⅛]** ⏳ Tier 3 system-shape test: spec undo + fold + delete. Apply a sequence (delete a node, fold a selection, rename, re-fold), step the *spec* undo back across the sequence, assert spec returns to its initial bytes; the viewer-state folds stack should be untouched (deleted folds reappear only when the *viewer* undo is exercised). Catches the bug where the two stacks bleed into each other or where a spec rollback leaves a fold pointing at a now-restored node id incoherently.
 - **[~⅛]** ⏳ Tier 2 invariant test: each undo stack is scoped to its own surface. After a spec undo, viewer-state diffs (folds, views, bookmarks, camera, lastSelectionIds) must be byte-identical to pre-undo. After a viewer undo, the spec must be byte-identical to pre-undo. Stronger than the previous "undo only touches spec" rule — has to police *two* surfaces' independence, not one. Promotes the rule from comment to enforced contract.
-- **[~½]** ⏳ Tier 4 headline edit-to-running-Go test. Success criterion #1 ("under 30 seconds end-to-end") made executable: scripted gesture + topogen + `go build`, latency measured. Nightly, not per-commit. Catches latency regressions (topogen slowdowns, debounce drift) that no other tier sees.
+- **[~½]** Tier 4 headline edit-to-running-Go test. Success criterion #1 ("under 30 seconds end-to-end") made executable: scripted gesture + topogen + `go build`, latency measured. Nightly, not per-commit. Catches latency regressions (topogen slowdowns, debounce drift) that no other tier sees. **Done in `2317742` at $1.30** ($3 est, range $2–$5, under). Gesture is a node-drag (x/y property tweak) since the editor exposes no UI for edge-kind; pipeline cost dominates either way. Lives at `tools/topology-vscode/e2e/tier4/edit-to-go-latency.spec.ts`, gated behind `PLAYWRIGHT_TIER4=1` (via `npm run test:tier4`) so the default Playwright suite stays Go-toolchain-free. Hard fail at 30s, soft warn at 10s. Local run: 1.6s end-to-end. CI nightly wiring is out of scope for this chunk.
 ## Running tally
 
 | Chunk | Commit | $ | est |
@@ -81,8 +81,10 @@ are unchanged — entries default to `txnId: undefined` so the existing
 `spec-undo-invariant.test.ts` and `spec-undo-system-shape.test.ts`).
 New cases live in `cross-surface-undo.test.ts`.
 
-**Phase 8 in-phase bullets done at $4.69 actual** ($8 estimate; well
-under). Tier 4 nightly headline edit-to-running-Go latency test
-remains deferred per the chunk-2 sign-off.
+**Phase 8 closed at $6.68 actual** vs. $8 in-phase + $3 deferred
+estimate (in-phase bullets + cross-surface undo closeout = $5.38;
+Tier 4 latency = $1.30 in `2317742`). Tier 4 nightly CI plumbing
+remains a separate follow-up — the test is opt-in runnable today
+via `npm run test:tier4`.
 
 - *Dropped: SVG export.* The `diagrams/` set is hand-authored to the style guide and the editor itself is the live view — exporting would mean re-implementing the style guide twice (live + export). Revive only when hand-authored diagrams drift from the spec badly enough to hurt; until then, screenshots / recordings cover incidental sharing.
