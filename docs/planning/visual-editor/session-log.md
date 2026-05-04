@@ -66,6 +66,21 @@ if this resurfaces.
 - Symmetric question: does the dot itself slow visibly at end now
   that the label fades earlier? If yes, option 3 covers both.
 
+**Update — fade alone insufficient.** User: "I still see the 1/2
+speed change. the only difference is there is a fraction of a
+second fade out before disapparing." Slowdown begins at
+`overall = 1 - PULSE_DASH_PX/svgArc` (often <0.90), so widening the
+fade only catches the tail. Reverted opacity to 0.95/0.05 and
+swapped to option 3-lite: replaced the visible-midpoint formula
+with `labelArcSvg = arcTraveled + PULSE_DASH_PX/2` (constant offset
+from the back of the dash, no clamp). Past `svgArc` the label
+position extrapolates from the path-end point along the end tangent
+so the label rides off the edge at constant speed and the existing
+opacity envelope fades it as it exits. Same `queryTangent` call as
+before; tangent is queried at `min(labelArcSvg, svgArc)` and reused
+for both extrapolation and the normal-direction offset, so no new
+sampling mismatch. Build + 157 tests green.
+
 ## 2026-05-03 — match cascade SVG pulse speed (0.08 px/ms)
 
 **Branch:** task/pulse-speed-svg-match

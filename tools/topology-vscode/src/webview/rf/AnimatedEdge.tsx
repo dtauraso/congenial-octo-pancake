@@ -415,24 +415,24 @@ function PulseInstance({
       arcTraveledRef.current = arcTraveled;
 
       const overall = arcTraveled / svgArc;
-      // Fade window widened from 0.05 → 0.10 so the label is mostly
-      // invisible during the final PULSE_DASH_PX of travel, where the
-      // visible-midpoint formula (labelArcSvg = (arcTraveled + headArc) / 2)
-      // halves the label's apparent speed once headArc clamps to svgArc.
-      const opacity = overall < 0.90 ? 1 : Math.max(0, (1 - overall) / 0.10);
+      const opacity = overall < 0.95 ? 1 : Math.max(0, (1 - overall) / 0.05);
 
       path.style.strokeDashoffset = String(-arcTraveled);
       path.style.opacity = String(opacity);
 
       if (label) {
-        // Label rides the dot's visible midpoint (arcTraveled is the
-        // back of the dash window; +DASH/2 is its center). Point
-        // comes from SVG (matches the dot exactly); tangent comes
-        // from the analytic cubic via Newton inversion at that
-        // point. Same parameter for both — no sampling mismatch.
-        const headArc = Math.min(svgArc, arcTraveled + PULSE_DASH_PX);
-        const labelArcSvg = (arcTraveled + headArc) / 2;
-        const point = path.getPointAtLength(labelArcSvg);
+        // Label rides a fixed offset ahead of the back of the dash
+        // window — NOT the visible-midpoint of the clipped dash. The
+        // visible-midpoint formula halves label speed in the final
+        // PULSE_DASH_PX once the dash leading edge clamps to svgArc,
+        // producing a conspicuous 2x slowdown right where the eye is
+        // focused. Riding the unclamped midpoint and extrapolating
+        // past the path end along the end tangent keeps constant
+        // speed; the opacity envelope fades the label out as it
+        // exits.
+        const labelArcSvg = arcTraveled + PULSE_DASH_PX / 2;
+        const queryArc = Math.min(labelArcSvg, svgArc);
+        const queryPoint = path.getPointAtLength(queryArc);
         // Cubic routes use the tangent-normal so the label rides
         // parallel to the curve (the rewrite at the top of the file
         // exists to preserve this on tightly-curling cubics). Snake
@@ -448,7 +448,11 @@ function PulseInstance({
         // quadrants, where that rule no longer perpendicular —
         // label would slide ahead/behind the dot. Cubics use the
         // classic perpendicular-with-upward-bias instead.
-        const tangent = queryTangent(geom, path, labelArcSvg, svgArc, point);
+        const tangent = queryTangent(geom, path, queryArc, svgArc, queryPoint);
+        const point = labelArcSvg <= svgArc
+          ? queryPoint
+          : { x: queryPoint.x + tangent.x * (labelArcSvg - svgArc),
+              y: queryPoint.y + tangent.y * (labelArcSvg - svgArc) };
         let nx: number, ny: number;
         if (route === "snake" || route === "below") {
           nx =  Math.abs(tangent.y);
