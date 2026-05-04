@@ -415,7 +415,10 @@ function PulseInstance({
       arcTraveledRef.current = arcTraveled;
 
       const overall = arcTraveled / svgArc;
-      const opacity = overall < 0.95 ? 1 : Math.max(0, (1 - overall) / 0.05);
+      const opacity =
+        overall < 0.05 ? Math.max(0, overall / 0.05) :
+        overall < 0.95 ? 1 :
+        Math.max(0, (1 - overall) / 0.05);
 
       path.style.strokeDashoffset = String(-arcTraveled);
       path.style.opacity = String(opacity);
@@ -470,7 +473,10 @@ function PulseInstance({
         // so sharing the dot's envelope makes the label fade while it
         // is still short of the arrow tip.
         const labelOverall = labelArcSvg / svgArc;
-        const labelOpacity = labelOverall < 0.95 ? 1 : Math.max(0, (1 - labelOverall) / 0.05);
+        const labelOpacity =
+          labelOverall < 0.05 ? Math.max(0, labelOverall / 0.05) :
+          labelOverall < 0.95 ? 1 :
+          Math.max(0, (1 - labelOverall) / 0.05);
         label.style.opacity = String(labelOpacity);
 
         if (probeOn) {
