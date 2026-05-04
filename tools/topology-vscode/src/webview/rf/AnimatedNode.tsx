@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { KIND_COLORS, type NodeSpec, type Port, type StateValue } from "../../schema";
 import { stepToNode, subscribe, getWorld, getTickMs } from "../../sim/runner";
-import { useSpec } from "../state";
+import { mutateSpec, useSpec } from "../state";
 
 // Visible port dot. Sized large enough to be a real drag target, colored by
 // the port's edge kind so users can see which kinds connect to which.
@@ -234,11 +234,36 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
       ) : (
         <div style={{ color: "#888", fontStyle: "italic" }}>(no spec)</div>
       )}
-      {data.notes ? (
-        <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid #eee", fontFamily: "inherit", color: "#444" }}>
-          {data.notes}
-        </div>
-      ) : null}
+      <textarea
+        className="node-notes-textarea"
+        value={data.notes ?? ""}
+        placeholder="notes"
+        onChange={(e) => {
+          const next = e.target.value;
+          mutateSpec((s) => {
+            const node = s.nodes.find((n) => n.id === id);
+            if (!node) return;
+            if (next === "") delete node.notes;
+            else node.notes = next;
+          });
+        }}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        style={{
+          marginTop: 6,
+          width: "100%",
+          minHeight: 36,
+          padding: 4,
+          boxSizing: "border-box",
+          border: "1px solid #ddd",
+          borderRadius: 3,
+          fontFamily: "inherit",
+          fontSize: 10,
+          color: "#444",
+          background: "#fafafa",
+          resize: "vertical",
+        }}
+      />
     </div>
   ) : null;
 
