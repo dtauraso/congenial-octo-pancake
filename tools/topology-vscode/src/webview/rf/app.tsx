@@ -618,7 +618,8 @@ function Inner() {
       // selectable, so dbl-click never fires on them; collapsing again uses
       // the right-click "fold selection" path on regular nodes.
       if (node.type === "fold") {
-        if (toggleFold(viewerState, node.id)) {
+        const ok = mutateViewer((s) => toggleFold(s, node.id));
+        if (ok) {
           const f = viewerState.folds?.find((x) => x.id === node.id);
           console.info(`[fold] toggled ${node.id} -> collapsed=${f?.collapsed}`);
           rebuildFlow();
