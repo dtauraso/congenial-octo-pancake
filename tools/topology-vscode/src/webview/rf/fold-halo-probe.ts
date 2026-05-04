@@ -41,6 +41,11 @@ export type FoldHaloEntry = {
 declare global {
   interface Window {
     __foldHaloProbe?: boolean;
+    // Verbose tier: when true, every member fire is logged (kind:"fire").
+    // Default off — only mount/start/end transitions are recorded, which
+    // is the useful timeline for halo-on/off correctness and is cheap
+    // even at high tick rates. Flip on for diagnostic sessions.
+    __foldHaloProbeVerbose?: boolean;
     __foldHaloLog?: FoldHaloEntry[];
     __foldHaloReport?: (opts?: { clear?: boolean }) => FoldHaloEntry[];
     __foldHaloDump?: () => number;
@@ -99,6 +104,17 @@ function probeEnabled(): boolean {
   return true;
 }
 
+function verboseEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.__foldHaloProbeVerbose === true) return true;
+  try {
+    if (window.localStorage?.getItem("foldHaloProbeVerbose") === "1") return true;
+  } catch {
+    // localStorage may throw in restricted contexts
+  }
+  return false;
+}
+
 export function recordFoldHaloEvent(
   foldId: string,
   kind: "mount" | "fire" | "start" | "end",
@@ -107,6 +123,10 @@ export function recordFoldHaloEvent(
   initialBuffered?: boolean,
 ): void {
   if (!probeEnabled()) return;
+  // Drop high-volume per-fire entries unless verbose tier is on. Mount
+  // and start/end transitions are always recorded — they're rare and
+  // are the load-bearing signal for halo correctness.
+  if (kind === "fire" && !verboseEnabled()) return;
   const world = getWorld();
   const bufferedAfter: FoldHaloEntry["bufferedAfter"] = [];
   for (const id of memberIds) {

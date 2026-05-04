@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { subscribe, getTickMs } from "../../sim/runner";
 import { recordFoldHaloEvent } from "./fold-halo-probe";
 import { createFoldActivityTracker, isFoldBoundaryEmit } from "./fold-activity";
 
-const FLASH_DURATION_MS = 300;
 const FOLD_STROKE = "#b89a3c";
 
 // Mirror AnimatedNode's portStyle: 8x8 colored dot, half-protruding past
@@ -38,18 +37,13 @@ export type FoldNodeData = {
 // boolean for the persistent buffered halo. Decoupling lets slice 1
 // (where the halo lives in the DOM) and this slice evolve independently.
 
-function useFoldHaloState(foldId: string, memberIds: string[]): {
-  buffered: boolean;
-  flashRef: React.MutableRefObject<HTMLDivElement | null>;
-  glowRef: React.MutableRefObject<HTMLDivElement | null>;
-} {
-  const flashRef = useRef<HTMLDivElement | null>(null);
-  const glowRef = useRef<HTMLDivElement | null>(null);
-  // "active" = any member has fired within ACTIVE_GRACE ticks. Each
-  // member fire refreshes the timeout; when it expires, the halo turns
-  // off. This matches the spec "halo on during member activity, off
-  // during none" — independent of whether members happen to use the
-  // AND-style __has_<port> buffering convention.
+function useFoldHaloState(foldId: string, memberIds: string[]): { buffered: boolean } {
+  // "active" = any member has fired within `decayMs`. Each member fire
+  // refreshes the timeout; when it expires, the halo turns off. The
+  // earlier flash + glow overlays were dropped — at typical tick rates
+  // they re-fired faster than they faded, producing a strobe that
+  // competed with the persistent halo. The port-dot halo is the single
+  // authoritative on/off signal now.
   const [buffered, setBuffered] = useState<boolean>(false);
   useEffect(() => {
     recordFoldHaloEvent(foldId, "mount", foldId, memberIds, false);
@@ -62,32 +56,6 @@ function useFoldHaloState(foldId: string, memberIds: string[]): {
       },
     );
     const unsub = subscribe((ev) => {
-      if (ev.type === "emit") {
-        if (isFoldBoundaryEmit(ids, ev.fromNodeId, ev.toNodeId)) {
-          const fl = flashRef.current;
-          if (fl) {
-            fl.getAnimations().forEach((a) => a.cancel());
-            fl.animate(
-              [{ opacity: 0 }, { opacity: 0.5, offset: 0.5 }, { opacity: 0 }],
-              { duration: FLASH_DURATION_MS },
-            );
-          }
-          const gl = glowRef.current;
-          if (gl) {
-            gl.getAnimations().forEach((a) => a.cancel());
-            gl.animate(
-              [
-                { boxShadow: `0 0 0 0 ${FOLD_STROKE}00`, opacity: 0 },
-                { boxShadow: `0 0 0 4px ${FOLD_STROKE}cc`, opacity: 0.8, offset: 0.4 },
-                { boxShadow: `0 0 0 2px ${FOLD_STROKE}66`, opacity: 0.4, offset: 0.7 },
-                { boxShadow: `0 0 0 0 ${FOLD_STROKE}00`, opacity: 0 },
-              ],
-              { duration: FLASH_DURATION_MS },
-            );
-          }
-        }
-        return;
-      }
       if (ev.type !== "fire" || !ids.has(ev.nodeId)) return;
       const wasActive = tracker.isActive();
       tracker.noteFire();
@@ -98,7 +66,7 @@ function useFoldHaloState(foldId: string, memberIds: string[]): {
       unsub();
     };
   }, [foldId, memberIds]);
-  return { buffered, flashRef, glowRef };
+  return { buffered };
 }
 
 function DiffBadge({ counts }: { counts: { added: number; removed: number; moved: number } }) {
@@ -135,7 +103,7 @@ export function FoldNode(props: NodeProps<FoldNodeData>) {
   const { data, selected } = props;
   // Slice 2 owns when/why these change; slice 1 (below) owns where they
   // mount and what they look like.
-  const { buffered, flashRef, glowRef } = useFoldHaloState(props.id, data.memberIds);
+  const { buffered } = useFoldHaloState(props.id, data.memberIds);
   if (data.collapsed) {
     return (
       <div
@@ -157,27 +125,6 @@ export function FoldNode(props: NodeProps<FoldNodeData>) {
           position: "relative",
         }}
       >
-        <div
-          ref={glowRef}
-          style={{
-            position: "absolute",
-            inset: -2,
-            borderRadius: 8,
-            pointerEvents: "none",
-            opacity: 0,
-          }}
-        />
-        <div
-          ref={flashRef}
-          style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: 6,
-            background: FOLD_STROKE,
-            pointerEvents: "none",
-            opacity: 0,
-          }}
-        />
         <Handle type="target" position={Position.Left} style={foldPortStyle("left", buffered)} />
         <Handle type="source" position={Position.Right} style={foldPortStyle("right", false)} />
         <div style={{ fontWeight: 600, position: "relative", zIndex: 1 }}>{data.label || "fold"}</div>
