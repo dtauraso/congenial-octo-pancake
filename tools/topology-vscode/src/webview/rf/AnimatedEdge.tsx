@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BaseEdge, type EdgeProps } from "reactflow";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind, type EdgeRoute } from "../../schema";
-import { subscribe, subscribeState, getConcurrentEdges, getTickMs } from "../../sim/runner";
+import { subscribe, subscribeState, getConcurrentEdges, getTickMs, getWorld } from "../../sim/runner";
+import { getPendingCount } from "../../sim/simulator";
 import { vscode } from "../save";
 import { markerEndUrl } from "./MarkerDefs";
 import { dashForKind } from "./edge-style";
@@ -604,6 +605,19 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   const [concurrent, setConcurrent] = useState(() => getConcurrentEdges().has(id));
   const concurrentRef = useRef(concurrent);
   concurrentRef.current = concurrent;
+  // Parked-at-source dot: when the edge opted into slot capacity and
+  // an emission was held back because the slot was full, show a small
+  // dot at the source handle with a count badge so the wait is visible
+  // (mirrors the SMIL diagram's idle pulse during the ack handshake).
+  const [pendingCount, setPendingCount] = useState(0);
+  useEffect(() => {
+    const update = () => {
+      const w = getWorld();
+      setPendingCount(w ? getPendingCount(w, id) : 0);
+    };
+    update();
+    return subscribeState(update);
+  }, [id]);
 
   useEffect(() => {
     const update = () => setConcurrent(getConcurrentEdges().has(id));
@@ -692,6 +706,24 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
         >
           {kind === "feedback-ack" ? `↻ ${label}` : label}
         </text>
+      )}
+      {pendingCount > 0 && (
+        <g pointerEvents="none">
+          <circle cx={sourceX} cy={sourceY} r={5} fill={stroke} opacity={0.85} />
+          <text
+            x={sourceX}
+            y={sourceY - 9}
+            textAnchor="middle"
+            fontSize={10}
+            fontWeight={600}
+            fill={stroke}
+            stroke="white"
+            strokeWidth={3}
+            paintOrder="stroke"
+          >
+            {pendingCount}
+          </text>
+        </g>
       )}
       {mid && valueLabel && (
         <text
