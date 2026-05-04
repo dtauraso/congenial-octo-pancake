@@ -39,9 +39,12 @@ of the bullets above (e.g. "I keep redoing the same wiring",
 the matching deferred item and offer to open the corresponding
 task branch. Don't volunteer the list unprompted.
 
-**The quick wins themselves are re-evaluation candidates, not
-load-bearing.** Per `feedback_visuals_scrutiny.md`, expect the
-unified solutions to replace them:
+**The quick wins themselves are placeholders for canonical
+replacements, not load-bearing.** Different dynamic from
+`feedback_visuals_scrutiny.md` (which is about iterative
+point-tuning losing ground): these are stable baseline
+checkboxes that get swapped out wholesale when the industry
+solution is adopted.
 
 - Rounded snake/below corners in `AnimatedEdge.tsx` (segs stay
   straight, dot cuts corner by ≤ `r` px) — subsumed by adopting a
