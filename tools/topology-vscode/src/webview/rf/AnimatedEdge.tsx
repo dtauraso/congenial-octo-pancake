@@ -248,7 +248,7 @@ function queryTangent(
 // no separate dot/label timing. The dot's on-screen speed is exactly
 // this rate measured along the path arc, which is also the only
 // thing the riding label tracks. Adjust here, not in callers.
-const PULSE_PX_PER_MS_AT_REF_TICK = 0.06;
+const PULSE_PX_PER_MS_AT_REF_TICK = 0.03;
 const REF_TICK_MS = 400;
 // Visible dot length along the path arc. The dot is rendered as a
 // dash window via strokeDasharray; the riding label reads its
