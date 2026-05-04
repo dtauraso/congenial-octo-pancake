@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { subscribe } from "../../sim/runner";
 import { recordFoldHaloEvent } from "./fold-halo-probe";
-import { applyFoldBoundaryEmit, isFoldBoundaryEmit } from "./fold-activity";
+import { isFoldBoundaryEmit } from "./fold-activity";
 
 const FOLD_STROKE = "#b89a3c";
 const FOLD_HALO_BOX_SHADOW = `0 0 0 2px ${FOLD_STROKE}`;
@@ -25,35 +25,29 @@ export type FoldNodeData = {
 // (where the halo lives in the DOM) and this slice evolve independently.
 
 function useFoldHaloState(foldId: string, memberIds: string[]): { buffered: boolean } {
-  // Halo as boundary-flow accumulator. The fold is a black box; halo
-  // means "stuff is inside, not yet released." Counts +1 on every emit
-  // that crosses inward (outside → member), -1 on every emit that
-  // crosses outward (member → outside). Internal and external emits
-  // are no-ops. Halo on iff count > 0; clamped at 0 so a fold that
-  // emits before it ever receives (initial held values) doesn't go
-  // negative. Pause/resume is free — emits stop while paused.
+  // Halo spec: turns on when the first member receives a pulse from
+  // outside the fold; turns off when the last member emits a pulse to
+  // outside the fold. "First/last" here means any inward/outward
+  // boundary-emit, latest wins. Internal and external emits are
+  // no-ops. Pause freezes naturally — no emits fire while paused.
   const [buffered, setBuffered] = useState<boolean>(false);
   useEffect(() => {
     const members = new Set(memberIds);
-    let count = 0;
     let active = false;
     recordFoldHaloEvent(foldId, "mount", foldId, memberIds, false);
     return subscribe((ev) => {
       if (ev.type !== "emit") return;
       if (!isFoldBoundaryEmit(members, ev.fromNodeId, ev.toNodeId)) return;
       const inward = members.has(ev.toNodeId);
-      count = applyFoldBoundaryEmit(members, count, ev.fromNodeId, ev.toNodeId);
-      const next = count > 0;
-      if (next !== active) {
-        active = next;
-        recordFoldHaloEvent(
-          foldId,
-          next ? "start" : "end",
-          inward ? ev.toNodeId : ev.fromNodeId,
-          memberIds,
-        );
-        setBuffered(next);
-      }
+      if (inward === active) return; // already in the matching state
+      active = inward;
+      recordFoldHaloEvent(
+        foldId,
+        active ? "start" : "end",
+        inward ? ev.toNodeId : ev.fromNodeId,
+        memberIds,
+      );
+      setBuffered(active);
     });
   }, [foldId, memberIds]);
   return { buffered };
