@@ -73,19 +73,6 @@ const RF_NODE_TYPES = { animated: AnimatedNode, fold: FoldNode, note: NoteNode }
 const GRID = 24;
 const ALIGN_TOL = 4;
 
-function flashRejectedHandle(nodeId: string, handleId: string) {
-  const el = document.querySelector<HTMLElement>(
-    `.react-flow__node[data-id="${CSS.escape(nodeId)}"] .react-flow__handle[data-handleid="${CSS.escape(handleId)}"]`,
-  );
-  if (!el) return;
-  el.classList.remove("handle-reject-flash");
-  // Reflow so re-adding the class restarts the animation when a user
-  // double-drops onto the same already-wired port.
-  void el.offsetWidth;
-  el.classList.add("handle-reject-flash");
-  window.setTimeout(() => el.classList.remove("handle-reject-flash"), 700);
-}
-
 const EDGE_KIND_OPTIONS: EdgeKind[] = [
   "chain", "signal", "feedback-ack", "release", "streak",
   "pointer", "and-out", "edge-connection", "inhibit-in", "any",
@@ -455,6 +442,18 @@ function Inner() {
     handleDelete([], deleted.map((e) => e.id));
   }, [handleDelete]);
 
+  // Input ports are 1-to-1: each target.handle is a single chan field on
+  // the runtime node struct, so two senders into the same port can't be
+  // wired. Returning false here makes ReactFlow draw the in-progress
+  // connection as invalid and skip the onConnect / onReconnect callback,
+  // so topogen never sees the duplicate. Outputs are allowed to fan out.
+  const isValidConnection = useCallback((conn: Connection) => {
+    if (!conn.target || !conn.targetHandle) return false;
+    return !spec.edges.some(
+      (e) => e.target === conn.target && e.targetHandle === conn.targetHandle,
+    );
+  }, []);
+
   const onConnect = useCallback((conn: Connection) => {
     if (isReadOnlyView()) return;
     if (!conn.source || !conn.target || !conn.sourceHandle || !conn.targetHandle) return;
@@ -467,21 +466,6 @@ function Inner() {
     const srcPort = srcDef?.outputs.find((p) => p.name === conn.sourceHandle);
     const dstPort = dstDef?.inputs.find((p) => p.name === conn.targetHandle);
     if (!srcPort || !dstPort) return;
-    // Input ports are 1-to-1: each target.handle is a single chan field on
-    // the runtime node struct, so two senders into the same port can't be
-    // wired. Reject before the edge is added rather than letting topogen
-    // emit broken Go. (Outputs are allowed to fan out — e.g.
-    // ChainInhibitor.inhibitOut → multiple inhibit gates.)
-    const portTaken = spec.edges.some(
-      (e) => e.target === conn.target && e.targetHandle === conn.targetHandle,
-    );
-    if (portTaken) {
-      console.warn(
-        `wirefold: target port ${conn.target}.${conn.targetHandle} is already wired; refusing duplicate edge`,
-      );
-      flashRejectedHandle(conn.target, conn.targetHandle);
-      return;
-    }
     // Channel-type inference: edge kind is the source port's kind. If the
     // target port disagrees, fall back to "any" so validatePorts won't reject
     // the new edge on reload (kind is informational; the handles carry the
@@ -538,21 +522,6 @@ function Inner() {
     const srcPort = srcDef?.outputs.find((p) => p.name === conn.sourceHandle);
     const dstPort = dstDef?.inputs.find((p) => p.name === conn.targetHandle);
     if (!srcPort || !dstPort) return;
-    // Same 1-to-1 input invariant as onConnect — but ignore the edge being
-    // rerouted itself (otherwise re-dropping on its existing target would
-    // self-reject).
-    const portTaken = spec.edges.some(
-      (e) => e.id !== oldEdge.id &&
-        e.target === conn.target &&
-        e.targetHandle === conn.targetHandle,
-    );
-    if (portTaken) {
-      console.warn(
-        `wirefold: target port ${conn.target}.${conn.targetHandle} is already wired; refusing reroute`,
-      );
-      flashRejectedHandle(conn.target, conn.targetHandle);
-      return;
-    }
     const newKind: EdgeKind = srcPort.kind === dstPort.kind ? srcPort.kind : "any";
     const next = mutateSpec((s) => {
       const e = s.edges.find((x) => x.id === oldEdge.id);
@@ -885,6 +854,7 @@ function Inner() {
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
         onConnect={onConnect}
+        isValidConnection={isValidConnection}
         onEdgeUpdate={onReconnect}
         onEdgeUpdateStart={onReconnectStart}
         onEdgeUpdateEnd={onReconnectEnd}
