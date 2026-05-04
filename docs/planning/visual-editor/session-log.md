@@ -95,6 +95,31 @@ pass.
     doesn't need a tangent at all. Sampling-based normals are the
     current weak point — replace the mechanism rather than tune
     its eps.
+  - Resolved next session (same day, $283.34 → $285.65). Three
+    layered changes in `AnimatedEdge.tsx`:
+    1. Lifted reactflow's bezier control-point math into a local
+       `buildPathGeom` helper. Both the `d` string and the analytic
+       control points/segments now come from one source — no string
+       parsing of our own output, no dependence on reactflow internals.
+    2. Replaced finite-difference tangent sampling with analytic
+       tangent. For straights, segment unit vector. For the cubic,
+       Newton-invert `B(t) = path.getPointAtLength(labelArcSvg)` to
+       recover `t`, then evaluate `B'(t)`. Point and tangent share
+       `t` by construction, eliminating the eps-clamp mismatch that
+       made the tail tangent disagree with the tail point. (An
+       intermediate attempt that built a chord-arc LUT and scaled
+       to SVG total was structurally wrong — chord arc isn't
+       proportional to SVG arc on a curl, so the recovered `t` was
+       still off. Newton inversion sidesteps the conversion.)
+    3. The visible "label rising at end" was actually compounded by
+       SVG `<text>` defaulting to `dominant-baseline: alphabetic` —
+       the y coordinate was the baseline, so glyphs rendered ~9–11px
+       *above* the translate point, stacking with the 10px normal
+       offset. Setting `dominantBaseline="central"` made the
+       configured offset visually match.
+  - Lesson: when a "geometry" bug visually exceeds the configured
+    parameter by ~one font height, suspect text baseline before
+    suspecting more geometry. Cheap to check, easy to overlook.
 
 ## 2026-05-03 — smoothness audit (non-edit interactions)
 

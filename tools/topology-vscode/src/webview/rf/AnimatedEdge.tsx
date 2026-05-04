@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { BaseEdge, getBezierPath, type EdgeProps } from "reactflow";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BaseEdge, type EdgeProps } from "reactflow";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind, type EdgeRoute } from "../../schema";
 import { subscribe, subscribeState, getConcurrentEdges, getTickMs } from "../../sim/runner";
 import { markerEndUrl } from "./MarkerDefs";
@@ -38,21 +38,181 @@ function midpoint(
   return { x: (sx + tx) / 2, y: (sy + ty) / 2 };
 }
 
-function routePath(
+// --- Path geometry: single source of truth for `d` and per-arc
+// position/tangent. Replaces finite-difference normal sampling, which
+// produced point/tangent inconsistency at the end of a bezier (the
+// tangent was clamped away from the path end while the point was
+// not, so on a tightly curling cubic the label drifted ~25–30px off
+// the parallel curve). Here, point and tangent are always evaluated
+// at the same parameter, so that mismatch is structurally impossible.
+
+type Pt = { x: number; y: number };
+
+type StraightSeg = {
+  kind: "straight";
+  p0: Pt; p1: Pt;
+  len: number;
+  ux: number; uy: number;
+};
+type CubicSeg = {
+  kind: "cubic";
+  p0: Pt; c1: Pt; c2: Pt; p1: Pt;
+};
+type Seg = StraightSeg | CubicSeg;
+type PathGeom = {
+  d: string;
+  segs: Seg[];
+  cum: number[];
+  // Sum of straight-segment lengths. For a single cubic this is 0;
+  // we never use chord arc to query a cubic — Newton inversion on
+  // the analytic cubic uses the SVG-arc position directly.
+  straightTotal: number;
+};
+
+// Mirrors reactflow's getBezierPath control-point math. Lifted so we
+// own both the `d` string and the analytic control points.
+function controlOffset(distance: number): number {
+  return distance >= 0 ? 0.5 * distance : 0.25 * 25 * Math.sqrt(-distance);
+}
+function controlPoint(pos: string, x1: number, y1: number, x2: number, y2: number): Pt {
+  switch (pos) {
+    case "left":   return { x: x1 - controlOffset(x1 - x2), y: y1 };
+    case "right":  return { x: x1 + controlOffset(x2 - x1), y: y1 };
+    case "top":    return { x: x1, y: y1 - controlOffset(y1 - y2) };
+    case "bottom": return { x: x1, y: y1 + controlOffset(y2 - y1) };
+    default:       return { x: x1, y: y1 };
+  }
+}
+
+function bezierAt(seg: CubicSeg, t: number): Pt {
+  const u = 1 - t;
+  const a = u*u*u, b = 3*u*u*t, c = 3*u*t*t, d = t*t*t;
+  return {
+    x: a*seg.p0.x + b*seg.c1.x + c*seg.c2.x + d*seg.p1.x,
+    y: a*seg.p0.y + b*seg.c1.y + c*seg.c2.y + d*seg.p1.y,
+  };
+}
+function bezierTangentAt(seg: CubicSeg, t: number): Pt {
+  const u = 1 - t;
+  const a = 3*u*u, b = 6*u*t, c = 3*t*t;
+  return {
+    x: a*(seg.c1.x-seg.p0.x) + b*(seg.c2.x-seg.c1.x) + c*(seg.p1.x-seg.c2.x),
+    y: a*(seg.c1.y-seg.p0.y) + b*(seg.c2.y-seg.c1.y) + c*(seg.p1.y-seg.c2.y),
+  };
+}
+
+function makeCubicSeg(p0: Pt, c1: Pt, c2: Pt, p1: Pt): CubicSeg {
+  return { kind: "cubic", p0, c1, c2, p1 };
+}
+
+// Recover the cubic parameter t such that B(t) ≈ target. Newton on
+// the projection of (target - B(t)) onto the unit tangent. Two or
+// three iterations from a reasonable seed converge to sub-pixel.
+function findCubicT(seg: CubicSeg, target: Pt, t0: number): number {
+  let t = Math.max(0, Math.min(1, t0));
+  for (let i = 0; i < 4; i++) {
+    const p = bezierAt(seg, t);
+    const tg = bezierTangentAt(seg, t);
+    const denom = tg.x * tg.x + tg.y * tg.y;
+    if (denom < 1e-9) break;
+    const dx = target.x - p.x, dy = target.y - p.y;
+    const step = (tg.x * dx + tg.y * dy) / denom;
+    const next = Math.max(0, Math.min(1, t + step));
+    if (Math.abs(next - t) < 1e-5) { t = next; break; }
+    t = next;
+  }
+  return t;
+}
+
+function addStraight(segs: Seg[], x0: number, y0: number, x1: number, y1: number) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const len = Math.hypot(dx, dy);
+  const u = len || 1;
+  segs.push({
+    kind: "straight",
+    p0: { x: x0, y: y0 }, p1: { x: x1, y: y1 },
+    len, ux: dx/u, uy: dy/u,
+  });
+}
+
+function finalize(d: string, segs: Seg[]): PathGeom {
+  const cum: number[] = [];
+  let acc = 0;
+  for (const s of segs) {
+    acc += s.kind === "straight" ? s.len : 0;
+    cum.push(acc);
+  }
+  return { d, segs, cum, straightTotal: acc };
+}
+
+function buildPathGeom(
   route: EdgeRoute,
-  sx: number, sy: number,
-  tx: number, ty: number,
+  sx: number, sy: number, sp: string,
+  tx: number, ty: number, tp: string,
   lane: number,
-): string {
+): PathGeom {
+  const segs: Seg[] = [];
   if (route === "snake") {
     const midX = (sx + tx) / 2 + lane;
-    return `M ${sx},${sy} L ${midX},${sy} L ${midX},${ty} L ${tx},${ty}`;
+    addStraight(segs, sx, sy, midX, sy);
+    addStraight(segs, midX, sy, midX, ty);
+    addStraight(segs, midX, ty, tx, ty);
+    return finalize(`M ${sx},${sy} L ${midX},${sy} L ${midX},${ty} L ${tx},${ty}`, segs);
   }
   if (route === "below") {
     const corridorY = Math.max(sy, ty) + 40 + lane;
-    return `M ${sx},${sy} L ${sx},${corridorY} L ${tx},${corridorY} L ${tx},${ty}`;
+    addStraight(segs, sx, sy, sx, corridorY);
+    addStraight(segs, sx, corridorY, tx, corridorY);
+    addStraight(segs, tx, corridorY, tx, ty);
+    return finalize(`M ${sx},${sy} L ${sx},${corridorY} L ${tx},${corridorY} L ${tx},${ty}`, segs);
   }
-  return `M ${sx},${sy} L ${tx},${ty}`;
+  const c1 = controlPoint(sp, sx, sy, tx, ty);
+  const c2 = controlPoint(tp, tx, ty, sx, sy);
+  segs.push(makeCubicSeg({ x: sx, y: sy }, c1, c2, { x: tx, y: ty }));
+  return finalize(`M ${sx},${sy} C ${c1.x},${c1.y} ${c2.x},${c2.y} ${tx},${ty}`, segs);
+}
+
+// Query unit tangent at SVG-arc position `svgArc`. The point is read
+// from SVG (so it matches the dot exactly); for a cubic edge we
+// recover the parameter t from that point via Newton inversion and
+// evaluate B'(t) analytically.
+function queryTangent(
+  geom: PathGeom,
+  path: SVGPathElement,
+  svgArc: number,
+  svgTotal: number,
+  point: Pt,
+): Pt {
+  // Single-cubic case.
+  if (geom.segs.length === 1 && geom.segs[0].kind === "cubic") {
+    const seg = geom.segs[0];
+    const t0 = svgTotal > 0 ? svgArc / svgTotal : 0;
+    const t = findCubicT(seg, point, t0);
+    const tg = bezierTangentAt(seg, t);
+    const tlen = Math.hypot(tg.x, tg.y) || 1;
+    return { x: tg.x / tlen, y: tg.y / tlen };
+  }
+  // All-straight case: SVG arc equals straight chord arc, so walk
+  // segments by `svgArc` directly.
+  let segStart = 0;
+  for (let i = 0; i < geom.segs.length; i++) {
+    if (svgArc <= geom.cum[i] || i === geom.segs.length - 1) {
+      const seg = geom.segs[i];
+      if (seg.kind === "straight") return { x: seg.ux, y: seg.uy };
+      break;
+    }
+    segStart = geom.cum[i];
+  }
+  // Mixed routes (none today): fall back to a tiny SVG-arc finite
+  // difference. Kept as a safety net, not the primary path.
+  void segStart;
+  const eps = Math.min(0.5, svgTotal / 2);
+  const sample = Math.min(Math.max(svgArc, eps), svgTotal - eps);
+  const a = path.getPointAtLength(sample + eps);
+  const b = path.getPointAtLength(sample - eps);
+  const tx = a.x - b.x, ty = a.y - b.y;
+  const tlen = Math.hypot(tx, ty) || 1;
+  return { x: tx / tlen, y: ty / tlen };
 }
 
 // Single named knob for traversal speed. Everything visual scales
@@ -80,17 +240,10 @@ type Pulse = {
   value: string;
 };
 
-// One traveling pulse, driven by requestAnimationFrame against a
-// single arc-traveled value. The dot (a stroke-dashoffset window on
-// the edge path) and the riding label both read position from the
-// same arc-traveled — there is no second animation that can drift
-// from the first. On a `d` change the arc-traveled is preserved
-// across the swap, so dragging a node mid-pulse continues the dot
-// from where it was rather than restarting at the source.
 function PulseInstance({
-  d, stroke, value, speedPxPerMs, onDone,
+  geom, stroke, value, speedPxPerMs, onDone,
 }: {
-  d: string;
+  geom: PathGeom;
   stroke: string;
   value: string;
   speedPxPerMs: number;
@@ -100,19 +253,21 @@ function PulseInstance({
   const labelRef = useRef<SVGTextElement | null>(null);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
-  // Cumulative arc traveled, preserved across `d` changes.
+  // Cumulative arc traveled in SVG arc units, preserved across `d`
+  // changes. SVG arc (used by strokeDashoffset) and our chord-arc
+  // (used by queryGeom) are reconciled with a per-`d` scale factor.
   const arcTraveledRef = useRef(0);
 
   useEffect(() => {
     const path = pathRef.current;
     if (!path) return;
     const label = labelRef.current;
-    const arc = path.getTotalLength();
-    if (arc <= 0) return;
+    const svgArc = path.getTotalLength();
+    if (svgArc <= 0) return;
 
     const swapStart = performance.now();
-    const startArc = Math.min(arcTraveledRef.current, arc);
-    const remainingArc = arc - startArc;
+    const startArc = Math.min(arcTraveledRef.current, svgArc);
+    const remainingArc = svgArc - startArc;
     if (remainingArc <= 0) {
       doneRef.current();
       return;
@@ -120,7 +275,6 @@ function PulseInstance({
     const remainingMs = remainingArc / speedPxPerMs;
 
     let rafId = 0;
-    let cancelled = false;
 
     const frame = () => {
       const elapsed = performance.now() - swapStart;
@@ -128,40 +282,27 @@ function PulseInstance({
       const arcTraveled = startArc + localT * remainingArc;
       arcTraveledRef.current = arcTraveled;
 
-      const overall = arcTraveled / arc;
-      // Match the previous fade envelope: fully opaque until the
-      // last 5% of the path, then fade out.
+      const overall = arcTraveled / svgArc;
       const opacity = overall < 0.95 ? 1 : Math.max(0, (1 - overall) / 0.05);
 
       path.style.strokeDashoffset = String(-arcTraveled);
       path.style.opacity = String(opacity);
 
       if (label) {
-        // Dot's visible span on the path is [arcTraveled, headArc],
-        // where headArc clamps at the path end during the tail-in
-        // phase. Label rides the visible midpoint of that span so
-        // dot and label stay aligned through that phase too.
-        const headArc = Math.min(arc, arcTraveled + PULSE_DASH_PX);
-        const labelArc = (arcTraveled + headArc) / 2;
-        const p = path.getPointAtLength(labelArc);
-        // Local tangent via small finite difference along the arc;
-        // normal is the tangent rotated 90°. Pick the side that
-        // points "up" on screen (negative y) so the label sits above
-        // the dot regardless of motion direction.
-        // Tangent from a strictly-interior window so the normal
-        // stays well-defined as labelArc approaches the path end.
-        const eps = Math.min(0.5, arc / 2);
-        const sampleArc = Math.min(Math.max(labelArc, eps), arc - eps);
-        const ahead = path.getPointAtLength(sampleArc + eps);
-        const behind = path.getPointAtLength(sampleArc - eps);
-        const tx = ahead.x - behind.x;
-        const ty = ahead.y - behind.y;
-        const tlen = Math.hypot(tx, ty) || 1;
-        let nx = -ty / tlen;
-        let ny = tx / tlen;
+        // Label rides the dot's visible midpoint (arcTraveled is the
+        // back of the dash window; +DASH/2 is its center). Point
+        // comes from SVG (matches the dot exactly); tangent comes
+        // from the analytic cubic via Newton inversion at that
+        // point. Same parameter for both — no sampling mismatch.
+        const headArc = Math.min(svgArc, arcTraveled + PULSE_DASH_PX);
+        const labelArcSvg = (arcTraveled + headArc) / 2;
+        const point = path.getPointAtLength(labelArcSvg);
+        const tangent = queryTangent(geom, path, labelArcSvg, svgArc, point);
+        let nx = -tangent.y;
+        let ny = tangent.x;
         if (ny > 0) { nx = -nx; ny = -ny; }
-        const lx = p.x + nx * PULSE_LABEL_NORMAL_PX;
-        const ly = p.y + ny * PULSE_LABEL_NORMAL_PX;
+        const lx = point.x + nx * PULSE_LABEL_NORMAL_PX;
+        const ly = point.y + ny * PULSE_LABEL_NORMAL_PX;
         label.setAttribute("transform", `translate(${lx}, ${ly})`);
         label.style.opacity = String(opacity);
       }
@@ -175,22 +316,18 @@ function PulseInstance({
     rafId = requestAnimationFrame(frame);
 
     return () => {
-      cancelled = true;
       cancelAnimationFrame(rafId);
-      // Capture progress reached so the next effect run (after a `d`
-      // swap) resumes from here on the new geometry.
       const elapsed = performance.now() - swapStart;
       const localT = Math.min(1, elapsed / remainingMs);
-      if (!cancelled) return; // unreachable, kept for clarity
       arcTraveledRef.current = startArc + localT * remainingArc;
     };
-  }, [d, speedPxPerMs]);
+  }, [geom, speedPxPerMs]);
 
   return (
     <>
       <path
         ref={pathRef}
-        d={d}
+        d={geom.d}
         fill="none"
         stroke={stroke}
         strokeWidth={3}
@@ -202,6 +339,7 @@ function PulseInstance({
       <text
         ref={labelRef}
         textAnchor="middle"
+        dominantBaseline="central"
         fontSize={11}
         fontWeight={400}
         fill={stroke}
@@ -214,20 +352,15 @@ function PulseInstance({
   );
 }
 
-// One-shot pulses along the edge's path, queued per edge. Each
-// "emit" from the runner appends to a per-edge queue; only the head
-// pulse renders. When it finishes, the next dequeues. Serializing
-// pulses on the same edge means a new emit waits for the previous
-// pulse to reach the downstream node rather than cancelling it
-// (which chopped the chain visually) or running concurrently (which
-// made rapid emits stack up unreadably).
 export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, data } = props;
   const route: EdgeRoute = data?.route ?? "line";
   const lane = data?.lane ?? 0;
-  const d = route === "line"
-    ? getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })[0]
-    : routePath(route, sourceX, sourceY, targetX, targetY, lane);
+  const geom = useMemo(
+    () => buildPathGeom(route, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, lane),
+    [route, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, lane],
+  );
+  const d = geom.d;
 
   const [pulses, setPulses] = useState<Pulse[]>([]);
   const pulseKeyRef = useRef(0);
@@ -286,7 +419,7 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
       {pulses[0] && (
         <PulseInstance
           key={pulses[0].key}
-          d={d}
+          geom={geom}
           stroke={stroke}
           value={pulses[0].value}
           speedPxPerMs={speed}
