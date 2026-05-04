@@ -248,8 +248,39 @@ type Pulse = {
 // the visible result. Toggle at runtime via devtools:
 //   window.__pulseProbe = true
 // or persist with `localStorage.setItem("pulseProbe", "1")`.
+// Structured collector. Each pulse that exceeds a threshold pushes
+// one entry to `window.__pulseProbeLog`. Programmatic readers (AI
+// agents driving devtools, Playwright tests) can call
+// `window.__pulseProbeReport()` to get the log and clear it.
+type ProbeLogEntry = {
+  ts: number;
+  edgeId: string;
+  drift: number;
+  tangentSlip: number;
+  measuredOffset: number;
+  expectedOffset: number;
+  angleDeg: number;
+  arcFrac: number;
+};
 declare global {
-  interface Window { __pulseProbe?: boolean }
+  interface Window {
+    __pulseProbe?: boolean;
+    __pulseProbeLog?: ProbeLogEntry[];
+    __pulseProbeReport?: (opts?: { clear?: boolean }) => ProbeLogEntry[];
+  }
+}
+function probeLog(): ProbeLogEntry[] {
+  if (typeof window === "undefined") return [];
+  if (!window.__pulseProbeLog) {
+    window.__pulseProbeLog = [];
+    window.__pulseProbeReport = (opts) => {
+      const log = window.__pulseProbeLog ?? [];
+      const snapshot = log.slice();
+      if (opts?.clear !== false) window.__pulseProbeLog = [];
+      return snapshot;
+    };
+  }
+  return window.__pulseProbeLog;
 }
 const PULSE_PROBE_DRIFT_PX = 1.5;
 const PULSE_PROBE_TANGENT_PX = 1.5;
@@ -374,6 +405,16 @@ function PulseInstance({
         if (probeOn && probeWorst &&
             (probeWorst.drift > PULSE_PROBE_DRIFT_PX ||
              probeWorst.tangentSlip > PULSE_PROBE_TANGENT_PX)) {
+          probeLog().push({
+            ts: performance.now(),
+            edgeId,
+            drift: probeWorst.drift,
+            tangentSlip: probeWorst.tangentSlip,
+            measuredOffset: probeWorst.measuredOffset,
+            expectedOffset: PULSE_LABEL_NORMAL_PX,
+            angleDeg: probeWorst.measuredAngleDeg,
+            arcFrac: probeWorst.arcFrac,
+          });
           // eslint-disable-next-line no-console
           console.warn(
             `[pulse-probe] edge=${edgeId} worst-drift=${probeWorst.drift.toFixed(2)}px ` +
