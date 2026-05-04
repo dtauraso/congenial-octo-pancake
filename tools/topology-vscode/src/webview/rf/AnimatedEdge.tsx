@@ -415,7 +415,11 @@ function PulseInstance({
       arcTraveledRef.current = arcTraveled;
 
       const overall = arcTraveled / svgArc;
-      const opacity = overall < 0.95 ? 1 : Math.max(0, (1 - overall) / 0.05);
+      // Fade window widened from 0.05 → 0.10 so the label is mostly
+      // invisible during the final PULSE_DASH_PX of travel, where the
+      // visible-midpoint formula (labelArcSvg = (arcTraveled + headArc) / 2)
+      // halves the label's apparent speed once headArc clamps to svgArc.
+      const opacity = overall < 0.90 ? 1 : Math.max(0, (1 - overall) / 0.10);
 
       path.style.strokeDashoffset = String(-arcTraveled);
       path.style.opacity = String(opacity);
