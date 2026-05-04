@@ -14,3 +14,4 @@
 - [project_industry_pattern_deferrals.md](project_industry_pattern_deferrals.md) — Visual-editor gaps from the 2026-05-03 industry-pattern review that are deferred until matching friction appears
 - [feedback_webview_devtools_frame.md](feedback_webview_devtools_frame.md) — VS Code webview devtools default to the outer wrapper frame; prefer file-bridge round-trips over `typeof window.X` for verification
 - [feedback_cost_overruns.md](feedback_cost_overruns.md) — Catalog of session cost overruns; pattern is speculative tooling on top of an unverified diagnosis
+- [project_pulse_label_offset_rule.md](project_pulse_label_offset_rule.md) — Pulse-label offset rule splits per route kind; mixing them shows up as tangent slip in the probe log

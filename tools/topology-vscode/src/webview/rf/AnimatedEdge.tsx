@@ -33,7 +33,7 @@ function midpoint(
     return { x: midX, y: (sy + ty) / 2 };
   }
   if (route === "below") {
-    const corridorY = Math.max(sy, ty) + 40 + lane;
+    const corridorY = Math.max(sy, ty) + 80 + lane;
     return { x: (sx + tx) / 2, y: corridorY };
   }
   return { x: (sx + tx) / 2, y: (sy + ty) / 2 };
@@ -160,7 +160,7 @@ function buildPathGeom(
     addStraight(segs, midX, ty, tx, ty);
     // Round the two corners. Animation segs stay straight (the dot
     // cuts the corner by at most `r` pixels — within visual noise).
-    const r = Math.min(8, Math.abs(midX - sx) / 2, Math.abs(tx - midX) / 2, Math.abs(ty - sy) / 2);
+    const r = Math.min(15, Math.abs(midX - sx) / 2, Math.abs(tx - midX) / 2, Math.abs(ty - sy) / 2);
     if (!(r > 0.5)) {
       return finalize(`M ${sx},${sy} L ${midX},${sy} L ${midX},${ty} L ${tx},${ty}`, segs);
     }
@@ -177,11 +177,11 @@ function buildPathGeom(
     return finalize(d, segs);
   }
   if (route === "below") {
-    const corridorY = Math.max(sy, ty) + 40 + lane;
+    const corridorY = Math.max(sy, ty) + 80 + lane;
     addStraight(segs, sx, sy, sx, corridorY);
     addStraight(segs, sx, corridorY, tx, corridorY);
     addStraight(segs, tx, corridorY, tx, ty);
-    const r = Math.min(8, Math.abs(corridorY - sy) / 2, Math.abs(corridorY - ty) / 2, Math.abs(tx - sx) / 2);
+    const r = Math.min(15, Math.abs(corridorY - sy) / 2, Math.abs(corridorY - ty) / 2, Math.abs(tx - sx) / 2);
     if (!(r > 0.5)) {
       return finalize(`M ${sx},${sy} L ${sx},${corridorY} L ${tx},${corridorY} L ${tx},${ty}`, segs);
     }
@@ -221,20 +221,14 @@ function queryTangent(
     const tlen = Math.hypot(tg.x, tg.y) || 1;
     return { x: tg.x / tlen, y: tg.y / tlen };
   }
-  // All-straight case: SVG arc equals straight chord arc, so walk
-  // segments by `svgArc` directly.
-  let segStart = 0;
-  for (let i = 0; i < geom.segs.length; i++) {
-    if (svgArc <= geom.cum[i] || i === geom.segs.length - 1) {
-      const seg = geom.segs[i];
-      if (seg.kind === "straight") return { x: seg.ux, y: seg.uy };
-      break;
-    }
-    segStart = geom.cum[i];
-  }
-  // Mixed routes (none today): fall back to a tiny SVG-arc finite
-  // difference. Kept as a safety net, not the primary path.
-  void segStart;
+  // Multi-seg routes (snake, below) are straights joined by rounded
+  // quadratic corners — the SVG path's tangent rotates smoothly
+  // through the Q arc, but `geom.segs` only carries the straights, so
+  // a segment-walk lookup snaps the tangent 90° at the cum boundary
+  // and the riding label jumps ~14px at each joint. Always use a
+  // finite difference on the real SVG path here so the label tracks
+  // the same smooth tangent the dot is drawn with.
+  void geom;
   const eps = Math.min(0.5, svgTotal / 2);
   const sample = Math.min(Math.max(svgArc, eps), svgTotal - eps);
   const a = path.getPointAtLength(sample + eps);
@@ -355,8 +349,8 @@ if (typeof window !== "undefined") {
   }, PROBE_HEARTBEAT_MS);
 }
 
-const PULSE_PROBE_DRIFT_PX = 1.5;
-const PULSE_PROBE_TANGENT_PX = 1.5;
+const PULSE_PROBE_DRIFT_PX = 0.01;
+const PULSE_PROBE_TANGENT_PX = 0.01;
 function pulseProbeEnabled(): boolean {
   if (typeof window === "undefined") return false;
   if (window.__pulseProbe === false) return false;
@@ -375,10 +369,11 @@ type ProbeWorst = {
 };
 
 function PulseInstance({
-  edgeId, geom, stroke, value, speedPxPerMs, onDone,
+  edgeId, geom, route, stroke, value, speedPxPerMs, onDone,
 }: {
   edgeId: string;
   geom: PathGeom;
+  route: EdgeRoute;
   stroke: string;
   value: string;
   speedPxPerMs: number;
@@ -434,10 +429,31 @@ function PulseInstance({
         const headArc = Math.min(svgArc, arcTraveled + PULSE_DASH_PX);
         const labelArcSvg = (arcTraveled + headArc) / 2;
         const point = path.getPointAtLength(labelArcSvg);
+        // Cubic routes use the tangent-normal so the label rides
+        // parallel to the curve (the rewrite at the top of the file
+        // exists to preserve this on tightly-curling cubics). Snake
+        // and below routes are mostly axis-aligned with rounded
+        // quad corners — rotating the offset 90° through a corner
+        // produces a visible downward wobble (~r + offset px), so
+        // pin those to screen-up.
+        // For axis-aligned routes (snake, below) the corner tangents
+        // stay in the first quadrant, so |ty|, -|tx| keeps the
+        // label always above horizontal and right of vertical with
+        // a smooth quarter-circle blend AND stays perpendicular to
+        // the tangent. For cubic/line routes the tangent crosses
+        // quadrants, where that rule no longer perpendicular —
+        // label would slide ahead/behind the dot. Cubics use the
+        // classic perpendicular-with-upward-bias instead.
         const tangent = queryTangent(geom, path, labelArcSvg, svgArc, point);
-        let nx = -tangent.y;
-        let ny = tangent.x;
-        if (ny > 0) { nx = -nx; ny = -ny; }
+        let nx: number, ny: number;
+        if (route === "snake" || route === "below") {
+          nx =  Math.abs(tangent.y);
+          ny = -Math.abs(tangent.x);
+        } else {
+          nx = -tangent.y;
+          ny =  tangent.x;
+          if (ny > 0) { nx = -nx; ny = -ny; }
+        }
         const lx = point.x + nx * PULSE_LABEL_NORMAL_PX;
         const ly = point.y + ny * PULSE_LABEL_NORMAL_PX;
         label.setAttribute("transform", `translate(${lx}, ${ly})`);
@@ -611,6 +627,7 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
           key={pulses[0].key}
           edgeId={id}
           geom={geom}
+          route={route}
           stroke={stroke}
           value={pulses[0].value}
           speedPxPerMs={speed}
