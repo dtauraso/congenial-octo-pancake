@@ -114,6 +114,7 @@ export function initWorld(spec: Spec): World {
       seed.outPort,
       seed.value,
       seed.atTick ?? 0,
+      0,
     );
   }
   // Edge channel priming: `edge.data.init: [v0, v1, ...]` mirrors Go's
@@ -144,6 +145,16 @@ export function initWorld(spec: Spec): World {
 // Pull `data.init: number[]` off an edge's opaque `data` field. Returns
 // [] for any other shape so unrelated `data` payloads (decoration,
 // labels) don't accidentally seed events.
+// Per-edge traversal delay. Overrides the emission's default delay so a
+// single source can fan out to edges of different lengths/latencies.
+// Modeled on `data.init`: opaque field, only the well-known shape is
+// honored. Negative or non-numeric values fall back to the default.
+function readEdgeDelay(data: unknown): number | undefined {
+  if (!data || typeof data !== "object") return undefined;
+  const d = (data as { delay?: unknown }).delay;
+  return typeof d === "number" && d >= 0 ? d : undefined;
+}
+
 function readEdgeInit(data: unknown): StateValue[] {
   if (!data || typeof data !== "object") return [];
   const init = (data as { init?: unknown }).init;
@@ -184,21 +195,25 @@ function orderEvents(a: SimEvent, b: SimEvent): number {
 }
 
 // Emit one (sourceNode, sourcePort, value) onto every outgoing edge,
-// scheduled at `at`. No edges → silently dropped (modeling Go's
-// dead-end channels like ToAck on terminal inhibitors).
+// scheduled at `baseTick + delay`. Each edge picks its own delay: the
+// edge's `data.delay` overrides, otherwise `defaultDelay` is used. No
+// edges → silently dropped (modeling Go's dead-end channels like ToAck
+// on terminal inhibitors).
 function scheduleEmission(
   world: World,
   idx: EdgeIndex,
   fromNodeId: string,
   fromPort: string,
   value: StateValue,
-  at: number,
+  baseTick: number,
+  defaultDelay: number,
 ): void {
   const edges = idx.get(edgeKey(fromNodeId, fromPort)) ?? [];
   for (const e of edges) {
+    const d = readEdgeDelay(e.data) ?? defaultDelay;
     world.queue.push({
       id: world.nextId++,
-      readyAt: at,
+      readyAt: baseTick + d,
       edgeId: e.id,
       fromNodeId,
       fromPort,
@@ -256,7 +271,8 @@ export function step(spec: Spec, world: World): World {
       head.toNodeId,
       em.port,
       em.value,
-      next.tick + (em.delay ?? 1),
+      next.tick,
+      em.delay ?? 1,
     );
   }
   next.queue.sort(orderEvents);
@@ -338,7 +354,7 @@ export function enqueueEmission(
   atTick: number,
 ): void {
   const idx = indexEdges(spec);
-  scheduleEmission(world, idx, fromNodeId, fromPort, value, atTick);
+  scheduleEmission(world, idx, fromNodeId, fromPort, value, atTick, 0);
   world.queue.sort(orderEvents);
 }
 
