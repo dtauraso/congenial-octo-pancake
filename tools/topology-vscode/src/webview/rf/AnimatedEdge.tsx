@@ -371,9 +371,11 @@ type ProbeWorst = {
 };
 
 function PulseInstance({
-  edgeId, geom, route, stroke, value, speedPxPerMs, onDone,
+  edgeId, fromNodeId, toNodeId, geom, route, stroke, value, speedPxPerMs, onDone,
 }: {
   edgeId: string;
+  fromNodeId: string;
+  toNodeId: string;
   geom: PathGeom;
   route: EdgeRoute;
   stroke: string;
@@ -408,7 +410,7 @@ function PulseInstance({
       doneRef.current();
       return;
     }
-    noteAnimStart(edgeId);
+    noteAnimStart(edgeId, fromNodeId, toNodeId);
     const remainingMs = remainingArc / speedPxPerMs;
 
     let rafId = 0;
@@ -568,7 +570,7 @@ function PulseInstance({
       const elapsed = getSimTime() - swapStart;
       const localT = Math.min(1, elapsed / remainingMs);
       arcTraveledRef.current = startArc + localT * remainingArc;
-      noteAnimEnd(edgeId, localT >= 1, arcTraveledRef.current);
+      noteAnimEnd(edgeId, fromNodeId, toNodeId, localT >= 1, arcTraveledRef.current);
     };
   }, [geom, speedPxPerMs]);
 
@@ -602,7 +604,7 @@ function PulseInstance({
 }
 
 export function AnimatedEdge(props: EdgeProps<EdgeData>) {
-  const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, data } = props;
+  const { id, source, target, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, data } = props;
   const route: EdgeRoute = data?.route ?? "line";
   const lane = data?.lane ?? 0;
   const geom = useMemo(
@@ -695,6 +697,8 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
         <PulseInstance
           key={`l0-${pulses0[0].key}`}
           edgeId={id}
+          fromNodeId={source}
+          toNodeId={target}
           geom={geom}
           route={route}
           stroke={stroke}
@@ -707,6 +711,8 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
         <PulseInstance
           key={`l1-${pulses1[0].key}`}
           edgeId={id}
+          fromNodeId={source}
+          toNodeId={target}
           geom={geom}
           route={route}
           stroke={stroke}

@@ -115,28 +115,53 @@ function currentSimTick(): number {
 
 // ---- public API: instrumentation hooks called from animation code ----
 
-export function noteAnimStart(edgeId: string): void {
-  if (!probeEnabled()) return;
-  push({
-    wallTs: Date.now(),
-    simTime: getSimTime(),
-    simTick: currentSimTick(),
-    kind: "anim-start",
-    edgeId,
-  });
+// Animation event subscription. Consumers (e.g. FoldNode halo) bind
+// view state to the animation lifecycle here instead of subscribing to
+// raw simulator events — the simulator fires receives at sim-instant
+// times while the view's "received" moment is when the pulse visually
+// arrives. Closes the model/view temporal-decoupling bug class.
+export type AnimEvent =
+  | { kind: "anim-start"; edgeId: string; fromNodeId: string; toNodeId: string; simTime: number; wallTs: number }
+  | { kind: "anim-end"; edgeId: string; fromNodeId: string; toNodeId: string; completed: boolean; arcTraveled: number; simTime: number; wallTs: number };
+export type AnimListener = (e: AnimEvent) => void;
+const animListeners: AnimListener[] = [];
+export function subscribeAnim(fn: AnimListener): () => void {
+  animListeners.push(fn);
+  return () => {
+    const i = animListeners.indexOf(fn);
+    if (i >= 0) animListeners.splice(i, 1);
+  };
+}
+function dispatchAnim(e: AnimEvent): void {
+  for (let i = 0; i < animListeners.length; i++) {
+    try { animListeners[i](e); } catch { /* isolate */ }
+  }
 }
 
-export function noteAnimEnd(edgeId: string, completed: boolean, arcTraveled: number): void {
-  if (!probeEnabled()) return;
-  push({
-    wallTs: Date.now(),
-    simTime: getSimTime(),
-    simTick: currentSimTick(),
-    kind: "anim-end",
-    edgeId,
-    completed,
-    arcTraveled,
-  });
+export function noteAnimStart(edgeId: string, fromNodeId: string, toNodeId: string): void {
+  const wallTs = Date.now();
+  const simTime = getSimTime();
+  if (probeEnabled()) {
+    push({
+      wallTs, simTime, simTick: currentSimTick(),
+      kind: "anim-start", edgeId, fromNodeId, toNodeId,
+    });
+  }
+  dispatchAnim({ kind: "anim-start", edgeId, fromNodeId, toNodeId, simTime, wallTs });
+}
+
+export function noteAnimEnd(
+  edgeId: string, fromNodeId: string, toNodeId: string, completed: boolean, arcTraveled: number,
+): void {
+  const wallTs = Date.now();
+  const simTime = getSimTime();
+  if (probeEnabled()) {
+    push({
+      wallTs, simTime, simTick: currentSimTick(),
+      kind: "anim-end", edgeId, fromNodeId, toNodeId, completed, arcTraveled,
+    });
+  }
+  dispatchAnim({ kind: "anim-end", edgeId, fromNodeId, toNodeId, completed, arcTraveled, simTime, wallTs });
 }
 
 export function noteMarker(note: string): void {

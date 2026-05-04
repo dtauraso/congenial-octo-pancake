@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { subscribe } from "../../sim/runner";
+import { subscribeAnim } from "./timeline-probe";
 import { recordFoldHaloEvent } from "./fold-halo-probe";
 import { isFoldBoundaryEmit } from "./fold-activity";
 
@@ -25,22 +25,36 @@ export type FoldNodeData = {
 // (where the halo lives in the DOM) and this slice evolve independently.
 
 function useFoldHaloState(foldId: string, memberIds: string[]): { buffered: boolean } {
-  // Halo spec: turns on when the first member receives a pulse from
-  // outside the fold; turns off when the last member emits a pulse to
-  // outside the fold. "First/last" here means any inward/outward
-  // boundary-emit, latest wins. Internal and external emits are
-  // no-ops. Pause freezes naturally — no emits fire while paused.
+  // Halo bound to animation lifecycle, not simulator events. The
+  // simulator fires receives at sim-instant times (often 0ms after the
+  // emit), so the model "received" before the user's eyes see the
+  // pulse arrive. Anchoring the halo to anim-end (inward) and
+  // anim-start (outward) means the halo flips when the user sees the
+  // pulse cross the boundary. Closes the model/view temporal-
+  // decoupling instance for the halo.
+  //
+  //  - anim-end on outside→member edge:  pulse visually arrived → on
+  //  - anim-start on member→outside edge: pulse visually departing → off
+  //
+  // Pause is free: the runner gates the rAF loop on play state, so
+  // anim-start/anim-end don't fire while paused.
   const [buffered, setBuffered] = useState<boolean>(false);
   useEffect(() => {
     const members = new Set(memberIds);
     let active = false;
     recordFoldHaloEvent(foldId, "mount", foldId, memberIds, false);
-    return subscribe((ev) => {
-      if (ev.type !== "emit") return;
+    return subscribeAnim((ev) => {
       if (!isFoldBoundaryEmit(members, ev.fromNodeId, ev.toNodeId)) return;
       const inward = members.has(ev.toNodeId);
-      if (inward === active) return; // already in the matching state
-      active = inward;
+      // Inward: visual arrival = anim-end. Outward: visual departure
+      // = anim-start. Other combos (anim-start inward, anim-end
+      // outward) aren't the perceptual moment; ignore them.
+      const isOnTrigger = inward && ev.kind === "anim-end";
+      const isOffTrigger = !inward && ev.kind === "anim-start";
+      if (!isOnTrigger && !isOffTrigger) return;
+      const next = isOnTrigger;
+      if (next === active) return;
+      active = next;
       recordFoldHaloEvent(
         foldId,
         active ? "start" : "end",
