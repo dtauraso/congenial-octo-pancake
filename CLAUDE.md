@@ -93,12 +93,22 @@ Project memory lives in `memory/` at the repo root. Files:
 
 ## Workflow
 
-- **All changes require explicit user sign-off before committing or pushing — no exceptions, regardless of file type (code, SVG, docs, memory, config).** After any change, build/run/verify and then stop and wait. Only commit when the user explicitly asks ("commit and push", "ship it", "lgtm", etc.). A sign-off authorizes the specific change just discussed, not future changes.
-- One logical change per commit
-- Build and run before reporting a change as ready; verify output matches previous run
-- Push each commit to the current feature branch (only after the sign-off authorizing it)
-- Channel names encode which two nodes are connected — preserve this convention
-- Before starting a new tool or proposing a major substrate (rendering library, framework, parser, runtime), explicitly ask "what's the dominant choice the rest of the world converged on for this category?" and justify deviating if not adopting it
+- **Commit and push freely on task branches.** Per-commit sign-off is no longer required (relaxed post-v0; editing or reverting committed code is cheap). Sign-off IS still required for: merging a task branch into `main`, force-pushes, branch deletion, dependency removal, and any other destructive or shared-state action called out in the system prompt's "Executing actions with care" section.
+- Build and run before reporting a change as ready; verify output matches previous run. If verification fails, fix forward or revert — don't leave broken state on the branch.
+- One logical change per commit.
+- Push each commit to the current task branch.
+- **Cost markers:** only record a `($N.NN)` cost marker on a commit (or bundle of commits) when the work was sized at **≥$5 expected** beforehand. Sub-$5 work lands without a marker. Bundle small commits into ≥$5 chunks for marker purposes. Pre-v0 sub-$5 markers stay as historical record but are no longer the convention.
+- **Branch hygiene:** task-named branches (`task/<short-kebab-description>`) that merge to `main` quickly. Avoid long-lived feature branches like the v0 `visual-editor` pattern.
+- Channel names encode which two nodes are connected — preserve this convention.
+- Before starting a new tool or proposing a major substrate (rendering library, framework, parser, runtime), explicitly ask "what's the dominant choice the rest of the world converged on for this category?" and justify deviating if not adopting it.
+
+## Posture (post-v0)
+
+The visual editor reached v0 (see [docs/planning/visual-editor-plan.md](docs/planning/visual-editor-plan.md)). Going forward:
+
+- **Friction-driven, not phase-driven.** New work is justified by friction surfaced during real-world editor use, logged in [docs/planning/visual-editor/session-log.md](docs/planning/visual-editor/session-log.md). Per-phase plans are dormant unless friction patterns revive them.
+- **Audit registry** at [docs/planning/visual-editor/audits.md](docs/planning/visual-editor/audits.md) describes the kinds of audits that exist (CI-backed, human-driven, AI-driven). Read it before proposing audit-style work.
+- **Working mode:** user drives the editor and narrates observations; assistant logs to session-log.md and makes changes; debug sessions between user and assistant as needed.
 
 ## Language / runtime
 

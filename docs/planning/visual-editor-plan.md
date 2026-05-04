@@ -73,10 +73,50 @@ that means honestly:
   long-lived branch. The next branch should be named after a
   specific real-world task, not after a phase number.
 
-## ▶ NEXT UP
+## ▶ Posture after v0: friction-driven, not phase-driven
 
-The most load-bearing remaining work, in priority order. Pick whichever
-matches the budget available and the kind of break you'd most regret.
+Plan-driven phase work is **paused**. v0 passed a hello-world bar but
+real-world testing has not started, so further speculative phase work
+risks repeating exactly the trap that made v0 hard to evaluate (lots
+shipped, value unproven). New posture:
+
+- **Friction is the input.** The user drives the editor in real
+  sessions; observations get logged as they happen to
+  [visual-editor/session-log.md](visual-editor/session-log.md) — append-only,
+  brief, concrete ("tried X, hit Y, took N min / felt awkward /
+  produced wrong Go"). Sessions accumulate before any rewrite is
+  proposed.
+- **Candidate pool, not commitments.** The items below under
+  *Candidate follow-ups* and the per-phase follow-ups in each phase
+  doc are now **candidates** to be re-justified against logged
+  friction, not work to be picked up speculatively.
+- **Smoothness gates structural editing.** Before structural-edit
+  sessions begin, non-edit interactions (pan/zoom/drag/playback/
+  scrub/fold/replay/view recall) need to feel smooth. The first
+  real-world session is a smoothness audit, not a topology change.
+- **Audits replace phases as the periodic concern.** See
+  [visual-editor/audits.md](visual-editor/audits.md) for the registry
+  of audit categories (security, code smells, complexity,
+  architectural tradeoffs, project-specific invariants like
+  goroutine leaks and backpressure discipline, etc.).
+- **Working mode.** User drives the editor and narrates; assistant
+  logs to session-log.md and makes changes; debug sessions as needed.
+- **Cost-marker rule.** Per CLAUDE.md, only record cost markers on
+  work sized ≥$5 expected. Sub-$5 commits land without markers.
+  Bundle small work into ≥$5 chunks for marker purposes. Pre-v0
+  sub-$5 markers stay as historical record.
+- **Branch hygiene.** Task-named branches (`task/<short-kebab>`)
+  that merge to `main` quickly. No more long-lived feature branches.
+- **Per-commit sign-off relaxed** (CLAUDE.md). Assistant commits and
+  pushes freely on task branches; sign-off still required for
+  merges to `main` and destructive/shared-state actions.
+
+## ▶ Candidate follow-ups (re-justify against session log before picking up)
+
+The most load-bearing items remaining from v0, in rough priority order.
+**Do not pick these up speculatively.** Each is a candidate to be
+re-justified against actual friction logged in session-log.md before
+being scheduled as work.
 
 1. **Phase 8 documented gap — rename + node-delete vs undo.** Surfaced
    at Phase 8 chunk 3: rename and node-delete mutate spec and
