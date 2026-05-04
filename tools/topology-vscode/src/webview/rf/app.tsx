@@ -29,15 +29,16 @@ import { flushViewSave, markViewSynced, scheduleSave, scheduleViewSave, vscode }
 import { refreshViewsPanel } from "../views";
 import { refreshTimelinePanel } from "../timeline";
 import {
-  canRedoViewer,
-  canUndoViewer,
   clearSpecHistory,
   clearViewerHistory,
+  getLastScope,
   mutateBoth,
   mutateSpec,
   mutateViewer,
+  patchViewerState,
   redoSpec,
   redoViewer,
+  setLastScope,
   setSpec,
   setViewerState,
   spec,
@@ -133,7 +134,6 @@ function Inner() {
       setGhostFront(false);
     };
   }, [compareMode]);
-  const selectedRef = useRef<Set<string>>(new Set());
   const paneRef = useRef<HTMLDivElement | null>(null);
   const lastSpec = useRef<Spec | null>(null);
   const reconnectOk = useRef<boolean>(false);
@@ -144,14 +144,14 @@ function Inner() {
   // would need per-node guides, which is more than this MVP warrants).
   const [guides, setGuides] = useState<{ vx: number | null; hy: number | null }>({ vx: null, hy: null });
 
-  // Undo/redo. Two scoped stacks (spec, viewer) live in state.ts; this
-  // handler routes Cmd/Ctrl-Z and Cmd/Ctrl-Shift-Z (or Ctrl-Y) to whichever
-  // stack matches the surface the user last interacted with. Surface is
-  // tagged with `data-undo-scope="viewer"` on the views and timeline
-  // panels; everything else (the main RF pane) falls through to spec.
-  // Skipped while a text input is focused (browser's native undo wins) and
-  // while the comparison pane is read-only.
-  const lastScopeRef = useRef<"spec" | "viewer">("spec");
+  // Undo/redo. Two scoped stacks (spec, viewer) live in state.ts; the
+  // keydown handler reads `lastScope` from the store to route Cmd/Ctrl-Z
+  // and Cmd/Ctrl-Shift-Z (or Ctrl-Y) to whichever stack matches the surface
+  // the user last interacted with. Surface is tagged with
+  // `data-undo-scope="viewer"` on the views and timeline panels; everything
+  // else (the main RF pane) falls through to spec. Skipped while a text
+  // input is focused (browser's native undo wins) and while the comparison
+  // pane is read-only.
   // Brief diff-added flash on items that re-appear after an undo/redo.
   // Phase-8.md asks for both diff-added and diff-removed; for MVP we tag
   // re-appearing items only — items removed by the undo no longer render,
@@ -162,7 +162,7 @@ function Inner() {
     const onMouseDown = (e: MouseEvent) => {
       const t = e.target as HTMLElement | null;
       const scoped = t?.closest?.<HTMLElement>("[data-undo-scope]");
-      lastScopeRef.current = (scoped?.dataset.undoScope as "spec" | "viewer") ?? "spec";
+      setLastScope((scoped?.dataset.undoScope as "spec" | "viewer") ?? "spec");
     };
     const isTextTarget = (t: EventTarget | null) =>
       t instanceof HTMLElement &&
@@ -217,7 +217,7 @@ function Inner() {
       if (isTextTarget(e.target)) return;
       if (compareModeRef.current === "A-other") return;
       e.preventDefault();
-      if (lastScopeRef.current === "viewer") {
+      if (getLastScope() === "viewer") {
         const beforeFolds = new Set((viewerState.folds ?? []).map((f) => f.id));
         const next = isUndo ? undoViewer() : redoViewer();
         if (!next) return;
@@ -245,8 +245,9 @@ function Inner() {
       if (e.key !== "f" && e.key !== "F") return;
       if (isTextTarget(e.target)) return;
       e.preventDefault();
-      if (e.shiftKey && selectedRef.current.size > 0) {
-        const set = selectedRef.current;
+      const selIds = viewerState.lastSelectionIds ?? [];
+      if (e.shiftKey && selIds.length > 0) {
+        const set = new Set(selIds);
         const sel = rf.getNodes().filter((n) => set.has(n.id));
         if (sel.length > 0) {
           rf.fitView({ nodes: sel, padding: 0.4, duration: 250, maxZoom: 1.2 });
@@ -282,7 +283,7 @@ function Inner() {
         return viewportToBox(rf.getViewport(), width, height);
       },
       setDim: (members) => setDimmed(members ? new Set(members) : null),
-      getSelectedNodeIds: () => Array.from(selectedRef.current),
+      getSelectedNodeIds: () => [...(viewerState.lastSelectionIds ?? [])],
       fitNodes: (ids) => {
         if (ids.length === 0) return;
         const set = new Set(ids);
@@ -318,17 +319,16 @@ function Inner() {
           const flow = specToFlow(next, viewerState.folds);
           // Reconcile the persisted selection against the current node set:
           // ids no longer present (after a delete in another session) are
-          // dropped from selectedRef, not kept as ghosts.
+          // dropped, not kept as ghosts.
           const presentIds = new Set(flow.nodes.map((n) => n.id));
-          const sel = new Set(
-            (viewerState.lastSelectionIds ?? []).filter((id) => presentIds.has(id))
-          );
+          const filtered = (viewerState.lastSelectionIds ?? []).filter((id) => presentIds.has(id));
+          const sel = new Set(filtered);
           if (sel.size > 0) {
             flow.nodes = flow.nodes.map((n) =>
               sel.has(n.id) ? { ...n, selected: true } : n
             );
           }
-          selectedRef.current = sel;
+          patchViewerState((v) => { v.lastSelectionIds = filtered.length > 0 ? filtered : undefined; });
           setNodes(flow.nodes);
           setEdges(flow.edges);
         } catch (err) {
@@ -367,20 +367,19 @@ function Inner() {
         }
         // Always reconcile selection on view-load — including the empty case,
         // so a sidecar without saved selection clears any stale `selected`
-        // flags from a prior render. If nodes haven't arrived yet, just seed
-        // selectedRef; the load handler will filter it against the spec.
+        // flags from a prior render. If nodes haven't arrived yet, leave
+        // viewerState.lastSelectionIds as just-loaded; the load handler will
+        // filter it against the spec.
         const savedSel = new Set(next.lastSelectionIds ?? []);
         setNodes((ns) => {
-          if (ns.length === 0) {
-            selectedRef.current = savedSel;
-            return ns;
-          }
+          if (ns.length === 0) return ns;
           const present = new Set(ns.map((n) => n.id));
-          const reconciled = new Set([...savedSel].filter((id) => present.has(id)));
-          selectedRef.current = reconciled;
+          const reconciled = [...savedSel].filter((id) => present.has(id));
+          const want = new Set(reconciled);
+          patchViewerState((v) => { v.lastSelectionIds = reconciled.length > 0 ? reconciled : undefined; });
           return ns.map((n) => {
-            const want = reconciled.has(n.id);
-            return n.selected === want ? n : { ...n, selected: want };
+            const wantSel = want.has(n.id);
+            return n.selected === wantSel ? n : { ...n, selected: wantSel };
           });
         });
         const c = next.camera;
@@ -407,7 +406,7 @@ function Inner() {
   }, [rf]);
 
   const persistViewport = useCallback((vp: Viewport) => {
-    viewerState.camera = { x: vp.x, y: vp.y, zoom: vp.zoom };
+    patchViewerState((v) => { v.camera = { x: vp.x, y: vp.y, zoom: vp.zoom }; });
     scheduleViewSave();
   }, []);
 
@@ -427,10 +426,9 @@ function Inner() {
   const onSelectionChange = useCallback(
     ({ nodes: sel }: { nodes: RFNode[] }) => {
       const ids = sel.map((n) => n.id);
-      selectedRef.current = new Set(ids);
       const prev = viewerState.lastSelectionIds ?? [];
       if (prev.length === ids.length && prev.every((v, i) => v === ids[i])) return;
-      viewerState.lastSelectionIds = ids.length > 0 ? ids : undefined;
+      patchViewerState((v) => { v.lastSelectionIds = ids.length > 0 ? ids : undefined; });
       scheduleViewSave();
     },
     [scheduleViewSave]
@@ -746,9 +744,11 @@ function Inner() {
       if (node.type === "fold") {
         // Persist fold-placeholder drags back into viewerState.folds so the
         // position survives reload (folds live in the sidecar).
-        const f = viewerState.folds?.find((x) => x.id === node.id);
-        if (!f) return;
-        f.position = [node.position.x, node.position.y];
+        if (!viewerState.folds?.some((x) => x.id === node.id)) return;
+        patchViewerState((v) => {
+          const f = v.folds?.find((x) => x.id === node.id);
+          if (f) f.position = [node.position.x, node.position.y];
+        });
         scheduleViewSave();
         return;
       }
@@ -796,7 +796,7 @@ function Inner() {
 
   const foldCurrentSelection = useCallback(() => {
     if (isReadOnlyView()) return;
-    const sel = selectedRef.current;
+    const sel = new Set(viewerState.lastSelectionIds ?? []);
     const memberIds = Array.from(sel).filter((id) => spec.nodes.some((n) => n.id === id));
     if (memberIds.length < 2) {
       console.info(`[fold] need >=2 nodes selected to fold; have ${memberIds.length}`);
@@ -836,7 +836,7 @@ function Inner() {
         console.info("[fold] right-click on a placeholder is a no-op; double-click to expand");
         return;
       }
-      const sel = selectedRef.current;
+      const sel = new Set(viewerState.lastSelectionIds ?? []);
       if (!sel.has(node.id)) {
         // Single-node right-click on an unselected node: silently add it
         // and fold — but only if there's already an existing selection

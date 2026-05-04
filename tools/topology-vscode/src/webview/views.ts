@@ -5,7 +5,7 @@
 import { NODE_TYPES } from "../schema";
 import { applyDim as applyDimRf, selectedNodeIds } from "./rf/bridge";
 import { scheduleViewSave } from "./save";
-import { mutateViewer, spec, view, viewerState } from "./state";
+import { getSpec, getView, mutateViewer, setView, useStore } from "./state";
 import { applyView, syncViewFromRenderer } from "./view";
 import type { SavedView } from "./viewerState";
 
@@ -70,7 +70,7 @@ export function refreshViewsPanel() {
 
 function renderList() {
   listEl.replaceChildren();
-  const views = viewerState.views ?? [];
+  const views = useStore.getState().viewerState.views ?? [];
   if (views.length === 0) {
     const empty = document.createElement("div");
     empty.className = "views-empty";
@@ -109,9 +109,10 @@ function saveView(name: string) {
   // to nodes fully contained in the current viewport.
   const sel = selectedNodeIds();
   const ids = sel.length > 0 ? sel : nodesInViewport();
+  const v = getView();
   const next: SavedView = {
     name,
-    viewport: { x: view.x, y: view.y, w: view.w, h: view.h },
+    viewport: { x: v.x, y: v.y, w: v.w, h: v.h },
     nodeIds: ids,
   };
   mutateViewer((s) => {
@@ -136,10 +137,7 @@ function deleteView(name: string) {
 
 function applySavedView(v: SavedView) {
   if (v.viewport) {
-    view.x = v.viewport.x;
-    view.y = v.viewport.y;
-    view.w = v.viewport.w;
-    view.h = v.viewport.h;
+    setView({ x: v.viewport.x, y: v.viewport.y, w: v.viewport.w, h: v.viewport.h });
     applyView();
     scheduleViewSave();
   }
@@ -166,11 +164,12 @@ function nodesInViewport(): string[] {
   // Fully-contained membership (not just intersection): a node counts only if
   // its whole bbox sits inside the viewport. Otherwise the dim contrast
   // disappears whenever the user has the full graph in view.
-  const x0 = view.x;
-  const y0 = view.y;
-  const x1 = view.x + view.w;
-  const y1 = view.y + view.h;
-  return spec.nodes
+  const v = getView();
+  const x0 = v.x;
+  const y0 = v.y;
+  const x1 = v.x + v.w;
+  const y1 = v.y + v.h;
+  return getSpec().nodes
     .filter((n) => {
       const def = NODE_TYPES[n.type] ?? NODE_TYPES.Generic;
       return n.x >= x0 && n.y >= y0 && n.x + def.width <= x1 && n.y + def.height <= y1;

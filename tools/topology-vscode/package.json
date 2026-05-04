@@ -44,9 +44,11 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "immer": "^11.1.4",
     "lit-html": "^3.3.2",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "reactflow": "^11.11.4"
+    "reactflow": "^11.11.4",
+    "zustand": "^5.0.12"
   }
 }

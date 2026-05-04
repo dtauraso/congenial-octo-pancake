@@ -1,11 +1,12 @@
 import { applyViewBox, currentViewBox, type ViewBox } from "./rf/bridge";
-import { view } from "./state";
+import { getView, setView } from "./state";
 
 export function applyView() {
-  applyViewBox({ x: view.x, y: view.y, w: view.w, h: view.h });
+  const v = getView();
+  applyViewBox({ x: v.x, y: v.y, w: v.w, h: v.h });
 }
 
 export function syncViewFromRenderer() {
   const vb: ViewBox = currentViewBox();
-  view.x = vb.x; view.y = vb.y; view.w = vb.w; view.h = vb.h;
+  setView({ x: vb.x, y: vb.y, w: vb.w, h: vb.h });
 }

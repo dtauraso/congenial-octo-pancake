@@ -1,153 +1,143 @@
+import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
+import { produce } from "immer";
 import type { Node, Spec } from "../schema";
 import { DEFAULT_VIEWER_STATE, type ViewerState } from "./viewerState";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
 
-export let spec: Spec = { nodes: [], edges: [] };
-export function getSpec(): Spec {
-  return spec;
-}
-export function setSpec(next: Spec) {
-  spec = next;
-  nodeById.clear();
-  for (const n of next.nodes) nodeById.set(n.id, n);
-}
-
-// Treat the live spec as immutable: every edit produces a fresh top-level
-// object via structuredClone, mutators run on the clone, then setSpec swaps
-// the module reference. This keeps reference equality changing on every
-// edit so future React useEffect([spec]) hooks fire correctly, and rules
-// out the entire class of "stale pointer into the old spec" bugs.
-export function mutateSpec(fn: (s: Spec) => void): Spec {
-  const next = structuredClone(spec);
-  fn(next);
-  pushSpecUndo({ snapshot: spec });
-  setSpec(next);
-  return next;
-}
-
-// Bounded snapshot stacks. Spec is treated as immutable (mutateSpec swaps
-// the reference on every edit), so pushing the prior reference is enough —
-// no extra cloning needed. Cap is generous; the failure mode if it filled
-// would be losing the oldest history, not corruption.
+// Bounded snapshot stacks. Spec/viewer are treated as immutable (immer
+// produces a fresh tree per edit), so pushing the prior reference is
+// enough — no extra cloning needed. Cap is generous; the failure mode if
+// it filled would be losing the oldest history, not corruption.
 const UNDO_LIMIT = 50;
 type SpecEntry = { snapshot: Spec; txnId?: number };
 type ViewerEntry = { snapshot: ViewerState; txnId?: number };
-const undoStack: SpecEntry[] = [];
-const redoStack: SpecEntry[] = [];
 
-function pushSpecUndo(entry: SpecEntry) {
-  undoStack.push(entry);
-  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
-  redoStack.length = 0;
+type View = { x: number; y: number; w: number; h: number };
+type Scope = "spec" | "viewer";
+
+interface Store {
+  spec: Spec;
+  viewerState: ViewerState;
+  view: View;
+  undoStack: SpecEntry[];
+  redoStack: SpecEntry[];
+  viewerUndoStack: ViewerEntry[];
+  viewerRedoStack: ViewerEntry[];
+  nextTxnId: number;
+  lastScope: Scope;
 }
 
-export function undoSpec(): Spec | null {
-  const prev = undoStack.pop();
-  if (!prev) return null;
-  redoStack.push({ snapshot: spec, txnId: prev.txnId });
-  setSpec(prev.snapshot);
-  // Cross-surface (mutateBoth) edits tag both stack entries with the same
-  // txnId so a single Cmd-Z reverses the whole user action.
-  if (prev.txnId !== undefined) {
-    const top = viewerUndoStack[viewerUndoStack.length - 1];
-    if (top && top.txnId === prev.txnId) {
-      viewerUndoStack.pop();
-      viewerRedoStack.push({ snapshot: viewerState, txnId: top.txnId });
-      setViewerState(top.snapshot);
-    }
+export const useStore = create<Store>(() => ({
+  spec: { nodes: [], edges: [] },
+  viewerState: { ...DEFAULT_VIEWER_STATE },
+  view: { x: 0, y: 0, w: 1380, h: 740 },
+  undoStack: [],
+  redoStack: [],
+  viewerUndoStack: [],
+  viewerRedoStack: [],
+  nextTxnId: 1,
+  lastScope: "spec",
+}));
+
+// Live module-level bindings kept in sync with the store. Non-React
+// modules (save.ts, views.ts, geom.ts, etc.) import these directly and
+// rely on ES-module live-binding semantics to see updates. The store is
+// the source of truth; these are convenience read-aliases.
+export let spec: Spec = useStore.getState().spec;
+export let viewerState: ViewerState = useStore.getState().viewerState;
+export const view: View = { ...useStore.getState().view };
+export const nodeById = new Map<string, Node>();
+
+useStore.subscribe((s) => {
+  if (s.spec !== spec) {
+    spec = s.spec;
+    nodeById.clear();
+    for (const n of s.spec.nodes) nodeById.set(n.id, n);
   }
-  return prev.snapshot;
-}
-
-export function redoSpec(): Spec | null {
-  const next = redoStack.pop();
-  if (!next) return null;
-  undoStack.push({ snapshot: spec, txnId: next.txnId });
-  setSpec(next.snapshot);
-  if (next.txnId !== undefined) {
-    const top = viewerRedoStack[viewerRedoStack.length - 1];
-    if (top && top.txnId === next.txnId) {
-      viewerRedoStack.pop();
-      viewerUndoStack.push({ snapshot: viewerState, txnId: top.txnId });
-      setViewerState(top.snapshot);
-    }
+  if (s.viewerState !== viewerState) viewerState = s.viewerState;
+  if (s.view.x !== view.x || s.view.y !== view.y || s.view.w !== view.w || s.view.h !== view.h) {
+    view.x = s.view.x; view.y = s.view.y; view.w = s.view.w; view.h = s.view.h;
   }
-  return next.snapshot;
+});
+
+// ---- Plain getters (non-React) ----
+export const getSpec = (): Spec => useStore.getState().spec;
+export const getViewerState = (): ViewerState => useStore.getState().viewerState;
+export const getView = (): View => useStore.getState().view;
+export const getLastScope = (): Scope => useStore.getState().lastScope;
+
+// ---- React selector hooks ----
+export const useSpec = (): Spec => useStore((s) => s.spec);
+export const useViewerState = (): ViewerState => useStore((s) => s.viewerState);
+export const useView = (): View => useStore(useShallow((s) => s.view));
+export const useLastScope = (): Scope => useStore((s) => s.lastScope);
+export const useUndoState = () =>
+  useStore(
+    useShallow((s) => ({
+      canUndoSpec: s.undoStack.length > 0,
+      canRedoSpec: s.redoStack.length > 0,
+      canUndoViewer: s.viewerUndoStack.length > 0,
+      canRedoViewer: s.viewerRedoStack.length > 0,
+    })),
+  );
+
+// ---- Setters ----
+export function setSpec(next: Spec) {
+  useStore.setState({ spec: next });
 }
-
-export function clearSpecHistory() {
-  undoStack.length = 0;
-  redoStack.length = 0;
-}
-
-export function canUndoSpec(): boolean { return undoStack.length > 0; }
-export function canRedoSpec(): boolean { return redoStack.length > 0; }
-
-export const view = { x: 0, y: 0, w: 1380, h: 740 };
-
-export let viewerState: ViewerState = { ...DEFAULT_VIEWER_STATE };
 export function setViewerState(next: ViewerState) {
-  viewerState = next;
+  useStore.setState({ viewerState: next });
+}
+export function setView(next: View) {
+  useStore.setState({ view: { ...next } });
+}
+export function setLastScope(scope: Scope) {
+  if (useStore.getState().lastScope !== scope) useStore.setState({ lastScope: scope });
 }
 
-// Viewer-side history is independent of the spec stack — phase-8.md
-// requires the two surfaces' undo histories never bleed. Only deliberate
-// creations (folds, saved views, bookmarks) flow through mutateViewer.
-// Camera pan, lastSelectionIds, and the active-view dim mask are
-// incidental tracking and bypass it.
-const viewerUndoStack: ViewerEntry[] = [];
-const viewerRedoStack: ViewerEntry[] = [];
+// History-bypassing patch for incidental viewer fields (camera, selection,
+// fold position). Distinct from mutateViewer which pushes onto undo.
+export function patchViewerState(fn: (v: ViewerState) => void) {
+  useStore.setState((s) => ({ viewerState: produce(s.viewerState, fn) }));
+}
 
-function pushViewerUndo(entry: ViewerEntry) {
-  viewerUndoStack.push(entry);
-  if (viewerUndoStack.length > UNDO_LIMIT) viewerUndoStack.shift();
-  viewerRedoStack.length = 0;
+// ---- History push helpers ----
+function withCap<T>(arr: T[], entry: T): T[] {
+  const next = [...arr, entry];
+  if (next.length > UNDO_LIMIT) next.shift();
+  return next;
+}
+
+// ---- Mutators ----
+export function mutateSpec(fn: (s: Spec) => void): Spec {
+  const prev = useStore.getState().spec;
+  const next = produce(prev, fn);
+  useStore.setState((st) => ({
+    spec: next,
+    undoStack: withCap(st.undoStack, { snapshot: prev }),
+    redoStack: [],
+  }));
+  return next;
 }
 
 export function mutateViewer<T>(fn: (v: ViewerState) => T): T {
-  const next = structuredClone(viewerState);
-  const result = fn(next);
-  // Skip the history push when fn produced no observable change. Viewer
-  // operations have validation paths that can early-return (createFold
-  // rejects overlap, etc.); without this, those rejections still leave a
-  // no-op entry on the stack that the user has to undo through.
-  if (JSON.stringify(next) === JSON.stringify(viewerState)) return result;
-  pushViewerUndo({ snapshot: viewerState });
-  setViewerState(next);
+  const prev = useStore.getState().viewerState;
+  let result!: T;
+  const next = produce(prev, (draft) => {
+    result = fn(draft) as T;
+  });
+  // immer returns the same reference when no draft mutations occurred.
+  // Skip the history push so validation paths that early-return (createFold
+  // rejecting overlap, etc.) don't leave a no-op entry to undo through.
+  if (next === prev) return result;
+  useStore.setState((st) => ({
+    viewerState: next,
+    viewerUndoStack: withCap(st.viewerUndoStack, { snapshot: prev }),
+    viewerRedoStack: [],
+  }));
   return result;
-}
-
-export function undoViewer(): ViewerState | null {
-  const prev = viewerUndoStack.pop();
-  if (!prev) return null;
-  viewerRedoStack.push({ snapshot: viewerState, txnId: prev.txnId });
-  setViewerState(prev.snapshot);
-  if (prev.txnId !== undefined) {
-    const top = undoStack[undoStack.length - 1];
-    if (top && top.txnId === prev.txnId) {
-      undoStack.pop();
-      redoStack.push({ snapshot: spec, txnId: top.txnId });
-      setSpec(top.snapshot);
-    }
-  }
-  return prev.snapshot;
-}
-
-export function redoViewer(): ViewerState | null {
-  const next = viewerRedoStack.pop();
-  if (!next) return null;
-  viewerUndoStack.push({ snapshot: viewerState, txnId: next.txnId });
-  setViewerState(next.snapshot);
-  if (next.txnId !== undefined) {
-    const top = redoStack[redoStack.length - 1];
-    if (top && top.txnId === next.txnId) {
-      redoStack.pop();
-      undoStack.push({ snapshot: spec, txnId: top.txnId });
-      setSpec(top.snapshot);
-    }
-  }
-  return next.snapshot;
 }
 
 // Cross-surface mutation: rename + node-delete touch spec AND viewer state
@@ -156,28 +146,133 @@ export function redoViewer(): ViewerState | null {
 // cascade so a single Cmd-Z reverses the whole user action. No-ops on
 // either side are still pushed as a pair to keep the txnId pairing
 // invariant simple — restoring an unchanged side to itself is harmless.
-let nextTxnId = 1;
 export function mutateBoth<T>(fn: (s: Spec, v: ViewerState) => T): T {
-  const nextSpec = structuredClone(spec);
-  const nextViewer = structuredClone(viewerState);
-  const result = fn(nextSpec, nextViewer);
-  const viewerChanged = JSON.stringify(nextViewer) !== JSON.stringify(viewerState);
-  const specChanged = JSON.stringify(nextSpec) !== JSON.stringify(spec);
+  const st = useStore.getState();
+  const prevSpec = st.spec;
+  const prevViewer = st.viewerState;
+  let result!: T;
+  let nextViewer: ViewerState = prevViewer;
+  const nextSpec = produce(prevSpec, (sd) => {
+    nextViewer = produce(prevViewer, (vd) => {
+      result = fn(sd, vd) as T;
+    });
+  });
+  const specChanged = nextSpec !== prevSpec;
+  const viewerChanged = nextViewer !== prevViewer;
   if (!specChanged && !viewerChanged) return result;
-  const txnId = nextTxnId++;
-  pushSpecUndo({ snapshot: spec, txnId });
-  pushViewerUndo({ snapshot: viewerState, txnId });
-  setSpec(nextSpec);
-  setViewerState(nextViewer);
+  const txnId = st.nextTxnId;
+  useStore.setState({
+    spec: nextSpec,
+    viewerState: nextViewer,
+    undoStack: withCap(st.undoStack, { snapshot: prevSpec, txnId }),
+    viewerUndoStack: withCap(st.viewerUndoStack, { snapshot: prevViewer, txnId }),
+    redoStack: [],
+    viewerRedoStack: [],
+    nextTxnId: txnId + 1,
+  });
   return result;
 }
 
-export function clearViewerHistory() {
-  viewerUndoStack.length = 0;
-  viewerRedoStack.length = 0;
+// ---- Undo / redo ----
+export function undoSpec(): Spec | null {
+  const st = useStore.getState();
+  if (st.undoStack.length === 0) return null;
+  const prev = st.undoStack[st.undoStack.length - 1];
+  useStore.setState({
+    spec: prev.snapshot,
+    undoStack: st.undoStack.slice(0, -1),
+    redoStack: [...st.redoStack, { snapshot: st.spec, txnId: prev.txnId }],
+  });
+  if (prev.txnId !== undefined) {
+    const st2 = useStore.getState();
+    const top = st2.viewerUndoStack[st2.viewerUndoStack.length - 1];
+    if (top && top.txnId === prev.txnId) {
+      useStore.setState({
+        viewerState: top.snapshot,
+        viewerUndoStack: st2.viewerUndoStack.slice(0, -1),
+        viewerRedoStack: [...st2.viewerRedoStack, { snapshot: st2.viewerState, txnId: top.txnId }],
+      });
+    }
+  }
+  return prev.snapshot;
 }
 
-export function canUndoViewer(): boolean { return viewerUndoStack.length > 0; }
-export function canRedoViewer(): boolean { return viewerRedoStack.length > 0; }
+export function redoSpec(): Spec | null {
+  const st = useStore.getState();
+  if (st.redoStack.length === 0) return null;
+  const next = st.redoStack[st.redoStack.length - 1];
+  useStore.setState({
+    spec: next.snapshot,
+    redoStack: st.redoStack.slice(0, -1),
+    undoStack: [...st.undoStack, { snapshot: st.spec, txnId: next.txnId }],
+  });
+  if (next.txnId !== undefined) {
+    const st2 = useStore.getState();
+    const top = st2.viewerRedoStack[st2.viewerRedoStack.length - 1];
+    if (top && top.txnId === next.txnId) {
+      useStore.setState({
+        viewerState: top.snapshot,
+        viewerRedoStack: st2.viewerRedoStack.slice(0, -1),
+        viewerUndoStack: [...st2.viewerUndoStack, { snapshot: st2.viewerState, txnId: top.txnId }],
+      });
+    }
+  }
+  return next.snapshot;
+}
 
-export const nodeById = new Map<string, Node>();
+export function undoViewer(): ViewerState | null {
+  const st = useStore.getState();
+  if (st.viewerUndoStack.length === 0) return null;
+  const prev = st.viewerUndoStack[st.viewerUndoStack.length - 1];
+  useStore.setState({
+    viewerState: prev.snapshot,
+    viewerUndoStack: st.viewerUndoStack.slice(0, -1),
+    viewerRedoStack: [...st.viewerRedoStack, { snapshot: st.viewerState, txnId: prev.txnId }],
+  });
+  if (prev.txnId !== undefined) {
+    const st2 = useStore.getState();
+    const top = st2.undoStack[st2.undoStack.length - 1];
+    if (top && top.txnId === prev.txnId) {
+      useStore.setState({
+        spec: top.snapshot,
+        undoStack: st2.undoStack.slice(0, -1),
+        redoStack: [...st2.redoStack, { snapshot: st2.spec, txnId: top.txnId }],
+      });
+    }
+  }
+  return prev.snapshot;
+}
+
+export function redoViewer(): ViewerState | null {
+  const st = useStore.getState();
+  if (st.viewerRedoStack.length === 0) return null;
+  const next = st.viewerRedoStack[st.viewerRedoStack.length - 1];
+  useStore.setState({
+    viewerState: next.snapshot,
+    viewerRedoStack: st.viewerRedoStack.slice(0, -1),
+    viewerUndoStack: [...st.viewerUndoStack, { snapshot: st.viewerState, txnId: next.txnId }],
+  });
+  if (next.txnId !== undefined) {
+    const st2 = useStore.getState();
+    const top = st2.redoStack[st2.redoStack.length - 1];
+    if (top && top.txnId === next.txnId) {
+      useStore.setState({
+        spec: top.snapshot,
+        redoStack: st2.redoStack.slice(0, -1),
+        undoStack: [...st2.undoStack, { snapshot: st2.spec, txnId: top.txnId }],
+      });
+    }
+  }
+  return next.snapshot;
+}
+
+export function clearSpecHistory() {
+  useStore.setState({ undoStack: [], redoStack: [] });
+}
+export function clearViewerHistory() {
+  useStore.setState({ viewerUndoStack: [], viewerRedoStack: [] });
+}
+export function canUndoSpec(): boolean { return useStore.getState().undoStack.length > 0; }
+export function canRedoSpec(): boolean { return useStore.getState().redoStack.length > 0; }
+export function canUndoViewer(): boolean { return useStore.getState().viewerUndoStack.length > 0; }
+export function canRedoViewer(): boolean { return useStore.getState().viewerRedoStack.length > 0; }
