@@ -15,9 +15,27 @@ import { getWorld } from "../../sim/runner";
 export type FoldHaloEntry = {
   ts: number;
   foldId: string;
-  transition: "start" | "end";
+  // "mount" = hook just initialized; carries initial buffered-union state
+  // so the log always shows the starting condition even when transitions
+  // happened before the probe was attached.
+  // "fire" = a member fired but the fold's buffered-union didn't change.
+  // "start"/"end" = the union flipped, so the visible halo turned on/off.
+  kind: "mount" | "fire" | "start" | "end";
+  // initialBuffered is set on "mount" entries: true means the halo was
+  // already on at attach time (and therefore "start" won't be logged for
+  // that initial activation — read this entry as the implicit start).
+  initialBuffered?: boolean;
   triggerNodeId: string;
-  bufferedMembers: Array<{ id: string; ports: string[] }>;
+  // bufferedAfter: which members hold a buffered input port AFTER this
+  // event's handler ran. A halo "start" needs at least one entry here on
+  // the on-edge, "end" needs zero. If "fire" entries never appear despite
+  // member activity, the runner subscription isn't reaching the hook.
+  bufferedAfter: Array<{ id: string; ports: string[] }>;
+  // worldStateKeys: top-level keys present in the trigger member's state
+  // object. If __has_<port> never appears here while the member's port
+  // halo IS visible when expanded, something is filtering / mutating
+  // state between the runner and the probe.
+  triggerStateKeys: string[];
 };
 
 declare global {
@@ -81,25 +99,30 @@ function probeEnabled(): boolean {
   return true;
 }
 
-export function recordFoldHaloTransition(
+export function recordFoldHaloEvent(
   foldId: string,
-  transition: "start" | "end",
+  kind: "mount" | "fire" | "start" | "end",
   triggerNodeId: string,
   memberIds: string[],
+  initialBuffered?: boolean,
 ): void {
   if (!probeEnabled()) return;
   const world = getWorld();
-  const bufferedMembers: FoldHaloEntry[]["bufferedMembers"] = [];
+  const bufferedAfter: FoldHaloEntry["bufferedAfter"] = [];
   for (const id of memberIds) {
     const ports = bufferedPorts(world?.state?.[id]);
-    if (ports.length > 0) bufferedMembers.push({ id, ports });
+    if (ports.length > 0) bufferedAfter.push({ id, ports });
   }
+  const triggerState = world?.state?.[triggerNodeId];
+  const triggerStateKeys = triggerState ? Object.keys(triggerState) : [];
   const entry: FoldHaloEntry = {
     ts: Date.now(),
     foldId,
-    transition,
+    kind,
     triggerNodeId,
-    bufferedMembers,
+    bufferedAfter,
+    triggerStateKeys,
+    ...(initialBuffered !== undefined ? { initialBuffered } : {}),
   };
   if (typeof window !== "undefined") {
     (window.__foldHaloLog ??= []).push(entry);
