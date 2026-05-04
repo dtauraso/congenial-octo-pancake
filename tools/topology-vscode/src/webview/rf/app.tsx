@@ -23,11 +23,8 @@ import { NodePalette, PALETTE_DATA_TYPE } from "./NodePalette";
 import { CompareToolbar, type CompareMode } from "./CompareToolbar";
 import { isPlaying as isRunnerPlaying, load as loadRunner, reset as resetRunner } from "../../sim/runner";
 import { MOTION_TYPES } from "../../sim/handlers";
-import { beginRenameNodeId, setRenameRerender } from "../rename";
-import { beginEditSublabel, setSublabelRerender } from "../sublabel";
+import { beginEditSublabel, beginRenameNodeId, setInlineEditRerender } from "../inline-edit";
 import { flushViewSave, markViewSynced, scheduleSave, scheduleViewSave, vscode } from "../save";
-import { refreshViewsPanel } from "../views";
-import { refreshTimelinePanel } from "../timeline";
 import {
   clearSpecHistory,
   clearViewerHistory,
@@ -44,8 +41,12 @@ import {
   spec,
   undoSpec,
   undoViewer,
+  useDimmed,
   viewerState,
 } from "../state";
+import { RunButton } from "../panels/RunButton";
+import { ViewsPanel } from "../panels/ViewsPanel";
+import { TimelinePanel } from "../panels/TimelinePanel";
 import {
   isLegacyCamera,
   parseViewerState,
@@ -60,8 +61,7 @@ import { FoldNode } from "./FoldNode";
 import { NoteNode } from "./NoteNode";
 import { MarkerDefs } from "./MarkerDefs";
 import { LegendPanel } from "./LegendPanel";
-import { notifyPanStart, register } from "./bridge";
-import { boxToViewport, viewportToBox } from "./camera";
+import { boxToViewport } from "./camera";
 import { parseHostToWebview } from "../../messages";
 
 const EDGE_TYPES = { animated: AnimatedEdge };
@@ -94,7 +94,7 @@ const EDGE_KIND_OPTIONS: EdgeKind[] = [
 function Inner() {
   const [nodes, setNodes] = useState<RFNode[]>([]);
   const [edges, setEdges] = useState<RFEdge[]>([]);
-  const [dimmed, setDimmed] = useState<Set<string> | null>(null);
+  const dimmed = useDimmed();
   const [edgeMenu, setEdgeMenu] = useState<{ x: number; y: number; edgeId: string } | null>(null);
   // Comparison pane state. Held in memory only — never written through
   // save.ts, never sent back as {type:"save"}. The Tier 2 invariant test
@@ -225,8 +225,6 @@ function Inner() {
         const reappeared = new Set<string>();
         for (const id of afterFolds) if (!beforeFolds.has(id)) reappeared.add(id);
         rebuildWithFlash(reappeared);
-        refreshViewsPanel();
-        refreshTimelinePanel();
         scheduleViewSave();
       } else {
         const before = idsOf(lastSpec.current);
@@ -267,40 +265,15 @@ function Inner() {
     };
   }, [rf]);
 
-  // Bridge handlers (camera, dim, selection getter).
   useEffect(() => {
-    register({
-      setViewBox: (vb) => {
-        const pane = paneRef.current;
-        if (!pane) return;
-        const { width, height } = pane.getBoundingClientRect();
-        rf.setViewport(boxToViewport(vb, width, height));
-      },
-      getViewBox: () => {
-        const pane = paneRef.current;
-        if (!pane) return { x: 0, y: 0, w: 0, h: 0 };
-        const { width, height } = pane.getBoundingClientRect();
-        return viewportToBox(rf.getViewport(), width, height);
-      },
-      setDim: (members) => setDimmed(members ? new Set(members) : null),
-      getSelectedNodeIds: () => [...(viewerState.lastSelectionIds ?? [])],
-      fitNodes: (ids) => {
-        if (ids.length === 0) return;
-        const set = new Set(ids);
-        const nodes = rf.getNodes().filter((n) => set.has(n.id));
-        if (nodes.length === 0) return;
-        rf.fitView({ nodes, padding: 0.4, duration: 250, maxZoom: 1.2 });
-      },
-    });
     const rerenderFromSpec = () => {
       if (!lastSpec.current) return;
       const flow = specToFlow(lastSpec.current, viewerState.folds);
       setNodes(flow.nodes);
       setEdges(flow.edges);
     };
-    setRenameRerender(rerenderFromSpec);
-    setSublabelRerender(rerenderFromSpec);
-  }, [rf]);
+    setInlineEditRerender(rerenderFromSpec);
+  }, []);
 
   useEffect(() => {
     const handler = (e: MessageEvent<unknown>) => {
@@ -410,7 +383,6 @@ function Inner() {
     scheduleViewSave();
   }, []);
 
-  const onMoveStart = useCallback(() => { notifyPanStart(); }, []);
   const onMoveEnd = useCallback((_: unknown, vp: Viewport) => {
     persistViewport(vp);
   }, [persistViewport]);
@@ -901,7 +873,6 @@ function Inner() {
         edges={styledEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onMoveStart={onMoveStart}
         onMoveEnd={onMoveEnd}
         onSelectionChange={onSelectionChange}
         onNodeDoubleClick={onNodeDoubleClick}
@@ -997,6 +968,9 @@ export default function App() {
   return (
     <ReactFlowProvider>
       <Inner />
+      <RunButton />
+      <ViewsPanel />
+      <TimelinePanel />
     </ReactFlowProvider>
   );
 }

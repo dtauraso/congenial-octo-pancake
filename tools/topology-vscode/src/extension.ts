@@ -227,8 +227,7 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
   <div class="toolbar">
     <span id="status" class="clean">saved</span>
     <span id="topogen-status" class="topogen-ok" title="generated Go is up to date">codegen ✓</span>
-    <button id="run-btn" class="run-btn" title="go run . in repo root">▶ run</button>
-    <span id="run-status" class="run-idle"></span>
+    <span id="run-mount"></span>
   </div>
   <div id="app"></div>
   <script nonce="${nonce}" src="${scriptUri}"></script>
