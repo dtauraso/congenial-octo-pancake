@@ -47,6 +47,32 @@ you're working on.
 | Cross-cutting — testing strategy | — | [testing-strategy.md](visual-editor/testing-strategy.md) | — |
 | Cross-cutting — risk & effort | — | [risk-and-effort.md](visual-editor/risk-and-effort.md) | — |
 
+## ▶ v0 closeout
+
+The `visual-editor` branch is being merged to `main` as **v0**. What
+that means honestly:
+
+- **Bar passed: hello-world low.** Changing a label in the editor
+  produces an updated value in the regenerated Go. Pulses animate.
+  Some labels show distinct in-flight values in at least one place.
+  Those very basic things work end-to-end.
+- **Real-world testing has not started.** No real topology change
+  has been driven through this tool in actual use yet. The
+  hello-world bar exercises the spec → Go round-trip surface and
+  the comprehension surfaces (animation, undo, fold) but does not
+  stress them at the volume or shape a real design session would.
+- **Cumulative spend through v0:** ≈\$80 across Phases 1–9 + Tier 4
+  latency. See per-phase docs for actuals.
+- **Expectation:** real-world use will likely surface rewrites and
+  redesigns. The remaining items in [NEXT UP](#-next-up) and the
+  per-phase follow-ups are *candidates*, not commitments —
+  re-evaluate them against actual workflow needs once real-world
+  sessions begin, rather than implementing speculatively.
+- **Branch hygiene:** `visual-editor` is being closed out at this
+  point so cumulative risk doesn't keep stacking on a single
+  long-lived branch. The next branch should be named after a
+  specific real-world task, not after a phase number.
+
 ## ▶ NEXT UP
 
 The most load-bearing remaining work, in priority order. Pick whichever
