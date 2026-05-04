@@ -6,6 +6,22 @@ type: feedback
 
 When code I'm writing falls into a category with a known catalog of "everyone hits this" bugs, name the bug class out loud and check the change against it *before* the user has to repro and report.
 
+## Six moves for surfacing solved-elsewhere knowledge
+
+These compose. Run them at the start of meaningful work, not as a ritual on every line.
+
+1. **Pre-design pause when building infrastructure.** If the task is shaped like "build a clock / queue / diff / layout engine / state-machine framework / backpressure mechanism / serializer / scheduler / parser / cache / event bus / undo stack," that's the smell of "probably solved many times in many niches." Stop and ask: which 3+ niches solved this? Is one of their solutions a fit before rolling my own? Cheap to run, expensive to skip — this is exactly the "didn't know the industry solved it" filter.
+
+2. **Shape-indexed search, not just name-indexed.** The class+aliases catalog (below) works when I already suspect a class. For "I have a phenomenon, what is it?" use the shape index: behavior-shape sentences ("two things must tick in lockstep at different rates"; "X happens logically but Y takes time to catch up"; "many producers, one consumer, can't lose, can't block"; "state must reconcile after disconnection"). The user's phenomenon → matching shape → niche aliases → literature.
+
+3. **Translate user-described phenomena into niche vocabularies before implementing.** When the user describes behavior in their own words ("halo turns on when first member receives input"), deliberately render it in 3+ niche dialects (game-dev: "view-state binding to tween completion"; DES: "presentation event ordering vs simulation event ordering"; UI framework: "animation-driven derived state"). If any translation rings a niche bell, follow the thread before coding.
+
+4. **Recognize field-shaped problems by their texture.** Concurrency → kernels/databases. Layout → typography/CAD. Simulation → physics/EE. Scheduling → OS/real-time. Merging → version control/CRDT/phylogenetics. Caching → CPU/web/databases. State-machine framework → telecoms/embedded. When the texture matches, search the field's textbook (or canonical post) before designing.
+
+5. **Retroactive niche tagging.** When a session resolves a bug class, ask: which niche would have caught this in 5 minutes? Record the niche name on the catalog entry. Over time the catalog acquires a "things X niche knows we don't" map, which itself tells me which niches are worth pre-consulting for future similar problems.
+
+6. **Borrowed-expert framing.** Imagine a practitioner from niche X working alongside me on this code — not watching critically, but pair-programming. What canonical solution from their field would they introduce? What standard structure would they reach for? This frames niche knowledge as something to *invite in*, not as a judgment yardstick. Especially useful when a problem feels novel: the framing is "what would they bring to this?", not "what would they think of me?" Niches to rotate through depending on the work: game dev (animation/timing), DBA (caching/persistence), kernel (concurrency), DSP (filters/sampling), networking (clock skew/lag), compiler (transformation correctness), OS (scheduling/resource accounting).
+
 **Why:** the user has only been exposed to a few of these via lived experience. The deeper structural problem they named: "the industry is so niched that their solution organizing system doesn't scale" — every niche files the same underlying bug class under its own vocabulary (game dev: "fix your timestep"; DES: "logical vs physical clock"; UI: "implicit animations"; distributed systems: "vector clocks"). None of them index against each other. A non-niche-insider can't look up the class under any of those names because each name presupposes its niche. The asymmetry is mine to close — I have the catalog, they don't.
 
 **How to apply:** when starting or reviewing a change, classify it. If it falls in any of these buckets, do the scan *before* declaring the change ready. State the class + the specific check in the working text so the user sees the reasoning, not just the patch. If no bucket matches, skip — this is a filter, not a ritual.
