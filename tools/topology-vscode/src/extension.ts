@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import * as fs from "fs";
 import * as crypto from "crypto";
 import { TopogenRunner } from "./topogenRunner";
 import { BuildAndRunRunner } from "./runCommand";
@@ -216,12 +217,18 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
   }
 
   private html(webview: vscode.Webview): string {
-    const scriptUri = webview.asWebviewUri(
-      vscode.Uri.file(path.join(this.context.extensionPath, "out", "webview.js"))
-    );
-    const styleUri = webview.asWebviewUri(
-      vscode.Uri.file(path.join(this.context.extensionPath, "out", "webview.css"))
-    );
+    const scriptPath = path.join(this.context.extensionPath, "out", "webview.js");
+    const stylePath = path.join(this.context.extensionPath, "out", "webview.css");
+    // Cache-bust on each render so reloads after a rebuild pick up the new
+    // bundle. VS Code's vscode-webview:// resources are otherwise cached
+    // aggressively by the underlying Chromium, which made hot-reload silently
+    // serve stale JS during dev.
+    const scriptVer = bundleVersion(scriptPath);
+    const styleVer = bundleVersion(stylePath);
+    const scriptUri = webview.asWebviewUri(vscode.Uri.file(scriptPath))
+      .with({ query: `v=${scriptVer}` });
+    const styleUri = webview.asWebviewUri(vscode.Uri.file(stylePath))
+      .with({ query: `v=${styleVer}` });
     const nonce = randomNonce();
     // React Flow positions every node via inline `style="transform: ..."`
     // attributes, which `style-src` governs when `style-src-attr` is unset.
@@ -270,4 +277,12 @@ async function applyEdit(doc: vscode.TextDocument, text: string) {
 
 function randomNonce(): string {
   return crypto.randomBytes(24).toString("base64");
+}
+
+function bundleVersion(filePath: string): string {
+  try {
+    return String(fs.statSync(filePath).mtimeMs | 0);
+  } catch {
+    return "0";
+  }
 }
