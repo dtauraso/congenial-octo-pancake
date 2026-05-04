@@ -264,3 +264,28 @@ this, it's cheap" gaps. Holding both per friction-driven posture;
 neither has caused observed pain yet.
 
 
+
+### 2026-05-03 — Implementation-pattern audit (different axis)
+
+Reframed the industry-pattern review from *missing user features* to
+*hand-rolled code that duplicates library primitives*. Scanned
+`tools/topology-vscode/src/` and produced
+[industry-pattern-audit.md](industry-pattern-audit.md): 19
+"reimplemented" items (R1-R19) with canonical replacements + 7
+"missing" react-flow/ecosystem features (M1-M7). Out-of-scope items
+(Yjs, Storybook, telemetry, mobile, react-query) explicitly listed
+and excluded.
+
+Key cross-references with the deferrals memo:
+- R14 (elkjs/libavoid-js routing) subsumes the deferred *auto-routing
+  with obstacle avoidance* item.
+- M1 (`isValidConnection`) subsumes the reject-flash quick win — no
+  flash needed if the drag never starts.
+- M3 (react-flow `EdgeLabelRenderer`) is a prerequisite for the
+  deferred *edge display labels* item.
+- R19 coordinates with deferred *snap to other nodes' edges* and
+  *multi-node alignment guides*.
+
+Audit doc is the spec for a future session; nothing landed here.
+Suggested cluster order: state→zustand (R1-R3) → panels→React
+(R4-R7) → geometry/routing (R14-R18, blocks on lib choice).
