@@ -2,18 +2,28 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { KIND_COLORS, type NodeSpec, type Port, type StateValue } from "../../schema";
 import { stepToNode, subscribe, getWorld, getTickMs } from "../../sim/runner";
+import { bufferedPorts } from "../../sim/handlers";
 import { mutateSpec, useSpec } from "../state";
 import { outgoingEdgeColors } from "./spec-colors";
 
 // Visible port dot. Sized large enough to be a real drag target, colored by
 // the port's edge kind so users can see which kinds connect to which.
-function portStyle(side: "left" | "right", topPct: number, color: string): React.CSSProperties {
+function portStyle(
+  side: "left" | "right",
+  topPct: number,
+  color: string,
+  buffered = false,
+): React.CSSProperties {
   return {
     width: 8, height: 8, minWidth: 0, minHeight: 0,
     [side]: -4, top: `${topPct}%`,
     transform: "translate(0, -50%)",
     background: color, border: "1px solid #fff",
     borderRadius: 4,
+    // Halo ring marks an input that has buffered a value and is waiting
+    // for its peer (AND-style joins). Distinct from the fire/glow pulse —
+    // halo is the idle "input X waiting" indicator (audit row #4).
+    ...(buffered ? { boxShadow: `0 0 0 2px ${color}` } : {}),
   };
 }
 
@@ -72,6 +82,10 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   // #66bb6a for −1, neutral otherwise). Drive that from runner state
   // (state.held) instead of a baked time loop.
   const [held, setHeld] = useState<StateValue | undefined>(() => getWorld()?.state?.[id]?.held);
+  // Audit row #4: per-port "input X waiting" indicator. State already
+  // exists as state.__has_<port>=1; bufferedPorts() reads it. Refreshed
+  // on every fire for this node since arrivals + clears both fire.
+  const [buffered, setBuffered] = useState<string[]>(() => bufferedPorts(getWorld()?.state?.[id]));
 
   useEffect(() => {
     const unsub = subscribe((ev) => {
@@ -112,6 +126,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
       setOffset({ dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) });
       setTweenMs(getTickMs());
       setHeld(s?.held);
+      setBuffered(bufferedPorts(s));
     });
     return unsub;
   }, [id]);
@@ -318,8 +333,8 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
             id={p.name}
             type="target"
             position={Position.Left}
-            style={portStyle("left", ((i + 1) * 100) / (data.inputs.length + 1), KIND_COLORS[p.kind] ?? "#888")}
-            title={`${p.name} (${p.kind})`}
+            style={portStyle("left", ((i + 1) * 100) / (data.inputs.length + 1), KIND_COLORS[p.kind] ?? "#888", buffered.includes(p.name))}
+            title={`${p.name} (${p.kind})${buffered.includes(p.name) ? " — buffered, waiting for peer" : ""}`}
           />
         ))
       )}
