@@ -6,22 +6,87 @@ type: feedback
 
 When code I'm writing falls into a category with a known catalog of "everyone hits this" bugs, name the bug class out loud and check the change against it *before* the user has to repro and report.
 
-**Why:** the user has only been exposed to a few of these via lived experience. They explicitly said: "I'm suspecting the industry is niched so much I could not have known to check the industry for these bugs as I was never exposed to them." That asymmetry is mine to close — I have the catalog, they don't. If I sit on it until they hit a symptom, we waste a round-trip per bug. We hit this exact pattern three times on wirefold (AnimatedEdge wall-clock decoupling → fold halo wall-clock decoupling → unified-sim-clock fix that should have been the first move).
+**Why:** the user has only been exposed to a few of these via lived experience. The deeper structural problem they named: "the industry is so niched that their solution organizing system doesn't scale" — every niche files the same underlying bug class under its own vocabulary (game dev: "fix your timestep"; DES: "logical vs physical clock"; UI: "implicit animations"; distributed systems: "vector clocks"). None of them index against each other. A non-niche-insider can't look up the class under any of those names because each name presupposes its niche. The asymmetry is mine to close — I have the catalog, they don't.
 
-**How to apply:** when starting or reviewing a change, classify it. If it falls in any of these buckets, do the scan *before* declaring the change ready:
+**How to apply:** when starting or reviewing a change, classify it. If it falls in any of these buckets, do the scan *before* declaring the change ready. State the class + the specific check in the working text so the user sees the reasoning, not just the patch. If no bucket matches, skip — this is a filter, not a ritual.
 
-- **Animation / time-based UI**: is wall-clock time (`Date.now`, `performance.now`, `setTimeout` for decay) used while a logical clock (sim clock, video clock, scrub position) exists? → unify on the logical clock. Symptoms: pause-decoupling, drift, "it kept going after I paused."
-- **Model/view temporal decoupling** (a.k.a. logical-time vs presentation-time, "fixed-timestep simulation with interpolated rendering"): does the view subscribe to the *model's* event stream (which fires at logical-instant times) when the user perceives the visual *animation arrival* as the meaningful moment? → bind the view to the animation lifecycle (anim-start/anim-end), not the raw model events. Symptoms: "the indicator lit up before the pulse arrived," "the badge showed `complete` while the bar was still filling." Canonical fix: view state = f(model event, animation params, current wall time). Names: Glenn Fiedler's "Fix Your Timestep!" (games), DES playback speed (SimPy/OMNeT++/Verilog), implicit animations (Flutter/SwiftUI), client-side prediction with rollback (networked games).
-- **State subscriptions / event listeners**: do all subscribers detach on unmount? Is one throwing subscriber going to take down the bus? → isolate listener throws; route to a probe.
-- **Persistence / dump-on-debounce**: does an empty snapshot overwrite a meaningful one? → guard with `if (snapshot.length === 0) return;`.
-- **`this`-binding on host APIs**: are `setTimeout`/`clearTimeout`/`addEventListener` etc. assigned as object methods? → wrap in arrow fns ("Illegal invocation" in browsers).
-- **Concurrency / channels / goroutines**: writer-without-reader deadlocks? channel overwrite without backpressure? unbounded fan-out? → check the wirefold latch+ack pattern in `docs/latch-backpressure.md`.
-- **Caching / memoization**: keyed correctly? invalidated on the right events? stale-while-revalidate semantics intentional?
-- **Replay / determinism**: any wall-clock or `Math.random` reads inside the replayable path? → must be seeded or driven from the trace.
-- **Pause/resume of any kind**: every counter, timer, and animation in scope frozen consistently? → if more than one site reinvents pause bookkeeping, that's the signal to unify on a frozen-on-pause clock.
-- **React effect deps**: do object/array deps trigger remounts they shouldn't? Is cleanup symmetric with setup?
-- **Diff / merge / undo**: is the inverse operation actually inverse? Round-trip identity test exists?
+**Entry format (deliberate convention).** Each bucket includes:
+- the *underlying* class name (vocabulary-neutral when possible),
+- a one-line *check* phrased as a question,
+- typical *symptoms* the user might describe,
+- the *fix shape*,
+- **niche aliases** — what each industry calls this class. The aliases are the Rosetta stone: a future query in any niche's vocabulary should land here. Add aliases as new ones surface. Aliases scale the catalog beyond me-as-its-only-reader.
 
-When a scan-bucket matches, state the class + the check explicitly in the working text so the user sees the reasoning, not just the patch. If no bucket matches, skip — this is a filter, not a ritual.
+---
 
-Add buckets to this list when a new class shows up in this codebase. Removing buckets is fine if they prove not load-bearing here.
+### Animation / time-based UI
+
+- **Check:** is wall-clock time (`Date.now`, `performance.now`, `setTimeout` for decay) used while a logical clock (sim clock, video clock, scrub position) exists?
+- **Symptoms:** pause-decoupling, drift, "it kept going after I paused."
+- **Fix:** unify on the logical clock; the view reads `getSimTime()` (or equivalent), not wall time.
+- **Niche aliases:** "media clock" (video players), "transport clock" (DAWs), "playback clock" (animation engines), "scrub-aware time" (timeline editors).
+
+### Model/view temporal decoupling
+
+- **Check:** does the view subscribe to the *model's* event stream (which fires at logical-instant times) when the user perceives the visual *animation arrival* as the meaningful moment?
+- **Symptoms:** "the indicator lit up before the pulse arrived," "the badge showed `complete` while the bar was still filling," "the toast appeared 300ms before the row finished sliding in."
+- **Fix:** bind view state to animation lifecycle (anim-start/anim-end), not raw model events. Generalized: `view state = f(model event, animation params, current wall time)`.
+- **Niche aliases:** "fix your timestep" / "interpolated rendering" (games — Glenn Fiedler), "logical vs physical clock" / "playback speed decoupling" (DES — SimPy, OMNeT++, ns-3, Verilog waveform viewers), "implicit animations" (Flutter, SwiftUI, CSS transitions), "client-side prediction with rollback" (networked games), "optimistic UI" / "tween-aware state" (web frontends).
+
+### State subscriptions / event listeners
+
+- **Check:** do all subscribers detach on unmount? Will one throwing subscriber take down the bus?
+- **Symptoms:** memory leaks across remounts, one listener bug taking down all UI.
+- **Fix:** isolate listener throws (try/catch per listener); route caught exceptions to a probe.
+- **Niche aliases:** "subscription leak" (Rx/observables), "use-effect cleanup bug" (React), "event handler leak" (DOM), "signal/slot dangling pointer" (Qt).
+
+### Persistence / dump-on-debounce
+
+- **Check:** does an empty snapshot overwrite a meaningful one?
+- **Symptoms:** the log file ends up empty after the bug just happened.
+- **Fix:** guard with `if (snapshot.length === 0) return;` or accumulate without clearing on dump.
+- **Niche aliases:** "lost-update on flush" (databases), "atomic-write-after-empty" (filesystems), "checkpoint-clobbering" (long-running services).
+
+### `this`-binding on host APIs
+
+- **Check:** are `setTimeout`/`clearTimeout`/`addEventListener` etc. assigned as object methods, losing global `this`?
+- **Symptoms:** "Illegal invocation" in browsers; works in Node, fails in browser, or vice versa.
+- **Fix:** wrap in arrow functions: `(fn, ms) => setTimeout(fn, ms)`.
+- **Niche aliases:** "method binding" (JS classes), "unbound method" (Python), "method-vs-bound-method confusion" (any OO language with first-class methods).
+
+### Concurrency / channels / goroutines
+
+- **Check:** writer-without-reader deadlocks? channel overwrite without backpressure? unbounded fan-out?
+- **Fix:** check the wirefold latch+ack pattern in `docs/latch-backpressure.md`.
+- **Niche aliases:** "lost wakeup" (kernel sync), "fast producer / slow consumer" (queueing), "unbounded buffer" (streaming systems), "head-of-line blocking" (network).
+
+### Caching / memoization
+
+- **Check:** keyed correctly? invalidated on the right events? stale-while-revalidate semantics intentional?
+- **Niche aliases:** "cache invalidation" (general — Phil Karlton's quip), "stale read" (databases), "memoization key bug" (functional programming), "ETag mismatch" (HTTP).
+
+### Replay / determinism
+
+- **Check:** any wall-clock or `Math.random` reads inside the replayable path?
+- **Fix:** must be seeded or driven from the trace.
+- **Niche aliases:** "non-deterministic replay" (games / record-replay debuggers), "side effects in pure code" (FP), "deterministic simulation" (FoundationDB-style testing), "rr divergence" (Mozilla rr).
+
+### Pause/resume of any kind
+
+- **Check:** every counter, timer, and animation in scope frozen consistently? If more than one site reinvents pause bookkeeping, that's the signal to unify.
+- **Fix:** unify on a frozen-on-pause clock. The "more than one site reinvents pause" smell is itself a refactor trigger.
+- **Niche aliases:** "transport pause" (DAWs / video editors), "world-pause vs UI-pause" (games), "scrubbing semantics" (timeline editors).
+
+### React effect deps
+
+- **Check:** do object/array deps trigger remounts they shouldn't? Is cleanup symmetric with setup?
+- **Niche aliases:** "stale closure" (React), "missing dependency" (eslint-react), "useEffect identity bug."
+
+### Diff / merge / undo
+
+- **Check:** is the inverse operation actually inverse? Round-trip identity test exists?
+- **Niche aliases:** "operational transform inverse" (collaborative editing), "CRDT merge associativity" (distributed state), "undo stack drift" (editors).
+
+---
+
+**Maintenance.** Add a bucket when a new class surfaces in this codebase. Add aliases when a new niche-vocabulary appears (don't wait for the bug; if I'm thinking about a class and remember the alias from a niche, log it). Removing buckets is fine if they prove not load-bearing here. Aliases shouldn't be removed — they're the Rosetta stone.
