@@ -1,0 +1,6 @@
+{"step":0,"kind":"recv","node":"rl","port":"release","value":1}
+{"step":1,"kind":"recv","node":"rl","port":"in","value":7}
+{"step":2,"kind":"recv","node":"rl","port":"release","value":1}
+{"step":3,"kind":"fire","node":"rl"}
+{"step":4,"kind":"send","edge":"rlOut","value":7}
+{"step":5,"kind":"send","edge":"rlAck","value":1}

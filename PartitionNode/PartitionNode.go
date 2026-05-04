@@ -1,8 +1,21 @@
+// Phase 8 Chunk 6 — PartitionNode rewritten to match the TS handler.
+//
+// Mirrors the partitionIn handler in src/sim/handlers.ts: a state
+// machine NotInitialized → Growing → Stopped, advanced only by
+// value=1 on `in`. On the NotInit→Growing transition emit out=1; on
+// the Growing→Stopped transition emit out=0; other inputs are
+// silently absorbed (no fire, no send) — matches TS noEmit.
+//
+// The previous shape (PartitionIsMade / EndFromInhibitor /
+// continuous Grow emission) was speculative and unwired in the
+// codebase (`grep -rln PartitionNode --include='*.go'` returned only
+// this file). Replacing it directly avoids dragging an obsolete API
+// alongside the parity-correct one.
+
 package PartitionNode
 
 import (
-	"fmt"
-	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
+	S "github.com/dtauraso/wirefold/SafeWorker"
 )
 
 const (
@@ -12,12 +25,11 @@ const (
 )
 
 type PartitionNode struct {
-	Id               int
-	State            int
-	PartitionIsMade  <-chan bool
-	FromEdge         <-chan int
-	EndFromInhibitor <-chan int
-	EndToInhibitor   chan<- int
+	Id     int
+	Name   string
+	State  int
+	FromIn <-chan int
+	ToOut  chan<- int
 }
 
 func (pn *PartitionNode) Update(s *S.SafeWorker) {
@@ -26,32 +38,23 @@ func (pn *PartitionNode) Update(s *S.SafeWorker) {
 		select {
 		case <-s.Ctx.Done():
 			return
-		default:
-		}
-
-		select {
-		case value := <-pn.FromEdge:
-			fmt.Printf("p%d: received %d from edge\n", pn.Id, value)
+		case v := <-pn.FromIn:
+			s.Trace.Recv(pn.Name, "in", v)
+			if v != 1 {
+				continue
+			}
 			switch pn.State {
 			case NotInitialized:
-				switch value {
-				case 1:
-					pn.State = Growing
-					fmt.Printf("p%d: start growing\n", pn.Id)
-				}
+				pn.State = Growing
+				s.Trace.Fire(pn.Name)
+				S.Send(pn.ToOut, 1)
+				s.Trace.Send(pn.Name, "out", 1)
 			case Growing:
-				switch value {
-				case 1:
-					pn.State = Stopped
-					fmt.Printf("p%d: stop growing\n", pn.Id)
-				}
+				pn.State = Stopped
+				s.Trace.Fire(pn.Name)
+				S.Send(pn.ToOut, 0)
+				s.Trace.Send(pn.Name, "out", 0)
 			}
-		default:
-		}
-
-		switch pn.State {
-		case Growing:
-			S.Send(pn.EndToInhibitor, S.Grow)
 		}
 	}
 }

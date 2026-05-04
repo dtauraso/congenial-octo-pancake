@@ -1,0 +1,56 @@
+{
+  "nodes": [
+    { "id": "src", "type": "Input", "data": { "init": [1, 2] } },
+    { "id": "gate", "type": "ReadGate" },
+    { "id": "inhib", "type": "ChainInhibitor", "index": 0 },
+    { "id": "right", "type": "InhibitRightGate" }
+  ],
+  "edges": [
+    {
+      "id": "src->gate",
+      "source": "src",
+      "sourceHandle": "out",
+      "target": "gate",
+      "targetHandle": "chainIn",
+      "kind": "chain",
+      "label": "srcToGate"
+    },
+    {
+      "id": "gate->inhib",
+      "source": "gate",
+      "sourceHandle": "out",
+      "target": "inhib",
+      "targetHandle": "in",
+      "kind": "chain",
+      "label": "gateToInhib"
+    },
+    {
+      "id": "inhib->gate",
+      "source": "inhib",
+      "sourceHandle": "out",
+      "target": "gate",
+      "targetHandle": "ack",
+      "kind": "feedback-ack",
+      "label": "inhibAckToGate",
+      "data": { "init": [1] }
+    },
+    {
+      "id": "inhib->right.left",
+      "source": "inhib",
+      "sourceHandle": "inhibitOut",
+      "target": "right",
+      "targetHandle": "left",
+      "kind": "inhibit-in",
+      "label": "inhibToRightLeft"
+    },
+    {
+      "id": "inhib->right.right",
+      "source": "inhib",
+      "sourceHandle": "inhibitOut",
+      "target": "right",
+      "targetHandle": "right",
+      "kind": "inhibit-in",
+      "label": "inhibToRightRight"
+    }
+  ]
+}

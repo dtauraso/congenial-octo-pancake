@@ -1,0 +1,12 @@
+{
+  "nodes": [
+    {
+      "id": "p",
+      "type": "Partition",
+      "x": 0,
+      "y": 0,
+      "props": { "slidePx": 45, "slideDy": -20 }
+    }
+  ],
+  "edges": []
+}

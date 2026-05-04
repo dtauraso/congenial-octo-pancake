@@ -1,0 +1,259 @@
+html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-family: ui-sans-serif, system-ui, sans-serif; }
+#app { width: 100vw; height: 100vh; }
+.node { cursor: grab; }
+.node.dragging { cursor: grabbing; }
+.node text { pointer-events: none; user-select: none; }
+.toolbar { position: fixed; top: 8px; left: 8px; padding: 6px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; display: flex; gap: 12px; align-items: center; z-index: 10; }
+.views-panel { z-index: 10; }
+.timeline-panel { z-index: 10; }
+.rf-anim-overlay { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+/* Dim the inner body, not the wrapper, so box-shadow / outline halos
+   (diff-added / diff-removed / diff-moved) keep full opacity even when
+   the node is dimmed by a saved-view focus. */
+.react-flow__node.dim > * { opacity: 0.18; transition: opacity 0.18s ease; }
+.react-flow__edge.dim { opacity: 0.18; transition: opacity 0.18s ease; }
+.react-flow__edge.selected .react-flow__edge-path { stroke-width: 3 !important; }
+.react-flow__edge:hover .react-flow__edge-path { stroke-width: 2.5; }
+.dirty { color: #c62828; font-weight: 600; }
+.clean { color: #2e7d32; }
+.topogen-ok { color: #2e7d32; }
+.topogen-running { color: #f57f17; }
+.topogen-error { color: #c62828; font-weight: 600; }
+.run-btn {
+  border: 1px solid #ddd; background: #fafafa; border-radius: 4px;
+  padding: 2px 8px; cursor: pointer; font: inherit; color: #333;
+}
+.run-btn:hover { background: #f0f0f0; }
+.run-idle { color: #666; }
+.run-running { color: #f57f17; }
+.run-ok { color: #2e7d32; }
+.run-error { color: #c62828; font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.views-panel {
+  position: fixed; top: 8px; right: 8px; width: 180px;
+  padding: 8px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px;
+  font-size: 12px; display: flex; flex-direction: column; gap: 6px;
+}
+.views-header { font-weight: 600; color: #444; }
+.views-save {
+  border: 1px solid #ddd; background: #fafafa; border-radius: 4px;
+  padding: 4px 6px; cursor: pointer; text-align: left; font: inherit; color: #333;
+}
+.views-save:hover { background: #f0f0f0; }
+.views-name-input {
+  border: 1px solid #1976d2; border-radius: 4px; padding: 4px 6px;
+  font: inherit; outline: none;
+}
+.views-list { display: flex; flex-direction: column; gap: 2px; }
+.views-empty { color: #999; font-style: italic; padding: 2px 4px; }
+.views-row {
+  display: flex; align-items: center; gap: 4px;
+  border-radius: 4px; padding: 1px;
+}
+.views-row.active { background: #e3f2fd; }
+.views-name {
+  flex: 1; text-align: left; border: none; background: transparent;
+  padding: 3px 6px; cursor: pointer; font: inherit; color: #222;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.views-name:hover { background: #f0f0f0; border-radius: 3px; }
+.views-del {
+  border: none; background: transparent; color: #999; cursor: pointer;
+  padding: 0 4px; font-size: 14px; line-height: 1;
+}
+.views-del:hover { color: #c62828; }
+
+.node.dim, g[data-edge-id].dim { opacity: 0.15; transition: opacity 0.18s ease; }
+.node:not(.dim), g[data-edge-id]:not(.dim) { transition: opacity 0.18s ease; }
+
+.timeline-panel {
+  position: fixed; bottom: 8px; left: 8px; right: 8px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; background: #fff; border: 1px solid #ddd; border-radius: 6px;
+  font-size: 12px;
+}
+.timeline-play {
+  border: 1px solid #ddd; background: #fafafa; border-radius: 4px;
+  padding: 2px 10px; cursor: pointer; font-size: 14px; line-height: 1.4;
+  min-width: 32px;
+}
+.timeline-play:hover { background: #f0f0f0; }
+.timeline-track {
+  flex: 1; position: relative; height: 24px;
+  background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px;
+  cursor: pointer;
+}
+.timeline-markers { position: absolute; inset: 0; pointer-events: none; }
+.timeline-marker {
+  position: absolute; top: -2px; transform: translateX(-50%);
+  pointer-events: auto;
+  border: 1px solid #f57f17; background: #fff8e1; color: #e65100;
+  border-radius: 3px; padding: 1px 5px;
+  font-size: 10px; cursor: pointer; white-space: nowrap;
+  max-width: 120px; overflow: hidden; text-overflow: ellipsis;
+}
+.timeline-marker:hover { background: #fff3e0; }
+.timeline-marker:focus { outline: 2px solid #1976d2; outline-offset: 1px; }
+.timeline-marker::after {
+  content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%);
+  width: 1px; height: 8px; background: #f57f17;
+}
+.timeline-playhead {
+  position: absolute; top: 0; bottom: 0; width: 2px;
+  background: #1976d2; pointer-events: none;
+}
+.timeline-time { color: #666; min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+.timeline-add {
+  border: 1px solid #ddd; background: #fafafa; border-radius: 4px;
+  padding: 4px 8px; cursor: pointer; font: inherit; color: #333;
+}
+.timeline-add:hover { background: #f0f0f0; }
+.timeline-name-input {
+  border: 1px solid #1976d2; border-radius: 4px; padding: 4px 6px;
+  font: inherit; outline: none; min-width: 140px;
+}
+.node-label.rename-active {
+  outline: 1px solid #1976d2; border-radius: 2px;
+  background: #fff; color: #111;
+  cursor: text;
+}
+.node-sublabel { font-size: 10px; color: #555; }
+.node-sublabel-placeholder { color: #aaa; font-style: italic; }
+.node-sublabel.sublabel-active {
+  outline: 1px solid #1976d2; border-radius: 2px;
+  background: #fff; color: #111; font-style: normal;
+  cursor: text; min-width: 40px;
+}
+.palette-panel {
+  position: fixed; top: 48px; left: 8px; width: 160px;
+  padding: 8px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px;
+  font-size: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 10;
+  max-height: calc(100vh - 120px); overflow-y: auto;
+}
+.palette-header { font-weight: 600; color: #444; }
+.palette-list { display: flex; flex-direction: column; gap: 2px; }
+.palette-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px; border: 1px solid #eee; border-radius: 4px;
+  background: #fafafa; cursor: grab; user-select: none;
+}
+.palette-item:hover { background: #f0f0f0; border-color: #ddd; }
+.palette-item:active { cursor: grabbing; }
+.palette-swatch { width: 14px; height: 10px; flex-shrink: 0; }
+.palette-name { color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ─── Comparison-mode decoration ─────────────────────────────────────
+ * Halos render *outside* the node body so playback flashes (which paint
+ * the body) stay uncontaminated. Halos punch through .dim per phase-5
+ * spec — the node body dims to ~18% but the halo stays at full opacity.
+ */
+.react-flow__node.diff-added {
+  box-shadow: 0 0 0 3px #2e7d32, 0 0 0 5px rgba(46, 125, 50, 0.25);
+  border-radius: 4px;
+}
+.react-flow__node.diff-removed {
+  box-shadow: 0 0 0 3px #c62828, 0 0 0 5px rgba(198, 40, 40, 0.25);
+  border-radius: 4px;
+}
+.react-flow__node.diff-moved {
+  outline: 2px dashed #c98a00;
+  outline-offset: 2px;
+}
+.react-flow__edge.diff-added .react-flow__edge-path {
+  stroke: #2e7d32 !important; stroke-width: 2.5px !important;
+}
+.react-flow__edge.diff-rewired .react-flow__edge-path {
+  stroke-dasharray: 6 4; stroke: #c98a00 !important;
+}
+.react-flow__edge.diff-moved-connector .react-flow__edge-path {
+  stroke: #c98a00; stroke-width: 1px; stroke-dasharray: 4 3; opacity: 0.7;
+}
+
+.react-flow__node.ghost {
+  opacity: 0.25;
+  pointer-events: none;
+}
+.react-flow__edge.ghost {
+  opacity: 0.35;
+  pointer-events: none;
+}
+/* When a node is both .ghost and a diff category, keep the halo bright
+   even though the body is faded — same punch-through rule as .dim. */
+.react-flow__node.ghost.diff-removed,
+.react-flow__node.ghost.diff-moved {
+  opacity: 0.35;
+}
+
+/* Mode B onion-skin: ghost layer rendered translucent below live; spacebar
+   held (.ghost-front on the wrapper) bumps the ghost layer in front. */
+.react-flow__node.onion-ghost { opacity: 0.25; }
+.react-flow__edge.onion-ghost { opacity: 0.35; }
+.ghost-front .react-flow__node.onion-ghost { opacity: 0.6; z-index: 1000; }
+.ghost-front .react-flow__edge.onion-ghost { opacity: 0.85; z-index: 1000; }
+.ghost-front .react-flow__node.onion-live { opacity: 0.4; }
+
+.compare-toolbar {
+  /* Bottom-right, above the timeline panel (~36px tall + 8px gap from
+     bottom). Avoids the top-right views panel and the top-left main
+     toolbar / palette. */
+  position: fixed; bottom: 56px; right: 8px; z-index: 10;
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px; background: #fff; border: 1px solid #ddd; border-radius: 6px;
+  font-size: 12px;
+}
+.compare-btn {
+  padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px;
+  background: #fafafa; cursor: pointer; font-size: 12px;
+}
+.compare-btn:hover { background: #f0f0f0; }
+.compare-close { color: #666; }
+.compare-label {
+  color: #444; font-style: italic;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.compare-mode-group { display: flex; gap: 0; }
+.compare-mode {
+  padding: 4px 8px; border: 1px solid #ccc; background: #fafafa;
+  cursor: pointer; font-size: 12px;
+}
+.compare-mode + .compare-mode { border-left: none; }
+.compare-mode:first-child { border-radius: 4px 0 0 4px; }
+.compare-mode:last-child { border-radius: 0 4px 4px 0; }
+.compare-mode.active { background: #1976d2; color: #fff; border-color: #1976d2; }
+.compare-error { color: #b00020; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.edge-context-menu {
+  background: #fff; border: 1px solid #ccc; border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15); padding: 4px 0;
+  min-width: 140px; font-size: 12px;
+}
+.edge-context-menu-header {
+  padding: 2px 10px; color: #888; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.edge-context-menu-item {
+  display: block; width: 100%; text-align: left;
+  border: 0; background: transparent; padding: 4px 10px;
+  font: inherit; color: #222; cursor: pointer;
+}
+.edge-context-menu-item:hover { background: #eef4ff; }
+.edge-context-menu-item.active {
+  background: #e3f2fd; color: #0d47a1; font-weight: 600;
+}
+.edge-context-menu-item.active::before {
+  content: "✓ "; color: #0d47a1;
+}
+
+/* Alignment guides shown while dragging a node whose center matches another
+   node's center within ALIGN_TOL flow units. Positioned over the RF pane;
+   the inline left/top is precomputed in screen coords. */
+.align-guide {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+  border-color: #e07a3a;
+  border-style: dashed;
+  border-width: 0;
+}
+.align-guide-v { top: 0; bottom: 0; width: 0; border-left-width: 1px; }
+.align-guide-h { left: 0; right: 0; height: 0; border-top-width: 1px; }

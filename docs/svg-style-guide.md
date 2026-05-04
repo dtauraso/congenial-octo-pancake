@@ -1,7 +1,62 @@
-# Topology-chain-cascade.svg — Style Compilation
+# SVG Style Guide
+
+Read this file before generating or modifying any SVG in this repo. It
+contains the binding conventions (Part 1) and the observed house-style
+vocabulary (Part 2). CLAUDE.md keeps only a pointer to here so that
+sessions not touching SVGs don't pay to load it.
+
+---
+
+# Part 1 — SVG Diagram Conventions (required for all SVG output)
+
+Every SVG you generate or modify must follow these rules. They exist to keep diagrams cheap to read and structurally legible. Violations must be corrected before returning the file.
+
+1. **Semantic grouping.** Every logical unit must be wrapped in a `<g>` with a descriptive `id` and `data-role` attribute. Example: `<g id="stage-i1" data-role="inhibitor" data-index="1">`. Never group by visual proximity alone — group by meaning. A circle and its label belong in the same group.
+
+2. **Symbol factoring.** Any element that repeats with the same structure must be defined once as a `<symbol>` in `<defs>` and instantiated with `<use href="#id" x="..." y="...">`. If there are three inhibitor stages, define one symbol, not three copies. This applies even if the repetition is only two instances.
+   > **Exception:** Do not use `<symbol>`/`<use>` for node background shapes that need per-class CSS styling (`fill`, `stroke`). CSS selectors cannot pierce the shadow DOM created by `<use>`, so colors will not apply. Use direct `<rect>` elements with a shape class instead (e.g. `<rect class="shape-latch" .../>`). `<symbol>` remains appropriate for purely geometric decorations that carry no CSS-styled fill or stroke.
+
+3. **Class-based styling.** Colors, stroke widths, and font sizes must be defined in a `<style>` block at the top of the file and applied via `class="..."`. Class names must be semantic (`.inhibitor`, `.contrast-edge`, `.recognition-gate`), not visual (`.orange`, `.thick`). No inline `stroke="#..."` or `fill="#..."` except inside the `<style>` block.
+
+4. **Sidecar metadata.** Every SVG must begin with a `<metadata>` block containing a compact machine-readable description of the diagram's logical structure: a list of named nodes with their roles, a list of edges with source/target/kind, and (for animated diagrams) a timing table. Format as JSON inside the metadata tag. This is the spec layer; the visual is a rendering of it.
+
+5. **Legend block.** Immediately after `<metadata>`, include a `<desc>` block with a short plain-text key: one line per node-role or class, explaining what it means. Example: `i0, i1, i2 — inhibitor stages (shift register cells)`. This is for the model's first read; keep it under ten lines.
+
+6. **Separate structure from animation.** If the diagram is animated, put all static `<g>` definitions first, then a clearly commented `<!-- ANIMATION -->` section containing all `<animate>` and timing-related elements. Never interleave static shapes with animate tags.
+
+7. **Coordinate discipline.** Use integer coordinates where possible. No trailing zeros, no unnecessary decimal precision. Round to the nearest pixel unless sub-pixel positioning is structurally required.
+
+8. **No redundant attributes.** Omit attributes that match SVG defaults. Omit `xmlns` repetition on child elements. Omit `fill="none"` if a class already sets it.
+
+9. **Hierarchy for complexity.** If a diagram has more than roughly 15 logical nodes, split it: produce a top-level overview diagram showing subsystems as boxes, and separate files for each subsystem's internals. Link them by shared node ids in the metadata.
+
+10. **When modifying an existing SVG**, preserve all of the above. Do not strip metadata, flatten groups, inline styles, or reorder sections. If the existing file violates these rules, fix the violations as part of the modification.
+
+**Strong harness rule:** if any of these conventions would make the diagram incorrect or unclear, stop and report the conflict instead of silently breaking the rule. The conventions serve the diagram; the diagram does not serve the conventions.
+
+## Known renderer exceptions
+
+These exceptions are required because the VS Code SVG preview renderer does not reliably apply CSS to SVG elements. Apply them in all SVG output for this project.
+
+**Exception to rule 2 — no `<symbol>`/`<use>` for styled shapes:**
+CSS cannot pierce the shadow DOM created by `<use>`, so `fill` and `stroke` classes will not apply to instanced symbols. Use direct `<rect>` elements with a shape class (e.g. `<rect class="shape-latch" .../>`) instead. `<symbol>` is only appropriate for purely geometric decorations that carry no CSS-styled fill or stroke.
+
+**Exception to rule 3 — CSS font-weight and fill are ignored on text:**
+The renderer does not inherit CSS `font-weight` or `fill` onto `<text>` elements. Always set these as inline presentation attributes on every `<text>` element:
+- `font-weight="300"` for all labels (prevents thick/bold rendering)
+- `fill="#111" stroke="none"` for edge name labels (dark, readable)
+- `fill="<semantic-color>" stroke="none"` for value labels (use the edge's color)
+- `stroke="none"` is required on all `<text>` elements — without it, the text inherits the parent `<g>`'s stroke, rendering letters as thick outlines with no fill.
+
+**Exception to rule 3 — CSS is unreliable for text color via class inheritance:**
+Do not rely on `.class text { fill: ... }` descendant selectors — they are ignored. Set `fill` directly on each `<text>` element as a presentation attribute.
+
+---
+
+# Part 2 — Topology-chain-cascade.svg — House Style Compilation
 
 ## Context
-Reference compilation of the style conventions used in [diagrams/topology-chain-cascade.svg](diagrams/topology-chain-cascade.svg). Captures nodes, edges, labels, spacing, path routing, and animation patterns so future diagrams in this repo can match the house style without re-deriving it from the file. Intended as a companion to the rules in [CLAUDE.md](CLAUDE.md).
+Reference compilation of the style conventions used in [diagrams/topology-chain-cascade.svg](../diagrams/topology-chain-cascade.svg). Captures nodes, edges, labels, spacing, path routing, and animation patterns so future diagrams in this repo can match the house style without re-deriving it from the file.
 
 ---
 

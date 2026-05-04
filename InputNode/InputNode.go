@@ -1,12 +1,12 @@
 package InputNode
 
 import (
-	"fmt"
-	S "github.com/dtauraso/congenial-octo-pancake/SafeWorker"
+	S "github.com/dtauraso/wirefold/SafeWorker"
 )
 
 type InputNode struct {
 	Id        int
+	Name      string
 	Input     <-chan int
 	ToNext    chan<- int
 	value     int
@@ -29,7 +29,7 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 				n.value = v
 				n.hasValue = true
 				n.sentValue = false
-				fmt.Printf("in%d: sending %d\n", n.Id, n.value)
+				s.Trace.Recv(n.Name, "Input", v)
 			default:
 			}
 		}
@@ -39,6 +39,8 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 			case n.ToNext <- n.value:
 				n.sentValue = true
 				n.hasValue = false
+				s.Trace.Fire(n.Name)
+				s.Trace.Send(n.Name, "out", n.value)
 			default:
 			}
 		}

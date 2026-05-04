@@ -1,0 +1,16 @@
+{
+  "nodes": [
+    { "id": "p", "type": "Partition", "x": 0, "y": 0, "state": { "dx": 0, "dy": 0 } },
+    { "id": "g", "type": "Generic", "x": 100, "y": 0 }
+  ],
+  "edges": [
+    {
+      "id": "pToG",
+      "source": "p",
+      "sourceHandle": "out",
+      "target": "g",
+      "targetHandle": "",
+      "kind": "chain"
+    }
+  ]
+}

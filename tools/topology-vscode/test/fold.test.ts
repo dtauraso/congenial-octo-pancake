@@ -1,0 +1,117 @@
+// Tier 2 retro: fold/unfold bridge behavior. The adapter takes the spec
+// plus a viewer-state folds[] list and emits RF nodes/edges that hide
+// collapsed members + reroute crossing edges to the placeholder, without
+// mutating the spec. Locks down: collapsed members aren't emitted as RF
+// nodes; expanded folds emit a frame around their members; edges fully
+// inside a collapsed fold are dropped; edges crossing a collapsed boundary
+// are rerouted to the placeholder; flowToSpec ignores fold nodes.
+
+import { describe, expect, it } from "vitest";
+import type { Spec } from "../src/schema";
+import { flowToSpec, specToFlow } from "../src/webview/rf/adapter";
+import { createFold, toggleFold } from "../src/webview/fold-core";
+import type { ViewerState } from "../src/webview/viewerState";
+
+function makeSpec(): Spec {
+  return {
+    nodes: [
+      { id: "a", type: "Generic", x: 0, y: 0 },
+      { id: "b", type: "Generic", x: 100, y: 0 },
+      { id: "c", type: "Generic", x: 200, y: 0 },
+      { id: "d", type: "Generic", x: 300, y: 0 },
+    ],
+    edges: [
+      { id: "e_ab", source: "a", sourceHandle: "", target: "b", targetHandle: "", kind: "any" },
+      { id: "e_bc", source: "b", sourceHandle: "", target: "c", targetHandle: "", kind: "any" },
+      { id: "e_cd", source: "c", sourceHandle: "", target: "d", targetHandle: "", kind: "any" },
+    ],
+  };
+}
+
+describe("fold-aware specToFlow", () => {
+  it("collapsed fold hides members, drops internal edges, reroutes crossing edges", () => {
+    const spec = makeSpec();
+    const vs: ViewerState = {};
+    const id = createFold(vs, ["b", "c"], [150, 0]);
+    expect(id).toBeDefined();
+    const flow = specToFlow(spec, vs.folds);
+
+    const ids = flow.nodes.map((n) => n.id).sort();
+    // Members b/c hidden; placeholder fold0 present; a/d still rendered.
+    expect(ids).toEqual(["a", "d", "fold0"].sort());
+
+    const placeholder = flow.nodes.find((n) => n.id === "fold0")!;
+    expect(placeholder.type).toBe("fold");
+    expect(placeholder.data?.collapsed).toBe(true);
+    expect(placeholder.data?.memberCount).toBe(2);
+
+    // e_bc is internal to the fold → dropped entirely.
+    expect(flow.edges.some((e) => e.id === "e_bc")).toBe(false);
+
+    // e_ab targets b (inside fold) → target rerouted to fold0; source intact.
+    const eab = flow.edges.find((e) => e.id === "e_ab")!;
+    expect(eab.source).toBe("a");
+    expect(eab.target).toBe("fold0");
+
+    // e_cd's source c is inside fold → rerouted to fold0; target intact.
+    const ecd = flow.edges.find((e) => e.id === "e_cd")!;
+    expect(ecd.source).toBe("fold0");
+    expect(ecd.target).toBe("d");
+  });
+
+  it("expanded fold emits a frame and keeps members + edges intact", () => {
+    const spec = makeSpec();
+    const vs: ViewerState = {};
+    createFold(vs, ["b", "c"], [150, 0]);
+    toggleFold(vs, "fold0"); // collapse → expand
+
+    const flow = specToFlow(spec, vs.folds);
+    const memberIds = flow.nodes.filter((n) => n.type === "animated").map((n) => n.id).sort();
+    expect(memberIds).toEqual(["a", "b", "c", "d"]);
+
+    const frame = flow.nodes.find((n) => n.type === "fold")!;
+    expect(frame.data?.collapsed).toBe(false);
+    // Frame must encompass member bounding box (b at x=100, c at x=200,
+    // both 110px wide by default).
+    expect(frame.position.x).toBeLessThan(100);
+    expect(frame.data?.width).toBeGreaterThan(200);
+
+    // All edges still rendered with original endpoints.
+    const eab = flow.edges.find((e) => e.id === "e_ab")!;
+    expect(eab.source).toBe("a");
+    expect(eab.target).toBe("b");
+    const ecd = flow.edges.find((e) => e.id === "e_cd")!;
+    expect(ecd.source).toBe("c");
+    expect(ecd.target).toBe("d");
+  });
+
+  it("specToFlow does not mutate the spec when folds are applied", () => {
+    const spec = makeSpec();
+    const before = JSON.stringify(spec);
+    const vs: ViewerState = {};
+    createFold(vs, ["b", "c"], [150, 0]);
+    specToFlow(spec, vs.folds);
+    expect(JSON.stringify(spec)).toBe(before);
+  });
+
+  it("flowToSpec ignores fold nodes on the round-trip", () => {
+    const spec = makeSpec();
+    const vs: ViewerState = {};
+    createFold(vs, ["b", "c"], [150, 0]);
+    toggleFold(vs, "fold0"); // expanded so member nodes are still in the flow
+
+    const flow = specToFlow(spec, vs.folds);
+    const round = flowToSpec(flow.nodes, flow.edges);
+    expect(round.nodes.map((n) => n.id).sort()).toEqual(["a", "b", "c", "d"]);
+    expect(round.nodes.some((n) => n.id === "fold0")).toBe(false);
+  });
+
+  it("createFold rejects members already inside another fold (no nesting)", () => {
+    const vs: ViewerState = {};
+    createFold(vs, ["a", "b"], [0, 0]);
+    const second = createFold(vs, ["b", "c"], [0, 0]);
+    // Filtered to {c}, only 1 member → too few; rejected.
+    expect(second).toBeUndefined();
+    expect(vs.folds?.length).toBe(1);
+  });
+});

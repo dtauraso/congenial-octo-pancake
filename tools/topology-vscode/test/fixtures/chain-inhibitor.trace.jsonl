@@ -1,0 +1,6 @@
+{"step":0,"kind":"recv","node":"ci","port":"in","value":5}
+{"step":1,"kind":"fire","node":"ci"}
+{"step":2,"kind":"send","edge":"ciInhibit","value":0}
+{"step":3,"kind":"send","edge":"ciReadNew","value":5}
+{"step":4,"kind":"send","edge":"ciOut","value":0}
+{"step":5,"kind":"send","edge":"ciAck","value":1}

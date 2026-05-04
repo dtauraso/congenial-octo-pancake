@@ -1,0 +1,16 @@
+{
+  "nodes": [
+    { "id": "a", "type": "Generic", "x": 0, "y": 0 },
+    { "id": "b", "type": "Generic", "x": 100, "y": 0 }
+  ],
+  "edges": [
+    {
+      "id": "aToB",
+      "source": "a",
+      "sourceHandle": "",
+      "target": "b",
+      "targetHandle": "",
+      "kind": "any"
+    }
+  ]
+}
