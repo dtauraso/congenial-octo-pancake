@@ -57,6 +57,7 @@ import {
 } from "../viewerState";
 import { specToFlow } from "./adapter";
 import { decorateForCompare, decorateForOnion } from "./diff-decorate";
+import "./timeline-probe";
 import { AnimatedEdge } from "./AnimatedEdge";
 import { AnimatedNode } from "./AnimatedNode";
 import { FoldNode } from "./FoldNode";

@@ -27,7 +27,8 @@ export type WebviewToHostMsg =
   | { type: "trace-clear" }
   | { type: "pulse-probe-dump"; json: string }
   | { type: "fold-halo-dump"; json: string }
-  | { type: "runner-errors-dump"; json: string };
+  | { type: "runner-errors-dump"; json: string }
+  | { type: "timeline-dump"; json: string };
 
 export type HostToWebviewMsg =
   | { type: "load"; text: string }
@@ -43,7 +44,7 @@ export type HostToWebviewMsg =
 
 export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new Set([
   "ready", "save", "view-save", "run", "run-cancel", "compare-head", "compare-file",
-  "trace-load", "trace-clear", "pulse-probe-dump", "fold-halo-dump", "runner-errors-dump",
+  "trace-load", "trace-clear", "pulse-probe-dump", "fold-halo-dump", "runner-errors-dump", "timeline-dump",
 ]);
 
 export const HOST_TO_WEBVIEW_TYPES: ReadonlySet<HostToWebviewMsg["type"]> = new Set([

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BaseEdge, type EdgeProps } from "reactflow";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind, type EdgeRoute } from "../../schema";
 import { subscribe, subscribeState, getConcurrentEdges, getTickMs, getWorld, isPlaying, getSimTime } from "../../sim/runner";
+import { noteAnimStart, noteAnimEnd } from "./timeline-probe";
 import { getPendingCount } from "../../sim/simulator";
 import { vscode } from "../save";
 import { markerEndUrl } from "./MarkerDefs";
@@ -407,6 +408,7 @@ function PulseInstance({
       doneRef.current();
       return;
     }
+    noteAnimStart(edgeId);
     const remainingMs = remainingArc / speedPxPerMs;
 
     let rafId = 0;
@@ -566,6 +568,7 @@ function PulseInstance({
       const elapsed = getSimTime() - swapStart;
       const localT = Math.min(1, elapsed / remainingMs);
       arcTraveledRef.current = startArc + localT * remainingArc;
+      noteAnimEnd(edgeId, localT >= 1, arcTraveledRef.current);
     };
   }, [geom, speedPxPerMs]);
 
