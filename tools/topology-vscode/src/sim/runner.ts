@@ -62,11 +62,20 @@ let playing = false;
 // fold-activity each reinvented.
 let simAccumMs = 0;
 let simSegmentStartWall = 0;
+// While a synchronous step is executing, simTime is pinned to the value
+// captured at the top of that step. All fire/emit/anim-start side-effects
+// of one event share this timestamp — DES "events execute at a single
+// scheduled now" semantics. Outside a step, getSimTime() falls back to
+// the wall-derived value so anim-end / heartbeat reads still advance.
+let stepSimTime: number | null = null;
 function nowWall(): number {
   return typeof performance !== "undefined" ? performance.now() : Date.now();
 }
-export function getSimTime(): number {
+function liveSimTime(): number {
   return playing ? simAccumMs + (nowWall() - simSegmentStartWall) : simAccumMs;
+}
+export function getSimTime(): number {
+  return stepSimTime ?? liveSimTime();
 }
 let replayEvents: TraceEvent[] | null = null;
 let replayIndex = 0;
@@ -224,9 +233,14 @@ export function stepOnce(): void {
     return;
   }
   const before = world.history.length;
-  world = step(spec, world);
-  const fresh = world.history.slice(before);
-  for (const rec of fresh) emitEvents(rec);
+  stepSimTime = liveSimTime();
+  try {
+    world = step(spec, world);
+    const fresh = world.history.slice(before);
+    for (const rec of fresh) emitEvents(rec);
+  } finally {
+    stepSimTime = null;
+  }
   notifyState();
 }
 
@@ -240,6 +254,17 @@ function replayStepOnce(): void {
     return;
   }
   const ev = replayEvents[replayIndex++];
+  stepSimTime = liveSimTime();
+  try {
+    replayDispatch(ev);
+  } finally {
+    stepSimTime = null;
+  }
+  notifyState();
+}
+
+function replayDispatch(ev: TraceEvent): void {
+  if (!spec || !world) return;
   if (ev.kind === "recv") {
     const node = spec.nodes.find((n) => n.id === ev.node);
     const handler = node ? getHandler(node.type, ev.port) : undefined;
@@ -271,7 +296,6 @@ function replayStepOnce(): void {
       });
     }
   }
-  notifyState();
 }
 
 export function getWorld(): World | null {
