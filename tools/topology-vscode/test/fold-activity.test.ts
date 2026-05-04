@@ -115,6 +115,21 @@ describe("createFoldActivityTracker", () => {
   });
 });
 
+describe("default setTimer binding", () => {
+  // Regression: assigning setTimeout/clearTimeout as object methods
+  // loses their global-this binding and throws "Illegal invocation"
+  // in browsers. Default `setTimer` must wrap them so noteFire() works
+  // when callers don't pass a custom timer (i.e. in production).
+  it("noteFire and decay run without 'Illegal invocation' on real timers", async () => {
+    const onChange = vi.fn();
+    const tracker = createFoldActivityTracker(20, onChange);
+    expect(() => tracker.noteFire()).not.toThrow();
+    await new Promise((r) => setTimeout(r, 60));
+    expect(onChange.mock.calls.map((c) => c[0])).toEqual([true, false]);
+    tracker.dispose();
+  });
+});
+
 describe("isFoldBoundaryEmit", () => {
   const members = new Set(["a", "b", "c"]);
   it("true when emit enters the fold (outside → member)", () => {

@@ -24,7 +24,13 @@ export function createFoldActivityTracker(
   setTimer: {
     set: (fn: () => void, ms: number) => unknown;
     clear: (h: unknown) => void;
-  } = { set: setTimeout, clear: clearTimeout },
+    // setTimeout/clearTimeout from the global object require `this`
+    // bound to the global; assigning them as object methods loses that
+    // binding and throws "Illegal invocation" in browsers. Wrap.
+  } = {
+    set: (fn, ms) => setTimeout(fn, ms),
+    clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+  },
 ): FoldActivityTracker {
   let active = false;
   let timer: unknown = null;
