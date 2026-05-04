@@ -33,6 +33,21 @@ const clear = (state: HandlerState, ports: string[]): HandlerState => {
 };
 const noEmit = (state: HandlerState): HandlerResult => ({ state, emissions: [] });
 
+// Plugin-side derivation: which input ports of a node currently hold a
+// buffered value, by reading the `__has_<port>` flag convention used by
+// the join handlers above. Core renderers consume this generically (e.g.
+// AnimatedNode draws a halo around buffered input handles) without
+// having to know the flag-naming convention themselves.
+const HAS_PREFIX = "__has_";
+export function bufferedPorts(state: HandlerState | undefined): string[] {
+  if (!state) return [];
+  const out: string[] = [];
+  for (const k of Object.keys(state)) {
+    if (k.startsWith(HAS_PREFIX) && state[k] === 1) out.push(k.slice(HAS_PREFIX.length));
+  }
+  return out;
+}
+
 // ChainInhibitor: `in` arrives → emit held value on inhibitOut, new
 // value on readNew, held on out, ack=1, then store new as held. Order
 // mirrors ChainInhibitorNode/ChainInhibitorNode.go (ToEdge sends, then
