@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { KIND_COLORS, type Port, type StateValue } from "../../schema";
+import { KIND_COLORS, type NodeSpec, type Port, type StateValue } from "../../schema";
 import { stepToNode, subscribe, getWorld, getTickMs } from "../../sim/runner";
+import { useSpec } from "../state";
 
 // Visible port dot. Sized large enough to be a real drag target, colored by
 // the port's edge kind so users can see which kinds connect to which.
@@ -40,6 +41,8 @@ export type AnimatedNodeData = {
   inputs: Port[];
   outputs: Port[];
   state?: Record<string, StateValue>;
+  spec?: NodeSpec;
+  notes?: string;
 };
 
 const FLASH_DURATION_MS = 300;
@@ -136,7 +139,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
       style={{
         position: "absolute",
         top: -10,
-        right: -10,
+        left: -10,
         width: 18,
         height: 18,
         padding: 0,
@@ -152,6 +155,91 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
     >
       ⏭
     </button>
+  ) : null;
+
+  // Inline spec/notes panel. Spec is AI-authored prose; notes is human
+  // (rendered editable in commit 4). outputRef segments resolve to the
+  // live outgoing edge's kind color so renaming an edge recolors prose
+  // automatically. Expansion is pure presentation — local useState, not
+  // persisted, so it never drifts spec semantics.
+  const [expanded, setExpanded] = useState(false);
+  const spec = useSpec();
+  const edgeColorById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of spec.edges) {
+      if (e.source === id) m.set(e.id, KIND_COLORS[e.kind] ?? "#888");
+    }
+    return m;
+  }, [spec.edges, id]);
+  const hasContent = (data.spec && data.spec.segments.length > 0) || !!data.notes;
+  const chevronBtn = (
+    <button
+      className="node-chevron-btn"
+      title={expanded ? "hide spec" : "show spec"}
+      onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+      style={{
+        position: "absolute",
+        top: -10,
+        right: -10,
+        width: 18,
+        height: 18,
+        padding: 0,
+        fontSize: 10,
+        lineHeight: "18px",
+        textAlign: "center",
+        borderRadius: 9,
+        border: `1px solid ${data.stroke}`,
+        background: hasContent ? data.stroke : "#fff",
+        color: hasContent ? "#fff" : data.stroke,
+        cursor: "pointer",
+        zIndex: 2,
+      }}
+    >
+      {expanded ? "▴" : "▾"}
+    </button>
+  );
+  const specPanel = expanded ? (
+    <div
+      className="node-spec-panel"
+      style={{
+        position: "absolute",
+        top: "100%",
+        left: 0,
+        marginTop: 4,
+        minWidth: data.width,
+        maxWidth: 320,
+        padding: "6px 8px",
+        background: "#fff",
+        border: `1px solid ${data.stroke}`,
+        borderRadius: 4,
+        fontFamily: "monospace",
+        fontSize: 10,
+        color: "#1a1a1a",
+        whiteSpace: "pre-wrap",
+        zIndex: 3,
+      }}
+    >
+      {data.spec && data.spec.segments.length > 0 ? (
+        <div>
+          {data.spec.segments.map((seg, i) =>
+            "text" in seg ? (
+              <span key={i}>{seg.text}</span>
+            ) : (
+              <span key={i} style={{ color: edgeColorById.get(seg.outputRef) ?? "#888", fontWeight: 600 }}>
+                {seg.outputRef}
+              </span>
+            ),
+          )}
+        </div>
+      ) : (
+        <div style={{ color: "#888", fontStyle: "italic" }}>(no spec)</div>
+      )}
+      {data.notes ? (
+        <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid #eee", fontFamily: "inherit", color: "#444" }}>
+          {data.notes}
+        </div>
+      ) : null}
+    </div>
   ) : null;
 
   return (
@@ -176,6 +264,8 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
       }}
     >
       {stepBtn}
+      {chevronBtn}
+      {specPanel}
       <div
         ref={glowRef}
         style={{
