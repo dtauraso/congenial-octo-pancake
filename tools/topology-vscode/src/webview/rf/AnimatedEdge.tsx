@@ -240,14 +240,12 @@ type Pulse = {
   value: string;
 };
 
-// Visual invariant probe. When enabled, each pulse measures the
-// actually-rendered label center against the dot center and logs a
-// one-line summary if the offset deviates from the configured value.
-// Catches the class of bug where geometry math is correct but
-// rendering quirks (text baseline, transform composition, …) move
-// the visible result. Toggle at runtime via devtools:
-//   window.__pulseProbe = true
-// or persist with `localStorage.setItem("pulseProbe", "1")`.
+// Visual invariant probe. On by default so drift is always being
+// measured — there is no "I forgot to enable it" failure mode.
+// Each pulse measures the actually-rendered label center against
+// the dot center and logs a one-line summary if the offset
+// deviates from the configured value. Disable at runtime with
+// `window.__pulseProbe = false` or `localStorage.setItem("pulseProbe","0")`.
 // Structured collector. Each pulse that exceeds a threshold pushes
 // one entry to `window.__pulseProbeLog`. Programmatic readers (AI
 // agents driving devtools, Playwright tests) can call
@@ -286,9 +284,11 @@ const PULSE_PROBE_DRIFT_PX = 1.5;
 const PULSE_PROBE_TANGENT_PX = 1.5;
 function pulseProbeEnabled(): boolean {
   if (typeof window === "undefined") return false;
-  if (window.__pulseProbe) return true;
-  try { return window.localStorage?.getItem("pulseProbe") === "1"; }
-  catch { return false; }
+  if (window.__pulseProbe === false) return false;
+  try {
+    if (window.localStorage?.getItem("pulseProbe") === "0") return false;
+  } catch { /* localStorage unavailable — fall through to default */ }
+  return true;
 }
 
 type ProbeWorst = {
