@@ -240,9 +240,38 @@ type Pulse = {
   value: string;
 };
 
+// Visual invariant probe. When enabled, each pulse measures the
+// actually-rendered label center against the dot center and logs a
+// one-line summary if the offset deviates from the configured value.
+// Catches the class of bug where geometry math is correct but
+// rendering quirks (text baseline, transform composition, …) move
+// the visible result. Toggle at runtime via devtools:
+//   window.__pulseProbe = true
+// or persist with `localStorage.setItem("pulseProbe", "1")`.
+declare global {
+  interface Window { __pulseProbe?: boolean }
+}
+const PULSE_PROBE_DRIFT_PX = 1.5;
+const PULSE_PROBE_TANGENT_PX = 1.5;
+function pulseProbeEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.__pulseProbe) return true;
+  try { return window.localStorage?.getItem("pulseProbe") === "1"; }
+  catch { return false; }
+}
+
+type ProbeWorst = {
+  drift: number;        // |measured offset| - PULSE_LABEL_NORMAL_PX
+  tangentSlip: number;  // measured offset projected onto local tangent
+  arcFrac: number;      // arcTraveled / svgArc at worst sample
+  measuredOffset: number;
+  measuredAngleDeg: number; // angle between measured offset and expected normal
+};
+
 function PulseInstance({
-  geom, stroke, value, speedPxPerMs, onDone,
+  edgeId, geom, stroke, value, speedPxPerMs, onDone,
 }: {
+  edgeId: string;
   geom: PathGeom;
   stroke: string;
   value: string;
@@ -275,6 +304,8 @@ function PulseInstance({
     const remainingMs = remainingArc / speedPxPerMs;
 
     let rafId = 0;
+    const probeOn = pulseProbeEnabled();
+    let probeWorst: ProbeWorst | null = null;
 
     const frame = () => {
       const elapsed = performance.now() - swapStart;
@@ -305,11 +336,52 @@ function PulseInstance({
         const ly = point.y + ny * PULSE_LABEL_NORMAL_PX;
         label.setAttribute("transform", `translate(${lx}, ${ly})`);
         label.style.opacity = String(opacity);
+
+        if (probeOn) {
+          // Local-coords bbox of the rendered text, plus the
+          // translate, gives the actual on-screen label center.
+          // Compare against the dot center (= `point`). With the
+          // current model, label center should sit exactly
+          // PULSE_LABEL_NORMAL_PX along (nx, ny) with no tangential
+          // component. Anything else is a rendering surprise.
+          let bb;
+          try { bb = label.getBBox(); }
+          catch { bb = null; }
+          if (bb) {
+            const cx = lx + bb.x + bb.width / 2;
+            const cy = ly + bb.y + bb.height / 2;
+            const dx = cx - point.x, dy = cy - point.y;
+            const measured = Math.hypot(dx, dy);
+            const drift = Math.abs(measured - PULSE_LABEL_NORMAL_PX);
+            const tangentSlip = Math.abs(dx * tangent.x + dy * tangent.y);
+            const cos = measured > 0 ? (dx * nx + dy * ny) / measured : 1;
+            const angleDeg = Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
+            if (!probeWorst || drift > probeWorst.drift || tangentSlip > probeWorst.tangentSlip) {
+              probeWorst = {
+                drift, tangentSlip,
+                arcFrac: arcTraveled / svgArc,
+                measuredOffset: measured,
+                measuredAngleDeg: angleDeg,
+              };
+            }
+          }
+        }
       }
 
       if (localT < 1) {
         rafId = requestAnimationFrame(frame);
       } else {
+        if (probeOn && probeWorst &&
+            (probeWorst.drift > PULSE_PROBE_DRIFT_PX ||
+             probeWorst.tangentSlip > PULSE_PROBE_TANGENT_PX)) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[pulse-probe] edge=${edgeId} worst-drift=${probeWorst.drift.toFixed(2)}px ` +
+            `tangent-slip=${probeWorst.tangentSlip.toFixed(2)}px ` +
+            `measured=${probeWorst.measuredOffset.toFixed(2)}px (expected ${PULSE_LABEL_NORMAL_PX}px) ` +
+            `angle-from-normal=${probeWorst.measuredAngleDeg.toFixed(1)}° at arc=${(probeWorst.arcFrac * 100).toFixed(0)}%`
+          );
+        }
         doneRef.current();
       }
     };
@@ -419,6 +491,7 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
       {pulses[0] && (
         <PulseInstance
           key={pulses[0].key}
+          edgeId={id}
           geom={geom}
           stroke={stroke}
           value={pulses[0].value}
