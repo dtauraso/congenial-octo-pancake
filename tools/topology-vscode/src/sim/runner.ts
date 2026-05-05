@@ -8,6 +8,7 @@ import type { Spec, StateValue, Edge } from "../schema";
 import {
   freeEdgeSlot,
   initWorld,
+  noteEdgeAnimEnded,
   replayTo,
   step,
   enqueueEmission,
@@ -195,18 +196,13 @@ export function noteEdgePulseEnded(edgeId: string): void {
   if (activeAnimations > 0) activeAnimations--;
   if (!spec || !world) return;
   if (!world.deferSlotFreeToView) return;
-  freeEdgeSlot(world, edgeId, spec, world.tick);
-  // Drop the edge from any node's bufferedEdges list — the value has
-  // visually arrived; the receiver may still be waiting for a join's
-  // other half, but the upstream channel is no longer carrying anything.
-  for (const nodeId of Object.keys(world.nodeBufferedEdges)) {
-    const arr = world.nodeBufferedEdges[nodeId];
-    const i = arr.indexOf(edgeId);
-    if (i >= 0) {
-      arr.splice(i, 1);
-      if (arr.length === 0) delete world.nodeBufferedEdges[nodeId];
-    }
-  }
+  // Slot release is gated on (animEnded AND consumed). This call marks
+  // animEnded; if the destination handler has already fired and cleared
+  // its buffer for this edge, the slot frees now. Otherwise the slot
+  // stays held until the handler fires — mirroring Go's cap-1 channel
+  // where the upstream send blocks until the receiver consumes the
+  // buffered value into a fire (e.g. ReadGate's chainIn waits for ack).
+  noteEdgeAnimEnded(world, edgeId, spec, world.tick);
   if (playing) {
     try { stepOnce(); }
     catch (err) { reportRunnerError("listener", err); }

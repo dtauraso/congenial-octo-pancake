@@ -101,6 +101,19 @@ export type World = {
   // headless tests self-contained (slots free on fire, no anim loop
   // needed).
   deferSlotFreeToView: boolean;
+  // Per-edge release gate under deferSlotFreeToView. An edge's slot is
+  // released only when BOTH conditions are true:
+  //   - animEnded: the visible pulse animation has finished (from
+  //     AnimatedEdge unmount → noteEdgeAnimEnded).
+  //   - consumed: the destination handler has fired with this edge's
+  //     value cleared from its buffer (from step's fire path →
+  //     noteEdgeConsumed). For pass-through handlers this happens at
+  //     handler-call time; for join handlers it happens later when the
+  //     matching partner port arrives.
+  // This mirrors Go's cap-1 channel + buffered-input-flag (HasValue)
+  // semantics: the upstream `ch <- v` send blocks until the receiver
+  // has actually consumed v into a fire, not merely received it.
+  edgeReleasePending: Record<string, { animEnded: boolean; consumed: boolean }>;
 };
 
 // Edges keyed by (sourceNode, sourcePort) for fast lookup at emit time.
@@ -146,6 +159,7 @@ export function initWorld(spec: Spec): World {
     nodeBufferedEdges: {},
     pendingSeeds: [],
     deferSlotFreeToView: false,
+    edgeReleasePending: {},
   };
   const idx = indexEdges(spec);
   // Explicit empty array means "seed nothing on purpose" — only fall
@@ -294,8 +308,52 @@ function scheduleEmission(
     } else {
       world.queue.push(ev);
       world.edgeOccupancy[e.id] = (world.edgeOccupancy[e.id] ?? 0) + 1;
+      if (world.deferSlotFreeToView) ensureReleaseEntry(world, e.id);
     }
   }
+}
+
+function ensureReleaseEntry(world: World, edgeId: string): void {
+  if (!world.edgeReleasePending[edgeId]) {
+    world.edgeReleasePending[edgeId] = { animEnded: false, consumed: false };
+  }
+}
+
+function tryReleaseEdge(world: World, edgeId: string, spec: Spec, nowTick: number): void {
+  const e = world.edgeReleasePending[edgeId];
+  if (!e) return;
+  if (!e.animEnded || !e.consumed) return;
+  delete world.edgeReleasePending[edgeId];
+  freeEdgeSlot(world, edgeId, spec, nowTick);
+}
+
+// Mark an edge's in-flight pulse as having finished its visible
+// animation. If the destination handler has also already consumed it,
+// frees the slot now; otherwise the slot stays held until consumption.
+export function noteEdgeAnimEnded(
+  world: World,
+  edgeId: string,
+  spec: Spec,
+  nowTick: number,
+): void {
+  ensureReleaseEntry(world, edgeId);
+  world.edgeReleasePending[edgeId].animEnded = true;
+  tryReleaseEdge(world, edgeId, spec, nowTick);
+}
+
+// Mark an edge's in-flight pulse as having been consumed by the
+// destination handler (handler fired and cleared this edge's port from
+// its buffer). If the visible animation has also already ended, frees
+// the slot now; otherwise the slot stays held until anim-end.
+export function noteEdgeConsumed(
+  world: World,
+  edgeId: string,
+  spec: Spec,
+  nowTick: number,
+): void {
+  ensureReleaseEntry(world, edgeId);
+  world.edgeReleasePending[edgeId].consumed = true;
+  tryReleaseEdge(world, edgeId, spec, nowTick);
 }
 
 // Decrement an edge's occupancy and, if pending events were waiting
@@ -320,6 +378,9 @@ export function freeEdgeSlot(
   released.id = world.nextId++;
   world.queue.push(released);
   world.edgeOccupancy[edgeId] = (world.edgeOccupancy[edgeId] ?? 0) + 1;
+  if (world.deferSlotFreeToView && !released.fromInit) {
+    ensureReleaseEntry(world, edgeId);
+  }
 }
 
 // Pop the next ready event, run its handler, schedule resulting
@@ -336,6 +397,7 @@ export function step(spec: Spec, world: World): World {
     edgeOccupancy: { ...world.edgeOccupancy },
     edgePending: { ...world.edgePending },
     nodeBufferedEdges: { ...world.nodeBufferedEdges },
+    edgeReleasePending: { ...world.edgeReleasePending },
     pendingSeeds: [...world.pendingSeeds],
   };
 
@@ -417,10 +479,20 @@ export function step(spec: Spec, world: World): World {
         for (const eid of buffered) freeEdgeSlot(next, eid, spec, next.tick);
         delete next.nodeBufferedEdges[head.toNodeId];
       }
+    } else {
+      // Defer mode: mark each edge whose value the handler just
+      // consumed (the arrival's edge plus every previously-buffered
+      // upstream edge — all join ports are cleared on fire). Each
+      // slot frees only once the matching anim-end has also fired.
+      if (head.edgeId !== null && !head.fromInit) {
+        noteEdgeConsumed(next, head.edgeId, spec, next.tick);
+      }
+      const buffered = next.nodeBufferedEdges[head.toNodeId];
+      if (buffered) {
+        for (const eid of buffered) noteEdgeConsumed(next, eid, spec, next.tick);
+        delete next.nodeBufferedEdges[head.toNodeId];
+      }
     }
-    // If deferring, slots stay occupied and nodeBufferedEdges retains
-    // its list so the runner's anim-end handler can free them once each
-    // pulse visually arrives.
   } else if (head.edgeId !== null && !head.fromInit) {
     const arr = next.nodeBufferedEdges[head.toNodeId] ?? [];
     arr.push(head.edgeId);
