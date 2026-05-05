@@ -9,8 +9,8 @@
 // inner DOM avoids a positioning round-trip and keeps the edited label
 // visually identical to the rendered one.
 
-import { mutateBoth, mutateSpec, getSpec, getViewerState } from "./state";
-import { scheduleSave } from "./save";
+import { mutateBoth, mutateSpec, patchViewerState, getSpec, getViewerState } from "./state";
+import { scheduleSave, scheduleViewSave } from "./save";
 import { applyRename } from "./rename-core";
 
 type RerenderFn = () => void;
@@ -102,21 +102,23 @@ export function beginRenameNodeId(oldId: string, labelEl: HTMLElement | null) {
 }
 
 export function beginEditSublabel(nodeId: string, el: HTMLElement | null) {
-  const node = getSpec().nodes.find((n) => n.id === nodeId);
-  if (!node) return;
-  const original = node.sublabel ?? "";
+  const original = getViewerState().nodes?.[nodeId]?.sublabel ?? "";
   beginInlineEdit(el, {
     initial: original,
     activeClass: "sublabel-active",
     onCommit: (next) => {
       if (next === original) return "";
-      mutateSpec((s) => {
-        const target = s.nodes.find((n) => n.id === nodeId);
-        if (!target) return;
-        if (next === "") delete target.sublabel;
-        else target.sublabel = next;
+      patchViewerState((v) => {
+        if (!v.nodes) v.nodes = {};
+        const existing = v.nodes[nodeId] ?? { x: 0, y: 0 };
+        if (next === "") {
+          const { sublabel: _sl, ...rest } = existing;
+          v.nodes[nodeId] = rest as typeof existing;
+        } else {
+          v.nodes[nodeId] = { ...existing, sublabel: next };
+        }
       });
-      scheduleSave();
+      scheduleViewSave();
       return null;
     },
   });

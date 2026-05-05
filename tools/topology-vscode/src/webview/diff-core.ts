@@ -4,9 +4,9 @@
 
 import type { Spec } from "../schema";
 
-// L¹ dead-band for "moved": |Δx| + |Δy| > POSITION_EPSILON in spec coords.
-// Suppresses formatter / hand-edit sub-pixel drift; intentional layout
-// adjustments (≥ 1px) still flag.
+// Position fields (x, y) moved to topology.view.json in audit #15.
+// "moved" detection would require comparing view state across snapshots;
+// for now the moved list is always empty (layout diffs are view-only).
 export const POSITION_EPSILON = 1;
 
 export type SpecDiff = {
@@ -21,12 +21,10 @@ export function diffSpecs(a: Spec, b: Spec): SpecDiff {
   const nodesRemoved: string[] = [];
   const nodesMoved: string[] = [];
   for (const id of aNodes.keys()) if (!bNodes.has(id)) nodesRemoved.push(id);
-  for (const [id, bn] of bNodes) {
+  for (const [id] of bNodes) {
     const an = aNodes.get(id);
-    if (!an) { nodesAdded.push(id); continue; }
-    if (Math.abs(an.x - bn.x) + Math.abs(an.y - bn.y) > POSITION_EPSILON) {
-      nodesMoved.push(id);
-    }
+    if (!an) { nodesAdded.push(id); }
+    // Position is view-only; no moved detection from spec alone.
   }
 
   const aEdges = new Map(a.edges.map((e) => [e.id, e]));

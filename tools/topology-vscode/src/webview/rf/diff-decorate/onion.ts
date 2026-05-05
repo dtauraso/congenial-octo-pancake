@@ -15,7 +15,7 @@ export function decorateForOnion(
   other: Spec,
   folds: Fold[],
 ): { nodes: RFNode[]; edges: RFEdge[] } {
-  const flow = specToFlow(live, folds);
+  const flow = specToFlow(live, folds, {});
   // Live nodes get a marker class so the spacebar swap (.ghost-front
   // on the wrapper) can bump ghosts above them via CSS without
   // touching live's zIndex.

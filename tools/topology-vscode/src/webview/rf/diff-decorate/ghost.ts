@@ -7,19 +7,24 @@ import { NODE_TYPES, type Node as SpecNode } from "../../../schema";
 export const GHOST_PREFIX = "__ghost__";
 export const CONNECTOR_PREFIX = "__moved_connector__";
 
-export function ghostNode(n: SpecNode, extraClass: string): RFNode {
+export function ghostNode(
+  n: SpecNode,
+  extraClass: string,
+  position: { x: number; y: number } = { x: 0, y: 0 },
+  sublabel?: string,
+): RFNode {
   const def = NODE_TYPES[n.type];
   return {
     id: `${GHOST_PREFIX}${n.id}`,
     type: "animated",
-    position: { x: n.x, y: n.y },
+    position,
     selectable: false,
     draggable: false,
     focusable: false,
     className: `ghost ${extraClass}`.trim(),
     data: {
       label: n.id,
-      sublabel: n.sublabel,
+      sublabel,
       type: n.type,
       fill: def?.fill ?? "#ffffff",
       stroke: def?.stroke ?? "#888",

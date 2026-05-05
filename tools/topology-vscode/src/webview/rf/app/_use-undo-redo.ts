@@ -16,7 +16,7 @@ export function useUndoRedo(ctx: AppCtx, hotkeysEnabled: boolean) {
   // render, so there's nothing to decorate without a ghost-rendering pass.
   const rebuildWithFlash = useCallback((flashSet: Set<string>) => {
     if (!lastSpec.current) return;
-    const flow = specToFlow(lastSpec.current, viewerState.folds);
+    const flow = specToFlow(lastSpec.current, viewerState.folds, viewerState);
     if (flashSet.size > 0) {
       const tag = (cn: string | undefined) => [cn, "diff-added"].filter(Boolean).join(" ");
       flow.nodes = flow.nodes.map((n) => flashSet.has(n.id) ? { ...n, className: tag(n.className) } : n);
@@ -27,7 +27,7 @@ export function useUndoRedo(ctx: AppCtx, hotkeysEnabled: boolean) {
         flashIdsRef.current = new Set();
         flashTimerRef.current = null;
         if (lastSpec.current) {
-          const f = specToFlow(lastSpec.current, viewerState.folds);
+          const f = specToFlow(lastSpec.current, viewerState.folds, viewerState);
           setNodes(f.nodes);
           setEdges(f.edges);
         }

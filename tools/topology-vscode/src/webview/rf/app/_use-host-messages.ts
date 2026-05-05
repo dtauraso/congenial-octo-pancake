@@ -30,7 +30,7 @@ export function useHostMessages(ctx: AppCtx, c: CompareSetters) {
       // consumers (on-connect, edge-handlers) see the new ids.
       const next = getSpec();
       ctx.lastSpec.current = next;
-      const flow = specToFlow(next, viewerState.folds);
+      const flow = specToFlow(next, viewerState.folds, viewerState);
       ctx.setNodes(flow.nodes);
       ctx.setEdges(flow.edges);
     };

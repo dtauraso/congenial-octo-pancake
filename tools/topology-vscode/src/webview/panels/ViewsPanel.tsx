@@ -160,10 +160,14 @@ function nodesInBox(v: ViewBox): string[] {
   const y0 = v.y;
   const x1 = v.x + v.w;
   const y1 = v.y + v.h;
+  const nvs = getViewerState().nodes ?? {};
   return getSpec().nodes
     .filter((n) => {
       const def = NODE_TYPES[n.type] ?? NODE_TYPES.Generic;
-      return n.x >= x0 && n.y >= y0 && n.x + def.width <= x1 && n.y + def.height <= y1;
+      const nv = nvs[n.id];
+      const nx = nv?.x ?? 0;
+      const ny = nv?.y ?? 0;
+      return nx >= x0 && ny >= y0 && nx + def.width <= x1 && ny + def.height <= y1;
     })
     .map((n) => n.id);
 }

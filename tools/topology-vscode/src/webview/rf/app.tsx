@@ -34,7 +34,7 @@ function Inner() {
 
   const rebuildFlow = useCallback(() => {
     if (!s.lastSpec.current) return;
-    const flow = specToFlow(s.lastSpec.current, viewerState.folds);
+    const flow = specToFlow(s.lastSpec.current, viewerState.folds, viewerState);
     setNodes(flow.nodes);
     setEdges(flow.edges);
   }, [s.lastSpec]);

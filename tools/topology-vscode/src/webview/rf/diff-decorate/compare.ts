@@ -16,7 +16,7 @@ export function decorateForCompare(
   other: Spec,
   folds: Fold[],
 ): { nodes: RFNode[]; edges: RFEdge[] } {
-  const flow = specToFlow(visible, folds);
+  const flow = specToFlow(visible, folds, {});
   // diff(other, visible): nodes.added = on visible only; nodes.removed
   // = on other only. Orient so "added" lines up with visible-side
   // highlights regardless of which side is shown.
