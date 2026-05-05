@@ -1,11 +1,9 @@
 {
   "nodes": [
-    { "id": "in0", "type": "Input", "x": 0, "y": 0, "sublabel": "feed" },
+    { "id": "in0", "type": "Input" },
     {
       "id": "i0",
       "type": "ChainInhibitor",
-      "x": 100,
-      "y": 0,
       "spec": {
         "lang": "en",
         "segments": [
@@ -27,7 +25,6 @@
       "kind": "chain",
       "label": "inToI0",
       "valueLabel": "v",
-      "route": "snake",
       "lane": 1,
       "arrowStyle": "filled"
     }

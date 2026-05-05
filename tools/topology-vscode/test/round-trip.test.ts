@@ -32,10 +32,10 @@ describe("spec ↔ React Flow round-trip", () => {
     expect(roundTrip(src)).toEqual(src);
   });
 
-  // Phase 6 Chunk A: motion-bearing state (dx/dy) lives on the spec
-  // because handlers cause it. Round-trip must preserve it or the
-  // bridge would silently drop the seed for partition slides etc.
-  it("preserves node.state (dx/dy seed) for motion-bearing nodes", () => {
+  // State (dx/dy) now lives in view.nodes[id].state, not in spec.
+  // The fixture no longer has state on nodes; the round-trip just checks
+  // the spec fields survive intact.
+  it("preserves state-motion fixture (state is view-only)", () => {
     const src = loadFixture("state-motion.json");
     expect(roundTrip(src)).toEqual(src);
   });
@@ -57,8 +57,6 @@ describe("spec ↔ React Flow round-trip", () => {
     expect(round.edges.map((e) => e.id)).toEqual(src.edges.map((e) => e.id));
     for (const [i, n] of src.nodes.entries()) {
       expect(round.nodes[i].type).toBe(n.type);
-      expect(round.nodes[i].x).toBe(n.x);
-      expect(round.nodes[i].y).toBe(n.y);
     }
     for (const [i, e] of src.edges.entries()) {
       expect(round.edges[i].source).toBe(e.source);
@@ -69,9 +67,8 @@ describe("spec ↔ React Flow round-trip", () => {
     }
   });
 
-  // Phase 9 chunks 1–3 wired route, lane, valueLabel, arrowStyle, and
-  // notes through the adapter. This previously-failing test is the
-  // round-trip contract for those fields.
+  // round-trip contract: lane, valueLabel, arrowStyle, notes survive.
+  // route is now view-only and not present in the spec fixture.
   it("preserves every field on the full-fields fixture", () => {
     const src = loadFixture("full-fields.json");
     expect(roundTrip(src)).toEqual(src);

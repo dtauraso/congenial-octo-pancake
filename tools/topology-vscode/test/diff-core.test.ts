@@ -65,32 +65,13 @@ describe("diffSpecs — node categories", () => {
     expect(d.nodes.moved).toEqual([]);
   });
 
-  it("reports moved nodes when L¹ delta exceeds POSITION_EPSILON", () => {
+  it("moved is always empty (positions live in view, not spec)", () => {
+    // Positions moved to topology.view.json in audit #15.
+    // spec-level diff has no position information, so moved is always [].
     const a = baseA();
-    const b = spec({
-      nodes: [
-        { id: "a", type: "Generic", x: 0, y: 0 },
-        { id: "b", type: "Generic", x: 110, y: 5 },
-      ],
-      edges: a.edges,
-    });
-    const d = diffSpecs(a, b);
-    expect(d.nodes.moved).toEqual(["b"]);
-  });
-
-  it("does not report sub-threshold drift as moved", () => {
-    const a = baseA();
-    const b = spec({
-      nodes: [
-        { id: "a", type: "Generic", x: 0.4, y: 0.3 },
-        { id: "b", type: "Generic", x: 100, y: 0 },
-      ],
-      edges: a.edges,
-    });
-    const d = diffSpecs(a, b);
-    // |0.4| + |0.3| = 0.7, below the 1.0 threshold.
-    expect(POSITION_EPSILON).toBe(1);
+    const d = diffSpecs(a, a);
     expect(d.nodes.moved).toEqual([]);
+    expect(POSITION_EPSILON).toBe(1); // constant preserved for reference
   });
 });
 

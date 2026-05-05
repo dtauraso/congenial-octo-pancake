@@ -3,21 +3,15 @@
     {
       "id": "in0",
       "type": "Input",
-      "x": 0,
-      "y": 0,
       "data": { "init": [0, 1, 0] }
     },
     {
       "id": "readGate",
-      "type": "ReadGate",
-      "x": 100,
-      "y": 0
+      "type": "ReadGate"
     },
     {
       "id": "i0",
-      "type": "ChainInhibitor",
-      "x": 200,
-      "y": 0
+      "type": "ChainInhibitor"
     }
   ],
   "edges": [

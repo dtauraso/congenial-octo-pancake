@@ -1,7 +1,7 @@
 {
   "nodes": [
-    { "id": "p", "type": "Partition", "x": 0, "y": 0, "state": { "dx": 0, "dy": 0 } },
-    { "id": "g", "type": "Generic", "x": 100, "y": 0 }
+    { "id": "p", "type": "Partition" },
+    { "id": "g", "type": "Generic" }
   ],
   "edges": [
     {

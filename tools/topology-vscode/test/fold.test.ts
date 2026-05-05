@@ -15,10 +15,10 @@ import type { ViewerState } from "../src/webview/viewerState";
 function makeSpec(): Spec {
   return {
     nodes: [
-      { id: "a", type: "Generic", x: 0, y: 0 },
-      { id: "b", type: "Generic", x: 100, y: 0 },
-      { id: "c", type: "Generic", x: 200, y: 0 },
-      { id: "d", type: "Generic", x: 300, y: 0 },
+      { id: "a", type: "Generic" },
+      { id: "b", type: "Generic" },
+      { id: "c", type: "Generic" },
+      { id: "d", type: "Generic" },
     ],
     edges: [
       { id: "e_ab", source: "a", sourceHandle: "", target: "b", targetHandle: "", kind: "any" },
@@ -28,13 +28,21 @@ function makeSpec(): Spec {
   };
 }
 
+// Node positions live in view, not spec.
+const BASE_NODE_VIEWS = {
+  a: { x: 0, y: 0 },
+  b: { x: 100, y: 0 },
+  c: { x: 200, y: 0 },
+  d: { x: 300, y: 0 },
+};
+
 describe("fold-aware specToFlow", () => {
   it("collapsed fold hides members, drops internal edges, reroutes crossing edges", () => {
     const spec = makeSpec();
-    const vs: ViewerState = {};
+    const vs: ViewerState = { nodes: { ...BASE_NODE_VIEWS } };
     const id = createFold(vs, ["b", "c"], [150, 0]);
     expect(id).toBeDefined();
-    const flow = specToFlow(spec, vs.folds);
+    const flow = specToFlow(spec, vs.folds, vs);
 
     const ids = flow.nodes.map((n) => n.id).sort();
     // Members b/c hidden; placeholder fold0 present; a/d still rendered.
@@ -61,11 +69,11 @@ describe("fold-aware specToFlow", () => {
 
   it("expanded fold emits a frame and keeps members + edges intact", () => {
     const spec = makeSpec();
-    const vs: ViewerState = {};
+    const vs: ViewerState = { nodes: { ...BASE_NODE_VIEWS } };
     createFold(vs, ["b", "c"], [150, 0]);
     toggleFold(vs, "fold0"); // collapse → expand
 
-    const flow = specToFlow(spec, vs.folds);
+    const flow = specToFlow(spec, vs.folds, vs);
     const memberIds = flow.nodes.filter((n) => n.type === "animated").map((n) => n.id).sort();
     expect(memberIds).toEqual(["a", "b", "c", "d"]);
 
@@ -88,19 +96,19 @@ describe("fold-aware specToFlow", () => {
   it("specToFlow does not mutate the spec when folds are applied", () => {
     const spec = makeSpec();
     const before = JSON.stringify(spec);
-    const vs: ViewerState = {};
+    const vs: ViewerState = { nodes: { ...BASE_NODE_VIEWS } };
     createFold(vs, ["b", "c"], [150, 0]);
-    specToFlow(spec, vs.folds);
+    specToFlow(spec, vs.folds, vs);
     expect(JSON.stringify(spec)).toBe(before);
   });
 
   it("flowToSpec ignores fold nodes on the round-trip", () => {
     const spec = makeSpec();
-    const vs: ViewerState = {};
+    const vs: ViewerState = { nodes: { ...BASE_NODE_VIEWS } };
     createFold(vs, ["b", "c"], [150, 0]);
     toggleFold(vs, "fold0"); // expanded so member nodes are still in the flow
 
-    const flow = specToFlow(spec, vs.folds);
+    const flow = specToFlow(spec, vs.folds, vs);
     const round = flowToSpec(flow.nodes, flow.edges);
     expect(round.nodes.map((n) => n.id).sort()).toEqual(["a", "b", "c", "d"]);
     expect(round.nodes.some((n) => n.id === "fold0")).toBe(false);
