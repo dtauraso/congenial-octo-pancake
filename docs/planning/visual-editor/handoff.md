@@ -10,7 +10,7 @@ read this file first (no chat history needed) and proceed.
 Continuing on wirefold, branch task/dom-substrate-happy-dom.
 
 State at handoff:
-  Local + origin/task/dom-substrate-happy-dom in sync at {{short-sha after this commit}}.
+  Local + origin/task/dom-substrate-happy-dom in sync at ac46f83 (refresh after each commit).
   npm test → 199/199 pass (59 files, contracts/ at 21/21).
   npm run check:loc → not re-run this turn.
   Working tree: topology.view.json modified (pre-existing, not from this turn).
