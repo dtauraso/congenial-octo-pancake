@@ -10,24 +10,44 @@ read this file first (no chat history needed) and proceed.
 Continuing on wirefold, branch main (no active task branch).
 
 State at handoff:
-  Local main at d344f7f (post-merge of task/sim-readgate-decline). Push pending.
-  npm test → 199/199 pass (59 files) — last run on the task branch tip pre-merge.
+  Local main post-merge of task/input-node-stdout + task/run-flush-pending-edits.
+  Push pending.
+  npm test → 199/199 pass (59 files) — last run on run-flush-pending-edits tip pre-merge.
   npm run check:loc → clean (no source files ≥ 200 LOC).
-  Working tree: topology.view.json modified (pre-existing, still carried — not from any task work).
+  go build / go test ./... → clean (post InputNode print add).
+  Working tree: topology.json + topology.view.json + Wiring.go modified
+  (in-flight editor state from this session's dogfooding, pre-existing).
 
-Per-session decision summary: user observed in0 firing on a steady
-tick cadence in the editor instead of waiting for the readGate→i1→ack
-cycle to complete. Root cause: the sim's makeJoin always consumed
-chainIn into its join state on arrival, freeing the inputToReadGate
-slot before readGate had actually fired downstream — so in0's next
-pendingSeed released without backpressure. Fix landed on
-task/sim-readgate-decline: HandlerResult gains optional
-`decline?: boolean`; makeJoin gains optional `gatedPort` (used by
-readGateJoin with gatedPort: "chainIn"); step.ts re-queues a declined
-event one tick later, leaving state, slot occupancy, and history
-untouched so the source stays backpressured. Verified by headless
-trace and by user reload of the rebuilt webview. Merged to main with
-sign-off.
+Per-session decision summary:
+1. task/sim-readgate-decline (merged earlier, d344f7f): in0 was firing
+   on a steady tick cadence because makeJoin consumed chainIn into the
+   join state immediately, freeing the inputToReadGate slot before
+   readGate had actually fired. Fix: HandlerResult gains optional
+   `decline?: boolean`; makeJoin gains optional `gatedPort` (readGate
+   uses gatedPort: "chainIn"); step.ts re-queues declined events at
+   tick+1 without touching state/slot/history.
+2. task/input-node-stdout: Input nodes had no fmt.Printf so an
+   editor-side rename of an Input node never showed up in `go run`
+   stdout. Added `fmt.Printf("%s: sent %d\n", n.Name, n.value)` in
+   InputNode.Update on each successful send.
+3. task/run-flush-pending-edits: editor → Go output pipeline was racy.
+   (a) The Run button could fire while a contenteditable rename was
+   still focused, or before the 250ms save debounce had fired —
+   topology.json on disk lagged behind the editor view. Fix: RunButton
+   blurs any active inline edit (commits via the existing blur
+   listener), bundles the latest spec text into the run message, and
+   the host applies+saves that text before topogen.write().
+   (b) Post-rename, dblclicking the same node re-opened the edit field
+   with the OLD name and "undid" the rename. Root cause: mutateBoth
+   replaces store.spec via immer but ctx.lastSpec.current was only
+   updated on load/connect/undo. inline-edit's rerenderFromSpec used
+   the stale lastSpec, so RF kept OLD node ids; the displayed label
+   only looked correct because the contenteditable's typed-in text
+   persisted through React's no-op reconciliation. Fix:
+   rerenderFromSpec now sources getSpec() from the live store and
+   writes it back into lastSpec.current.
+
+All three branches merged to main with sign-off and deleted.
 
 Contract registry status (docs/planning/visual-editor/contracts.md):
   C1 ✅ ready-once + ready-once-hook (Tier 1+2)
@@ -37,7 +57,7 @@ Contract registry status (docs/planning/visual-editor/contracts.md):
   C5 ✅ stuck-pending-precondition
 
 Open branches (pushed, unmerged):
-  (none — task/sim-readgate-decline merged and deleted)
+  (none — task/input-node-stdout + task/run-flush-pending-edits merged and deleted)
 
 Next options (each justified against "what did the rest of the world converge on"):
 1. Drive the editor and log fresh friction to docs/planning/visual-editor/session-log.md (post-v0 default — the world converged on dogfooding-driven iteration once a v0 ships).
