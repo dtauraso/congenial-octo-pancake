@@ -10,15 +10,24 @@ read this file first (no chat history needed) and proceed.
 Continuing on wirefold, branch main (no active task branch).
 
 State at handoff:
-  Local + origin/main in sync at 075971a (post-merge of task/dom-substrate-happy-dom).
-  npm test → 199/199 pass (59 files, contracts/ at 21/21) — last run on the merged branch tip pre-merge.
+  Local main at d344f7f (post-merge of task/sim-readgate-decline). Push pending.
+  npm test → 199/199 pass (59 files) — last run on the task branch tip pre-merge.
   npm run check:loc → clean (no source files ≥ 200 LOC).
-  Working tree: topology.view.json modified (pre-existing, carried across the merge — not from any task work).
+  Working tree: topology.view.json modified (pre-existing, still carried — not from any task work).
 
-Per-session decision summary: task/dom-substrate-happy-dom was merged
-to main with sign-off, then deleted local + remote. All five contract
-rows are ✅ on main. Post-v0 friction-driven mode is now in effect —
-no contract debt remains to chase.
+Per-session decision summary: user observed in0 firing on a steady
+tick cadence in the editor instead of waiting for the readGate→i1→ack
+cycle to complete. Root cause: the sim's makeJoin always consumed
+chainIn into its join state on arrival, freeing the inputToReadGate
+slot before readGate had actually fired downstream — so in0's next
+pendingSeed released without backpressure. Fix landed on
+task/sim-readgate-decline: HandlerResult gains optional
+`decline?: boolean`; makeJoin gains optional `gatedPort` (used by
+readGateJoin with gatedPort: "chainIn"); step.ts re-queues a declined
+event one tick later, leaving state, slot occupancy, and history
+untouched so the source stays backpressured. Verified by headless
+trace and by user reload of the rebuilt webview. Merged to main with
+sign-off.
 
 Contract registry status (docs/planning/visual-editor/contracts.md):
   C1 ✅ ready-once + ready-once-hook (Tier 1+2)
@@ -28,7 +37,7 @@ Contract registry status (docs/planning/visual-editor/contracts.md):
   C5 ✅ stuck-pending-precondition
 
 Open branches (pushed, unmerged):
-  (none — task/dom-substrate-happy-dom merged and deleted)
+  (none — task/sim-readgate-decline merged and deleted)
 
 Next options (each justified against "what did the rest of the world converge on"):
 1. Drive the editor and log fresh friction to docs/planning/visual-editor/session-log.md (post-v0 default — the world converged on dogfooding-driven iteration once a v0 ships).
