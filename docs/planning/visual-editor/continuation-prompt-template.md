@@ -1,13 +1,13 @@
 # Continuation prompt template
 
-At the end of a session, render the block below in the chat with
-`{{...}}` placeholders filled in for current state. It does not need
-to be copyable — display it as plain prose, not inside a fenced code
-block. The next session reads it directly from chat history.
+The current handoff lives at
+[handoff.md](handoff.md) in this directory. Any AI starting a fresh
+session reads that file — not chat history — to pick up state. This
+template is the *schema* for handoff.md: when an invariant changes,
+edit the template; the next session re-renders handoff.md from it.
 
 Stable invariants (branch hygiene, cwd note, friction-logging rule)
-live here so they don't have to be rediscovered each session. Edit
-this template when an invariant changes; edit the placeholders each
+live in the template so they don't have to be rediscovered each
 session.
 
 ---
@@ -45,4 +45,4 @@ Branch hygiene: no merge to main without explicit sign-off. Delete merged branch
 Cwd for tsc/tests/check:loc/build: tools/topology-vscode/ (Bash resets cwd — chain cd or use absolute paths).
 If user surfaces unrelated friction, log to docs/planning/visual-editor/session-log.md and open a fresh task/<short-kebab>.
 
-ALWAYS — at end of session, render a continuation prompt as plain prose (no fenced code block, not copyable) tailored to the state you're leaving the branch in. The output prompt must itself contain this same ALWAYS clause so the loop is self-perpetuating across sessions. Use docs/planning/visual-editor/continuation-prompt-template.md as the structural source of truth; update the template when an invariant changes.
+ALWAYS — at end of session, overwrite docs/planning/visual-editor/handoff.md with a freshly-rendered prompt tailored to the state you're leaving the branch in, and commit it on the task branch. Do not rely on chat history; the next AI may be a fresh model with no transcript. The rendered handoff must itself contain this same ALWAYS clause so the loop is self-perpetuating across sessions. Use this template (continuation-prompt-template.md) as the structural source of truth; update the template when an invariant changes.
