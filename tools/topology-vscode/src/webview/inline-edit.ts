@@ -19,6 +19,15 @@ let active: HTMLElement | null = null;
 let rerender: RerenderFn = () => {};
 export function setInlineEditRerender(fn: RerenderFn) { rerender = fn; }
 
+// Synchronously commit any in-progress inline edit. Run / save-flush
+// callsites use this so a half-typed rename doesn't get left out of the
+// posted spec. Returns true if an edit was active and committed.
+export function flushActiveInlineEdit(): boolean {
+  if (!active) return false;
+  active.blur();
+  return true;
+}
+
 interface Options {
   initial: string;             // text shown in the editor; written back on cancel
   activeClass: string;         // CSS class added during edit (visual cue)

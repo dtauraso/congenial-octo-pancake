@@ -59,8 +59,18 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
       catch (err) { post({ type: "save-error", message: errMsg(err) }); }
       return;
     case "run":
-      try { await topogen.write(); }
-      catch { return; }
+      try {
+        // If the webview bundled the latest spec text, persist it before
+        // codegen so an in-flight inline edit (or a still-debounced save)
+        // can't leave topology.json one rename behind the editor view.
+        if (msg.text !== undefined) {
+          ctx.setLastAppliedVersion(document.version + 1);
+          await applyEdit(document, msg.text);
+          await document.save();
+          ctx.setLastAppliedVersion(document.version);
+        }
+        await topogen.write();
+      } catch { return; }
       runner.run();
       return;
     case "run-cancel":
