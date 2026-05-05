@@ -50,13 +50,25 @@ export function bufferedPorts(state: HandlerState | undefined): string[] {
   return out;
 }
 
+// `gatedPort`: that input is refused (decline) when the other input
+// isn't already buffered. Models a join whose value side must wait for
+// the ack/control side before consuming from its edge — keeps the
+// upstream slot occupied so the source backpressures naturally.
 export function makeJoin(
   inputs: [string, string],
   outPort: string,
   combine: (a: StateValue, b: StateValue) => StateValue,
+  opts?: { gatedPort?: string },
 ): HandlerFn {
   const [pa, pb] = inputs;
+  const gated = opts?.gatedPort;
   return (state, input) => {
+    if (gated && input.port === gated) {
+      const other = input.port === pa ? pb : pa;
+      if (!has(state, other)) {
+        return { state, emissions: [], decline: true };
+      }
+    }
     const next = buffer(state, input.port, input.value);
     if (has(next, pa) && has(next, pb)) {
       return {

@@ -2,9 +2,15 @@ import { describe, expect, it } from "vitest";
 import { run } from "./_helpers";
 
 describe("ReadGate / SyncGate", () => {
-  it("ReadGate forwards the value once ack arrives", () => {
-    const after = run("ReadGate", "chainIn", 11).state;
-    const r = run("ReadGate", "ack", 1, after);
+  it("ReadGate declines chainIn until ack is staged, then forwards", () => {
+    // chainIn before ack: declined (state unchanged, source stays
+    // backpressured by occupied slot upstream).
+    const declined = run("ReadGate", "chainIn", 11);
+    expect(declined.decline).toBe(true);
+    expect(declined.state).toEqual({});
+    // Stage ack first, then chainIn: now both halves present → fire.
+    const after = run("ReadGate", "ack", 1).state;
+    const r = run("ReadGate", "chainIn", 11, after);
     expect(r.emissions).toEqual([{ port: "out", value: 11 }]);
   });
 
