@@ -19,29 +19,22 @@ import { classifyConcurrentEdges } from "./concurrency";
 import { getHandler } from "./handlers";
 import { NODE_TYPES } from "../schema";
 import type { TraceEvent } from "./trace";
+import {
+  notify,
+  notifyState,
+  type FireEvent,
+} from "./event-bus";
+import { reportRunnerError } from "./error-probe";
 
-export type FireEvent = {
-  type: "fire";
-  nodeId: string;
-  inputPort: string;
-  inputValue: StateValue;
-  // Tick + ord come from the FireRecord so listeners can correlate
-  // with simulator history if needed.
-  tick: number;
-  ord: number;
-};
-
-export type EmitEvent = {
-  type: "emit";
-  edgeId: string;
-  fromNodeId: string;
-  toNodeId: string;
-  value: StateValue;
-  tick: number;
-};
-
-export type RunnerEvent = FireEvent | EmitEvent;
-export type RunnerListener = (e: RunnerEvent) => void;
+export {
+  subscribe,
+  subscribeState,
+  type FireEvent,
+  type EmitEvent,
+  type RunnerEvent,
+  type RunnerListener,
+} from "./event-bus";
+export { reportRunnerError } from "./error-probe";
 
 // User-tunable tick interval. The user-facing speed slider in
 // timeline.ts writes here; faster topologies still run at the spec's
@@ -81,8 +74,6 @@ export function getSimTime(): number {
 }
 let replayEvents: TraceEvent[] | null = null;
 let replayIndex = 0;
-const listeners: RunnerListener[] = [];
-const stateListeners: Array<() => void> = [];
 
 export function getTickMs(): number {
   return tickMs;
@@ -379,25 +370,6 @@ export function getWorld(): World | null {
   return world;
 }
 
-export function subscribe(fn: RunnerListener): () => void {
-  listeners.push(fn);
-  return () => {
-    const i = listeners.indexOf(fn);
-    if (i >= 0) listeners.splice(i, 1);
-  };
-}
-
-// Separate channel for "anything about runner state changed" — cheap
-// signal for UI affordances (play/pause button, tick label) that don't
-// care about per-event payloads.
-export function subscribeState(fn: () => void): () => void {
-  stateListeners.push(fn);
-  return () => {
-    const i = stateListeners.indexOf(fn);
-    if (i >= 0) stateListeners.splice(i, 1);
-  };
-}
-
 function tick(): void {
   if (!spec || !world) return;
   if (replayEvents) {
@@ -562,91 +534,3 @@ function findEdge(s: Spec, id: string): Edge | undefined {
   return undefined;
 }
 
-function notify(e: RunnerEvent): void {
-  const snapshot = listeners.slice();
-  for (let i = 0; i < snapshot.length; i++) {
-    try {
-      snapshot[i](e);
-    } catch (err) {
-      reportRunnerError("listener", err, { event: e });
-    }
-  }
-}
-
-function notifyState(): void {
-  const snapshot = stateListeners.slice();
-  for (let i = 0; i < snapshot.length; i++) {
-    try {
-      snapshot[i]();
-    } catch (err) {
-      reportRunnerError("stateListener", err);
-    }
-  }
-}
-
-// Runtime-error probe. Caught exceptions get pushed here AND to the
-// console; the probe writes them to .probe/runner-errors-last.json so
-// AI agents and CLI readers can diagnose without devtools. Mirrors the
-// fold-halo and pulse-probe lifecycle (eager init, debounce dump).
-type RunnerErrorEntry = {
-  ts: number;
-  source: "listener" | "stateListener" | "stepOnce";
-  message: string;
-  stack?: string;
-  context?: unknown;
-};
-declare global {
-  interface Window {
-    __runnerErrorsLog?: RunnerErrorEntry[];
-    __runnerErrorsDump?: () => number;
-  }
-}
-let runnerErrorsDumpTimer: ReturnType<typeof setTimeout> | null = null;
-function getVsCodeApi(): { postMessage(m: unknown): void } | null {
-  if (typeof window === "undefined") return null;
-  const w = window as unknown as { __vscodeApi?: { postMessage(m: unknown): void } };
-  return w.__vscodeApi ?? null;
-}
-function scheduleRunnerErrorsDump(): void {
-  if (typeof window === "undefined") return;
-  if (runnerErrorsDumpTimer !== null) clearTimeout(runnerErrorsDumpTimer);
-  runnerErrorsDumpTimer = setTimeout(() => {
-    runnerErrorsDumpTimer = null;
-    window.__runnerErrorsDump?.();
-  }, 250);
-}
-if (typeof window !== "undefined") {
-  if (!window.__runnerErrorsLog) window.__runnerErrorsLog = [];
-  window.__runnerErrorsDump = () => {
-    const log = window.__runnerErrorsLog ?? [];
-    const snapshot = log.slice();
-    window.__runnerErrorsLog = [];
-    const api = getVsCodeApi();
-    if (api) {
-      api.postMessage({
-        type: "runner-errors-dump",
-        json: JSON.stringify({ ts: Date.now(), entries: snapshot }, null, 2),
-      });
-    }
-    return snapshot.length;
-  };
-}
-export function reportRunnerError(
-  source: RunnerErrorEntry["source"],
-  err: unknown,
-  context?: unknown,
-): void {
-  const e = err as { message?: unknown; stack?: unknown };
-  const entry: RunnerErrorEntry = {
-    ts: Date.now(),
-    source,
-    message: typeof e?.message === "string" ? e.message : String(err),
-    stack: typeof e?.stack === "string" ? e.stack : undefined,
-    context,
-  };
-  console.error(`runner ${source} threw:`, err);
-  if (typeof window !== "undefined") {
-    (window.__runnerErrorsLog ??= []).push(entry);
-    scheduleRunnerErrorsDump();
-  }
-}
