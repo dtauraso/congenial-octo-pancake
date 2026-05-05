@@ -1,6 +1,8 @@
 package InputNode
 
 import (
+	"fmt"
+
 	S "github.com/dtauraso/wirefold/SafeWorker"
 )
 
@@ -39,6 +41,7 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 			case n.ToNext <- n.value:
 				n.sentValue = true
 				n.hasValue = false
+				fmt.Printf("%s: sent %d\n", n.Name, n.value)
 				s.Trace.Fire(n.Name)
 				s.Trace.Send(n.Name, "out", n.value)
 			default:
