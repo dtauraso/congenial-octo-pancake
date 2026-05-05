@@ -10,41 +10,46 @@ read this file first (no chat history needed) and proceed.
 Continuing on wirefold, branch main (no active task branch).
 
 State at handoff:
-  Local main post-merge of task/audit-11-doc-drift.
+  Local main post-merge of task/audit-15-spec-view-split.
   Pushed.
-  npm test → 199/199 pass (last run pre-CI infra; not re-run after doc-only changes).
-  npm run check:loc → clean.
+  npm test → 197/197 pass. tsc --noEmit clean. npm run check:loc clean.
   go build / go test ./... → clean.
-  Working tree: topology.json + topology.view.json + Wiring.go modified
-  (in-flight editor state from earlier dogfooding — pre-existing, untouched).
+  Working tree: nodes/Wiring/Wiring.go modified
+  (in-flight Go-side state from earlier work — pre-existing, untouched).
+  topology.json + topology.view.json now reflect post-migration shape (committed).
 
 Per-session decision summary:
-1. task/audit-11-doc-drift (merged), two commits:
-   (a) 71abfb0 — fix broken path refs in live docs. Updated README,
-       docs/editor-audit-2026-05-04.md, audits.md, contracts.md,
-       industry-pattern-audit.md, risk-and-effort.md, session-log.md,
-       svg-style-guide.md, memory/*.md, tools/topology-vscode/ARCHITECTURE.md.
-       Path moves: `Wiring/` → `nodes/Wiring/`, lit-html `render/` →
-       React layout, `src/` → `tools/topology-vscode/src/`. Removed
-       refs to deleted files (views.ts, timeline.ts, run.ts, bridge.ts,
-       rename.ts, sublabel.ts, riding-keyframes.ts, camera.ts,
-       render/index.ts, render/animation.ts).
-   (b) 3de2170 — historical banners on phase-3, 4, 4.5, 5, 7, 8, 9.
-       Per audit #19 (reading-trip economy), chasing every ref in
-       closed phase docs is not cost-justified. Each phase doc now has
-       a `> **Status:** historical — paths may be stale post-reorg.`
-       banner pointing readers to handoff.md for current state.
-   Audit count: 134 → 57 findings. The remaining 57 are all in the
-   historical phase docs and are documented as accepted.
+1. task/audit-15-spec-view-split (merged), five commits:
+   (a) cadb2ff — schema+types: dropped x, y, role, sublabel, value,
+       state from Node type; dropped route from Edge type. Added
+       NodeView { x, y, sublabel?, state? } and EdgeView { route? }
+       to ViewerState. Split viewerState.ts at 208 LOC into types +
+       viewerState.parse.ts to stay under the 200-LOC budget.
+   (b) f67c621 — adapters+readers+writers: spec-to-flow now takes a
+       ViewerState arg and reads position/sublabel/state from
+       vs.nodes[id] and route from vs.edges[id]; flow-to-spec stops
+       writing those fields. Writers (_on-node-drag, inline-edit)
+       patch viewerState instead of spec. Readers (NodeBody,
+       AnimatedEdge, _bounds, geom, ViewsPanel, _on-node-context,
+       ghost) all read from view. diff-core dropped position-based
+       moved detection.
+   (c) 865706f — migration shim (_handle-load.ts +
+       _migrate-legacy-fields.ts): on load, if raw topology.json has
+       legacy fields, seeds viewerState.nodes/edges before parseSpec
+       drops them. View wins on conflict. Schedules a view save
+       immediately so the migration persists.
+   (d) 9058073 — tests + fixtures updated for the split.
+   (e) 024efc9 — committed the migrated working-tree topology.json +
+       topology.view.json (positions, sublabels, states, routes moved
+       to view; role + value deleted entirely). Updated
+       audit-spec-view-hygiene.mjs viewAllowed set to include
+       `nodes` and `edges` keys on the view file.
+   Schema decisions confirmed: state moved to view (revisit if
+   topogen ever consumes it); role and value deleted as dead.
+   Audit count: 24 → 0.
 
 Initial audit findings (NOT addressed — surfaced for follow-up):
-- #15 spec/view hygiene: topology.json contains presentation fields
-  on every node (x, y, role, sublabel; some have value/state) and
-  one edge has a `route` field. None are consumed by topogen. This
-  is the registry-flagged "single most damaging architectural rot."
-  Decision needed before fixing: do these fields move to
-  topology.view.json (clean split), or is there a third "spec
-  metadata" surface?
+- #15 spec/view hygiene: CLEARED.
 - #11 doc drift: cleared for live docs. 57 remaining findings live
   in phase-*.md historical docs with status banners — not blocking.
 - #14 channel naming: clean after _test.go exclusion.
@@ -60,14 +65,14 @@ Open branches (pushed, unmerged):
   (none)
 
 Next options:
-1. Address audit #15 spec/view rot (highest registry priority,
-   needs schema design — Opus task; user sign-off on schema before
-   implementation).
-2. Drive the editor and log fresh friction to session-log.md
-   (post-v0 default).
-3. Open one of the dormant recommended branches:
+1. Drive the editor and log fresh friction to session-log.md
+   (post-v0 default). Highest-value mode now that the registry-flagged
+   architectural rot is gone.
+2. Open one of the dormant recommended branches:
    visualize-gate-buffer-state, backpressure-slack-envelope,
    stepping-semantics-doc.
+3. Address the Go-side dirty edit on nodes/Wiring/Wiring.go (figure
+   out what it was for and either commit or revert).
 
 Branch hygiene: no merge to main without explicit sign-off. Delete merged branches without re-asking. Force-push needs sign-off.
 Cwd for tsc/tests/check:loc/build: tools/topology-vscode/ (Bash resets cwd — chain cd or use absolute paths).
