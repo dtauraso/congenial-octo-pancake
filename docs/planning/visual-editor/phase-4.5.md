@@ -1,5 +1,7 @@
 # Phase 4.5 — plugin hardening (audit-driven)
 
+> **Status:** historical — paths may be stale post-reorg. See [handoff.md](handoff.md) for current state.
+
 **Status: ✅ 4.5.1–4.5.5 done at \$13.47 actual (against ~\$210 original / ~\$15 post-recalibration estimate). 4.5.6 lows & nits remain opportunistic.**
 
 Per-band actuals:

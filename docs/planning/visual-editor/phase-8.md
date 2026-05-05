@@ -1,5 +1,7 @@
 # Phase 8 — polish
 
+> **Status:** historical — paths may be stale post-reorg. See [handoff.md](handoff.md) for current state.
+
 **Cap:** ~⅞ scoped + ½ Tier 4 = ~1.375. **$ extra-usage est:** ~$80 (range $40–$140, 1× mixed). Open-ended; ~⅜ saved by React Flow + the AnimatedNode pattern; +~⅜ tests.
 
 - **[~⅛]** Spec undo / redo. (Cheaper than the original ~¼: the "mutate spec → rebuild via `specToFlow` → `setNodes`/`setEdges`" pipeline is already proven by id rename's `rerender` callback; an undo stack of spec snapshots plugs into the same callback.) **Substrate:** use [`zundo`](https://github.com/charkour/zundo), the dominant Zustand undo middleware (~2KB, snapshot-based with built-in grouping/diffing). Wraps the spec store in one line; avoids hand-rolling and maintaining a stack.
