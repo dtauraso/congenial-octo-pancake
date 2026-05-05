@@ -98,6 +98,7 @@
       "target": "readGate1",
       "targetHandle": "chainIn",
       "kind": "chain",
+      "data": { "slots": 1 },
       "label": "inputToReadGate"
     },
     {
