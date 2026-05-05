@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 const TRIGGER = 200;
 const TARGET = 100;
 
-const SOURCE_EXTS = new Set([".ts", ".tsx", ".go", ".js", ".mjs", ".cjs"]);
+const SOURCE_EXTS = new Set([".ts", ".tsx"]);
 const EXCLUDE_PATH_FRAGMENTS = [
   "node_modules/",
   "/dist/",

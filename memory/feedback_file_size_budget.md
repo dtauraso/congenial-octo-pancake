@@ -1,14 +1,14 @@
 ---
 name: file size budget
-description: Source files >= 200 LOC must be refactored; refactor target is <= 100 LOC. Always active, including mid-design and mid-debug.
+description: TypeScript files (.ts/.tsx) >= 200 LOC must be refactored; refactor target is <= 100 LOC. Always active, including mid-design and mid-debug. Go is exempt.
 type: feedback
 ---
 
-Every source file (`.ts`, `.tsx`, `.go`, `.js`, `.mjs`) is on a line-count budget:
+Every TypeScript file (`.ts`, `.tsx`) is on a line-count budget:
 
 - **Trigger threshold:** ≥ **200 LOC** → must be refactored.
 - **Refactor target:** ≤ **100 LOC** per resulting file.
-- Generated files, fixtures, and JSON are exempt.
+- Go (`.go`), Markdown, JSON, fixtures, and generated files are exempt. Go has different cohesion conventions; the rule is motivated by the topology-vscode webview/sim growing past 500 LOC.
 
 **Why:** the user explicitly asked for this rule (2026-05-05) after the topology-vscode files grew past ~500 LOC and a manual refactor pass had to be planned. Small files reduce friction in design/debug because future agents can hold a file in context with low overhead, and bisecting regressions becomes per-concern instead of per-megafile.
 

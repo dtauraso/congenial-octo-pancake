@@ -95,7 +95,7 @@ Project memory lives in `memory/` at the repo root. Files:
 
 - **Trigger threshold:** any source file ≥ **200 LOC** must be refactored.
 - **Refactor target:** split until every resulting file is ≤ **100 LOC**.
-- Applies to all hand-written source: `.ts`, `.tsx`, `.go`, etc. Generated files, fixtures, and JSON are exempt.
+- Applies to TypeScript only (`.ts`, `.tsx`). Go, Markdown, JSON, fixtures, and generated files are exempt — the rule is motivated by the topology-vscode webview/sim growing past 500 LOC, and the Go side has different cohesion conventions.
 - The rule is **always active**, including mid-design and mid-debug. If you finish an unrelated change and notice the file is now over 200, refactor in a follow-up commit before moving on.
 - Run `npm run check:loc` (in `tools/topology-vscode/`) to list offenders. The script is the source of truth — keep this rule and the script in sync.
 
