@@ -19,7 +19,7 @@ export type WebviewToHostMsg =
   | { type: "ready" }
   | { type: "save"; text: string }
   | { type: "view-save"; text: string }
-  | { type: "run" }
+  | { type: "run"; text?: string }
   | { type: "run-cancel" }
   | { type: "compare-head" }
   | { type: "compare-file" }
@@ -65,6 +65,11 @@ export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {
     case "save":
     case "view-save":
       return typeof m.text === "string" ? (m as unknown as WebviewToHostMsg) : undefined;
+    case "run":
+      // text is optional; reject only if present-but-not-a-string
+      return m.text === undefined || typeof m.text === "string"
+        ? (m as unknown as WebviewToHostMsg)
+        : undefined;
     case "pulse-probe-dump":
     case "fold-halo-dump":
     case "runner-errors-dump":

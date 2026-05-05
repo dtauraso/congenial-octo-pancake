@@ -1,19 +1,32 @@
 import { createPortal } from "react-dom";
 import { vscode } from "../save";
-import { useRunStatus } from "../state";
+import { spec, useRunStatus } from "../state";
+import { flushActiveInlineEdit } from "../inline-edit";
 
 export function RunButton() {
   const status = useRunStatus();
   const mount = document.getElementById("run-mount");
   if (!mount) return null;
   const running = status.state === "running";
+  const onRun = () => {
+    if (running) {
+      vscode.postMessage({ type: "run-cancel" });
+      return;
+    }
+    // Commit any in-flight inline rename so the posted text reflects what
+    // the user sees on screen, then bundle the spec into the run message
+    // so the host writes topology.json synchronously before topogen runs.
+    flushActiveInlineEdit();
+    const text = JSON.stringify(spec, null, 2) + "\n";
+    vscode.postMessage({ type: "run", text });
+  };
   return createPortal(
     <>
       <button
         type="button"
         className="run-btn"
         title={running ? "stop the running process" : "go run . in repo root"}
-        onClick={() => vscode.postMessage({ type: running ? "run-cancel" : "run" })}
+        onClick={onRun}
       >
         {running ? "■ stop" : "▶ run"}
       </button>
