@@ -110,6 +110,17 @@ Project memory lives in `memory/` at the repo root. Files:
 - Channel names encode which two nodes are connected — preserve this convention.
 - Before starting a new tool or proposing a major substrate (rendering library, framework, parser, runtime), explicitly ask "what's the dominant choice the rest of the world converged on for this category?" and justify deviating if not adopting it.
 
+## Session handoff
+
+Live state of the active task branch lives at
+[docs/planning/visual-editor/handoff.md](docs/planning/visual-editor/handoff.md).
+Read it first — it names the branch, contract status, open options,
+and the ALWAYS clause that keeps the loop self-perpetuating. Schema
+is in
+[docs/planning/visual-editor/continuation-prompt-template.md](docs/planning/visual-editor/continuation-prompt-template.md).
+Do not rely on chat history for handoff context; the next session may
+be a fresh model with no transcript.
+
 ## Posture (post-v0)
 
 The visual editor reached v0 (see [docs/planning/visual-editor-plan.md](docs/planning/visual-editor-plan.md)). Going forward:
