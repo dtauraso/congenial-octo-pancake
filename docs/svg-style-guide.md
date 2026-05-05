@@ -158,7 +158,7 @@ Conventions:
 - camelCase for signal flow: `inputToReadLatch`, `sbd0DoneToSyncGate`, `detectorLatchAckToReadGate`.
 - hyphen-segmented for qualified reads: `i0-sbd0-old`, `i0-sbd0-new`.
 - IDs of edge groups follow `id="edge-<name>"`; edge name matches the `id` field inside `<metadata>` JSON.
-- Channel names encode both endpoints (house rule from [CLAUDE.md](CLAUDE.md)).
+- Channel names encode both endpoints (house rule from [CLAUDE.md](../CLAUDE.md)).
 
 ## 9. Arrow Markers
 
@@ -205,6 +205,6 @@ All defined in `<defs>`, identical geometry (`M0,0 L8,3 L0,6`, 8×6, refX=8 refY
 ## 14. Verification
 
 This is a read-only compilation — no code changes. To verify:
-- Open [diagrams/topology-chain-cascade.svg](diagrams/topology-chain-cascade.svg) in VS Code preview; confirm every class/color/shape in the tables above appears as described.
+- Open [diagrams/topology-chain-cascade.svg](../diagrams/topology-chain-cascade.svg) in VS Code preview; confirm every class/color/shape in the tables above appears as described.
 - Cross-check the `<metadata>` JSON's `nodes[]` and `edges[]` against the `<g>` ids in the body; each entry should correspond to exactly one rendered group.
 - Confirm timing fractions in `metadata.timing.steps` line up with `keyTimes` values in the `<animate>` elements.

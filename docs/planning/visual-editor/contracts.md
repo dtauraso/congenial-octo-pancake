@@ -22,7 +22,7 @@ because they live in those layers:
   `task/topology-spec-slots-1`). `topology.json` was last edited before
   the May-4 `data.slots` migration and never picked up `slots: 1` on
   `inputToReadGate`. The inline `cycleSpec` in
-  `test/simulator/readgate-backpressure.test.ts` had `slots: 1`, so the
+  `../../../tools/topology-vscode/test/simulator/readgate-backpressure.test.ts` had `slots: 1`, so the
   test passed while the live spec was unbounded. No round-trip test
   asserts that the saved spec preserves `data.slots`.
 
@@ -51,11 +51,11 @@ balance. CI version of the runtime leak probe.
 
 | ID | Tier | Invariant | Test | Origin |
 |---|---|---|---|---|
-| C1 | 1+2 | `useHostMessages` posts `{type:"ready"}` exactly once per mount, regardless of render count. | `test/contracts/ready-once.test.ts` (Tier-1: router posts ready exactly once per install) + `test/contracts/ready-once-hook.test.tsx` (Tier-2: `renderHook` + rerender — hook calls `installHostMessageRouter` once per mount; cleanup runs on unmount) | task/camera-snap-back-fix (d8e3c88); Tier-2 added on task/dom-substrate-happy-dom |
-| C2 | 1 | A spec round-tripped through `parseSpec` → `specToFlow` → `flowToSpec` (the editor save path) preserves every edge's `data` field (slots, init, delay) and every node's `data` field. | `test/contracts/spec-data-roundtrip.test.ts` | task/topology-spec-slots-1 (628945f) |
-| C3 | 1 | `view-load` host message triggers exactly one `setViewport` call per message. | `test/contracts/view-load-setviewport.test.ts` (pins `resolveViewLoadViewport` returning ≤1 viewport; the call site in `_handle-view-load.ts` reduces this to ≤1 `setViewport` per message by inspection) | task/camera-snap-back-fix (d8e3c88) |
-| C4 | 3 | Under any play/pause/cycle sequence, every edge's `(noteEdgePulseStarted, noteEdgePulseEnded)` count pair balances at quiescence. The bridge must be a single `[edgeId]`-keyed effect — folding it into the `[geom, speedPxPerMs]` effect's cleanup would re-fire on every reflow. | `test/contracts/pulse-bridge-balance.test.tsx` (mounts `<PulseInstance>` under happy-dom, asserts `state.activeAnimations` returns to 0 after unmount and stays at 1 across geom rerenders) | task/pulse-bridge-leak-probe (758d883) |
-| C5 | 1 | `cycle-restart.logStuckPendingOnce` fires only when `hasPendingWork(world)` is true. (Match the message to the actual condition — captured probes have shown a mismatch shape.) | `test/contracts/stuck-pending-precondition.test.ts` | .probe/runner-errors-last.json (May 4) |
+| C1 | 1+2 | `useHostMessages` posts `{type:"ready"}` exactly once per mount, regardless of render count. | `../../../tools/topology-vscode/test/contracts/ready-once.test.ts` (Tier-1: router posts ready exactly once per install) + `../../../tools/topology-vscode/test/contracts/ready-once-hook.test.tsx` (Tier-2: `renderHook` + rerender — hook calls `installHostMessageRouter` once per mount; cleanup runs on unmount) | task/camera-snap-back-fix (d8e3c88); Tier-2 added on task/dom-substrate-happy-dom |
+| C2 | 1 | A spec round-tripped through `parseSpec` → `specToFlow` → `flowToSpec` (the editor save path) preserves every edge's `data` field (slots, init, delay) and every node's `data` field. | `../../../tools/topology-vscode/test/contracts/spec-data-roundtrip.test.ts` | task/topology-spec-slots-1 (628945f) |
+| C3 | 1 | `view-load` host message triggers exactly one `setViewport` call per message. | `../../../tools/topology-vscode/test/contracts/view-load-setviewport.test.ts` (pins `resolveViewLoadViewport` returning ≤1 viewport; the call site in `_handle-view-load.ts` reduces this to ≤1 `setViewport` per message by inspection) | task/camera-snap-back-fix (d8e3c88) |
+| C4 | 3 | Under any play/pause/cycle sequence, every edge's `(noteEdgePulseStarted, noteEdgePulseEnded)` count pair balances at quiescence. The bridge must be a single `[edgeId]`-keyed effect — folding it into the `[geom, speedPxPerMs]` effect's cleanup would re-fire on every reflow. | `../../../tools/topology-vscode/test/contracts/pulse-bridge-balance.test.tsx` (mounts `<PulseInstance>` under happy-dom, asserts `state.activeAnimations` returns to 0 after unmount and stays at 1 across geom rerenders) | task/pulse-bridge-leak-probe (758d883) |
+| C5 | 1 | `cycle-restart.logStuckPendingOnce` fires only when `hasPendingWork(world)` is true. (Match the message to the actual condition — captured probes have shown a mismatch shape.) | `../../../tools/topology-vscode/test/contracts/stuck-pending-precondition.test.ts` | .probe/runner-errors-last.json (May 4) |
 
 ## Substrate decision (open)
 
@@ -72,6 +72,6 @@ a Tier 1 gap shows itself.
 
 **Next step (if approved):** stand up Tier 1 by extracting
 `useHostMessages`'s effect body into a pure module-level function, then
-add `test/contracts/ready-once.test.ts` and `view-load-setviewport.test.ts`
+add `../../../tools/topology-vscode/test/contracts/ready-once.test.ts` and `view-load-setviewport.test.ts`
 asserting call counts against a fake `vscode` postMessage. Then C2's
 spec round-trip (already pure, no extraction needed).

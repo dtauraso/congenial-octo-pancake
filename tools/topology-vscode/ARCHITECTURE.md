@@ -22,7 +22,7 @@ Communication is `panel.webview.postMessage` ↔ `vscode.postMessage`.
 Webview → extension: `ready`, `save`, `view-save`, `run`, `run-cancel`.
 Extension → webview: `load`, `view-load`, `topogen-status`, `run-status`.
 Wired in `extension.ts` `panel.webview.onDidReceiveMessage`. Webview side
-in `webview/save.ts` (sender) and `webview/main.ts` (handler).
+in `src/webview/save.ts` (sender) and `src/webview/main.tsx` (handler).
 
 ## Extension side — what lives where
 
@@ -53,9 +53,9 @@ Each `webview/<feature>.ts` owns one UI affordance. Most expose
 | `run.ts` | "▶ run" button + status pill |
 | `defs.ts` | SVG `<defs>` (markers, gradients) |
 | `geom.ts` | Coordinate / hit-test helpers |
-| `render/index.ts` | `render()` + `staticRender()` — lit-html dispatch |
-| `render/{nodes,edges,chrome,background,state-text}.ts` | Per-layer renderers |
-| `render/animation.ts` | SMIL/keyframe authoring against `playback` clock |
+| `src/webview/rf/app.tsx` | React Flow canvas — nodes, edges, handles, interaction |
+| `src/webview/rf/AnimatedEdge.tsx`, `src/webview/rf/AnimatedNode.tsx` | Animated edge/node components |
+| `src/webview/rf/adapter.ts` | Spec ↔ React Flow node/edge model conversion |
 
 ## Spec vs viewer state (load-bearing distinction)
 

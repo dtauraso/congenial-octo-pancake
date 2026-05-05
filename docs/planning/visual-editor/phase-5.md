@@ -1,5 +1,7 @@
 # Phase 5 — comparison
 
+> **Status:** historical — paths may be stale post-reorg. See [handoff.md](handoff.md) for current state.
+
 **Status:** ✅ done. **Actual:** ~\$5.65 (vs. ~\$110 estimate; ~5% / ~18× overestimate). Shipped in 7 steps across commits `74e6abc` (steps 1–3: diff-core + compare loaders + compare toolbar) and `153c74d` (steps 4–7: diff decoration + onion-skin + Tier 2/3 tests).
 
 **Follow-ups: ✅ shipped at \$2.40 actual** (vs. ~\$6 estimated for the pair; ~40% of midpoint — on the mechanical-band trend). Commits `bb0ac48` (CSS) and `be4beef` (badge + tests + plan).

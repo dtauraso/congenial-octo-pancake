@@ -1,5 +1,7 @@
 # Phase 3 — structural editing (mental-model sync → code change)
 
+> **Status:** historical — paths may be stale post-reorg. See [handoff.md](handoff.md) for current state.
+
 **Cap:** ~½ remaining; migration tail came in ~¾ vs. ~½ estimate, testing foundation done, Tier 3 harness came in ~¼ vs. ~¾ estimate.
 **$ extra-usage est:** ~$30 remaining (range $15–$50, 1× mixed). Done portion (~2.25 caps) ≈ $135 equivalent.
 

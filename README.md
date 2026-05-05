@@ -15,8 +15,8 @@ Two things in one repo:
 | Path | What it is |
 |------|------------|
 | `*Node/` (top-level Go packages) | Runtime primitives: inhibitors, latches, edge/XOR detectors, gates, partitions, distributors |
-| `Wiring/` | Topology assembly — how nodes connect at runtime |
-| `topogen/` | Spec → Go code generator (`topology.json` → `Wiring/Wiring.go`) |
+| `nodes/Wiring/` | Topology assembly — how nodes connect at runtime |
+| `topogen/` | Spec → Go code generator (`topology.json` → `nodes/Wiring/Wiring.go`) |
 | `tools/topology-vscode/` | The visual editor (vscode webview, React Flow + Zustand) |
 | `topology.json` | The spec (canonical source of truth) |
 | `topology.view.json` | Viewer state sidecar (camera, folds, bookmarks — never affects codegen) |

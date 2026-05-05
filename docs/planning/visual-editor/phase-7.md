@@ -1,5 +1,7 @@
 # Phase 7 — trace replay rejoins the pipeline
 
+> **Status:** historical — paths may be stale post-reorg. See [handoff.md](handoff.md) for current state.
+
 Closes the runtime → viewer loop. Go runtime emits a value-flow trace;
 TS viewer replays it and renders drift against the simulator's own
 output. See [trace-replay-plan.md](../trace-replay-plan.md) for the

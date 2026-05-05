@@ -5,7 +5,7 @@ type: project
 ---
 
 The 2026-05-03 industry-standard-pattern review (entry in
-`docs/planning/visual-editor/session-log.md`) produced a coverage
+`../docs/planning/visual-editor/session-log.md`) produced a coverage
 matrix and triage. Quick wins (MiniMap, fit-view keybindings,
 rounded snake corners, port-reject UI cue) shipped on
 `task/industry-pattern-review` (commit `689fd7d`). The rest are

@@ -15,7 +15,7 @@
 - [feedback_webview_devtools_frame.md](feedback_webview_devtools_frame.md) — VS Code webview devtools default to the outer wrapper frame; prefer file-bridge round-trips over `typeof window.X` for verification
 - [feedback_cost_overruns.md](feedback_cost_overruns.md) — Catalog of session cost overruns; pattern is speculative tooling on top of an unverified diagnosis
 - [project_pulse_label_offset_rule.md](project_pulse_label_offset_rule.md) — Pulse-label offset rule splits per route kind; mixing them shows up as tangent slip in the probe log
-- [feedback_runner_errors_probe_first.md](feedback_runner_errors_probe_first.md) — When the editor hangs/decouples, read `.probe/runner-errors-last.json` first; one thrown listener often explains compound UI symptoms
+- [feedback_runner_errors_probe_first.md](feedback_runner_errors_probe_first.md) — When the editor hangs/decouples, read `../.probe/runner-errors-last.json` first; one thrown listener often explains compound UI symptoms
 - [feedback_industry_bug_class_scan.md](feedback_industry_bug_class_scan.md) — Before declaring an animation/timing/state/IPC change ready, scan against the well-known bug-class catalog and name the class in the working text
 - [feedback_per_emit_simtime_anchoring.md](feedback_per_emit_simtime_anchoring.md) — For emit→pulse animations, anchor each instance at its emit simTime and render concurrently; head-of-queue serial mount is the wrong shape (validated 2026-05-04)
 - [project_graph_node_pulse_coordination.md](project_graph_node_pulse_coordination.md) — Cross-node pulse coordination still off after unified-sim-clock work; next session needs a specific symptom before scanning
