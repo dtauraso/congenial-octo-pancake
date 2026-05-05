@@ -18,6 +18,31 @@ import type {
 } from "../schema";
 import { getHandler } from "./handlers";
 import { NODE_TYPES } from "../schema";
+import {
+  defaultSeed,
+  readEdgeDelay,
+  readEdgeInit,
+  readEdgeSlots,
+} from "./seeds";
+import {
+  ensureReleaseEntry,
+  freeEdgeSlot,
+  noteEdgeConsumed,
+} from "./slot-release";
+
+// Re-export for callers that import from "./simulator".
+export {
+  defaultSeed,
+  readEdgeDelay,
+  readEdgeInit,
+  readEdgeSlots,
+  readNodeInit,
+} from "./seeds";
+export {
+  freeEdgeSlot,
+  noteEdgeAnimEnded,
+  noteEdgeConsumed,
+} from "./slot-release";
 
 export type SimEvent = {
   // Monotonically-increasing schedule order. Tie-break for ready events.
@@ -120,7 +145,7 @@ export type World = {
 type EdgeIndex = Map<string, Edge[]>;
 
 function edgeKey(nodeId: string, port: string): string {
-  return `${nodeId}${port}`;
+  return `${nodeId}${port}`;
 }
 
 function indexEdges(spec: Spec): EdgeIndex {
@@ -209,65 +234,6 @@ export function initWorld(spec: Spec): World {
   return world;
 }
 
-// Pull `data.init: number[]` off an edge's opaque `data` field. Returns
-// [] for any other shape so unrelated `data` payloads (decoration,
-// labels) don't accidentally seed events.
-// Per-edge traversal delay. Overrides the emission's default delay so a
-// single source can fan out to edges of different lengths/latencies.
-// Modeled on `data.init`: opaque field, only the well-known shape is
-// honored. Negative or non-numeric values fall back to the default.
-function readEdgeDelay(data: unknown): number | undefined {
-  if (!data || typeof data !== "object") return undefined;
-  const d = (data as { delay?: unknown }).delay;
-  return typeof d === "number" && d >= 0 ? d : undefined;
-}
-
-// Per-edge slot capacity. Default is 1 — every edge behaves like an
-// unbuffered Go channel (sender blocks until receiver reads). Mirrors
-// what the wirefold latch+gate+ack pattern already enforces in the Go
-// runtime: at most one value in flight on each edge. Explicit
-// `data.slots: N` overrides for edges that genuinely need a buffer.
-const DEFAULT_EDGE_SLOTS = 1;
-function readEdgeSlots(data: unknown): number {
-  if (!data || typeof data !== "object") return DEFAULT_EDGE_SLOTS;
-  const s = (data as { slots?: unknown }).slots;
-  return typeof s === "number" && s >= 1 ? Math.floor(s) : DEFAULT_EDGE_SLOTS;
-}
-
-function readEdgeInit(data: unknown): StateValue[] {
-  if (!data || typeof data !== "object") return [];
-  const init = (data as { init?: unknown }).init;
-  if (!Array.isArray(init)) return [];
-  return init.filter(
-    (v): v is StateValue => typeof v === "number" || typeof v === "string",
-  );
-}
-
-// Fallback when the spec has no `timing.seed`: feed each Input node's
-// `data.init: [...]` array (matches Go's `<- ch` priming) onto its
-// `out` port, one tick apart. Falls back to a single value=1 pulse if
-// no init array is present, so play does something visible on any
-// topology with at least one Input.
-function defaultSeed(spec: Spec): import("../schema").SeedEvent[] {
-  const out: import("../schema").SeedEvent[] = [];
-  for (const n of spec.nodes) {
-    if (n.type !== "Input") continue;
-    const init = readNodeInit(n.data);
-    if (init.length === 0) {
-      out.push({ nodeId: n.id, outPort: "out", value: 1, atTick: 0 });
-      continue;
-    }
-    init.forEach((v, i) => {
-      out.push({ nodeId: n.id, outPort: "out", value: v, atTick: i });
-    });
-  }
-  return out;
-}
-
-function readNodeInit(data: unknown): StateValue[] {
-  return readEdgeInit(data);
-}
-
 function orderEvents(a: SimEvent, b: SimEvent): number {
   if (a.readyAt !== b.readyAt) return a.readyAt - b.readyAt;
   return a.id - b.id;
@@ -310,76 +276,6 @@ function scheduleEmission(
       world.edgeOccupancy[e.id] = (world.edgeOccupancy[e.id] ?? 0) + 1;
       if (world.deferSlotFreeToView) ensureReleaseEntry(world, e.id);
     }
-  }
-}
-
-function ensureReleaseEntry(world: World, edgeId: string): void {
-  if (!world.edgeReleasePending[edgeId]) {
-    world.edgeReleasePending[edgeId] = { animEnded: false, consumed: false };
-  }
-}
-
-function tryReleaseEdge(world: World, edgeId: string, spec: Spec, nowTick: number): void {
-  const e = world.edgeReleasePending[edgeId];
-  if (!e) return;
-  if (!e.animEnded || !e.consumed) return;
-  delete world.edgeReleasePending[edgeId];
-  freeEdgeSlot(world, edgeId, spec, nowTick);
-}
-
-// Mark an edge's in-flight pulse as having finished its visible
-// animation. If the destination handler has also already consumed it,
-// frees the slot now; otherwise the slot stays held until consumption.
-export function noteEdgeAnimEnded(
-  world: World,
-  edgeId: string,
-  spec: Spec,
-  nowTick: number,
-): void {
-  ensureReleaseEntry(world, edgeId);
-  world.edgeReleasePending[edgeId].animEnded = true;
-  tryReleaseEdge(world, edgeId, spec, nowTick);
-}
-
-// Mark an edge's in-flight pulse as having been consumed by the
-// destination handler (handler fired and cleared this edge's port from
-// its buffer). If the visible animation has also already ended, frees
-// the slot now; otherwise the slot stays held until anim-end.
-export function noteEdgeConsumed(
-  world: World,
-  edgeId: string,
-  spec: Spec,
-  nowTick: number,
-): void {
-  ensureReleaseEntry(world, edgeId);
-  world.edgeReleasePending[edgeId].consumed = true;
-  tryReleaseEdge(world, edgeId, spec, nowTick);
-}
-
-// Decrement an edge's occupancy and, if pending events were waiting
-// for the slot, release one onto the queue with a recomputed readyAt
-// (current tick + edge delay) so the wait shows up as a delivery
-// happening *now*, not at the originally-scheduled tick.
-export function freeEdgeSlot(
-  world: World,
-  edgeId: string,
-  spec: Spec,
-  nowTick: number,
-): void {
-  const cur = world.edgeOccupancy[edgeId] ?? 0;
-  if (cur > 0) world.edgeOccupancy[edgeId] = cur - 1;
-  const pending = world.edgePending[edgeId];
-  if (!pending || pending.length === 0) return;
-  const released = pending.shift()!;
-  if (pending.length === 0) delete world.edgePending[edgeId];
-  const e = spec.edges.find((x) => x.id === edgeId);
-  const d = e ? (readEdgeDelay(e.data) ?? 1) : 1;
-  released.readyAt = nowTick + d;
-  released.id = world.nextId++;
-  world.queue.push(released);
-  world.edgeOccupancy[edgeId] = (world.edgeOccupancy[edgeId] ?? 0) + 1;
-  if (world.deferSlotFreeToView && !released.fromInit) {
-    ensureReleaseEntry(world, edgeId);
   }
 }
 
