@@ -74,3 +74,6 @@ tools/topology-vscode/test-results/
 
 # Pulse-probe dump from the visual editor's webview (workspace-local, transient)
 /.probe/
+
+# macOS
+.DS_Store
