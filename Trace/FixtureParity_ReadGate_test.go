@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	RG "github.com/dtauraso/wirefold/ReadGateNode"
-	S "github.com/dtauraso/wirefold/SafeWorker"
+	RG "github.com/dtauraso/wirefold/nodes/ReadGateNode"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	. "github.com/dtauraso/wirefold/Trace"
 )
 

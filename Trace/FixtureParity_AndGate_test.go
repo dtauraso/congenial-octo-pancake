@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	AG "github.com/dtauraso/wirefold/AndGateNode"
-	S "github.com/dtauraso/wirefold/SafeWorker"
+	AG "github.com/dtauraso/wirefold/nodes/AndGateNode"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	. "github.com/dtauraso/wirefold/Trace"
 )
 

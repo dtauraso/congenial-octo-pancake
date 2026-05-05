@@ -1,0 +1,67 @@
+// Phase 8 Chunk 3 — StreakBreakDetector on the Go side.
+//
+// Mirrors the TS handler in src/sim/handlers.ts (sbdJoin):
+//   buffer one input on `old` or `new`; when both buffered, emit
+//   done = (sign(old) != sign(new)) ? 1 : 0, then clear. Sign treats
+//   v>=1 as positive (matches the signed-edge convention shared with
+//   StreakDetector).
+
+package StreakBreakDetector
+
+import (
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+)
+
+type StreakBreakDetector struct {
+	Id      int
+	Name    string
+	FromOld <-chan int
+	FromNew <-chan int
+	ToDone  chan<- int
+
+	old, new       int
+	hasOld, hasNew bool
+}
+
+func (n *StreakBreakDetector) Update(s *S.SafeWorker) {
+	defer s.Wg.Done()
+	for {
+		select {
+		case <-s.Ctx.Done():
+			return
+		default:
+		}
+
+		if !n.hasOld {
+			select {
+			case v := <-n.FromOld:
+				n.old = v
+				n.hasOld = true
+				s.Trace.Recv(n.Name, "old", v)
+			default:
+			}
+		}
+
+		if !n.hasNew {
+			select {
+			case v := <-n.FromNew:
+				n.new = v
+				n.hasNew = true
+				s.Trace.Recv(n.Name, "new", v)
+			default:
+			}
+		}
+
+		if n.hasOld && n.hasNew {
+			broke := 0
+			if (n.old >= 1) != (n.new >= 1) {
+				broke = 1
+			}
+			s.Trace.Fire(n.Name)
+			S.Send(n.ToDone, broke)
+			s.Trace.Send(n.Name, "done", broke)
+			n.hasOld = false
+			n.hasNew = false
+		}
+	}
+}

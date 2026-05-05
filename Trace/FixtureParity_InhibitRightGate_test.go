@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	IRG "github.com/dtauraso/wirefold/InhibitRightGateNode"
-	S "github.com/dtauraso/wirefold/SafeWorker"
+	IRG "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	. "github.com/dtauraso/wirefold/Trace"
 )
 
