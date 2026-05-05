@@ -181,7 +181,18 @@ export function reset(): void {
 // the queue if the slot was holding one back, and steps the simulator
 // forward if the runner is playing — so a freshly-released emission
 // doesn't have to wait for the next interval tick to dispatch.
+// Active visible animations. Incremented on AnimatedEdge mount,
+// decremented on unmount. Source of truth for "is the screen
+// visually quiet" — used to gate continuous-cycle restart so we
+// never wipe sim state while a pulse is still in flight on screen.
+let activeAnimations = 0;
+
+export function noteEdgePulseStarted(_edgeId: string): void {
+  activeAnimations++;
+}
+
 export function noteEdgePulseEnded(edgeId: string): void {
+  if (activeAnimations > 0) activeAnimations--;
   if (!spec || !world) return;
   if (!world.deferSlotFreeToView) return;
   freeEdgeSlot(world, edgeId, spec, world.tick);
@@ -414,11 +425,17 @@ function tick(): void {
 
 let stuckLogged = false;
 
-// Continuous-cycle auto-restart. When the queue + pendingSeeds drain we
-// don't pause — we wait a quiet window (long enough for in-flight visible
-// pulses to finish anim) then re-seed from spec. User pause cancels the
-// pending re-seed; user play schedules a fresh cycle if needed.
+// Continuous-cycle auto-restart. When the queue + pendingSeeds drain
+// we don't pause — we wait until both the sim is quiet AND no
+// AnimatedEdge is still in flight on screen, then re-seed from spec.
+// Gating on activeAnimations (not a wall-clock guess) is what makes
+// the "at most one pulse per visible edge" invariant hold across
+// cycle boundaries: re-seeding while a pulse is still animating
+// emits a second pulse onto the same edge before the first ends.
+// User pause cancels the pending re-seed; user play schedules a
+// fresh cycle if needed.
 const CYCLE_RESTART_QUIET_MS = 2000;
+const CYCLE_RESTART_RECHECK_MS = 250;
 let cycleRestartTimer: ReturnType<typeof setTimeout> | null = null;
 function cancelCycleRestart(): void {
   if (cycleRestartTimer !== null) {
@@ -428,17 +445,21 @@ function cancelCycleRestart(): void {
 }
 function scheduleCycleRestart(): void {
   if (cycleRestartTimer !== null) return;
-  cycleRestartTimer = setTimeout(() => {
-    cycleRestartTimer = null;
-    if (!playing || !spec) return;
-    if (!world) return;
-    if (world.queue.length > 0 || world.pendingSeeds.length > 0) return;
-    world = initWorldForRun(spec);
-    stuckLogged = false;
-    try { stepOnce(); }
-    catch (err) { reportRunnerError("stepOnce", err); }
-    notifyState();
-  }, CYCLE_RESTART_QUIET_MS);
+  cycleRestartTimer = setTimeout(tryCycleRestart, CYCLE_RESTART_QUIET_MS);
+}
+function tryCycleRestart(): void {
+  cycleRestartTimer = null;
+  if (!playing || !spec || !world) return;
+  if (world.queue.length > 0 || world.pendingSeeds.length > 0) return;
+  if (activeAnimations > 0) {
+    cycleRestartTimer = setTimeout(tryCycleRestart, CYCLE_RESTART_RECHECK_MS);
+    return;
+  }
+  world = initWorldForRun(spec);
+  stuckLogged = false;
+  try { stepOnce(); }
+  catch (err) { reportRunnerError("stepOnce", err); }
+  notifyState();
 }
 function logStuckPendingOnce(w: World): void {
   if (stuckLogged) return;

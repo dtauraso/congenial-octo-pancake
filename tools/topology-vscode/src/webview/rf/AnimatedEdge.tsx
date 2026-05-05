@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BaseEdge, type EdgeProps } from "reactflow";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind, type EdgeRoute } from "../../schema";
-import { subscribe, subscribeState, getConcurrentEdges, getTickMs, getWorld, isPlaying, getSimTime, noteEdgePulseEnded } from "../../sim/runner";
+import { subscribe, subscribeState, getConcurrentEdges, getTickMs, getWorld, isPlaying, getSimTime, noteEdgePulseEnded, noteEdgePulseStarted } from "../../sim/runner";
 import { noteAnimStart, noteAnimEnd, noteAnimRerun } from "./timeline-probe";
 import { vscode } from "../save";
 import { markerEndUrl } from "./MarkerDefs";
@@ -606,6 +606,7 @@ function PulseInstance({
   // the simulator's edge slot every reflow — letting a second emit
   // dispatch onto an edge that's still visibly carrying the first pulse.
   useEffect(() => {
+    noteEdgePulseStarted(edgeId);
     return () => { noteEdgePulseEnded(edgeId); };
   }, [edgeId]);
 
