@@ -1,9 +1,9 @@
 # Continuation prompt template
 
-Copy the fenced block below at the end of a session, fill in `{{...}}`
-placeholders with current state, and paste at the start of the next
-session. The block contains its own ALWAYS clause so the loop
-self-perpetuates.
+At the end of a session, render the block below in the chat with
+`{{...}}` placeholders filled in for current state. It does not need
+to be copyable — display it as plain prose, not inside a fenced code
+block. The next session reads it directly from chat history.
 
 Stable invariants (branch hygiene, cwd note, friction-logging rule)
 live here so they don't have to be rediscovered each session. Edit
@@ -12,7 +12,6 @@ session.
 
 ---
 
-```
 Continuing on wirefold, branch {{branch-name}}.
 
 State at handoff:
@@ -46,5 +45,4 @@ Branch hygiene: no merge to main without explicit sign-off. Delete merged branch
 Cwd for tsc/tests/check:loc/build: tools/topology-vscode/ (Bash resets cwd — chain cd or use absolute paths).
 If user surfaces unrelated friction, log to docs/planning/visual-editor/session-log.md and open a fresh task/<short-kebab>.
 
-ALWAYS — at end of session, output a copyable continuation prompt inside a fenced code block tailored to the state you're leaving the branch in. The output prompt must itself contain this same ALWAYS clause so the loop is self-perpetuating across sessions. Use docs/planning/visual-editor/continuation-prompt-template.md as the structural source of truth; update the template when an invariant changes.
-```
+ALWAYS — at end of session, render a continuation prompt as plain prose (no fenced code block, not copyable) tailored to the state you're leaving the branch in. The output prompt must itself contain this same ALWAYS clause so the loop is self-perpetuating across sessions. Use docs/planning/visual-editor/continuation-prompt-template.md as the structural source of truth; update the template when an invariant changes.
