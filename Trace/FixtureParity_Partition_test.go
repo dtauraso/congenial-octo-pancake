@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	P "github.com/dtauraso/wirefold/PartitionNode"
-	S "github.com/dtauraso/wirefold/SafeWorker"
+	P "github.com/dtauraso/wirefold/nodes/PartitionNode"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	. "github.com/dtauraso/wirefold/Trace"
 )
 

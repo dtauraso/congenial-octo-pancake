@@ -27,9 +27,9 @@ import (
 	"strings"
 	"testing"
 
-	CI "github.com/dtauraso/wirefold/ChainInhibitorNode"
-	RL "github.com/dtauraso/wirefold/ReadLatchNode"
-	S "github.com/dtauraso/wirefold/SafeWorker"
+	CI "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode"
+	RL "github.com/dtauraso/wirefold/nodes/ReadLatchNode"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	. "github.com/dtauraso/wirefold/Trace"
 
 	"context"

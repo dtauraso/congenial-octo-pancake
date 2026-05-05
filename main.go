@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	S "github.com/dtauraso/wirefold/SafeWorker"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	T "github.com/dtauraso/wirefold/Trace"
-	W "github.com/dtauraso/wirefold/Wiring"
+	W "github.com/dtauraso/wirefold/nodes/Wiring"
 )
 
 // RunTest wires the topology and lets it run for `dur` before

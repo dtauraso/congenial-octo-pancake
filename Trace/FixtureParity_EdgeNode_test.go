@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
-	EN "github.com/dtauraso/wirefold/EdgeNode"
-	S "github.com/dtauraso/wirefold/SafeWorker"
+	EN "github.com/dtauraso/wirefold/nodes/EdgeNode"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	. "github.com/dtauraso/wirefold/Trace"
 )
 

@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	CI "github.com/dtauraso/wirefold/ChainInhibitorNode"
-	INN "github.com/dtauraso/wirefold/InputNode"
-	S "github.com/dtauraso/wirefold/SafeWorker"
+	CI "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode"
+	INN "github.com/dtauraso/wirefold/nodes/InputNode"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	. "github.com/dtauraso/wirefold/Trace"
 )
 

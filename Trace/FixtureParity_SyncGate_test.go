@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	S "github.com/dtauraso/wirefold/SafeWorker"
-	SG "github.com/dtauraso/wirefold/SyncGateNode"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+	SG "github.com/dtauraso/wirefold/nodes/SyncGateNode"
 	. "github.com/dtauraso/wirefold/Trace"
 )
 

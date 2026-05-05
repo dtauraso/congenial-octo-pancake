@@ -20,11 +20,11 @@
 package Wiring
 
 import (
-	CI "github.com/dtauraso/wirefold/ChainInhibitorNode"
-	IRG "github.com/dtauraso/wirefold/InhibitRightGateNode"
-	INN "github.com/dtauraso/wirefold/InputNode"
-	RGN "github.com/dtauraso/wirefold/ReadGateNode"
-	S "github.com/dtauraso/wirefold/SafeWorker"
+	CI "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode"
+	IRG "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode"
+	INN "github.com/dtauraso/wirefold/nodes/InputNode"
+	RGN "github.com/dtauraso/wirefold/nodes/ReadGateNode"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 )
 
 func Wire() []S.Node {

@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	INN "github.com/dtauraso/wirefold/InputNode"
-	S "github.com/dtauraso/wirefold/SafeWorker"
+	INN "github.com/dtauraso/wirefold/nodes/InputNode"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	. "github.com/dtauraso/wirefold/Trace"
 )
 

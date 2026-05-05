@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	SBD "github.com/dtauraso/wirefold/StreakBreakDetector"
-	S "github.com/dtauraso/wirefold/SafeWorker"
+	SBD "github.com/dtauraso/wirefold/nodes/StreakBreakDetector"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	. "github.com/dtauraso/wirefold/Trace"
 )
 

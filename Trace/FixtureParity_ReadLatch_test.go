@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	RL "github.com/dtauraso/wirefold/ReadLatchNode"
-	S "github.com/dtauraso/wirefold/SafeWorker"
+	RL "github.com/dtauraso/wirefold/nodes/ReadLatchNode"
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	. "github.com/dtauraso/wirefold/Trace"
 )
 
