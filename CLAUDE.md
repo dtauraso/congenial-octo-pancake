@@ -129,6 +129,30 @@ The visual editor reached v0 (see [docs/planning/visual-editor-plan.md](docs/pla
 - **Audit registry** at [docs/planning/visual-editor/audits.md](docs/planning/visual-editor/audits.md) describes the kinds of audits that exist (CI-backed, human-driven, AI-driven). Read it before proposing audit-style work.
 - **Working mode:** user drives the editor and narrates observations; assistant logs to session-log.md and makes changes; debug sessions between user and assistant as needed.
 
+## Model routing
+
+Most of this repo's work doesn't need Opus. Default to cheaper models for
+executor-style work; reserve Opus for planning and judgment.
+
+**Use `model: haiku`** for: file scans, log/grep work, reading session-log
+or memory to surface a fact, simple multi-file finds, running the
+deterministic audit scripts and reporting findings.
+
+**Use `model: sonnet`** for: mechanical edits with a clear spec, refactors
+inside a single file, writing tests against an existing pattern, doc
+updates, running CI-backed audits (1–3) when red and triaging output,
+follow-up fixes from audit findings.
+
+**Reserve Opus (default)** for: planning a new task branch, the
+judgment-heavy audits (6 security, 9 complexity, 10 architecture, 19
+reading-trip economy), debugging non-obvious behavior, designing the
+spec/view split when adding fields.
+
+Apply via `Agent({ model: "sonnet", ... })` or by spawning a subagent of
+the matching kind. If unsure, downshift first and escalate only if the
+cheaper model produces poor output — the cost asymmetry favors trying
+cheap first.
+
 ## Language / runtime
 
 Go 1.21.4 — `github.com/dtauraso/wirefold`

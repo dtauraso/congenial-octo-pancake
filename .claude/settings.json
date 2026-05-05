@@ -1,5 +1,31 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(npm run build)",
+      "Bash(npm run build *)",
+      "Bash(npm test)",
+      "Bash(npm test *)",
+      "Bash(npm run check:loc)",
+      "Bash(npm run check:loc *)",
+      "Bash(npx tsc)",
+      "Bash(npx tsc *)",
+      "Bash(npx vitest run *)",
+      "Bash(npx playwright test *)",
+      "Bash(go build *)",
+      "Bash(go test *)"
+    ]
+  },
   "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/stop-checks.sh"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
