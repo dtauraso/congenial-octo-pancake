@@ -17,6 +17,7 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       props?: SpecNode["props"];
       spec?: SpecNode["spec"];
       notes?: SpecNode["notes"];
+      nodeData?: SpecNode["data"];
     };
     return {
       id: n.id,
@@ -28,6 +29,7 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       ...(d.props !== undefined ? { props: d.props } : {}),
       ...(d.spec !== undefined ? { spec: d.spec } : {}),
       ...(d.notes !== undefined ? { notes: d.notes } : {}),
+      ...(d.nodeData !== undefined ? { data: d.nodeData } : {}),
     };
   });
 
@@ -41,6 +43,7 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       arrowStyle?: SpecEdge["arrowStyle"];
       valueLabel?: string;
       label?: string;
+      edgeData?: SpecEdge["data"];
     };
     return {
       id: e.id,
@@ -56,6 +59,7 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       ...(d.route !== undefined ? { route: d.route } : {}),
       ...(d.lane !== undefined ? { lane: d.lane } : {}),
       ...(d.arrowStyle !== undefined ? { arrowStyle: d.arrowStyle } : {}),
+      ...(d.edgeData !== undefined ? { data: d.edgeData } : {}),
     };
   });
 

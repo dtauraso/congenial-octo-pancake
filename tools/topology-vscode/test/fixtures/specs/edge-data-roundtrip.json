@@ -1,0 +1,52 @@
+{
+  "nodes": [
+    {
+      "id": "in0",
+      "type": "Input",
+      "x": 0,
+      "y": 0,
+      "data": { "init": [0, 1, 0] }
+    },
+    {
+      "id": "readGate",
+      "type": "ReadGate",
+      "x": 100,
+      "y": 0
+    },
+    {
+      "id": "i0",
+      "type": "ChainInhibitor",
+      "x": 200,
+      "y": 0
+    }
+  ],
+  "edges": [
+    {
+      "id": "inToReadGate",
+      "source": "in0",
+      "sourceHandle": "out",
+      "target": "readGate",
+      "targetHandle": "chainIn",
+      "kind": "chain",
+      "data": { "slots": 1 }
+    },
+    {
+      "id": "readGateToI0",
+      "source": "readGate",
+      "sourceHandle": "out",
+      "target": "i0",
+      "targetHandle": "in",
+      "kind": "chain",
+      "data": { "delay": 2 }
+    },
+    {
+      "id": "ack",
+      "source": "i0",
+      "sourceHandle": "ack",
+      "target": "readGate",
+      "targetHandle": "ack",
+      "kind": "feedback-ack",
+      "data": { "init": [1] }
+    }
+  ]
+}

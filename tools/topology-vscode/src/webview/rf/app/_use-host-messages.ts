@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { parseSpec, type Spec } from "../../../schema";
-import { parseHostToWebview } from "../../../messages";
 import { specToFlow } from "../adapter";
 import { setInlineEditRerender } from "../../inline-edit";
 import { vscode } from "../../save";
@@ -10,6 +9,7 @@ import type { CompareMode } from "../CompareToolbar";
 import type { AppCtx } from "./_ctx";
 import { handleLoad } from "./_handle-load";
 import { handleViewLoad } from "./_handle-view-load";
+import { installHostMessageRouter } from "./_install-host-message-router";
 
 type CompareSetters = {
   setComparisonSpec: Dispatch<SetStateAction<Spec | null>>;
@@ -32,30 +32,29 @@ export function useHostMessages(ctx: AppCtx, c: CompareSetters) {
   }, [ctx]);
 
   useEffect(() => {
-    const handler = (e: MessageEvent<unknown>) => {
-      const msg = parseHostToWebview(e.data);
-      if (!msg) return;
-      if (msg.type === "load") {
-        handleLoad(ctx, msg.text);
-      } else if (msg.type === "compare-load") {
-        try {
-          const next: Spec = parseSpec(JSON.parse(msg.text));
-          c.setComparisonSpec(next);
-          c.setComparisonLabel(msg.label);
-          c.setCompareError(null);
-          c.setCompareMode("A-live");
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          c.setCompareError(`could not parse ${msg.label}: ${message}`);
-        }
-      } else if (msg.type === "compare-error") {
-        c.setCompareError(msg.message);
-      } else if (msg.type === "view-load") {
-        handleViewLoad(ctx, msg.text);
-      }
-    };
-    window.addEventListener("message", handler);
-    vscode.postMessage({ type: "ready" });
-    return () => window.removeEventListener("message", handler);
+    return installHostMessageRouter(
+      {
+        addEventListener: (t, h) => window.addEventListener(t, h as EventListener),
+        removeEventListener: (t, h) => window.removeEventListener(t, h as EventListener),
+        postMessage: (m) => vscode.postMessage(m),
+      },
+      {
+        load: (text) => handleLoad(ctx, text),
+        compareLoad: ({ text, label }) => {
+          try {
+            const next: Spec = parseSpec(JSON.parse(text));
+            c.setComparisonSpec(next);
+            c.setComparisonLabel(label);
+            c.setCompareError(null);
+            c.setCompareMode("A-live");
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            c.setCompareError(`could not parse ${label}: ${message}`);
+          }
+        },
+        compareError: (message) => c.setCompareError(message),
+        viewLoad: (text) => handleViewLoad(ctx, text),
+      },
+    );
   }, [ctx, c]);
 }
