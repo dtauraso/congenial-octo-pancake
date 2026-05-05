@@ -1,0 +1,42 @@
+name: periodic-checks
+
+on:
+  schedule:
+    - cron: '17 8 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21.4'
+      - run: go build ./...
+      - run: go test ./...
+      - name: outdated go modules
+        run: go list -m -u all
+        continue-on-error: true
+
+  node:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/topology-vscode
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: tools/topology-vscode/package-lock.json
+      - run: npm ci
+      - run: npm run check:loc
+      - run: npm test
+      - name: npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
