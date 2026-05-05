@@ -36,6 +36,13 @@ without Claude Code-specific tooling.
 
 ## CI-backed audits (already wired from prior phase work)
 
+> **Mechanical slices.** Audits 11, 14, and 15 each have a deterministic
+> sub-check wired into `.github/workflows/periodic-checks.yml` via
+> `scripts/audit-{channel-names,spec-view-hygiene,doc-drift}.{sh,mjs}`.
+> They run informational (non-blocking) and only catch the grep-able
+> failures; the AI-driven sections below still cover judgment items.
+
+
 ### 1. Visual regression — SVG / canvas baselines
 
 **What it checks.** Diagrams and editor canvas renders match stored

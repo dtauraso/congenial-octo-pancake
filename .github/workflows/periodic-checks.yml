@@ -40,3 +40,17 @@ jobs:
       - name: npm audit
         run: npm audit --audit-level=high
         continue-on-error: true
+
+  audits:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: channel-naming convention
+        run: bash scripts/audit-channel-names.sh
+        continue-on-error: true
+      - name: spec/view hygiene
+        run: node scripts/audit-spec-view-hygiene.mjs
+        continue-on-error: true
+      - name: doc drift
+        run: node scripts/audit-doc-drift.mjs
+        continue-on-error: true
