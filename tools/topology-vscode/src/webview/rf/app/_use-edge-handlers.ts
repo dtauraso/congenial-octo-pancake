@@ -48,7 +48,7 @@ export function useEdgeHandlers(ctx: AppCtx) {
       if (e) e.kind = kind;
     });
     ctx.lastSpec.current = next;
-    const flow = specToFlow(next, viewerState.folds);
+    const flow = specToFlow(next, viewerState.folds, viewerState);
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
     scheduleSave();

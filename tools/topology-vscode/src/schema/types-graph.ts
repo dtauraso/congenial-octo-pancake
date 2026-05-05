@@ -4,7 +4,6 @@
 import type {
   ArrowStyle,
   EdgeKind,
-  EdgeRoute,
   Port,
   StateValue,
 } from "./types";
@@ -21,13 +20,7 @@ export type NodeSpec = { lang: string; segments: SpecSegment[] };
 export type Node = {
   id: string;
   type: string;
-  role?: string;
-  x: number;
-  y: number;
   index?: number;
-  sublabel?: string;
-  value?: string;
-  state?: Record<string, StateValue>;
   // Per-instance config consumed by simulator handlers (e.g. delay,
   // inputCount). Defaults come from NODE_TYPES[type].defaultProps;
   // spec only stores overrides.
@@ -46,7 +39,6 @@ export type Edge = {
   kind: EdgeKind;
   label?: string;
   valueLabel?: string;
-  route?: EdgeRoute;
   lane?: number;
   arrowStyle?: ArrowStyle;
   data?: unknown;

@@ -12,8 +12,6 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
     .map((n) => {
     const d = (n.data ?? {}) as {
       type?: string;
-      sublabel?: string;
-      state?: SpecNode["state"];
       props?: SpecNode["props"];
       spec?: SpecNode["spec"];
       notes?: SpecNode["notes"];
@@ -22,10 +20,6 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
     return {
       id: n.id,
       type: d.type ?? "Generic",
-      x: n.position.x,
-      y: n.position.y,
-      ...(d.sublabel !== undefined ? { sublabel: d.sublabel } : {}),
-      ...(d.state !== undefined ? { state: d.state } : {}),
       ...(d.props !== undefined ? { props: d.props } : {}),
       ...(d.spec !== undefined ? { spec: d.spec } : {}),
       ...(d.notes !== undefined ? { notes: d.notes } : {}),
@@ -38,7 +32,7 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
       kind?: EdgeKind;
       sourceHandle?: string;
       targetHandle?: string;
-      route?: SpecEdge["route"];
+      route?: "line" | "snake" | "below";
       lane?: number;
       arrowStyle?: SpecEdge["arrowStyle"];
       valueLabel?: string;
@@ -56,7 +50,6 @@ export function flowToSpec(nodes: RFNode[], edges: RFEdge[]): Spec {
         ? { label: d.label }
         : typeof e.label === "string" ? { label: e.label } : {}),
       ...(d.valueLabel !== undefined ? { valueLabel: d.valueLabel } : {}),
-      ...(d.route !== undefined ? { route: d.route } : {}),
       ...(d.lane !== undefined ? { lane: d.lane } : {}),
       ...(d.arrowStyle !== undefined ? { arrowStyle: d.arrowStyle } : {}),
       ...(d.edgeData !== undefined ? { data: d.edgeData } : {}),

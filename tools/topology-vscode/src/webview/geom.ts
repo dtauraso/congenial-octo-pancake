@@ -1,5 +1,5 @@
 import { NODE_TYPES, type Edge, type Node } from "../schema";
-import { nodeById, spec } from "./state";
+import { nodeById, spec, viewerState } from "./state";
 
 export type EdgeGeom =
   | { kind: "line"; x1: number; y1: number; x2: number; y2: number }
@@ -7,14 +7,19 @@ export type EdgeGeom =
 
 export function nodeCenter(n: Node): { cx: number; cy: number; w: number; h: number } {
   const def = NODE_TYPES[n.type] ?? NODE_TYPES.Generic;
-  return { cx: n.x + def.width / 2, cy: n.y + def.height / 2, w: def.width, h: def.height };
+  const nv = viewerState.nodes?.[n.id];
+  const x = nv?.x ?? 0;
+  const y = nv?.y ?? 0;
+  return { cx: x + def.width / 2, cy: y + def.height / 2, w: def.width, h: def.height };
 }
 
 export function maxBottom(): number {
   let m = 0;
   for (const n of spec.nodes) {
     const def = NODE_TYPES[n.type] ?? NODE_TYPES.Generic;
-    m = Math.max(m, n.y + def.height);
+    const nv = viewerState.nodes?.[n.id];
+    const y = nv?.y ?? 0;
+    m = Math.max(m, y + def.height);
   }
   return m;
 }
@@ -32,13 +37,13 @@ export function edgeGeom(e: Edge): EdgeGeom | null {
   const b = nodeCenter(t);
   if (e.kind === "feedback-ack") {
     const lane = maxBottom() + 30;
-    const sy = s.y + a.h;
-    const ty = t.y + b.h;
+    const sy = (viewerState.nodes?.[s.id]?.y ?? 0) + a.h;
+    const ty = (viewerState.nodes?.[t.id]?.y ?? 0) + b.h;
     return pathFromPoints([[a.cx, sy], [a.cx, lane], [b.cx, lane], [b.cx, ty]]);
   }
   if (e.kind === "inhibit-in") {
-    const sTop = s.y;
-    const tBot = t.y + b.h;
+    const sTop = viewerState.nodes?.[s.id]?.y ?? 0;
+    const tBot = (viewerState.nodes?.[t.id]?.y ?? 0) + b.h;
     const lane = (sTop + tBot) / 2;
     return pathFromPoints([[a.cx, sTop], [a.cx, lane], [b.cx, lane], [b.cx, tBot]]);
   }

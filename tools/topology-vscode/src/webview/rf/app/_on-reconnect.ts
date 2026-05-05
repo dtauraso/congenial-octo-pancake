@@ -31,7 +31,7 @@ export function onReconnectImpl(ctx: AppCtx, oldEdge: RFEdge, conn: Connection) 
   });
   ctx.reconnectOk.current = true;
   ctx.lastSpec.current = next;
-  const flow = specToFlow(next, viewerState.folds);
+  const flow = specToFlow(next, viewerState.folds, viewerState);
   ctx.setNodes(flow.nodes);
   ctx.setEdges(flow.edges);
   scheduleSave();

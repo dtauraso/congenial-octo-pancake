@@ -18,7 +18,7 @@ export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
   // If the spec already loaded *and* the sidecar has folds, rebuild now
   // so the folds (which live on viewerState, not the spec) appear.
   if (ctx.lastSpec.current && next.folds && next.folds.length > 0) {
-    const flow = specToFlow(ctx.lastSpec.current, next.folds);
+    const flow = specToFlow(ctx.lastSpec.current, next.folds, next);
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
   }

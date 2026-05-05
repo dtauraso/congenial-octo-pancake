@@ -51,8 +51,8 @@ export function useNodeContextHandlers(ctx: AppCtx) {
     }
     let cx = 0, cy = 0;
     for (const id of memberIds) {
-      const n = spec.nodes.find((sn) => sn.id === id);
-      if (n) { cx += n.x; cy += n.y; }
+      const nv = viewerState.nodes?.[id];
+      if (nv) { cx += nv.x; cy += nv.y; }
     }
     cx = cx / memberIds.length;
     cy = cy / memberIds.length;

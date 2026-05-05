@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { parseSpec } from "../src/schema";
 
-const okNode = { id: "n", type: "ChainInhibitor", x: 0, y: 0 };
+const okNode = { id: "n", type: "ChainInhibitor" };
 const okEdge = {
   id: "e", source: "n", sourceHandle: "out",
   target: "n", targetHandle: "chainIn", kind: "chain",
@@ -29,12 +29,6 @@ describe("parseSpec rejects", () => {
     expect(() =>
       parseSpec({ nodes: [{ ...okNode, id: 1 }], edges: [] }),
     ).toThrow(/spec\.nodes\[0\]\.id/);
-  });
-
-  it("node missing x or y", () => {
-    expect(() =>
-      parseSpec({ nodes: [{ id: "a", type: "Input" }], edges: [] }),
-    ).toThrow(/spec\.nodes\[0\]\.x/);
   });
 
   it("edge with kind outside EDGE_KINDS", () => {

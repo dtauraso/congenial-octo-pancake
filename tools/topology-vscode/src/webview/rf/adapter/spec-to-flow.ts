@@ -1,6 +1,6 @@
 import type { Edge as RFEdge, Node as RFNode } from "reactflow";
 import { KIND_COLORS, NODE_TYPES, type Node as SpecNode, type Spec } from "../../../schema";
-import type { Fold } from "../../viewerState";
+import type { Fold, ViewerState } from "../../viewerState";
 import { COLLAPSED_FOLD_W, COLLAPSED_FOLD_H, expandedBounds } from "./_bounds";
 
 // Fold-aware spec→flow conversion. Folds are viewer-only state; they never
@@ -12,6 +12,7 @@ import { COLLAPSED_FOLD_W, COLLAPSED_FOLD_H, expandedBounds } from "./_bounds";
 export function specToFlow(
   spec: Spec,
   folds: Fold[] = [],
+  vs: Pick<ViewerState, "nodes" | "edges"> = {},
 ): { nodes: RFNode[]; edges: RFEdge[] } {
   // Map memberId → containing collapsed fold id. Nested folds are not
   // supported here; if a node appears in multiple collapsed folds, the first
@@ -44,7 +45,7 @@ export function specToFlow(
         zIndex: 0,
       };
     }
-    const b = expandedBounds(f, nodeById);
+    const b = expandedBounds(f, nodeById, vs.nodes ?? {});
     return {
       id: f.id,
       type: "fold",
@@ -72,13 +73,14 @@ export function specToFlow(
     const def = NODE_TYPES[n.type];
     const width = def?.width ?? 110;
     const height = def?.height ?? 60;
+    const nv = vs.nodes?.[n.id];
     return {
       id: n.id,
       type: "animated",
-      position: { x: n.x, y: n.y },
+      position: { x: nv?.x ?? 0, y: nv?.y ?? 0 },
       data: {
         label: n.id,
-        sublabel: n.sublabel,
+        sublabel: nv?.sublabel,
         type: n.type,
         fill: def?.fill ?? "#ffffff",
         stroke: def?.stroke ?? "#888",
@@ -90,7 +92,7 @@ export function specToFlow(
         // Round-trip node.state so initial dx/dy (and any other handler-state
         // seed) survives spec → flow → spec. Runner overwrites world.state
         // from initWorld; the spec field is the seed, not the live value.
-        state: n.state,
+        state: nv?.state,
         props: n.props,
         spec: n.spec,
         notes: n.notes,
@@ -115,6 +117,7 @@ export function specToFlow(
     // endpoints so RF falls back to the placeholder's default handles.
     const sourceHandle = srcFold ? undefined : e.sourceHandle;
     const targetHandle = dstFold ? undefined : e.targetHandle;
+    const ev = vs.edges?.[e.id];
     edges.push({
       id: e.id,
       source,
@@ -131,7 +134,7 @@ export function specToFlow(
         kind: e.kind,
         sourceHandle: e.sourceHandle,
         targetHandle: e.targetHandle,
-        route: e.route,
+        route: ev?.route,
         lane: e.lane,
         arrowStyle: e.arrowStyle,
         valueLabel: e.valueLabel,

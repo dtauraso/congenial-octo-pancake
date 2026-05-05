@@ -56,8 +56,11 @@ export function useNodeDrag(
     }
     const sn = spec.nodes.find((n) => n.id === node.id);
     if (!sn) return;
-    const dx = node.position.x - sn.x;
-    const dy = node.position.y - sn.y;
+    const prevNv = viewerState.nodes?.[node.id];
+    const prevX = prevNv?.x ?? 0;
+    const prevY = prevNv?.y ?? 0;
+    const dx = node.position.x - prevX;
+    const dy = node.position.y - prevY;
     if (dx === 0 && dy === 0) return;
     // Phase 6 Chunk B record-mode-lite: paused drag on a motion-bearing
     // node rewrites the per-phase slide rule (props.slidePx/slideDy) so
@@ -74,21 +77,19 @@ export function useNodeDrag(
         target.props = p;
       });
       ctx.lastSpec.current = next;
-      // Spec base x/y didn't change, so RF must re-snap to the original
+      // View x/y didn't change, so RF must re-snap to the original
       // position — otherwise the dragged-to coordinate sticks visually
       // and compounds with the next state.dx tween.
       ctx.rebuildFlow();
       scheduleSave();
       return;
     }
-    const next = mutateSpec((s) => {
-      const target = s.nodes.find((n) => n.id === node.id);
-      if (!target) return;
-      target.x = node.position.x;
-      target.y = node.position.y;
+    patchViewerState((v) => {
+      if (!v.nodes) v.nodes = {};
+      const existing = v.nodes[node.id] ?? { x: 0, y: 0 };
+      v.nodes[node.id] = { ...existing, x: node.position.x, y: node.position.y };
     });
-    ctx.lastSpec.current = next;
-    scheduleSave();
+    scheduleViewSave();
   }, [ctx, setGuides]);
 
   return { onNodeDrag, onNodeDragStop };

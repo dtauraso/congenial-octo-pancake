@@ -13,7 +13,7 @@ const topogen = readFileSync(`${root}/cmd/topogen/main.go`, "utf8");
 const tagRe = /`json:"([a-zA-Z0-9_]+)/g;
 const specAllowed = new Set([...topogen.matchAll(tagRe)].map((m) => m[1]));
 
-const viewAllowed = new Set(["camera", "views", "folds", "bookmarks"]);
+const viewAllowed = new Set(["camera", "views", "folds", "bookmarks", "lastSelectionIds", "nodes", "edges"]);
 
 function walk(obj, allowed, path, file) {
   if (Array.isArray(obj)) { obj.forEach((x, i) => walk(x, allowed, `${path}[${i}]`, file)); return; }
