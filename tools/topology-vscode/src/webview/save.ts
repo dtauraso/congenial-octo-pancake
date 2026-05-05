@@ -79,6 +79,11 @@ export function performSave() {
 }
 
 export function performViewSave() {
+  // Race guard: until view-load has been processed (markViewSynced called),
+  // viewerState lacks the persisted nodes/edges from the sidecar. Saving in
+  // that window serializes empty {nodes,edges} and clobbers the file on
+  // disk. See task/view-load-race-guard.
+  if (lastViewSyncedText === undefined) return;
   const text = serializeViewerState(viewerState);
   if (text === lastViewSyncedText) return;
   lastViewSyncedText = text;
@@ -95,6 +100,7 @@ export function flushSave() {
 }
 
 export function scheduleViewSave() {
+  if (lastViewSyncedText === undefined) return;
   viewSaveImpl?.schedule();
 }
 
