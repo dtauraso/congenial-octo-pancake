@@ -276,7 +276,15 @@ function Inner() {
           lastSpec.current = next;
           loadRunner(next);
           resetRunner();
-          playRunner();
+          // Defer auto-play one frame so AnimatedEdge subscribers and
+          // React Flow's first layout pass exist when the runner's
+          // initial stepOnce fires. Without this, the first emit
+          // dispatches into an empty subscriber set (phantom simT=0
+          // pulse with no PulseInstance) and the [geom, speedPxPerMs]
+          // effect re-runs as RF settles, producing a startup
+          // anim-rerun storm. By round 2 (cycle restart) everything
+          // stabilizes; this one-frame defer makes round 1 match.
+          requestAnimationFrame(() => playRunner());
           const flow = specToFlow(next, viewerState.folds);
           // Reconcile the persisted selection against the current node set:
           // ids no longer present (after a delete in another session) are
