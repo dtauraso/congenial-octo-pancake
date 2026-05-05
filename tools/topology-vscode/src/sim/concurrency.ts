@@ -53,6 +53,11 @@ export function classifyConcurrentEdges(spec: Spec): Set<string> {
       concurrent.add(e.id);
       continue;
     }
+    // Input-sourced edges are driven by the seed sequence (and
+    // pendingSeeds for atTick>0), not by the N1' self-pacer. Self-pacing
+    // an Input would re-fire its last init value forever, conflicting
+    // with the deterministic [v0, v1, ...] sequence the seed defines.
+    if (typeOf.get(e.source) === "Input") continue;
     if (!gated.has(e.source)) concurrent.add(e.id);
   }
   return concurrent;

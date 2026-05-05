@@ -1,607 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BaseEdge, type EdgeProps } from "reactflow";
-import { KIND_COLORS, type ArrowStyle, type EdgeKind, type EdgeRoute } from "../../schema";
-import { subscribe, subscribeState, getConcurrentEdges, getTickMs, getWorld, isPlaying } from "../../sim/runner";
-import { getPendingCount } from "../../sim/simulator";
-import { vscode } from "../save";
+import { KIND_COLORS, type EdgeRoute } from "../../schema";
+import { subscribe, subscribeState, getConcurrentEdges, getSimTime } from "../../sim/runner";
 import { markerEndUrl } from "./MarkerDefs";
 import { dashForKind } from "./edge-style";
-
-const MAX_RIDING_LABEL_CHARS = 8;
-function formatRidingValue(v: unknown): string {
-  if (typeof v === "number") return String(v);
-  const s = String(v);
-  return s.length > MAX_RIDING_LABEL_CHARS
-    ? s.slice(0, MAX_RIDING_LABEL_CHARS) + "…"
-    : s;
-}
-
-type EdgeData = {
-  kind?: EdgeKind;
-  route?: EdgeRoute;
-  lane?: number;
-  arrowStyle?: ArrowStyle;
-  valueLabel?: string;
-  label?: string;
-};
-
-function midpoint(
-  route: EdgeRoute,
-  sx: number, sy: number, tx: number, ty: number, lane: number,
-): { x: number; y: number } {
-  if (route === "snake") {
-    const midX = (sx + tx) / 2 + lane;
-    return { x: midX, y: (sy + ty) / 2 };
-  }
-  if (route === "below") {
-    const corridorY = Math.max(sy, ty) + 80 + lane;
-    return { x: (sx + tx) / 2, y: corridorY };
-  }
-  return { x: (sx + tx) / 2, y: (sy + ty) / 2 };
-}
-
-// --- Path geometry: single source of truth for `d` and per-arc
-// position/tangent. Replaces finite-difference normal sampling, which
-// produced point/tangent inconsistency at the end of a bezier (the
-// tangent was clamped away from the path end while the point was
-// not, so on a tightly curling cubic the label drifted ~25–30px off
-// the parallel curve). Here, point and tangent are always evaluated
-// at the same parameter, so that mismatch is structurally impossible.
-
-type Pt = { x: number; y: number };
-
-type StraightSeg = {
-  kind: "straight";
-  p0: Pt; p1: Pt;
-  len: number;
-  ux: number; uy: number;
-};
-type CubicSeg = {
-  kind: "cubic";
-  p0: Pt; c1: Pt; c2: Pt; p1: Pt;
-};
-type Seg = StraightSeg | CubicSeg;
-type PathGeom = {
-  d: string;
-  segs: Seg[];
-  cum: number[];
-  // Sum of straight-segment lengths. For a single cubic this is 0;
-  // we never use chord arc to query a cubic — Newton inversion on
-  // the analytic cubic uses the SVG-arc position directly.
-  straightTotal: number;
-};
-
-// Mirrors reactflow's getBezierPath control-point math. Lifted so we
-// own both the `d` string and the analytic control points.
-function controlOffset(distance: number): number {
-  return distance >= 0 ? 0.5 * distance : 0.25 * 25 * Math.sqrt(-distance);
-}
-function controlPoint(pos: string, x1: number, y1: number, x2: number, y2: number): Pt {
-  switch (pos) {
-    case "left":   return { x: x1 - controlOffset(x1 - x2), y: y1 };
-    case "right":  return { x: x1 + controlOffset(x2 - x1), y: y1 };
-    case "top":    return { x: x1, y: y1 - controlOffset(y1 - y2) };
-    case "bottom": return { x: x1, y: y1 + controlOffset(y2 - y1) };
-    default:       return { x: x1, y: y1 };
-  }
-}
-
-function bezierAt(seg: CubicSeg, t: number): Pt {
-  const u = 1 - t;
-  const a = u*u*u, b = 3*u*u*t, c = 3*u*t*t, d = t*t*t;
-  return {
-    x: a*seg.p0.x + b*seg.c1.x + c*seg.c2.x + d*seg.p1.x,
-    y: a*seg.p0.y + b*seg.c1.y + c*seg.c2.y + d*seg.p1.y,
-  };
-}
-function bezierTangentAt(seg: CubicSeg, t: number): Pt {
-  const u = 1 - t;
-  const a = 3*u*u, b = 6*u*t, c = 3*t*t;
-  return {
-    x: a*(seg.c1.x-seg.p0.x) + b*(seg.c2.x-seg.c1.x) + c*(seg.p1.x-seg.c2.x),
-    y: a*(seg.c1.y-seg.p0.y) + b*(seg.c2.y-seg.c1.y) + c*(seg.p1.y-seg.c2.y),
-  };
-}
-
-function makeCubicSeg(p0: Pt, c1: Pt, c2: Pt, p1: Pt): CubicSeg {
-  return { kind: "cubic", p0, c1, c2, p1 };
-}
-
-// Recover the cubic parameter t such that B(t) ≈ target. Newton on
-// the projection of (target - B(t)) onto the unit tangent. Two or
-// three iterations from a reasonable seed converge to sub-pixel.
-function findCubicT(seg: CubicSeg, target: Pt, t0: number): number {
-  let t = Math.max(0, Math.min(1, t0));
-  for (let i = 0; i < 4; i++) {
-    const p = bezierAt(seg, t);
-    const tg = bezierTangentAt(seg, t);
-    const denom = tg.x * tg.x + tg.y * tg.y;
-    if (denom < 1e-9) break;
-    const dx = target.x - p.x, dy = target.y - p.y;
-    const step = (tg.x * dx + tg.y * dy) / denom;
-    const next = Math.max(0, Math.min(1, t + step));
-    if (Math.abs(next - t) < 1e-5) { t = next; break; }
-    t = next;
-  }
-  return t;
-}
-
-function addStraight(segs: Seg[], x0: number, y0: number, x1: number, y1: number) {
-  const dx = x1 - x0, dy = y1 - y0;
-  const len = Math.hypot(dx, dy);
-  const u = len || 1;
-  segs.push({
-    kind: "straight",
-    p0: { x: x0, y: y0 }, p1: { x: x1, y: y1 },
-    len, ux: dx/u, uy: dy/u,
-  });
-}
-
-function finalize(d: string, segs: Seg[]): PathGeom {
-  const cum: number[] = [];
-  let acc = 0;
-  for (const s of segs) {
-    acc += s.kind === "straight" ? s.len : 0;
-    cum.push(acc);
-  }
-  return { d, segs, cum, straightTotal: acc };
-}
-
-function buildPathGeom(
-  route: EdgeRoute,
-  sx: number, sy: number, sp: string,
-  tx: number, ty: number, tp: string,
-  lane: number,
-): PathGeom {
-  const segs: Seg[] = [];
-  if (route === "snake") {
-    const midX = (sx + tx) / 2 + lane;
-    addStraight(segs, sx, sy, midX, sy);
-    addStraight(segs, midX, sy, midX, ty);
-    addStraight(segs, midX, ty, tx, ty);
-    // Round the two corners. Animation segs stay straight (the dot
-    // cuts the corner by at most `r` pixels — within visual noise).
-    const r = Math.min(15, Math.abs(midX - sx) / 2, Math.abs(tx - midX) / 2, Math.abs(ty - sy) / 2);
-    if (!(r > 0.5)) {
-      return finalize(`M ${sx},${sy} L ${midX},${sy} L ${midX},${ty} L ${tx},${ty}`, segs);
-    }
-    const sxDir = midX >= sx ? 1 : -1;
-    const yDir  = ty   >= sy ? 1 : -1;
-    const txDir = tx   >= midX ? 1 : -1;
-    const d =
-      `M ${sx},${sy} ` +
-      `L ${midX - sxDir * r},${sy} ` +
-      `Q ${midX},${sy} ${midX},${sy + yDir * r} ` +
-      `L ${midX},${ty - yDir * r} ` +
-      `Q ${midX},${ty} ${midX + txDir * r},${ty} ` +
-      `L ${tx},${ty}`;
-    return finalize(d, segs);
-  }
-  if (route === "below") {
-    const corridorY = Math.max(sy, ty) + 80 + lane;
-    addStraight(segs, sx, sy, sx, corridorY);
-    addStraight(segs, sx, corridorY, tx, corridorY);
-    addStraight(segs, tx, corridorY, tx, ty);
-    const r = Math.min(15, Math.abs(corridorY - sy) / 2, Math.abs(corridorY - ty) / 2, Math.abs(tx - sx) / 2);
-    if (!(r > 0.5)) {
-      return finalize(`M ${sx},${sy} L ${sx},${corridorY} L ${tx},${corridorY} L ${tx},${ty}`, segs);
-    }
-    const xDir  = tx >= sx ? 1 : -1;
-    const d =
-      `M ${sx},${sy} ` +
-      `L ${sx},${corridorY - r} ` +
-      `Q ${sx},${corridorY} ${sx + xDir * r},${corridorY} ` +
-      `L ${tx - xDir * r},${corridorY} ` +
-      `Q ${tx},${corridorY} ${tx},${corridorY - r} ` +
-      `L ${tx},${ty}`;
-    return finalize(d, segs);
-  }
-  const c1 = controlPoint(sp, sx, sy, tx, ty);
-  const c2 = controlPoint(tp, tx, ty, sx, sy);
-  segs.push(makeCubicSeg({ x: sx, y: sy }, c1, c2, { x: tx, y: ty }));
-  return finalize(`M ${sx},${sy} C ${c1.x},${c1.y} ${c2.x},${c2.y} ${tx},${ty}`, segs);
-}
-
-// Query unit tangent at SVG-arc position `svgArc`. The point is read
-// from SVG (so it matches the dot exactly); for a cubic edge we
-// recover the parameter t from that point via Newton inversion and
-// evaluate B'(t) analytically.
-function queryTangent(
-  geom: PathGeom,
-  path: SVGPathElement,
-  svgArc: number,
-  svgTotal: number,
-  point: Pt,
-): Pt {
-  // Single-cubic case.
-  if (geom.segs.length === 1 && geom.segs[0].kind === "cubic") {
-    const seg = geom.segs[0];
-    const t0 = svgTotal > 0 ? svgArc / svgTotal : 0;
-    const t = findCubicT(seg, point, t0);
-    const tg = bezierTangentAt(seg, t);
-    const tlen = Math.hypot(tg.x, tg.y) || 1;
-    return { x: tg.x / tlen, y: tg.y / tlen };
-  }
-  // Multi-seg routes (snake, below) are straights joined by rounded
-  // quadratic corners — the SVG path's tangent rotates smoothly
-  // through the Q arc, but `geom.segs` only carries the straights, so
-  // a segment-walk lookup snaps the tangent 90° at the cum boundary
-  // and the riding label jumps ~14px at each joint. Always use a
-  // finite difference on the real SVG path here so the label tracks
-  // the same smooth tangent the dot is drawn with.
-  void geom;
-  const eps = Math.min(0.5, svgTotal / 2);
-  const sample = Math.min(Math.max(svgArc, eps), svgTotal - eps);
-  const a = path.getPointAtLength(sample + eps);
-  const b = path.getPointAtLength(sample - eps);
-  const tx = a.x - b.x, ty = a.y - b.y;
-  const tlen = Math.hypot(tx, ty) || 1;
-  return { x: tx / tlen, y: ty / tlen };
-}
-
-// Single named knob for traversal speed. Everything visual scales
-// from this — there is no per-edge tuning, no per-route correction,
-// no separate dot/label timing. The dot's on-screen speed is exactly
-// this rate measured along the path arc, which is also the only
-// thing the riding label tracks. Adjust here, not in callers.
-const PULSE_PX_PER_MS_AT_REF_TICK = 0.08;
-const REF_TICK_MS = 400;
-// Visible dot length along the path arc. The dot is rendered as a
-// dash window via strokeDasharray; the riding label reads its
-// midpoint along the same arc so dot and label trace one curve.
-const PULSE_DASH_PX = 20;
-// Perpendicular distance from the path to the riding label, along
-// the local normal at the dot's midpoint. Using the normal (not a
-// fixed screen-y offset) keeps the label's track parallel to the
-// dot's track on curves and diagonals.
-const PULSE_LABEL_NORMAL_PX = 10;
-function pulseSpeedPxPerMs(): number {
-  return (REF_TICK_MS / getTickMs()) * PULSE_PX_PER_MS_AT_REF_TICK;
-}
-
-type Pulse = {
-  key: number;
-  value: string;
-};
-
-// Visual invariant probe. On by default so drift is always being
-// measured — there is no "I forgot to enable it" failure mode.
-// Each pulse measures the actually-rendered label center against
-// the dot center and logs a one-line summary if the offset
-// deviates from the configured value. Disable at runtime with
-// `window.__pulseProbe = false` or `localStorage.setItem("pulseProbe","0")`.
-// Structured collector. Each pulse that exceeds a threshold pushes
-// one entry to `window.__pulseProbeLog`. Programmatic readers (AI
-// agents driving devtools, Playwright tests) can call
-// `window.__pulseProbeReport()` to get the log and clear it.
-type ProbeLogEntry = {
-  ts: number;
-  edgeId: string;
-  drift: number;
-  tangentSlip: number;
-  measuredOffset: number;
-  expectedOffset: number;
-  angleDeg: number;
-  arcFrac: number;
-};
-declare global {
-  interface Window {
-    __pulseProbe?: boolean;
-    __pulseProbeLog?: ProbeLogEntry[];
-    __pulseProbeReport?: (opts?: { clear?: boolean }) => ProbeLogEntry[];
-    __pulseProbeDump?: () => number;
-  }
-}
-// Install probe globals eagerly at module load so external callers see
-// __pulseProbeDump / __pulseProbeReport even before the first pulse fires.
-if (typeof window !== "undefined") {
-  if (!window.__pulseProbeLog) window.__pulseProbeLog = [];
-  window.__pulseProbeReport = (opts) => {
-    const log = window.__pulseProbeLog ?? [];
-    const snapshot = log.slice();
-    if (opts?.clear !== false) window.__pulseProbeLog = [];
-    return snapshot;
-  };
-  // Posts the current log to the extension host, which writes it to
-  // <workspaceRoot>/.probe/pulse-last.json. Always clears the in-memory
-  // log after dumping — the file is the durable record.
-  window.__pulseProbeDump = () => {
-    const log = window.__pulseProbeLog ?? [];
-    const snapshot = log.slice();
-    window.__pulseProbeLog = [];
-    vscode.postMessage({
-      type: "pulse-probe-dump",
-      json: JSON.stringify({ ts: Date.now(), entries: snapshot }, null, 2),
-    });
-    return snapshot.length;
-  };
-}
-function probeLog(): ProbeLogEntry[] {
-  if (typeof window === "undefined") return [];
-  return window.__pulseProbeLog ?? [];
-}
-// Auto-dump the probe log to disk after a short quiet period whenever
-// new entries arrive. Lets external readers (CLI, AI agents) tail
-// .probe/pulse-last.json without anyone running a console call.
-const PROBE_DUMP_DEBOUNCE_MS = 500;
-let probeDumpTimer: ReturnType<typeof setTimeout> | null = null;
-function scheduleProbeDump(): void {
-  if (typeof window === "undefined") return;
-  if (probeDumpTimer !== null) clearTimeout(probeDumpTimer);
-  probeDumpTimer = setTimeout(() => {
-    probeDumpTimer = null;
-    window.__pulseProbeDump?.();
-  }, PROBE_DUMP_DEBOUNCE_MS);
-}
-// Heartbeat: every PROBE_HEARTBEAT_MS, dump the log if any pulse rendered
-// since the last dump. Guarantees a refreshed file on the disk for
-// external readers — clean runs (no drift entries) still produce a file
-// with `entries: []`, which is the positive "things look fine" signal.
-const PROBE_HEARTBEAT_MS = 5000;
-let probePulsedSinceDump = false;
-function noteProbePulse(): void {
-  probePulsedSinceDump = true;
-}
-if (typeof window !== "undefined") {
-  setInterval(() => {
-    if (!probePulsedSinceDump) return;
-    probePulsedSinceDump = false;
-    window.__pulseProbeDump?.();
-  }, PROBE_HEARTBEAT_MS);
-}
-
-const PULSE_PROBE_DRIFT_PX = 0.01;
-const PULSE_PROBE_TANGENT_PX = 0.01;
-function pulseProbeEnabled(): boolean {
-  if (typeof window === "undefined") return false;
-  if (window.__pulseProbe === false) return false;
-  try {
-    if (window.localStorage?.getItem("pulseProbe") === "0") return false;
-  } catch { /* localStorage unavailable — fall through to default */ }
-  return true;
-}
-
-type ProbeWorst = {
-  drift: number;        // |measured offset| - PULSE_LABEL_NORMAL_PX
-  tangentSlip: number;  // measured offset projected onto local tangent
-  arcFrac: number;      // arcTraveled / svgArc at worst sample
-  measuredOffset: number;
-  measuredAngleDeg: number; // angle between measured offset and expected normal
-};
-
-function PulseInstance({
-  edgeId, geom, route, stroke, value, speedPxPerMs, onDone,
-}: {
-  edgeId: string;
-  geom: PathGeom;
-  route: EdgeRoute;
-  stroke: string;
-  value: string;
-  speedPxPerMs: number;
-  onDone: () => void;
-}) {
-  const pathRef = useRef<SVGPathElement | null>(null);
-  const labelRef = useRef<SVGTextElement | null>(null);
-  const doneRef = useRef(onDone);
-  doneRef.current = onDone;
-  // Cumulative arc traveled in SVG arc units, preserved across `d`
-  // changes. SVG arc (used by strokeDashoffset) and our chord-arc
-  // (used by queryGeom) are reconciled with a per-`d` scale factor.
-  const arcTraveledRef = useRef(0);
-
-  useEffect(() => {
-    const path = pathRef.current;
-    if (!path) return;
-    const label = labelRef.current;
-    const svgArc = path.getTotalLength();
-    if (svgArc <= 0) return;
-
-    let swapStart = performance.now();
-    const startArc = Math.min(arcTraveledRef.current, svgArc);
-    const remainingArc = svgArc - startArc;
-    if (remainingArc <= 0) {
-      doneRef.current();
-      return;
-    }
-    const remainingMs = remainingArc / speedPxPerMs;
-
-    let rafId = 0;
-    let pauseStart: number | null = null;
-    const probeOn = pulseProbeEnabled();
-    let probeWorst: ProbeWorst | null = null;
-
-    const frame = () => {
-      const elapsed = performance.now() - swapStart;
-      const localT = Math.min(1, elapsed / remainingMs);
-      const arcTraveled = startArc + localT * remainingArc;
-      arcTraveledRef.current = arcTraveled;
-
-      const overall = arcTraveled / svgArc;
-      const opacity =
-        overall < 0.05 ? Math.max(0, overall / 0.05) :
-        overall < 0.95 ? 1 :
-        Math.max(0, (1 - overall) / 0.05);
-
-      path.style.strokeDashoffset = String(-arcTraveled);
-      path.style.opacity = String(opacity);
-
-      if (label) {
-        // Label rides a fixed offset ahead of the back of the dash
-        // window — NOT the visible-midpoint of the clipped dash. The
-        // visible-midpoint formula halves label speed in the final
-        // PULSE_DASH_PX once the dash leading edge clamps to svgArc,
-        // producing a conspicuous 2x slowdown right where the eye is
-        // focused. Riding the unclamped midpoint and extrapolating
-        // past the path end along the end tangent keeps constant
-        // speed; the opacity envelope fades the label out as it
-        // exits.
-        const labelArcSvg = arcTraveled + PULSE_DASH_PX / 2;
-        const queryArc = Math.min(labelArcSvg, svgArc);
-        const queryPoint = path.getPointAtLength(queryArc);
-        // Cubic routes use the tangent-normal so the label rides
-        // parallel to the curve (the rewrite at the top of the file
-        // exists to preserve this on tightly-curling cubics). Snake
-        // and below routes are mostly axis-aligned with rounded
-        // quad corners — rotating the offset 90° through a corner
-        // produces a visible downward wobble (~r + offset px), so
-        // pin those to screen-up.
-        // For axis-aligned routes (snake, below) the corner tangents
-        // stay in the first quadrant, so |ty|, -|tx| keeps the
-        // label always above horizontal and right of vertical with
-        // a smooth quarter-circle blend AND stays perpendicular to
-        // the tangent. For cubic/line routes the tangent crosses
-        // quadrants, where that rule no longer perpendicular —
-        // label would slide ahead/behind the dot. Cubics use the
-        // classic perpendicular-with-upward-bias instead.
-        const tangent = queryTangent(geom, path, queryArc, svgArc, queryPoint);
-        const point = labelArcSvg <= svgArc
-          ? queryPoint
-          : { x: queryPoint.x + tangent.x * (labelArcSvg - svgArc),
-              y: queryPoint.y + tangent.y * (labelArcSvg - svgArc) };
-        let nx: number, ny: number;
-        if (route === "snake" || route === "below") {
-          nx =  Math.abs(tangent.y);
-          ny = -Math.abs(tangent.x);
-        } else {
-          nx = -tangent.y;
-          ny =  tangent.x;
-          if (ny > 0) { nx = -nx; ny = -ny; }
-        }
-        const lx = point.x + nx * PULSE_LABEL_NORMAL_PX;
-        const ly = point.y + ny * PULSE_LABEL_NORMAL_PX;
-        label.setAttribute("transform", `translate(${lx}, ${ly})`);
-        // Label opacity is keyed to the label's own arc progress, not
-        // the dot's. The label sits PULSE_DASH_PX/2 ahead of the dot,
-        // so sharing the dot's envelope makes the label fade while it
-        // is still short of the arrow tip.
-        const labelOverall = labelArcSvg / svgArc;
-        const labelOpacity =
-          labelOverall < 0.05 ? Math.max(0, labelOverall / 0.05) :
-          labelOverall < 0.95 ? 1 :
-          Math.max(0, (1 - labelOverall) / 0.05);
-        label.style.opacity = String(labelOpacity);
-
-        if (probeOn) {
-          // Local-coords bbox of the rendered text, plus the
-          // translate, gives the actual on-screen label center.
-          // Compare against the dot center (= `point`). With the
-          // current model, label center should sit exactly
-          // PULSE_LABEL_NORMAL_PX along (nx, ny) with no tangential
-          // component. Anything else is a rendering surprise.
-          let bb;
-          try { bb = label.getBBox(); }
-          catch { bb = null; }
-          if (bb) {
-            const cx = lx + bb.x + bb.width / 2;
-            const cy = ly + bb.y + bb.height / 2;
-            const dx = cx - point.x, dy = cy - point.y;
-            const measured = Math.hypot(dx, dy);
-            const drift = Math.abs(measured - PULSE_LABEL_NORMAL_PX);
-            const tangentSlip = Math.abs(dx * tangent.x + dy * tangent.y);
-            const cos = measured > 0 ? (dx * nx + dy * ny) / measured : 1;
-            const angleDeg = Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
-            if (!probeWorst || drift > probeWorst.drift || tangentSlip > probeWorst.tangentSlip) {
-              probeWorst = {
-                drift, tangentSlip,
-                arcFrac: arcTraveled / svgArc,
-                measuredOffset: measured,
-                measuredAngleDeg: angleDeg,
-              };
-            }
-          }
-        }
-      }
-
-      if (localT < 1) {
-        rafId = requestAnimationFrame(frame);
-      } else {
-        if (probeOn) noteProbePulse();
-        if (probeOn && probeWorst &&
-            (probeWorst.drift > PULSE_PROBE_DRIFT_PX ||
-             probeWorst.tangentSlip > PULSE_PROBE_TANGENT_PX)) {
-          probeLog().push({
-            ts: performance.now(),
-            edgeId,
-            drift: probeWorst.drift,
-            tangentSlip: probeWorst.tangentSlip,
-            measuredOffset: probeWorst.measuredOffset,
-            expectedOffset: PULSE_LABEL_NORMAL_PX,
-            angleDeg: probeWorst.measuredAngleDeg,
-            arcFrac: probeWorst.arcFrac,
-          });
-          scheduleProbeDump();
-          // eslint-disable-next-line no-console
-          console.warn(
-            `[pulse-probe] edge=${edgeId} worst-drift=${probeWorst.drift.toFixed(2)}px ` +
-            `tangent-slip=${probeWorst.tangentSlip.toFixed(2)}px ` +
-            `measured=${probeWorst.measuredOffset.toFixed(2)}px (expected ${PULSE_LABEL_NORMAL_PX}px) ` +
-            `angle-from-normal=${probeWorst.measuredAngleDeg.toFixed(1)}° at arc=${(probeWorst.arcFrac * 100).toFixed(0)}%`
-          );
-        }
-        doneRef.current();
-      }
-    };
-    if (isPlaying()) rafId = requestAnimationFrame(frame);
-    else pauseStart = performance.now();
-
-    // Gate the rAF loop on runner play-state so pressing pause freezes
-    // in-flight pulses in place and pressing play resumes from the same
-    // arc. Without this, pulses run to completion regardless of pause —
-    // the "pulse keeps flying after pause" decoupling.
-    const unsubState = subscribeState(() => {
-      const playing = isPlaying();
-      if (!playing && rafId) {
-        cancelAnimationFrame(rafId);
-        rafId = 0;
-        pauseStart = performance.now();
-      } else if (playing && pauseStart !== null) {
-        swapStart += performance.now() - pauseStart;
-        pauseStart = null;
-        rafId = requestAnimationFrame(frame);
-      }
-    });
-
-    return () => {
-      unsubState();
-      if (rafId) cancelAnimationFrame(rafId);
-      const reference = pauseStart ?? performance.now();
-      const elapsed = reference - swapStart;
-      const localT = Math.min(1, elapsed / remainingMs);
-      arcTraveledRef.current = startArc + localT * remainingArc;
-    };
-  }, [geom, speedPxPerMs]);
-
-  return (
-    <>
-      <path
-        ref={pathRef}
-        d={geom.d}
-        fill="none"
-        stroke={stroke}
-        strokeWidth={3}
-        strokeDasharray={`${PULSE_DASH_PX},9999`}
-        strokeDashoffset={0}
-        opacity={0}
-        pointerEvents="none"
-      />
-      <text
-        ref={labelRef}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={11}
-        fontWeight={400}
-        fill={stroke}
-        stroke="none"
-        pointerEvents="none"
-      >
-        {value}
-      </text>
-    </>
-  );
-}
+import { buildPathGeom } from "./AnimatedEdge/_geom";
+import { midpoint } from "./AnimatedEdge/_geom";
+import {
+  type EdgeData, type Pulse,
+  formatRidingValue, pulseSpeedPxPerMs,
+} from "./AnimatedEdge/_constants";
+import { PulseInstance } from "./AnimatedEdge/PulseInstance";
 
 export function AnimatedEdge(props: EdgeProps<EdgeData>) {
-  const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, data } = props;
+  const { id, source, target, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, data } = props;
   const route: EdgeRoute = data?.route ?? "line";
   const lane = data?.lane ?? 0;
   const geom = useMemo(
@@ -611,11 +23,9 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   const d = geom.d;
 
   // Two parallel pulse lanes for concurrent edges; the runner emits a
-  // second pulse one tick ahead via concurrentEdges, and the SMIL
-  // reference renders each as its own paint layer. Within a lane,
-  // pulses still queue serially so an in-flight pulse runs to
-  // completion before the next on that lane begins. Non-concurrent
-  // edges only ever populate lane 0.
+  // second pulse one tick ahead via concurrentEdges. Within a lane,
+  // pulses queue serially. Non-concurrent edges only ever populate
+  // lane 0.
   const [pulses0, setPulses0] = useState<Pulse[]>([]);
   const [pulses1, setPulses1] = useState<Pulse[]>([]);
   const len0Ref = useRef(0);
@@ -626,20 +36,6 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   const [concurrent, setConcurrent] = useState(() => getConcurrentEdges().has(id));
   const concurrentRef = useRef(concurrent);
   concurrentRef.current = concurrent;
-  // Parked-at-source dot: when the edge opted into slot capacity and
-  // an emission was held back because the slot was full, show a small
-  // dot at the source handle with a count badge so the wait is visible
-  // (mirrors the SMIL diagram's idle pulse during the ack handshake).
-  const [pendingCount, setPendingCount] = useState(0);
-  useEffect(() => {
-    const update = () => {
-      const w = getWorld();
-      setPendingCount(w ? getPendingCount(w, id) : 0);
-    };
-    update();
-    return subscribeState(update);
-  }, [id]);
-
   useEffect(() => {
     const update = () => setConcurrent(getConcurrentEdges().has(id));
     update();
@@ -650,7 +46,11 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
     const unsub = subscribe((ev) => {
       if (ev.type !== "emit" || ev.edgeId !== id) return;
       const key = ++pulseKeyRef.current;
-      const pulse = { key, value: formatRidingValue(ev.value) };
+      const pulse: Pulse = {
+        key,
+        value: formatRidingValue(ev.value),
+        simStart: getSimTime(),
+      };
       if (concurrentRef.current && len1Ref.current < len0Ref.current) {
         len1Ref.current += 1;
         setPulses1((cur) => [...cur, pulse]);
@@ -662,11 +62,15 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
     return unsub;
   }, [id]);
 
-  const advanceLane0 = useCallback(() => {
-    setPulses0((cur) => cur.slice(1));
+  // Drop-by-key, not slice(1): pulses animate concurrently and a
+  // shorter-arc geometry change could let a later pulse finish first.
+  const advanceLane0 = useCallback((key: number) => {
+    setPulses0((cur) => cur.filter((p) => p.key !== key));
+    if (len0Ref.current > 0) len0Ref.current -= 1;
   }, []);
-  const advanceLane1 = useCallback(() => {
-    setPulses1((cur) => cur.slice(1));
+  const advanceLane1 = useCallback((key: number) => {
+    setPulses1((cur) => cur.filter((p) => p.key !== key));
+    if (len1Ref.current > 0) len1Ref.current -= 1;
   }, []);
 
   const kind = data?.kind ?? "any";
@@ -690,30 +94,36 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   return (
     <>
       <BaseEdge path={d} style={baseStyle} markerEnd={markerEnd} interactionWidth={28} />
-      {pulses0[0] && (
+      {pulses0.map((p) => (
         <PulseInstance
-          key={`l0-${pulses0[0].key}`}
+          key={`l0-${p.key}`}
           edgeId={id}
+          fromNodeId={source}
+          toNodeId={target}
           geom={geom}
           route={route}
           stroke={stroke}
-          value={pulses0[0].value}
+          value={p.value}
           speedPxPerMs={speed}
-          onDone={advanceLane0}
+          simStart={p.simStart}
+          onDone={() => advanceLane0(p.key)}
         />
-      )}
-      {concurrent && pulses1[0] && (
+      ))}
+      {concurrent && pulses1.map((p) => (
         <PulseInstance
-          key={`l1-${pulses1[0].key}`}
+          key={`l1-${p.key}`}
           edgeId={id}
+          fromNodeId={source}
+          toNodeId={target}
           geom={geom}
           route={route}
           stroke={stroke}
-          value={pulses1[0].value}
+          value={p.value}
           speedPxPerMs={speed}
-          onDone={advanceLane1}
+          simStart={p.simStart}
+          onDone={() => advanceLane1(p.key)}
         />
-      )}
+      ))}
       {mid && label && (
         <text
           x={mid.x}
@@ -727,24 +137,6 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
         >
           {kind === "feedback-ack" ? `↻ ${label}` : label}
         </text>
-      )}
-      {pendingCount > 0 && (
-        <g pointerEvents="none">
-          <circle cx={sourceX} cy={sourceY} r={5} fill={stroke} opacity={0.85} />
-          <text
-            x={sourceX}
-            y={sourceY - 9}
-            textAnchor="middle"
-            fontSize={10}
-            fontWeight={600}
-            fill={stroke}
-            stroke="white"
-            strokeWidth={3}
-            paintOrder="stroke"
-          >
-            {pendingCount}
-          </text>
-        </g>
       )}
       {mid && valueLabel && (
         <text

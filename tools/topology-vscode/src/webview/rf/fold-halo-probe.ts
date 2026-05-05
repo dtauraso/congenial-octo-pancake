@@ -52,6 +52,9 @@ declare global {
   }
 }
 
+const HEARTBEAT_MS = 5000;
+let transitionsSinceDump = false;
+
 if (typeof window !== "undefined") {
   if (!window.__foldHaloLog) window.__foldHaloLog = [];
   window.__foldHaloReport = (opts) => {
@@ -63,7 +66,17 @@ if (typeof window !== "undefined") {
   window.__foldHaloDump = () => {
     const log = window.__foldHaloLog ?? [];
     const snapshot = log.slice();
-    window.__foldHaloLog = [];
+    if (snapshot.length === 0) return 0;
+    // Keep the log instead of clearing it — the file becomes a
+    // rolling session timeline so the *first* transition after play
+    // is still readable when later transitions trigger more dumps.
+    // Cap at MAX_LOG entries so the log doesn't grow unbounded
+    // through long sessions; oldest entries roll off.
+    const MAX_LOG = 200;
+    if (log.length > MAX_LOG) {
+      window.__foldHaloLog = log.slice(log.length - MAX_LOG);
+    }
+    transitionsSinceDump = false;
     vscode.postMessage({
       type: "fold-halo-dump",
       json: JSON.stringify({ ts: Date.now(), entries: snapshot }, null, 2),
@@ -83,12 +96,9 @@ function scheduleDump(): void {
   }, DUMP_DEBOUNCE_MS);
 }
 
-const HEARTBEAT_MS = 5000;
-let transitionsSinceDump = false;
 if (typeof window !== "undefined") {
   setInterval(() => {
     if (!transitionsSinceDump) return;
-    transitionsSinceDump = false;
     window.__foldHaloDump?.();
   }, HEARTBEAT_MS);
 }

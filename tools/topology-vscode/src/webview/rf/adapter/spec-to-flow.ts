@@ -1,0 +1,161 @@
+import type { Edge as RFEdge, Node as RFNode } from "reactflow";
+import { KIND_COLORS, NODE_TYPES, type Node as SpecNode, type Spec } from "../../../schema";
+import type { Fold } from "../../viewerState";
+import { COLLAPSED_FOLD_W, COLLAPSED_FOLD_H, expandedBounds } from "./_bounds";
+
+// Fold-aware spec→flow conversion. Folds are viewer-only state; they never
+// touch the spec (topogen ignores topology.view.json). Edges that cross a
+// collapsed fold boundary are re-routed onto the fold placeholder *only in
+// the flow*; the underlying spec edge keeps its original endpoints, so on
+// expand the original wiring is reinstated without mutation.
+
+export function specToFlow(
+  spec: Spec,
+  folds: Fold[] = [],
+): { nodes: RFNode[]; edges: RFEdge[] } {
+  // Map memberId → containing collapsed fold id. Nested folds are not
+  // supported here; if a node appears in multiple collapsed folds, the first
+  // wins (the plan flags nested folds as needing manual coordination).
+  const collapsedFoldFor = new Map<string, string>();
+  for (const f of folds) {
+    if (!f.collapsed) continue;
+    for (const m of f.memberIds) {
+      if (!collapsedFoldFor.has(m)) collapsedFoldFor.set(m, f.id);
+    }
+  }
+
+  const nodeById = new Map<string, SpecNode>();
+  for (const n of spec.nodes) nodeById.set(n.id, n);
+
+  const foldNodes: RFNode[] = folds.map((f) => {
+    if (f.collapsed) {
+      return {
+        id: f.id,
+        type: "fold",
+        position: { x: f.position[0], y: f.position[1] },
+        data: {
+          label: f.label,
+          collapsed: true,
+          memberCount: f.memberIds.length,
+          memberIds: f.memberIds,
+          width: COLLAPSED_FOLD_W,
+          height: COLLAPSED_FOLD_H,
+        },
+        zIndex: 0,
+      };
+    }
+    const b = expandedBounds(f, nodeById);
+    return {
+      id: f.id,
+      type: "fold",
+      position: { x: b.x, y: b.y },
+      data: {
+        label: f.label,
+        collapsed: false,
+        memberCount: f.memberIds.length,
+        memberIds: f.memberIds,
+        width: b.w,
+        height: b.h,
+      },
+      // Expanded folds render *behind* members. Don't set zIndex: -1 — that
+      // drops the wrapper (label tab included) below the canvas background.
+      // Array order is enough: fold nodes are emitted first below.
+      // Not draggable because the frame's position is recomputed from member
+      // bounds on every render.
+      draggable: false,
+    };
+  });
+
+  const memberNodes: RFNode[] = spec.nodes
+    .filter((n) => !collapsedFoldFor.has(n.id))
+    .map((n) => {
+    const def = NODE_TYPES[n.type];
+    const width = def?.width ?? 110;
+    const height = def?.height ?? 60;
+    return {
+      id: n.id,
+      type: "animated",
+      position: { x: n.x, y: n.y },
+      data: {
+        label: n.id,
+        sublabel: n.sublabel,
+        type: n.type,
+        fill: def?.fill ?? "#ffffff",
+        stroke: def?.stroke ?? "#888",
+        shape: def?.shape ?? "rect",
+        width,
+        height,
+        inputs: def?.inputs ?? [],
+        outputs: def?.outputs ?? [],
+        // Round-trip node.state so initial dx/dy (and any other handler-state
+        // seed) survives spec → flow → spec. Runner overwrites world.state
+        // from initWorld; the spec field is the seed, not the live value.
+        state: n.state,
+        props: n.props,
+        spec: n.spec,
+        notes: n.notes,
+      },
+    };
+  });
+
+  const edges: RFEdge[] = [];
+  for (const e of spec.edges) {
+    const srcFold = collapsedFoldFor.get(e.source);
+    const dstFold = collapsedFoldFor.get(e.target);
+    if (srcFold && dstFold && srcFold === dstFold) continue;
+
+    const source = srcFold ?? e.source;
+    const target = dstFold ?? e.target;
+    // When an endpoint is rerouted to a fold placeholder, the original port
+    // handle no longer applies. Drop sourceHandle/targetHandle on rerouted
+    // endpoints so RF falls back to the placeholder's default handles.
+    const sourceHandle = srcFold ? undefined : e.sourceHandle;
+    const targetHandle = dstFold ? undefined : e.targetHandle;
+    edges.push({
+      id: e.id,
+      source,
+      target,
+      sourceHandle,
+      targetHandle,
+      type: "animated",
+      // `label` is rendered as SVG <text> by AnimatedEdge so the style-guide
+      // font-weight / fill / stroke="none" rules apply (RF's default label
+      // renders via foreignObject, which the guide's text exceptions don't
+      // reach). Carried in data only.
+      style: { stroke: KIND_COLORS[e.kind] ?? "#888", strokeWidth: 1.5 },
+      data: {
+        kind: e.kind,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+        route: e.route,
+        lane: e.lane,
+        arrowStyle: e.arrowStyle,
+        valueLabel: e.valueLabel,
+        label: e.label,
+      },
+    });
+  }
+
+  // spec.notes[] render as RF nodes of type "note" so they pan/zoom with the
+  // canvas. Index-keyed ids (`__note-N`) keep ordering stable across the
+  // round-trip; flowToSpec reads the same prefix back.
+  const NOTE_DEFAULT_W = 160;
+  const NOTE_DEFAULT_H = 60;
+  const noteNodes: RFNode[] = (spec.notes ?? []).map((nt, i) => ({
+    id: `__note-${i}`,
+    type: "note",
+    position: { x: nt.x, y: nt.y },
+    data: {
+      text: nt.text,
+      width: nt.width ?? NOTE_DEFAULT_W,
+      height: nt.height ?? NOTE_DEFAULT_H,
+      hasWidth: nt.width !== undefined,
+      hasHeight: nt.height !== undefined,
+    },
+    draggable: false,
+    selectable: false,
+  }));
+
+  // Fold rectangles render *behind* the rest, so emit them first.
+  return { nodes: [...foldNodes, ...memberNodes, ...noteNodes], edges };
+}

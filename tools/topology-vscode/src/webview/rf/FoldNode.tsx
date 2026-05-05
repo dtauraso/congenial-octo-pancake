@@ -1,24 +1,11 @@
 import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { subscribe, getTickMs } from "../../sim/runner";
+import { subscribeAnim } from "./timeline-probe";
 import { recordFoldHaloEvent } from "./fold-halo-probe";
-import { createFoldActivityTracker, isFoldBoundaryEmit } from "./fold-activity";
+import { isFoldBoundaryEmit } from "./fold-activity";
 
 const FOLD_STROKE = "#b89a3c";
-
-// Mirror AnimatedNode's portStyle: 8x8 colored dot, half-protruding past
-// the edge. The buffered halo (boxShadow) goes on the input dot only,
-// matching how member nodes show their per-port "input X waiting" ring.
-function foldPortStyle(side: "left" | "right", buffered = false): React.CSSProperties {
-  return {
-    width: 8, height: 8, minWidth: 0, minHeight: 0,
-    [side]: -4, top: "50%",
-    transform: "translate(0, -50%)",
-    background: FOLD_STROKE, border: "1px solid #fff",
-    borderRadius: 4,
-    ...(buffered ? { boxShadow: `0 0 0 2px ${FOLD_STROKE}` } : {}),
-  };
-}
+const FOLD_HALO_BOX_SHADOW = `0 0 0 2px ${FOLD_STROKE}`;
 
 export type FoldNodeData = {
   label: string;
@@ -38,33 +25,49 @@ export type FoldNodeData = {
 // (where the halo lives in the DOM) and this slice evolve independently.
 
 function useFoldHaloState(foldId: string, memberIds: string[]): { buffered: boolean } {
-  // "active" = any member has fired within `decayMs`. Each member fire
-  // refreshes the timeout; when it expires, the halo turns off. The
-  // earlier flash + glow overlays were dropped — at typical tick rates
-  // they re-fired faster than they faded, producing a strobe that
-  // competed with the persistent halo. The port-dot halo is the single
-  // authoritative on/off signal now.
+  // Halo bound to animation lifecycle, not simulator events. The
+  // simulator fires receives at sim-instant times (often 0ms after the
+  // emit), so the model "received" before the user's eyes see the
+  // pulse arrive. Anchoring the halo to anim-end (inward) and
+  // anim-start (outward) means the halo flips when the user sees the
+  // pulse cross the boundary. Closes the model/view temporal-
+  // decoupling instance for the halo.
+  //
+  //  - anim-end on outside→member edge:  pulse visually arrived → on
+  //  - anim-start on member→outside edge: pulse visually departing → off
+  //
+  // Pause is free: the runner gates the rAF loop on play state, so
+  // anim-start/anim-end don't fire while paused.
   const [buffered, setBuffered] = useState<boolean>(false);
   useEffect(() => {
+    // Include foldId itself in the membership set: when the fold is
+    // collapsed, the adapter rewrites boundary edges so their source/
+    // target become the fold placeholder's id, not the original member.
+    // The placeholder is the visual stand-in for the members, so an
+    // anim event with foldId on one side IS a boundary crossing.
+    const members = new Set([...memberIds, foldId]);
+    let active = false;
     recordFoldHaloEvent(foldId, "mount", foldId, memberIds, false);
-    const ids = new Set(memberIds);
-    const tracker = createFoldActivityTracker(
-      Math.round(getTickMs() * 1.5),
-      (active) => {
-        recordFoldHaloEvent(foldId, active ? "start" : "end", active ? "(fire)" : "(decay)", memberIds);
-        setBuffered(active);
-      },
-    );
-    const unsub = subscribe((ev) => {
-      if (ev.type !== "fire" || !ids.has(ev.nodeId)) return;
-      const wasActive = tracker.isActive();
-      tracker.noteFire();
-      if (wasActive) recordFoldHaloEvent(foldId, "fire", ev.nodeId, memberIds);
+    return subscribeAnim((ev) => {
+      if (!isFoldBoundaryEmit(members, ev.fromNodeId, ev.toNodeId)) return;
+      const inward = members.has(ev.toNodeId);
+      // Inward: visual arrival = anim-end. Outward: visual departure
+      // = anim-start. Other combos (anim-start inward, anim-end
+      // outward) aren't the perceptual moment; ignore them.
+      const isOnTrigger = inward && ev.kind === "anim-end";
+      const isOffTrigger = !inward && ev.kind === "anim-start";
+      if (!isOnTrigger && !isOffTrigger) return;
+      const next = isOnTrigger;
+      if (next === active) return;
+      active = next;
+      recordFoldHaloEvent(
+        foldId,
+        active ? "start" : "end",
+        inward ? ev.toNodeId : ev.fromNodeId,
+        memberIds,
+      );
+      setBuffered(active);
     });
-    return () => {
-      tracker.dispose();
-      unsub();
-    };
   }, [foldId, memberIds]);
   return { buffered };
 }
@@ -123,10 +126,11 @@ export function FoldNode(props: NodeProps<FoldNodeData>) {
           boxSizing: "border-box",
           cursor: "pointer",
           position: "relative",
+          ...(buffered ? { boxShadow: FOLD_HALO_BOX_SHADOW } : {}),
         }}
       >
-        <Handle type="target" position={Position.Left} style={foldPortStyle("left", buffered)} />
-        <Handle type="source" position={Position.Right} style={foldPortStyle("right", false)} />
+        <Handle type="target" position={Position.Left} style={HANDLE_HIDDEN} />
+        <Handle type="source" position={Position.Right} style={HANDLE_HIDDEN} />
         <div style={{ fontWeight: 600, position: "relative", zIndex: 1 }}>{data.label || "fold"}</div>
         <div style={{ opacity: 0.7, position: "relative", zIndex: 1 }}>{data.memberCount} nodes</div>
         <div style={{ fontSize: 9, opacity: 0.6, marginTop: 2, position: "relative", zIndex: 1 }}>double-click to expand</div>
@@ -145,6 +149,7 @@ export function FoldNode(props: NodeProps<FoldNodeData>) {
         borderRadius: 8,
         boxSizing: "border-box",
         pointerEvents: "none",
+        ...(buffered ? { boxShadow: FOLD_HALO_BOX_SHADOW } : {}),
       }}
     >
       <div
