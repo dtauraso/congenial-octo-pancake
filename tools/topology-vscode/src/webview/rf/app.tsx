@@ -50,12 +50,17 @@ function Inner() {
 
   useUndoRedo(ctx, s.compareMode !== "A-other");
   useFitViewHotkeys(rf);
-  useHostMessages(ctx, {
+  // Stable identity is load-bearing: useHostMessages' effect deps include
+  // this object, and a fresh literal each render re-runs the effect, which
+  // re-posts {type:"ready"} → host re-sends view-load → setViewport snaps
+  // the camera back mid-pan.
+  const compareSetters = useMemo(() => ({
     setComparisonSpec: s.setComparisonSpec,
     setComparisonLabel: s.setComparisonLabel,
     setCompareMode: s.setCompareMode,
     setCompareError: s.setCompareError,
-  });
+  }), [s.setComparisonSpec, s.setComparisonLabel, s.setCompareMode, s.setCompareError]);
+  useHostMessages(ctx, compareSetters);
 
   const onMoveEnd = useCallback((_: unknown, vp: Viewport) => {
     patchViewerState((v) => { v.camera = { x: vp.x, y: vp.y, zoom: vp.zoom }; });
