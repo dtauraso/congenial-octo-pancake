@@ -28,6 +28,7 @@ export type TimelineEntry = {
     | "fire"
     | "anim-start"
     | "anim-end"
+    | "anim-rerun"
     | "play"
     | "pause"
     | "marker";
@@ -46,6 +47,13 @@ export type TimelineEntry = {
   arcTraveled?: number;
   // free-form note for marker entries (used by tests / manual sessions)
   note?: string;
+  // anim-rerun fields: PulseInstance's [geom, speed] effect re-ran
+  // mid-flight. Captures whether arc rebase regressed or path length
+  // changed under the dot — both produce visible "slow / stalled" pulses.
+  prevArc?: number;
+  newStartArc?: number;
+  newSvgArc?: number;
+  newRemainingMs?: number;
 };
 
 declare global {
@@ -162,6 +170,23 @@ export function noteAnimEnd(
     });
   }
   dispatchAnim({ kind: "anim-end", edgeId, fromNodeId, toNodeId, completed, arcTraveled, simTime, wallTs });
+}
+
+export function noteAnimRerun(
+  edgeId: string, prevArc: number, newStartArc: number, newSvgArc: number, newRemainingMs: number,
+): void {
+  if (!probeEnabled()) return;
+  push({
+    wallTs: Date.now(),
+    simTime: getSimTime(),
+    simTick: currentSimTick(),
+    kind: "anim-rerun",
+    edgeId,
+    prevArc,
+    newStartArc,
+    newSvgArc,
+    newRemainingMs,
+  });
 }
 
 export function noteMarker(note: string): void {

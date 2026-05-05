@@ -6,6 +6,7 @@
 
 import type { Spec, StateValue, Edge } from "../schema";
 import {
+  freeEdgeSlot,
   initWorld,
   replayTo,
   step,
@@ -95,9 +96,40 @@ export function setTickMs(ms: number): void {
   notifyState();
 }
 
+// Wrap initWorld so the runner-managed world always pins slot release
+// to anim-end (deferSlotFreeToView). Without this, slots free the
+// millisecond a handler runs and the simulator dispatches the next emit
+// while the previous pulse is still mid-flight visually — multiple
+// pulses accumulate on the edge. Headless tests call initWorld directly
+// and keep the default false.
+function initWorldForRun(s: Spec): World {
+  const w = initWorld(s);
+  w.deferSlotFreeToView = true;
+  return w;
+}
+
+// "At rest" means: nothing queued, no future seeds, no values parked on
+// edges waiting for the view's anim-end to release their slot, AND no
+// pulses still occupying edge slots (slotsUsed). With deferSlotFreeToView
+// the queue can drain while pulses are still mid-flight; treating that
+// as quiescent would reset the world on the next play() and replay seeds
+// from tick 0.
+function hasPendingWork(w: World): boolean {
+  if (w.queue.length > 0) return true;
+  if (w.pendingSeeds.length > 0) return true;
+  for (const k in w.edgePending) {
+    if (w.edgePending[k].length > 0) return true;
+  }
+  for (const k in w.edgeOccupancy) {
+    if (w.edgeOccupancy[k] > 0) return true;
+  }
+  return false;
+}
+
 export function load(next: Spec): void {
+  cancelCycleRestart();
   spec = next;
-  world = initWorld(next);
+  world = initWorldForRun(next);
   concurrentEdges = classifyConcurrentEdges(next);
   replayEvents = null;
   replayIndex = 0;
@@ -115,7 +147,7 @@ export function load(next: Spec): void {
 // renders them.
 export function loadTrace(nextSpec: Spec, events: readonly TraceEvent[]): void {
   spec = nextSpec;
-  world = initWorld(nextSpec);
+  world = initWorldForRun(nextSpec);
   if (world) world.queue = [];
   concurrentEdges = classifyConcurrentEdges(nextSpec);
   replayEvents = events.slice();
@@ -137,12 +169,43 @@ export function getConcurrentEdges(): ReadonlySet<string> {
 
 export function reset(): void {
   if (!spec) return;
-  world = initWorld(spec);
+  cancelCycleRestart();
+  world = initWorldForRun(spec);
+  stuckLogged = false;
+  notifyState();
+}
+
+// View → sim bridge: AnimatedEdge calls this when a pulse animation
+// finishes. Frees the edge's slot (and any nodeBufferedEdges entries
+// keyed to it on its destination), promotes a pending emission onto
+// the queue if the slot was holding one back, and steps the simulator
+// forward if the runner is playing — so a freshly-released emission
+// doesn't have to wait for the next interval tick to dispatch.
+export function noteEdgePulseEnded(edgeId: string): void {
+  if (!spec || !world) return;
+  if (!world.deferSlotFreeToView) return;
+  freeEdgeSlot(world, edgeId, spec, world.tick);
+  // Drop the edge from any node's bufferedEdges list — the value has
+  // visually arrived; the receiver may still be waiting for a join's
+  // other half, but the upstream channel is no longer carrying anything.
+  for (const nodeId of Object.keys(world.nodeBufferedEdges)) {
+    const arr = world.nodeBufferedEdges[nodeId];
+    const i = arr.indexOf(edgeId);
+    if (i >= 0) {
+      arr.splice(i, 1);
+      if (arr.length === 0) delete world.nodeBufferedEdges[nodeId];
+    }
+  }
+  if (playing) {
+    try { stepOnce(); }
+    catch (err) { reportRunnerError("listener", err); }
+  }
   notifyState();
 }
 
 export function play(): void {
   if (playing || !spec) return;
+  cancelCycleRestart();
   // If we're at rest (queue drained from a previous run, or never
   // started), re-seed by resetting. Lets the play button behave as
   // "restart from seed" when nothing's queued, instead of silently
@@ -150,11 +213,12 @@ export function play(): void {
   if (replayEvents) {
     if (replayIndex >= replayEvents.length) {
       replayIndex = 0;
-      world = initWorld(spec);
+      world = initWorldForRun(spec);
       if (world) world.queue = [];
     }
-  } else if (!world || world.queue.length === 0) {
-    world = initWorld(spec);
+  } else if (!world || !hasPendingWork(world)) {
+    world = initWorldForRun(spec);
+    stuckLogged = false;
   }
   playing = true;
   simSegmentStartWall = nowWall();
@@ -212,6 +276,7 @@ export function pause(): void {
     clearInterval(intervalId);
     intervalId = 0;
   }
+  cancelCycleRestart();
   notifyState();
 }
 
@@ -228,8 +293,13 @@ export function stepOnce(): void {
     return;
   }
   if (world.queue.length === 0) {
-    pause();
-    notifyState();
+    // Queue empty + no future seeds = end of a cycle. Don't pause —
+    // schedule a debounced re-seed so the animation runs continuously.
+    // The quiet window lets in-flight visible pulses finish before the
+    // next cycle starts. User pause() cancels the timer.
+    if (world.pendingSeeds.length === 0) {
+      scheduleCycleRestart();
+    }
     return;
   }
   const before = world.history.length;
@@ -332,14 +402,91 @@ function tick(): void {
     return;
   }
   if (world.queue.length === 0) {
-    pause();
+    if (world.pendingSeeds.length === 0) {
+      scheduleCycleRestart();
+    } else {
+      logStuckPendingOnce(world);
+    }
     return;
   }
   stepOnce();
 }
 
+let stuckLogged = false;
+
+// Continuous-cycle auto-restart. When the queue + pendingSeeds drain we
+// don't pause — we wait a quiet window (long enough for in-flight visible
+// pulses to finish anim) then re-seed from spec. User pause cancels the
+// pending re-seed; user play schedules a fresh cycle if needed.
+const CYCLE_RESTART_QUIET_MS = 2000;
+let cycleRestartTimer: ReturnType<typeof setTimeout> | null = null;
+function cancelCycleRestart(): void {
+  if (cycleRestartTimer !== null) {
+    clearTimeout(cycleRestartTimer);
+    cycleRestartTimer = null;
+  }
+}
+function scheduleCycleRestart(): void {
+  if (cycleRestartTimer !== null) return;
+  cycleRestartTimer = setTimeout(() => {
+    cycleRestartTimer = null;
+    if (!playing || !spec) return;
+    if (!world) return;
+    if (world.queue.length > 0 || world.pendingSeeds.length > 0) return;
+    world = initWorldForRun(spec);
+    stuckLogged = false;
+    try { stepOnce(); }
+    catch (err) { reportRunnerError("stepOnce", err); }
+    notifyState();
+  }, CYCLE_RESTART_QUIET_MS);
+}
+function logStuckPendingOnce(w: World): void {
+  if (stuckLogged) return;
+  stuckLogged = true;
+  const occ: Record<string, number> = {};
+  for (const k in w.edgeOccupancy) if (w.edgeOccupancy[k] > 0) occ[k] = w.edgeOccupancy[k];
+  const pend: Record<string, number> = {};
+  for (const k in w.edgePending) if (w.edgePending[k].length > 0) pend[k] = w.edgePending[k].length;
+  const buf: Record<string, string[]> = {};
+  for (const k in w.nodeBufferedEdges) if (w.nodeBufferedEdges[k].length > 0) buf[k] = [...w.nodeBufferedEdges[k]];
+  const context = {
+    tick: w.tick,
+    pendingSeeds: w.pendingSeeds.length,
+    nextSeedAtTick: w.pendingSeeds[0]?.atTick,
+    edgeOccupancy: occ,
+    edgePending: pend,
+    nodeBufferedEdges: buf,
+  };
+  // eslint-disable-next-line no-console
+  console.warn("[runner] queue empty but hasPendingWork=true", context);
+  reportRunnerError(
+    "stepOnce",
+    new Error("stuck-pending: queue empty but hasPendingWork=true"),
+    context,
+  );
+}
+
 function emitEvents(rec: FireRecord): void {
   if (!spec || !world) return;
+  // Seed-driven arrivals (Input-sourced edges) have no upstream handler
+  // to produce an emit notification, so the pulse animation never
+  // starts. Notify a paired emit here so seed values are visible — same
+  // role the N1' self-pacer used to play incidentally before Input was
+  // excluded from concurrent classification.
+  if (rec.inEdgeId) {
+    const inEdge = findEdge(spec, rec.inEdgeId);
+    const srcNode = inEdge ? spec.nodes.find((n) => n.id === inEdge.source) : undefined;
+    if (inEdge && srcNode?.type === "Input") {
+      notify({
+        type: "emit",
+        edgeId: inEdge.id,
+        fromNodeId: inEdge.source,
+        toNodeId: inEdge.target,
+        value: rec.inputValue,
+        tick: rec.tick,
+      });
+    }
+  }
   const fireEvent: FireEvent = {
     type: "fire",
     nodeId: rec.nodeId,

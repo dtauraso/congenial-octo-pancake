@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BaseEdge, type EdgeProps } from "reactflow";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind, type EdgeRoute } from "../../schema";
-import { subscribe, subscribeState, getConcurrentEdges, getTickMs, getWorld, isPlaying, getSimTime } from "../../sim/runner";
-import { noteAnimStart, noteAnimEnd } from "./timeline-probe";
-import { getPendingCount } from "../../sim/simulator";
+import { subscribe, subscribeState, getConcurrentEdges, getTickMs, getWorld, isPlaying, getSimTime, noteEdgePulseEnded } from "../../sim/runner";
+import { noteAnimStart, noteAnimEnd, noteAnimRerun } from "./timeline-probe";
 import { vscode } from "../save";
 import { markerEndUrl } from "./MarkerDefs";
 import { dashForKind } from "./edge-style";
@@ -423,7 +422,9 @@ function PulseInstance({
     // jumps to the correct simulated position rather than starting
     // from arc=0. On geom/speed re-run, anchor at the current sim
     // time and resume from arcTraveledRef.
-    const swapStart = firstRunRef.current ? simStart : getSimTime();
+    const isFirstRun = firstRunRef.current;
+    const prevArc = arcTraveledRef.current;
+    const swapStart = isFirstRun ? simStart : getSimTime();
     firstRunRef.current = false;
     const startArc = Math.min(arcTraveledRef.current, svgArc);
     const remainingArc = svgArc - startArc;
@@ -433,6 +434,9 @@ function PulseInstance({
     }
     noteAnimStart(edgeId, fromNodeId, toNodeId);
     const remainingMs = remainingArc / speedPxPerMs;
+    if (!isFirstRun) {
+      noteAnimRerun(edgeId, prevArc, startArc, svgArc, remainingMs);
+    }
 
     let rafId = 0;
     const probeOn = pulseProbeEnabled();
@@ -595,6 +599,16 @@ function PulseInstance({
     };
   }, [geom, speedPxPerMs]);
 
+  // Slot release runs exactly once per PulseInstance lifetime. Keeping
+  // it out of the [geom, speedPxPerMs] effect's cleanup is load-bearing:
+  // a window resize or React Flow re-layout re-runs that effect mid-
+  // flight, and folding noteEdgePulseEnded into its cleanup would free
+  // the simulator's edge slot every reflow — letting a second emit
+  // dispatch onto an edge that's still visibly carrying the first pulse.
+  useEffect(() => {
+    return () => { noteEdgePulseEnded(edgeId); };
+  }, [edgeId]);
+
   return (
     <>
       <path
@@ -650,20 +664,6 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   const [concurrent, setConcurrent] = useState(() => getConcurrentEdges().has(id));
   const concurrentRef = useRef(concurrent);
   concurrentRef.current = concurrent;
-  // Parked-at-source dot: when the edge opted into slot capacity and
-  // an emission was held back because the slot was full, show a small
-  // dot at the source handle with a count badge so the wait is visible
-  // (mirrors the SMIL diagram's idle pulse during the ack handshake).
-  const [pendingCount, setPendingCount] = useState(0);
-  useEffect(() => {
-    const update = () => {
-      const w = getWorld();
-      setPendingCount(w ? getPendingCount(w, id) : 0);
-    };
-    update();
-    return subscribeState(update);
-  }, [id]);
-
   useEffect(() => {
     const update = () => setConcurrent(getConcurrentEdges().has(id));
     update();
@@ -769,24 +769,6 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
         >
           {kind === "feedback-ack" ? `↻ ${label}` : label}
         </text>
-      )}
-      {pendingCount > 0 && (
-        <g pointerEvents="none">
-          <circle cx={sourceX} cy={sourceY} r={5} fill={stroke} opacity={0.85} />
-          <text
-            x={sourceX}
-            y={sourceY - 9}
-            textAnchor="middle"
-            fontSize={10}
-            fontWeight={600}
-            fill={stroke}
-            stroke="white"
-            strokeWidth={3}
-            paintOrder="stroke"
-          >
-            {pendingCount}
-          </text>
-        </g>
       )}
       {mid && valueLabel && (
         <text

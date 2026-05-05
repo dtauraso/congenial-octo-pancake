@@ -32,6 +32,14 @@ export type SimEvent = {
   toNodeId: string;
   toPort: string;
   value: StateValue;
+  // Edge `data.init` priming. Init values are "already in flight" from
+  // before time started — they hold an edge slot during queueing/fire
+  // (slot=1 backpressure still applies to subsequent senders), but no
+  // visible pulse is animated for them. Under deferSlotFreeToView the
+  // normal release path is the view's anim-end callback; an init event
+  // has no anim-end, so step() must free its slot at fire time
+  // regardless of defer or the slot leaks forever.
+  fromInit?: boolean;
 };
 
 export type FireRecord = {
@@ -78,6 +86,21 @@ export type World = {
   // the Go topology where the upstream channel can't accept another
   // value until the receiver has cleared its buffer.
   nodeBufferedEdges: Record<string, string[]>;
+  // Seeds whose atTick is in the future. Held outside the main queue so
+  // their slot acquisition is deferred until their atTick arrives — a
+  // future-atTick seed grabbing a slot at world-build (when the slot is
+  // free but the seed's emission isn't due yet) would mis-report the
+  // edge as "full" before play started. Drained in `step` as sim.tick
+  // advances. Sorted by atTick ascending.
+  pendingSeeds: SeedEvent[];
+  // When true, `step` does NOT free edge slots when a handler fires.
+  // The view (AnimatedEdge) calls `freeEdgeSlot` on anim-end instead,
+  // so an edge's slot stays occupied for the full duration of the
+  // visible pulse animation — not just the millisecond between the
+  // model-event arriving and the handler running. Default false keeps
+  // headless tests self-contained (slots free on fire, no anim loop
+  // needed).
+  deferSlotFreeToView: boolean;
 };
 
 // Edges keyed by (sourceNode, sourcePort) for fast lookup at emit time.
@@ -121,22 +144,22 @@ export function initWorld(spec: Spec): World {
     edgeOccupancy: {},
     edgePending: {},
     nodeBufferedEdges: {},
+    pendingSeeds: [],
+    deferSlotFreeToView: false,
   };
   const idx = indexEdges(spec);
   // Explicit empty array means "seed nothing on purpose" — only fall
   // back to defaults when seed is undefined.
   const effective = spec.timing?.seed ?? defaultSeed(spec);
   for (const seed of effective) {
-    scheduleEmission(
-      world,
-      idx,
-      seed.nodeId,
-      seed.outPort,
-      seed.value,
-      seed.atTick ?? 0,
-      0,
-    );
+    const at = seed.atTick ?? 0;
+    if (at > world.tick) {
+      world.pendingSeeds.push(seed);
+    } else {
+      scheduleEmission(world, idx, seed.nodeId, seed.outPort, seed.value, at, 0);
+    }
   }
+  world.pendingSeeds.sort((a, b) => (a.atTick ?? 0) - (b.atTick ?? 0));
   // Edge channel priming: `edge.data.init: [v0, v1, ...]` mirrors Go's
   // `ch <- v0; ch <- v1` pre-loading. Each value becomes a naked event
   // already in flight to the edge's target, ahead of any source fire.
@@ -155,8 +178,9 @@ export function initWorld(spec: Spec): World {
         toNodeId: e.target,
         toPort: e.targetHandle,
         value: v,
+        fromInit: true,
       };
-      if (slots !== undefined && (world.edgeOccupancy[e.id] ?? 0) >= slots) {
+      if ((world.edgeOccupancy[e.id] ?? 0) >= slots) {
         const arr = world.edgePending[e.id] ?? [];
         arr.push(ev);
         world.edgePending[e.id] = arr;
@@ -184,14 +208,16 @@ function readEdgeDelay(data: unknown): number | undefined {
   return typeof d === "number" && d >= 0 ? d : undefined;
 }
 
-// Per-edge slot capacity. Mirrors `make(chan T, N)` — once N pulses
-// are in flight on the edge (queued or held in the receiver's buffer),
-// the source blocks. Unset means unbounded (preserves prior behavior
-// for edges that haven't opted in).
-function readEdgeSlots(data: unknown): number | undefined {
-  if (!data || typeof data !== "object") return undefined;
+// Per-edge slot capacity. Default is 1 — every edge behaves like an
+// unbuffered Go channel (sender blocks until receiver reads). Mirrors
+// what the wirefold latch+gate+ack pattern already enforces in the Go
+// runtime: at most one value in flight on each edge. Explicit
+// `data.slots: N` overrides for edges that genuinely need a buffer.
+const DEFAULT_EDGE_SLOTS = 1;
+function readEdgeSlots(data: unknown): number {
+  if (!data || typeof data !== "object") return DEFAULT_EDGE_SLOTS;
   const s = (data as { slots?: unknown }).slots;
-  return typeof s === "number" && s >= 1 ? Math.floor(s) : undefined;
+  return typeof s === "number" && s >= 1 ? Math.floor(s) : DEFAULT_EDGE_SLOTS;
 }
 
 function readEdgeInit(data: unknown): StateValue[] {
@@ -261,7 +287,7 @@ function scheduleEmission(
       toPort: e.targetHandle,
       value,
     };
-    if (slots !== undefined && (world.edgeOccupancy[e.id] ?? 0) >= slots) {
+    if ((world.edgeOccupancy[e.id] ?? 0) >= slots) {
       const arr = world.edgePending[e.id] ?? [];
       arr.push(ev);
       world.edgePending[e.id] = arr;
@@ -276,7 +302,7 @@ function scheduleEmission(
 // for the slot, release one onto the queue with a recomputed readyAt
 // (current tick + edge delay) so the wait shows up as a delivery
 // happening *now*, not at the originally-scheduled tick.
-function freeEdgeSlot(
+export function freeEdgeSlot(
   world: World,
   edgeId: string,
   spec: Spec,
@@ -310,18 +336,43 @@ export function step(spec: Spec, world: World): World {
     edgeOccupancy: { ...world.edgeOccupancy },
     edgePending: { ...world.edgePending },
     nodeBufferedEdges: { ...world.nodeBufferedEdges },
+    pendingSeeds: [...world.pendingSeeds],
   };
 
-  if (next.queue.length === 0) {
+  if (next.queue.length === 0 && next.pendingSeeds.length === 0) {
     // Already quiescent before this call. Nothing to do.
     next.wasQuiescent = true;
     return next;
   }
 
-  // Advance virtual tick to the next ready event.
-  const head = next.queue[0];
-  if (head.readyAt > next.tick) next.tick = head.readyAt;
-  next.queue.shift();
+  // If the queue is empty but pending seeds remain, advance the tick to
+  // the next pending-seed atTick so its scheduleEmission lands on a
+  // current sim.tick (not in the past, not pre-due).
+  if (next.queue.length === 0 && next.pendingSeeds.length > 0) {
+    const nextAt = next.pendingSeeds[0].atTick ?? 0;
+    if (nextAt > next.tick) next.tick = nextAt;
+  } else {
+    // Advance virtual tick to the next ready event.
+    const head = next.queue[0];
+    if (head.readyAt > next.tick) next.tick = head.readyAt;
+  }
+
+  // Drain any pending seeds whose atTick has now arrived. Each goes
+  // through scheduleEmission, where the slot check happens at the
+  // correct moment (current sim.tick) — if the slot is full at that
+  // moment, the seed lands in edgePending and will be released by
+  // freeEdgeSlot like any other backpressured emission.
+  while (next.pendingSeeds.length > 0 && (next.pendingSeeds[0].atTick ?? 0) <= next.tick) {
+    const seed = next.pendingSeeds.shift()!;
+    scheduleEmission(next, idx, seed.nodeId, seed.outPort, seed.value, seed.atTick ?? 0, 0);
+  }
+  next.queue.sort(orderEvents);
+
+  if (next.queue.length === 0) {
+    next.wasQuiescent = true;
+    return next;
+  }
+  const head = next.queue.shift()!;
 
   const handler = getHandler(
     spec.nodes.find((n) => n.id === head.toNodeId)?.type ?? "",
@@ -346,14 +397,31 @@ export function step(spec: Spec, world: World): World {
   // value (join half-arrival, latch `in` waiting for `release`); slot
   // stays occupied and we record which edge fed which port so a later
   // fire can free it.
+  // Init-priming events ("already in flight from before time started")
+  // have no visual pulse, so the view's anim-end callback never fires
+  // for their own slot — release it here regardless of defer, or it
+  // leaks forever. Crucially, init MUST NOT touch nodeBufferedEdges:
+  // those entries belong to upstream pulses that ARE animated, and
+  // freeing them here would cut backpressure short and let two pulses
+  // share the same visual edge.
+  if (head.fromInit && head.edgeId !== null) {
+    freeEdgeSlot(next, head.edgeId, spec, next.tick);
+  }
   if (result.emissions.length > 0) {
-    if (head.edgeId !== null) freeEdgeSlot(next, head.edgeId, spec, next.tick);
-    const buffered = next.nodeBufferedEdges[head.toNodeId];
-    if (buffered) {
-      for (const eid of buffered) freeEdgeSlot(next, eid, spec, next.tick);
-      delete next.nodeBufferedEdges[head.toNodeId];
+    if (!next.deferSlotFreeToView) {
+      if (head.edgeId !== null && !head.fromInit) {
+        freeEdgeSlot(next, head.edgeId, spec, next.tick);
+      }
+      const buffered = next.nodeBufferedEdges[head.toNodeId];
+      if (buffered) {
+        for (const eid of buffered) freeEdgeSlot(next, eid, spec, next.tick);
+        delete next.nodeBufferedEdges[head.toNodeId];
+      }
     }
-  } else if (head.edgeId !== null) {
+    // If deferring, slots stay occupied and nodeBufferedEdges retains
+    // its list so the runner's anim-end handler can free them once each
+    // pulse visually arrives.
+  } else if (head.edgeId !== null && !head.fromInit) {
     const arr = next.nodeBufferedEdges[head.toNodeId] ?? [];
     arr.push(head.edgeId);
     next.nodeBufferedEdges[head.toNodeId] = arr;
@@ -392,10 +460,10 @@ export function step(spec: Spec, world: World): World {
   //          queue (no anchor configured).
   if (spec.cycleAnchor) {
     if (head.toNodeId === spec.cycleAnchor) next.cycle += 1;
-  } else if (next.queue.length === 0) {
+  } else if (next.queue.length === 0 && next.pendingSeeds.length === 0) {
     next.cycle += 1;
   }
-  next.wasQuiescent = next.queue.length === 0;
+  next.wasQuiescent = next.queue.length === 0 && next.pendingSeeds.length === 0;
   return next;
 }
 
@@ -412,7 +480,7 @@ export function runUntil(
   let cur = world;
   for (let i = 0; i < maxSteps; i++) {
     if (pred(cur)) return cur;
-    if (cur.queue.length === 0) return cur;
+    if (cur.queue.length === 0 && cur.pendingSeeds.length === 0) return cur;
     cur = step(spec, cur);
   }
   throw new Error(
@@ -429,7 +497,9 @@ export function replayTo(spec: Spec, targetCycle: number): World {
 
 // Convenience for tests / N1' detection: run to first quiescence.
 export function runToQuiescent(spec: Spec, world: World = initWorld(spec)): World {
-  return runUntil(spec, world, (w) => w.queue.length === 0 && w.tick > 0);
+  return runUntil(spec, world, (w) =>
+    w.queue.length === 0 && w.pendingSeeds.length === 0 && w.tick > 0,
+  );
 }
 
 // Re-export handler registry through the sim namespace so callers can

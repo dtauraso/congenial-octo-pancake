@@ -22,7 +22,7 @@ import { applyDelete } from "../delete-core";
 import { createFold, toggleFold } from "../fold-core";
 import { NodePalette, PALETTE_DATA_TYPE } from "./NodePalette";
 import { CompareToolbar, type CompareMode } from "./CompareToolbar";
-import { isPlaying as isRunnerPlaying, load as loadRunner, reset as resetRunner } from "../../sim/runner";
+import { isPlaying as isRunnerPlaying, load as loadRunner, play as playRunner, reset as resetRunner } from "../../sim/runner";
 import { MOTION_TYPES } from "../../sim/handlers";
 import { beginEditSublabel, beginRenameNodeId, setInlineEditRerender } from "../inline-edit";
 import { flushViewSave, markViewSynced, scheduleSave, scheduleViewSave, vscode } from "../save";
@@ -276,6 +276,7 @@ function Inner() {
           lastSpec.current = next;
           loadRunner(next);
           resetRunner();
+          playRunner();
           const flow = specToFlow(next, viewerState.folds);
           // Reconcile the persisted selection against the current node set:
           // ids no longer present (after a delete in another session) are

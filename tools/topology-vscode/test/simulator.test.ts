@@ -275,8 +275,13 @@ describe("simulator: per-edge data.delay", () => {
         seed: [{ nodeId: "in", outPort: "out", value: 1, atTick: 3 }],
       },
     };
-    const w = initWorld(spec);
-    expect(w.queue[0].readyAt).toBe(3);
+    // atTick=3 is future-dated, so the seed sits in pendingSeeds rather
+    // than the queue. One step advances tick to 3 and drains the seed
+    // through scheduleEmission with baseTick=3 + defaultDelay=0.
+    let w = initWorld(spec);
+    expect(w.pendingSeeds.length).toBe(1);
+    w = step(spec, w);
+    expect(w.history[0]?.tick).toBe(3);
   });
 });
 
@@ -476,10 +481,12 @@ describe("simulator: readGate cycle backpressure (audit row #1)", () => {
   it("holds inputs 2 and 3 at the source until ack handshakes free the slot", () => {
     const w0 = initWorld(cycleSpec);
     // Default Input seeding fans the [0,1,0] init across atTick=0,1,2.
-    // Only the first should enter the queue; the others sit in pending.
+    // Only the atTick=0 seed enters the queue; atTick=1 and atTick=2
+    // sit in pendingSeeds (deferred so they don't grab the slot before
+    // their emission is due — see initWorld for the rationale).
     const inFlight = w0.queue.filter((e) => e.edgeId === "inputToReadGate").length;
     expect(inFlight).toBe(1);
-    expect(w0.edgePending.inputToReadGate?.length).toBe(2);
+    expect(w0.pendingSeeds.length).toBe(2);
     expect(w0.edgeOccupancy.inputToReadGate).toBe(1);
   });
 
