@@ -7,18 +7,18 @@ read this file first (no chat history needed) and proceed.
 
 ---
 
-Continuing on wirefold, branch task/dom-substrate-happy-dom.
+Continuing on wirefold, branch main (no active task branch).
 
 State at handoff:
-  Local + origin/task/dom-substrate-happy-dom in sync at ac46f83 (refresh after each commit).
-  npm test → 199/199 pass (59 files, contracts/ at 21/21).
-  npm run check:loc → not re-run this turn.
-  Working tree: topology.view.json modified (pre-existing, not from this turn).
+  Local + origin/main in sync at 075971a (post-merge of task/dom-substrate-happy-dom).
+  npm test → 199/199 pass (59 files, contracts/ at 21/21) — last run on the merged branch tip pre-merge.
+  npm run check:loc → clean (no source files ≥ 200 LOC).
+  Working tree: topology.view.json modified (pre-existing, carried across the merge — not from any task work).
 
-Per-branch decision summary: this branch stood up the DOM substrate
-(happy-dom + @testing-library/react), then used it to close the last
-two pending integration contracts (C1 Tier-2, C4 Tier-3). All five
-rows in the registry are now ✅.
+Per-session decision summary: task/dom-substrate-happy-dom was merged
+to main with sign-off, then deleted local + remote. All five contract
+rows are ✅ on main. Post-v0 friction-driven mode is now in effect —
+no contract debt remains to chase.
 
 Contract registry status (docs/planning/visual-editor/contracts.md):
   C1 ✅ ready-once + ready-once-hook (Tier 1+2)
@@ -28,13 +28,12 @@ Contract registry status (docs/planning/visual-editor/contracts.md):
   C5 ✅ stuck-pending-precondition
 
 Open branches (pushed, unmerged):
-  task/dom-substrate-happy-dom — DOM substrate + C1 Tier-2 + C2 row + C4 Tier-3 + handoff-in-repo refactor. Ready to merge with sign-off.
+  (none — task/dom-substrate-happy-dom merged and deleted)
 
 Next options (each justified against "what did the rest of the world converge on"):
-1. Merge task/dom-substrate-happy-dom to main — needs sign-off. All five contracts ✅, full suite green. Clean shippable state.
-2. Drive the editor and log fresh friction to session-log.md (post-v0 default mode — no contract debt to chase).
-3. Open one of the dormant recommended branches (visualize-gate-buffer-state, backpressure-slack-envelope, stepping-semantics-doc).
-4. Pre-merge polish: run npm run check:loc and address any offenders before the merge ask.
+1. Drive the editor and log fresh friction to docs/planning/visual-editor/session-log.md (post-v0 default — the world converged on dogfooding-driven iteration once a v0 ships).
+2. Open one of the dormant recommended branches: visualize-gate-buffer-state, backpressure-slack-envelope, stepping-semantics-doc. Each needs a fresh task/<short-kebab> branch.
+3. Audit pass — see docs/planning/visual-editor/audits.md for the registry of CI-backed, human-driven, and AI-driven audit kinds.
 
 Branch hygiene: no merge to main without explicit sign-off. Delete merged branches without re-asking. Force-push needs sign-off.
 Cwd for tsc/tests/check:loc/build: tools/topology-vscode/ (Bash resets cwd — chain cd or use absolute paths).
