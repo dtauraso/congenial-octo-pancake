@@ -41,13 +41,7 @@ export function parseNode(v: unknown, path: string): Node {
   return {
     id: str(o.id, `${path}.id`),
     type: str(o.type, `${path}.type`),
-    role: opt(o.role, (x) => str(x, `${path}.role`)),
-    x: num(o.x, `${path}.x`),
-    y: num(o.y, `${path}.y`),
     index: opt(o.index, (x) => num(x, `${path}.index`)),
-    sublabel: opt(o.sublabel, (x) => str(x, `${path}.sublabel`)),
-    value: opt(o.value, (x) => str(x, `${path}.value`)),
-    state: opt(o.state, (x) => stateMap(x, `${path}.state`)),
     props: opt(o.props, (x) => stateMap(x, `${path}.props`)),
     spec: opt(o.spec, (x) => parseNodeSpec(x, `${path}.spec`)),
     notes: opt(o.notes, (x) => str(x, `${path}.notes`)),
@@ -66,9 +60,6 @@ export function parseEdge(v: unknown, path: string): Edge {
     kind: oneOf(o.kind, EDGE_KINDS, `${path}.kind`),
     label: opt(o.label, (x) => str(x, `${path}.label`)),
     valueLabel: opt(o.valueLabel, (x) => str(x, `${path}.valueLabel`)),
-    route: opt(o.route, (x) =>
-      oneOf(x, ["line", "snake", "below"] as const, `${path}.route`),
-    ),
     lane: opt(o.lane, (x) => num(x, `${path}.lane`)),
     arrowStyle: opt(o.arrowStyle, (x) =>
       oneOf(x, ["filled", "open"] as const, `${path}.arrowStyle`),
