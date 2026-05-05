@@ -1,8 +1,8 @@
 import { specToFlow } from "../adapter";
-import { boxToViewport } from "../camera";
 import { markViewSynced, scheduleViewSave } from "../../save";
 import { clearViewerHistory, patchViewerState, setViewerState } from "../../state";
-import { isLegacyCamera, parseViewerState, serializeViewerState } from "../../viewerState";
+import { parseViewerState, serializeViewerState } from "../../viewerState";
+import { resolveViewLoadViewport } from "./_resolve-view-load-viewport";
 import type { AppCtx } from "./_ctx";
 
 // "view-load" sidecar message: install viewerState, reconcile selection
@@ -36,20 +36,15 @@ export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
       return n.selected === wantSel ? n : { ...n, selected: wantSel };
     });
   });
-  const c = next.camera;
-  if (c && !isLegacyCamera(c)) {
-    ctx.rf.setViewport({ x: c.x, y: c.y, zoom: c.zoom });
-  } else if (c) {
-    // Legacy SVG viewBox sidecar — convert with the current pane size,
-    // then rewrite `next.camera` in canonical form so the next save
-    // persists the migrated shape.
-    const pane = ctx.paneRef.current;
-    if (pane) {
-      const { width, height } = pane.getBoundingClientRect();
-      const vp = boxToViewport(c, width, height);
-      ctx.rf.setViewport(vp);
-      next.camera = { x: vp.x, y: vp.y, zoom: vp.zoom };
-      scheduleViewSave();
-    }
+  const paneRect = ctx.paneRef.current?.getBoundingClientRect() ?? null;
+  const resolution = resolveViewLoadViewport(next.camera, paneRect);
+  if (resolution.kind === "direct") {
+    ctx.rf.setViewport(resolution.viewport);
+  } else if (resolution.kind === "migrated") {
+    // Legacy SVG viewBox sidecar — apply the migrated viewport and rewrite
+    // next.camera in canonical form so the next save persists the new shape.
+    ctx.rf.setViewport(resolution.viewport);
+    next.camera = resolution.viewport;
+    scheduleViewSave();
   }
 }

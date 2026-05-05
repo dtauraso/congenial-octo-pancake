@@ -51,9 +51,9 @@ balance. CI version of the runtime leak probe.
 
 | ID | Tier | Invariant | Test | Origin |
 |---|---|---|---|---|
-| C1 | 1 | `useHostMessages` posts `{type:"ready"}` exactly once per mount, regardless of render count. | _pending_ — `test/contracts/ready-once.test.ts` | task/camera-snap-back-fix (d8e3c88) |
+| C1 | 1 | `useHostMessages` posts `{type:"ready"}` exactly once per mount, regardless of render count. | `test/contracts/ready-once.test.ts` (Tier-1 half: router posts ready exactly once per install; hook-layer "one install per mount" half awaits Tier-2 substrate) | task/camera-snap-back-fix (d8e3c88) |
 | C2 | 1 | A spec round-tripped through `parseSpec` → `serializeSpec` (or save path) preserves every edge's `data.slots` field. | _pending_ — `test/contracts/spec-slots-roundtrip.test.ts` | task/topology-spec-slots-1 (628945f) |
-| C3 | 1 | `view-load` host message triggers exactly one `setViewport` call per message. | _pending_ — `test/contracts/view-load-setviewport.test.ts` | task/camera-snap-back-fix (d8e3c88) |
+| C3 | 1 | `view-load` host message triggers exactly one `setViewport` call per message. | `test/contracts/view-load-setviewport.test.ts` (pins `resolveViewLoadViewport` returning ≤1 viewport; the call site in `_handle-view-load.ts` reduces this to ≤1 `setViewport` per message by inspection) | task/camera-snap-back-fix (d8e3c88) |
 | C4 | 3 | Under any play/pause/cycle sequence, every edge's `(noteEdgePulseStarted, noteEdgePulseEnded)` count pair balances at quiescence. | _pending_ — `test/contracts/pulse-bridge-balance.test.ts` | task/pulse-bridge-leak-probe (758d883) |
 | C5 | 1 | `cycle-restart.logStuckPendingOnce` fires only when `hasPendingWork(world)` is true. (Match the message to the actual condition — captured probes have shown a mismatch shape.) | _pending_ — `test/contracts/stuck-pending-precondition.test.ts` | .probe/runner-errors-last.json (May 4) |
 
