@@ -4,7 +4,7 @@ import { parseSpec, type Spec } from "../../../schema";
 import { specToFlow } from "../adapter";
 import { setInlineEditRerender } from "../../inline-edit";
 import { vscode } from "../../save";
-import { viewerState } from "../../state";
+import { getSpec, viewerState } from "../../state";
 import type { CompareMode } from "../CompareToolbar";
 import type { AppCtx } from "./_ctx";
 import { handleLoad } from "./_handle-load";
@@ -23,8 +23,14 @@ export function useHostMessages(ctx: AppCtx, c: CompareSetters) {
   // so we register a callback that rebuilds the flow from the live spec.
   useEffect(() => {
     const rerenderFromSpec = () => {
-      if (!ctx.lastSpec.current) return;
-      const flow = specToFlow(ctx.lastSpec.current, viewerState.folds);
+      // Source from the zustand store, not ctx.lastSpec.current — local
+      // mutations (rename via mutateBoth) replace store.spec via immer
+      // but don't touch lastSpec.current, so the latter is stale right
+      // after a rename. Keep lastSpec.current in sync too so other
+      // consumers (on-connect, edge-handlers) see the new ids.
+      const next = getSpec();
+      ctx.lastSpec.current = next;
+      const flow = specToFlow(next, viewerState.folds);
       ctx.setNodes(flow.nodes);
       ctx.setEdges(flow.edges);
     };
