@@ -5,7 +5,7 @@ type: feedback
 ---
 
 For this project, write memory files directly to the repo's
-`memory/` directory and update `memory/MEMORY.md`. Do not write
+`memory/` directory and update `MEMORY.md`. Do not write
 the same memory into the local Claude memory dir at
 `~/.claude/projects/-Users-David-Documents-github-wirefold/memory/`
 and then mirror it. One source of truth, no drift.
@@ -17,5 +17,5 @@ AI systems per the post-v0 no-lock-in rule (see
 
 **How to apply:** any new feedback/project/reference memory for
 this project goes straight to `memory/<name>.md` with an entry
-appended to `memory/MEMORY.md`. The default auto-memory path
+appended to `MEMORY.md`. The default auto-memory path
 under `~/.claude/...` is overridden for this project specifically.

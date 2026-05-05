@@ -18,7 +18,7 @@ Effort is measured in **Opus 4.7 cap hits** — how many times the session token
 
 What burns the cap: large file reads on each context rebuild, back-and-forth UI iteration with extension reloads, and verification runs through `topogen` that re-read generated Go. Pure planning / small edits are cheap; gesture-by-gesture UI work and keyframe animation work are expensive.
 
-A round of repo cleanup landed before resuming Phase 3 (commits `29413bd…3d5bade`): SVG conventions out of CLAUDE.md auto-load, deleted the parallel `tools/topology-editor/` tree, split `extension.ts` by concern, added `tools/topology-vscode/ARCHITECTURE.md` as a one-screen file map, spec-summary header on generated `Wiring/wiring.go`, and `topogen --check` so debounced saves validate without rewriting the file. The estimates below already credit those savings against the prior `~13` total.
+A round of repo cleanup landed before resuming Phase 3 (commits `29413bd…3d5bade`): SVG conventions out of CLAUDE.md auto-load, deleted the parallel `tools/topology-editor/` tree, split `extension.ts` by concern, added `../../../tools/topology-vscode/ARCHITECTURE.md` as a one-screen file map, spec-summary header on generated `../../../nodes/Wiring/Wiring.go`, and `topogen --check` so debounced saves validate without rewriting the file. The estimates below already credit those savings against the prior `~13` total.
 
 ## Per-phase estimates
 

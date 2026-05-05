@@ -37,7 +37,7 @@ without Claude Code-specific tooling.
 ## CI-backed audits (already wired from prior phase work)
 
 > **Mechanical slices.** Audits 11, 14, and 15 each have a deterministic
-> sub-check wired into `.github/workflows/periodic-checks.yml` via
+> sub-check wired into `../../../.github/workflows/periodic-checks.yml` via
 > `scripts/audit-{channel-names,spec-view-hygiene,doc-drift}.{sh,mjs}`.
 > They run informational (non-blocking) and only catch the grep-able
 > failures; the AI-driven sections below still cover judgment items.
@@ -303,7 +303,7 @@ code that exists.
 
 - **CLAUDE.md.** Workflow rules, node types table, paths
   referenced are current.
-- **`docs/planning/visual-editor-plan.md` and per-phase docs.**
+- **`../visual-editor-plan.md` and per-phase docs.**
   Status claims match reality.
 - **`memory/` files.** No outdated facts (memories have shelf
   life — see auto-memory rules).
@@ -343,7 +343,7 @@ or any new node type.
 ### 13. Backpressure invariant
 
 **What it checks.** The latch + AND-gate + ack discipline
-documented in CLAUDE.md and `docs/latch-backpressure.md` holds
+documented in CLAUDE.md and `../../latch-backpressure.md` holds
 throughout `Wiring/` and the node packages. No paths where a value
 can be overwritten in a channel because the downstream latch
 hasn't acked yet. No AND gate that depends on a signal which
@@ -483,7 +483,7 @@ AI won't think to open until after it's already burned the budget.
 
 - **Load-bearing facts surface early.** Lessons from cost overruns
   and recurring mistakes (`memory/feedback_*.md`,
-  `memory/MEMORY.md` index lines) are reachable from one or two
+  `../../../memory/MEMORY.md` index lines) are reachable from one or two
   hops off the entry points (CLAUDE.md, audits.md, session-log).
   No load-bearing fact is reachable *only* through a deep doc
   chain.

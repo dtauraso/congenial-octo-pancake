@@ -6,7 +6,7 @@ type: project
 
 The riding pulse label in `AnimatedEdge.tsx` uses a route-kind-
 dependent offset rule. Mixing them is a known footgun; the probe
-(`window.__pulseProbeLog`, file-bridge at `.probe/pulse-last.json`)
+(`window.__pulseProbeLog`, file-bridge at `../.probe/pulse-last.json`)
 catches it as **tangent slip > 0** even when the perpendicular
 drift is zero.
 

@@ -309,7 +309,7 @@ replay, view recall. The pulse visual probe is always on as of
 in the webview devtools console — empty array is a clean result
 worth recording, non-empty entries are fresh friction.
 
-- The probe output is now persisted to `.probe/pulse-last.json`
+- The probe output is now persisted to `../../../.probe/pulse-last.json`
   via a new webview→host message (`pulse-probe-dump`). The webview
   installs `__pulseProbeDump()` eagerly on module load; entries
   also auto-dump 500ms after each push, and a 5s heartbeat
@@ -405,22 +405,22 @@ ones a typical graph-editor user expects on first contact.
 
 | Pattern | Have it? | Where / gap | Rough effort |
 |---|---|---|---|
-| Pan / zoom / fit-view on load | Yes | [app.tsx:892](tools/topology-vscode/src/webview/rf/app.tsx#L892) (`fitView`), `minZoom 0.1`, `maxZoom 4` | — |
-| Snap-to-grid | Yes | [app.tsx:879-880](tools/topology-vscode/src/webview/rf/app.tsx#L879-L880) (`GRID=24`) | — |
-| Alignment guides during drag | Partial | [app.tsx:681-707](tools/topology-vscode/src/webview/rf/app.tsx#L681-L707) — single-node only; multi-node selection drag clears guides intentionally | S — extend to bbox of selection |
-| Marquee / lasso selection | Yes | `selectionOnDrag`, `SelectionMode.Partial`, `panOnDrag={[1]}` ([app.tsx:895-897](tools/topology-vscode/src/webview/rf/app.tsx#L895-L897)) | — |
+| Pan / zoom / fit-view on load | Yes | [app.tsx:892](../../../tools/topology-vscode/src/webview/rf/app.tsx#L892) (`fitView`), `minZoom 0.1`, `maxZoom 4` | — |
+| Snap-to-grid | Yes | [app.tsx:879-880](../../../tools/topology-vscode/src/webview/rf/app.tsx#L879-L880) (`GRID=24`) | — |
+| Alignment guides during drag | Partial | [app.tsx:681-707](../../../tools/topology-vscode/src/webview/rf/app.tsx#L681-L707) — single-node only; multi-node selection drag clears guides intentionally | S — extend to bbox of selection |
+| Marquee / lasso selection | Yes | `selectionOnDrag`, `SelectionMode.Partial`, `panOnDrag={[1]}` ([app.tsx:895-897](../../../tools/topology-vscode/src/webview/rf/app.tsx#L895-L897)) | — |
 | Multi-select drag | Yes (RF default) | — | — |
-| Port-anchored handles | Yes | `sourceHandle`/`targetHandle`; 1-to-1 input invariant enforced ([app.tsx:474-482](tools/topology-vscode/src/webview/rf/app.tsx#L474-L482)) | — |
+| Port-anchored handles | Yes | `sourceHandle`/`targetHandle`; 1-to-1 input invariant enforced ([app.tsx:474-482](../../../tools/topology-vscode/src/webview/rf/app.tsx#L474-L482)) | — |
 | Edge reroute (drag endpoint) | Yes | `onEdgeUpdate*` handlers | — |
-| Orthogonal routing | Partial | `EdgeRoute = "line"\|"snake"\|"below"` ([schema.ts:62](tools/topology-vscode/src/schema.ts#L62)); snake is orthogonal but **sharp corners** ([AnimatedEdge.tsx:155-167](tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx#L155-L167)) | S — replace `L` with rounded-corner arcs / `Q` |
+| Orthogonal routing | Partial | `EdgeRoute = "line"\|"snake"\|"below"` ([schema.ts:62](../../../tools/topology-vscode/src/schema.ts#L62)); snake is orthogonal but **sharp corners** ([AnimatedEdge.tsx:155-167](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx#L155-L167)) | S — replace `L` with rounded-corner arcs / `Q` |
 | Rounded corners on orthogonal edges | **No** | sharp 90° corners only | folded into above |
 | Auto-routing (avoid node overlaps) | **No** | corridor offset is fixed `+40`; no obstacle awareness | L — adopt a router (ELK, libavoid-js) or accept `route` field as authoritative |
 | Edge labels | Partial | edges have a `label` (Go identifier, not display label); not rendered on canvas | M — render display label on `BaseEdge`, anchor near midpoint |
 | Edge-label collision avoidance | **No** | n/a until labels render | M (after labels) |
 | MiniMap / overview | **No** | no `MiniMap` import; only `Controls` | XS — drop in `<MiniMap />` |
-| Zoom-to-fit shortcut | Partial | bridge exposes `fitNodes(ids)` ([app.tsx:255-261](tools/topology-vscode/src/webview/rf/app.tsx#L255-L261)) but no global `f` / `cmd-1` keybinding | XS — wire keybinding |
+| Zoom-to-fit shortcut | Partial | bridge exposes `fitNodes(ids)` ([app.tsx:255-261](../../../tools/topology-vscode/src/webview/rf/app.tsx#L255-L261)) but no global `f` / `cmd-1` keybinding | XS — wire keybinding |
 | Zoom-to-selection | Partial | `fitNodes` works on selection via bridge, no keyboard hook | XS |
-| Undo / redo | Yes | scoped stacks (spec / viewer), gesture-aware via `data-undo-scope` ([app.tsx:140-236](tools/topology-vscode/src/webview/rf/app.tsx#L140-L236)) | — |
+| Undo / redo | Yes | scoped stacks (spec / viewer), gesture-aware via `data-undo-scope` ([app.tsx:140-236](../../../tools/topology-vscode/src/webview/rf/app.tsx#L140-L236)) | — |
 | Undo grouping at gesture level | Partial | `mutateBoth` groups spec+viewer for delete; multi-node drag pushes one history entry per node-drag-stop (not coalesced) | S — coalesce within a single selection-drag gesture |
 | Copy / paste | **No** | no clipboard handlers | M — serialize selection subgraph, regen ids on paste |
 | Duplicate (cmd-D) | **No** | — | S (after copy/paste plumbing) |
@@ -431,7 +431,7 @@ ones a typical graph-editor user expects on first contact.
 | Context menus | Partial | edge-kind and fold menus exist; no general node menu (rename/duplicate/etc.) | S |
 | Keybinding cheatsheet / discoverability | **No** | — | XS — static panel |
 | Touch / trackpad pan | Yes | `panOnScroll={true}` | — |
-| Connect-validation feedback | Partial | port-conflict logged to console, no UI cue ([app.tsx:478-481](tools/topology-vscode/src/webview/rf/app.tsx#L478-L481)) | XS — toast or red handle flash |
+| Connect-validation feedback | Partial | port-conflict logged to console, no UI cue ([app.tsx:478-481](../../../tools/topology-vscode/src/webview/rf/app.tsx#L478-L481)) | XS — toast or red handle flash |
 | Diff / compare view | Yes (project-specific) | A-live / A-other / B-onion modes | — beyond category baseline |
 | Auto-layout (one-shot) | **No** | manual placement only; ELK / dagre are canonical drop-ins | M |
 
@@ -440,7 +440,7 @@ ones a typical graph-editor user expects on first contact.
 **High value, low effort (open branches when next friction surfaces):**
 1. **MiniMap** — XS, drop-in `<MiniMap />`. Standard expectation; perceptual win for "where am I in this graph."
 2. **Zoom-to-fit / zoom-to-selection keybindings** — XS, function already exists; bind `f` and `shift-f`.
-3. **Rounded corners on `snake` route** — S, single edit in [AnimatedEdge.tsx:155-167](tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx#L155-L167). Visual polish every other tool has.
+3. **Rounded corners on `snake` route** — S, single edit in [AnimatedEdge.tsx:155-167](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx#L155-L167). Visual polish every other tool has.
 4. **Connect-validation UI cue** — XS, replace `console.warn` for port-already-wired with a transient red flash on the rejected target handle.
 
 **High value, medium effort (branch when friction is logged):**
@@ -573,7 +573,7 @@ Regression test added at
 ### Diagnostic infrastructure that paid for itself
 
 The bug was diagnosed by reading
-`.probe/runner-errors-last.json` directly — the user never had to
+`../../../.probe/runner-errors-last.json` directly — the user never had to
 copy a console trace. The probe was set up earlier in the same
 session as a quasi-automation play after the user asked whether I
 could run the diagnostic steps myself (I can't drive the VS Code
@@ -581,7 +581,7 @@ webview UI, but I can route caught throws to disk).
 
 Pattern: any caught exception in a webview listener → push to
 `window.__runnerErrorsLog` → debounced postMessage to host →
-`.probe/runner-errors-last.json`. Eager init in
+`../../../.probe/runner-errors-last.json`. Eager init in
 [runner.ts](../../../tools/topology-vscode/src/sim/runner.ts)
 (`reportRunnerError` + `__runnerErrorsDump` globals) so the bridge
 is alive before any error fires. Mirrors the pulse-probe and

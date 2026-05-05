@@ -36,7 +36,7 @@ is the authoritative copy; this is the portable copy.
 
 - No new "Phase 10" docs. Plan-driven phase work is paused.
 - New work is justified by friction logged in
-  `docs/planning/visual-editor/session-log.md` during real-world
+  `../docs/planning/visual-editor/session-log.md` during real-world
   editor sessions.
 - The NEXT UP candidates and per-phase follow-ups are now
   *candidates*, not commitments.
@@ -48,7 +48,7 @@ is the authoritative copy; this is the portable copy.
 
 ## Audit registry replaces phase docs as the periodic concern
 
-- See `docs/planning/visual-editor/audits.md` for the full set:
+- See `../docs/planning/visual-editor/audits.md` for the full set:
   security, code smells, code quality, complexity, architectural
   tradeoffs, project-specific invariants (goroutine leaks,
   backpressure discipline, channel naming, spec/viewer hygiene),
