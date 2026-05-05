@@ -10,13 +10,15 @@ type DumpType =
   | "pulse-probe-dump"
   | "fold-halo-dump"
   | "runner-errors-dump"
-  | "timeline-dump";
+  | "timeline-dump"
+  | "pulse-bridge-dump";
 
 const FILENAMES: Record<DumpType, string> = {
   "pulse-probe-dump": "pulse-last.json",
   "fold-halo-dump": "fold-halo-last.json",
   "runner-errors-dump": "runner-errors-last.json",
   "timeline-dump": "timeline-last.json",
+  "pulse-bridge-dump": "pulse-bridge-last.json",
 };
 
 export async function writeProbeDump(

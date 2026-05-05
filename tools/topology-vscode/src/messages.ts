@@ -28,7 +28,8 @@ export type WebviewToHostMsg =
   | { type: "pulse-probe-dump"; json: string }
   | { type: "fold-halo-dump"; json: string }
   | { type: "runner-errors-dump"; json: string }
-  | { type: "timeline-dump"; json: string };
+  | { type: "timeline-dump"; json: string }
+  | { type: "pulse-bridge-dump"; json: string };
 
 export type HostToWebviewMsg =
   | { type: "load"; text: string }

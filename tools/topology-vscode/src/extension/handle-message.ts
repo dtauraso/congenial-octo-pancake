@@ -81,6 +81,7 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
     case "fold-halo-dump":
     case "runner-errors-dump":
     case "timeline-dump":
+    case "pulse-bridge-dump":
       await writeProbeDump(msg.type, msg.json, document.uri);
       return;
   }

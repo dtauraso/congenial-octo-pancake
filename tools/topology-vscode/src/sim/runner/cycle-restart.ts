@@ -10,6 +10,7 @@
 
 import { notifyState } from "../event-bus";
 import { reportRunnerError } from "../error-probe";
+import { getPulseBridgeLeaks } from "../pulse-bridge-probe";
 import type { World } from "../simulator";
 import { state } from "./_state";
 import { initWorldForRun } from "./_init";
@@ -62,6 +63,7 @@ export function logStuckPendingOnce(w: World): void {
     edgeOccupancy: occ,
     edgePending: pend,
     nodeBufferedEdges: buf,
+    pulseBridgeLeaks: getPulseBridgeLeaks(),
   };
   // eslint-disable-next-line no-console
   console.warn("[runner] queue empty but hasPendingWork=true", context);

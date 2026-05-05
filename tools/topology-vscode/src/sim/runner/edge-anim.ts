@@ -6,15 +6,18 @@
 import { noteEdgeAnimEnded } from "../simulator";
 import { notifyState } from "../event-bus";
 import { reportRunnerError } from "../error-probe";
+import { notePulseBridgeStart, notePulseBridgeEnd } from "../pulse-bridge-probe";
 import { state } from "./_state";
 import { stepOnce } from "./step";
 
-export function noteEdgePulseStarted(_edgeId: string): void {
+export function noteEdgePulseStarted(edgeId: string): void {
   state.activeAnimations++;
+  notePulseBridgeStart(edgeId);
 }
 
 export function noteEdgePulseEnded(edgeId: string): void {
   if (state.activeAnimations > 0) state.activeAnimations--;
+  notePulseBridgeEnd(edgeId);
   if (!state.spec || !state.world) return;
   if (!state.world.deferSlotFreeToView) return;
   // Slot release is gated on (animEnded AND consumed). This call marks
