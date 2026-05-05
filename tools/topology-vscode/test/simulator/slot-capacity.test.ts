@@ -77,10 +77,15 @@ describe("simulator: edge slot capacity (audit row #1)", () => {
       },
     };
     let w = initWorld(rgSpec);
+    // Step once: chainIn arrives at rg with no ack → handler declines,
+    // event re-queues for tick+1. Slot stays occupied (decline never
+    // frees), source backpressures the second pulse into edgePending.
     w = step(rgSpec, w);
     expect(w.edgeOccupancy.inToRg).toBe(1);
     expect(w.edgePending.inToRg?.length).toBe(1);
-    expect(w.nodeBufferedEdges.rg).toEqual(["inToRg"]);
+    expect(w.nodeBufferedEdges.rg ?? []).toEqual([]);
+    expect(w.queue.some((e) => e.toNodeId === "rg" && e.toPort === "chainIn"))
+      .toBe(true);
     w.queue.push({
       id: w.nextId++,
       readyAt: w.tick,
@@ -91,8 +96,13 @@ describe("simulator: edge slot capacity (audit row #1)", () => {
       toPort: "ack",
       value: 1,
     });
-    w = step(rgSpec, w);
-    expect(w.nodeBufferedEdges.rg ?? []).toEqual([]);
+    // Now step until rg fires (ack processes first, then re-queued
+    // chainIn at tick+1). After fire, slot frees and the held value
+    // releases from edgePending onto the edge.
+    for (let i = 0; i < 5; i++) {
+      w = step(rgSpec, w);
+      if (w.queue.some((e) => e.value === 8 && e.edgeId === "inToRg")) break;
+    }
     expect(w.queue.some((e) => e.value === 8 && e.edgeId === "inToRg")).toBe(true);
   });
 });

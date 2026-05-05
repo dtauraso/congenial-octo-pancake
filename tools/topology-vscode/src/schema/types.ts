@@ -35,7 +35,16 @@ export type Emission = {
 
 export type HandlerState = Record<string, StateValue>;
 export type HandlerInput = { port: string; value: StateValue };
-export type HandlerResult = { state: HandlerState; emissions: Emission[] };
+// `decline: true` means the handler refuses to consume this input right
+// now (e.g. a gated join whose other half hasn't arrived). The simulator
+// leaves state unchanged, keeps the edge slot occupied, and re-queues
+// the event for a later tick. Mirrors the Go pattern where ReadGate
+// only drains FromValue once HasAck is staged.
+export type HandlerResult = {
+  state: HandlerState;
+  emissions: Emission[];
+  decline?: boolean;
+};
 export type HandlerFn = (
   state: HandlerState,
   input: HandlerInput,

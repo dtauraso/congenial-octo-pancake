@@ -68,6 +68,17 @@ export function step(spec: Spec, world: World): World {
   const prevState = next.state[head.toNodeId] ?? {};
   const props = resolveProps(spec, head.toNodeId);
   const result = handler(prevState, { port: head.toPort, value: head.value }, props);
+
+  // Handler refused this input (e.g. ReadGate.chainIn before ack staged).
+  // Re-queue the event one tick later, leaving state, slot occupancy, and
+  // history untouched — the upstream source stays backpressured.
+  if (result.decline) {
+    next.queue.push({ ...head, readyAt: next.tick + 1 });
+    next.queue.sort(orderEvents);
+    next.wasQuiescent = false;
+    return next;
+  }
+
   next.state[head.toNodeId] = result.state;
 
   // Init-priming events have no visual pulse, so the view's anim-end

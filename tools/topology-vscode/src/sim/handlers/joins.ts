@@ -5,7 +5,9 @@
 import type { HandlerFn } from "../../schema";
 import { buffer, clear, has, makeJoin, noEmit } from "./utils";
 
-export const readGateJoin = makeJoin(["chainIn", "ack"], "out", (a) => a);
+export const readGateJoin = makeJoin(["chainIn", "ack"], "out", (a) => a, {
+  gatedPort: "chainIn",
+});
 export const syncGateJoin = makeJoin(["a", "b"], "release", () => 1);
 export const andGateJoin = makeJoin(["a", "b"], "out", (a, b) =>
   Number(a) === 1 && Number(b) === 1 ? 1 : 0,
