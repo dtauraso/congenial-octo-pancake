@@ -14,9 +14,9 @@ State at handoff:
   Pushed.
   npm test → 197/197 pass. tsc --noEmit clean. npm run check:loc clean.
   go build / go test ./... → clean.
-  Working tree: nodes/Wiring/Wiring.go modified
-  (in-flight Go-side state from earlier work — pre-existing, untouched).
+  Working tree: clean.
   topology.json + topology.view.json now reflect post-migration shape (committed).
+  nodes/Wiring/Wiring.go regenerated to match current spec node IDs (64811c7).
 
 Per-session decision summary:
 1. task/audit-15-spec-view-split (merged), five commits:
@@ -71,8 +71,7 @@ Next options:
 2. Open one of the dormant recommended branches:
    visualize-gate-buffer-state, backpressure-slack-envelope,
    stepping-semantics-doc.
-3. Address the Go-side dirty edit on nodes/Wiring/Wiring.go (figure
-   out what it was for and either commit or revert).
+3. (done — Wiring.go regen committed in 64811c7.)
 
 Branch hygiene: no merge to main without explicit sign-off. Delete merged branches without re-asking. Force-push needs sign-off.
 Cwd for tsc/tests/check:loc/build: tools/topology-vscode/ (Bash resets cwd — chain cd or use absolute paths).
