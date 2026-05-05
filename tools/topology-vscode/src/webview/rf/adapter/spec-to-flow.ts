@@ -94,6 +94,10 @@ export function specToFlow(
         props: n.props,
         spec: n.spec,
         notes: n.notes,
+        // Same round-trip story for n.data — Input nodes use it for
+        // {init: [...]}, future node types may use it for other handler
+        // config. flow-to-spec puts it back.
+        nodeData: n.data,
       },
     };
   });
@@ -132,6 +136,11 @@ export function specToFlow(
         arrowStyle: e.arrowStyle,
         valueLabel: e.valueLabel,
         label: e.label,
+        // Simulator-relevant edge data. Carried verbatim so flow-to-spec
+        // can put them back; without this round-trip every save through
+        // the editor would silently strip backpressure / seeding /
+        // delay configuration from the spec.
+        edgeData: e.data,
       },
     });
   }
