@@ -7,6 +7,12 @@ import { notify, nextPulseId, type FireEvent } from "../event-bus";
 import { state, findEdge } from "./_state";
 import * as cadence from "../../cadence/in0ReadGateAck";
 
+// Single hook point for sim → wire-bus events. Today forwards to
+// notify; will route through the cluster buffer in a later chunk.
+function dispatch(ev: Parameters<typeof notify>[0]): void {
+  notify(ev);
+}
+
 export function emitEvents(rec: FireRecord): void {
   if (!state.spec || !state.world) return;
   // Seed-driven arrivals (Input-sourced edges) have no upstream handler
@@ -26,7 +32,7 @@ export function emitEvents(rec: FireRecord): void {
       // would have blocked the sender" semantic projected onto the
       // canvas. Filter-only: never synthesizes pulses.
       if (!isCadenced || cadence.mayEmit(inEdge.source)) {
-        notify({
+        dispatch({
           type: "emit",
           edgeId: inEdge.id,
           fromNodeId: inEdge.source,
@@ -49,11 +55,11 @@ export function emitEvents(rec: FireRecord): void {
     tick: rec.tick,
     ord: rec.ord,
   };
-  notify(fireEvent);
+  dispatch(fireEvent);
   for (const em of rec.emissions) {
     for (const edge of state.spec.edges) {
       if (edge.source === rec.nodeId && edge.sourceHandle === em.port) {
-        notify({
+        dispatch({
           type: "emit",
           edgeId: edge.id,
           fromNodeId: rec.nodeId,
@@ -91,7 +97,7 @@ export function emitEvents(rec: FireRecord): void {
           rec.inputValue,
           state.world.tick + 1,
         );
-        notify({
+        dispatch({
           type: "emit",
           edgeId: edge.id,
           fromNodeId: edge.source,
