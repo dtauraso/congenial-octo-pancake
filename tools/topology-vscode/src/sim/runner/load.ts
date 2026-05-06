@@ -9,6 +9,7 @@ import { notifyState } from "../event-bus";
 import { state, TICK_MIN, TICK_MAX } from "./_state";
 import { initWorldForRun } from "./_init";
 import { cancelCycleRestart } from "./cycle-restart";
+import { resetCadence } from "../../cadence/in0ReadGateAck";
 
 export function getTickMs(): number {
   return state.tickMs;
@@ -27,6 +28,7 @@ export function setTickMs(ms: number): void {
 
 export function load(next: Spec): void {
   cancelCycleRestart();
+  resetCadence();
   state.spec = next;
   state.world = initWorldForRun(next);
   state.concurrentEdges = classifyConcurrentEdges(next);
@@ -56,6 +58,7 @@ export function getConcurrentEdges(): ReadonlySet<string> {
 export function reset(): void {
   if (!state.spec) return;
   cancelCycleRestart();
+  resetCadence();
   state.world = initWorldForRun(state.spec);
   state.stuckLogged = false;
   notifyState();

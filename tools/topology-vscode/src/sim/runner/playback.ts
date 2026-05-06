@@ -7,6 +7,7 @@ import { initWorldForRun, hasPendingWork } from "./_init";
 import { cancelCycleRestart, scheduleCycleRestart, logStuckPendingOnce } from "./cycle-restart";
 import { stepOnce } from "./step";
 import { pauseAllPulseTimers, resumeAllPulseTimers } from "./pulse-completion";
+import { resetCadence } from "../../cadence/in0ReadGateAck";
 
 export function rearmInterval(): void {
   if (state.intervalId) clearInterval(state.intervalId);
@@ -23,10 +24,12 @@ export function play(): void {
   if (state.replayEvents) {
     if (state.replayIndex >= state.replayEvents.length) {
       state.replayIndex = 0;
+      resetCadence();
       state.world = initWorldForRun(state.spec);
       if (state.world) state.world.queue = [];
     }
   } else if (!state.world || !hasPendingWork(state.world)) {
+    resetCadence();
     state.world = initWorldForRun(state.spec);
     state.stuckLogged = false;
   }
