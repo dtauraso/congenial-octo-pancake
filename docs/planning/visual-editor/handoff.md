@@ -7,66 +7,28 @@ read this file first (no chat history needed) and proceed.
 
 ---
 
-Continuing on wirefold, branch `task/fold-delete-crash` (unpushed).
+Continuing on wirefold, branch `main`. No active task branch.
 Working tree clean except for the long-standing `topology.view.json`
 modification carried across branches.
 
 State at handoff:
-  Friction reported: deleting a fold node in folded mode appeared to
-  make almost the entire editor vanish; the only recovery was
-  removing the topology-diff overlay and reloading the topology.json
-  tab.
+  `task/fold-delete-crash` merged to main (commit b970639) and
+  the local branch deleted. Both fixes are live:
+  webview-level Backspace/Delete bypass for RF v11's fold-placeholder
+  keydown quirk, and viewerState threaded through `decorateForCompare`
+  / `decorateForOnion` so members keep their positions under a diff
+  overlay. User signed off live ("working. ship it.").
 
-  Investigation (one-shot in-process probe wired through the existing
-  `.probe/*.json` mechanism, kept the bundle out of the shipped diff)
-  showed RF was producing a `select` change for the fold but never a
-  `remove` change after the Backspace keypress. The keydown event
-  itself reached the window with `defaultPrevented: false` and target
-  = the selected fold-placeholder div. RF v11's `useKeyPress` skips
-  global delete when the active element is the focused node DOM —
-  exactly what happens once you click a fold-placeholder.
+  Origin/main is in sync — nothing pending to push.
 
-  Two fixes shipped in this branch:
+**Next task (highest-priority dormant follow-up):** tune
+`NODE_ANIMATION_RULES` per-type at
+[tools/topology-vscode/src/sim/runner/node-animation-rules.ts](../../tools/topology-vscode/src/sim/runner/node-animation-rules.ts).
+Current values are guesses set against the old 2000ms global baseline
+and have not been calibrated per node-type. Open a fresh
+`task/animation-rules-tuning` (or similar) branch when starting.
 
-  1. **Webview-level keydown bypass for fold delete.** A capture-phase
-     handler at
-     [tools/topology-vscode/src/webview/rf/app.tsx](../../tools/topology-vscode/src/webview/rf/app.tsx)
-     calls `delH.onNodesDelete` directly with any selected fold nodes
-     when Backspace/Delete is pressed (skipping inputs / contenteditable
-     so it doesn't fight inline editors). This sidesteps the RF quirk.
-
-  2. **Position fix in the diff-overlay path.**
-     `decorateForCompare` and `decorateForOnion` were calling
-     `specToFlow(visible, folds, {})` with an empty viewer-state, so
-     while a diff overlay was active every member's RF position fell
-     back to (0,0). The fold itself was unaffected (it uses
-     `fold.position` directly), so the bug stayed hidden until a
-     fold was deleted under the overlay — at which point all members
-     of the deleted fold appeared at the origin, looking "vanished"
-     from a panned viewport. Threaded `viewerState` through both
-     decorate paths.
-
-  Tests added:
-  - [tools/topology-vscode/test/diff-decorate.test.ts](../../tools/topology-vscode/test/diff-decorate.test.ts)
-    — locks down "decorateForCompare preserves member positions from
-    viewer state" (no (0,0) fallback).
-  - [tools/topology-vscode/test/fold.test.ts](../../tools/topology-vscode/test/fold.test.ts)
-    — locks down "deleting a collapsed fold restores members and
-    original edges as if the fold never existed."
-
-  214/214 tests pass. tsc clean. check:loc clean. webview build clean.
-
-**Live verification status:** user verified the fix works in the
-editor ("working. ship it.").
-
-**Branch is mergeable to main pending user sign-off.**
-
-**Next session's first task:** await merge sign-off, then return to
-the dormant follow-ups. Tuning `NODE_ANIMATION_RULES` per-type
-remains the highest-priority dormant item — current values are
-guesses against the prior 2000ms global baseline.
-
-Probe instrumentation (carried forward, still active):
+Probe instrumentation (carried forward, still active on main):
   - `.probe/stuck-pulse-last.json` — at first stuck-anim moment.
   - `.probe/stuck-pulse-last-followup.json` — 1.5s later.
   - `.probe/stuck-pulse-last-third.json` — 30s later.
@@ -76,7 +38,7 @@ Probe instrumentation (carried forward, still active):
   - `window.__resetPulseLeak()` in console re-arms the one-shot.
 
 Open branches:
-  - task/fold-delete-crash (this branch, unpushed)
+  - none (on main, idle)
 
 Other recommended branches (dormant, not started):
   - visualize-gate-buffer-state
