@@ -1,93 +1,90 @@
-// Sim-adjacent presentation-cadence: the in0/readGate emission ack.
+// Sim-adjacent presentation-cadence: visual back-pressure derived
+// from spec topology.
 //
-// Back-channel internal to the visualization, not part of runtime
-// topology and not part of simulator event state. When an Input node
-// feeds a ReadGate via chainIn, the Input is permitted to emit its
-// next pulse only after the ReadGate has *begun emitting* its visible
-// output pulse. The first emission is free (the simulator seed); every
-// subsequent emission is driven by the cadence ack itself, not by the
-// N1' concurrency self-pacer (which deliberately excludes Input
-// sources to preserve the deterministic seed sequence).
+// Each entry in `spec.cadenceAcks` encodes a back-pressure rule:
+//   source = data destination (the "ack producer")
+//   target = gated source (the "ack consumer")
+// Meaning: the gated source may emit its next visible pulse only
+// after the data destination's most recent visible cycle has fully
+// completed. Concretely, two anim-end conditions per latched cycle:
+//   (a) the gated source's data pulse has visibly arrived at the
+//       destination (data-edge anim-end), AND
+//   (b) one of the destination's outbound visible pulses has ended
+//       (destination has visibly produced output).
+// Whichever is slower dictates the gate.
 //
-// On ack: if a refire was parked while gated, fire it. Otherwise
-// synthesize a fresh emission from the last-emitted value so in0
-// keeps cycling in lock-step with readGate's output rather than
-// waiting for the cycle-restart timer.
+// Filter-only: the cadence never synthesizes visible pulses; it only
+// suppresses sim-side notifies until both conditions are met. The
+// next visible pulse is whichever sim-driven emission the cadence
+// next allows through.
+//
+// Naming note: the file name is historical — the rule is now generic
+// over any (destination, gated source) pair declared via a
+// cadence-ack edge, not specific to in0/readGate. See contract C10
+// (test/contracts/cadence-back-pressure.test.ts) for the formal rule.
 
 import type { Spec, StateValue } from "../schema";
 
-export type PendingRefire = {
-  sourceNodeId: string;
-  sourceHandle: string;
-  edgeId: string;
-  toNodeId: string;
-  value: StateValue;
-};
+type Latch = { srcArrived: boolean; dstOutputDone: boolean };
+type Entry = { dataEdgeId: string; dstId: string };
 
-const awaitingAck = new Set<string>();
-const pendingRefire = new Map<string, PendingRefire>();
-const lastValue = new Map<string, StateValue>();
+// Map gated-source node id → registry entry. Built from spec at load.
+const registry = new Map<string, Entry>();
+// Map gated-source node id → latch state (only present when awaiting).
+const awaiting = new Map<string, Latch>();
 
-export function mayEmit(inputNodeId: string): boolean {
-  return !awaitingAck.has(inputNodeId);
-}
-
-export function markEmitted(inputNodeId: string, value: StateValue): void {
-  awaitingAck.add(inputNodeId);
-  lastValue.set(inputNodeId, value);
-}
-
-export function recordPending(p: PendingRefire): void {
-  pendingRefire.set(p.sourceNodeId, p);
-}
-
-// Called when a ReadGate begins emitting outward. For each Input
-// feeding its chainIn that's currently awaiting ack: clear the wait
-// and hand the caller a refire to fire — either the parked one (if a
-// gated emission was suppressed) or a fresh one synthesized from the
-// last emitted value (the cadence-driven repeat, replacing the role
-// the self-pacer would play for non-Input edges).
-export function ackFromReadGate(
-  spec: Spec,
-  readGateNodeId: string,
-  fire: (p: PendingRefire) => void,
-): void {
-  for (const edge of spec.edges) {
-    if (edge.target !== readGateNodeId) continue;
-    if (edge.targetHandle !== "chainIn") continue;
-    const src = spec.nodes.find((n) => n.id === edge.source);
-    if (src?.type !== "Input") continue;
-    if (!awaitingAck.has(src.id)) continue;
-    awaitingAck.delete(src.id);
-    const parked = pendingRefire.get(src.id);
-    if (parked) {
-      pendingRefire.delete(src.id);
-      fire(parked);
-      continue;
-    }
-    const v = lastValue.get(src.id);
-    if (v === undefined) continue;
-    fire({
-      sourceNodeId: src.id,
-      sourceHandle: edge.sourceHandle,
-      edgeId: edge.id,
-      toNodeId: edge.target,
-      value: v,
-    });
+export function buildRegistry(spec: Spec): void {
+  registry.clear();
+  awaiting.clear();
+  for (const ack of spec.cadenceAcks ?? []) {
+    const srcId = ack.target; // gated source
+    const dstId = ack.source; // data destination
+    // The data edge is the spec edge from src → dst.
+    const dataEdge = spec.edges.find(
+      (e) => e.source === srcId && e.target === dstId,
+    );
+    if (!dataEdge) continue;
+    registry.set(srcId, { dataEdgeId: dataEdge.id, dstId });
   }
 }
 
-export function isInputToReadGateChain(spec: Spec, edgeId: string): boolean {
-  const edge = spec.edges.find((e) => e.id === edgeId);
-  if (!edge) return false;
-  if (edge.targetHandle !== "chainIn") return false;
-  const src = spec.nodes.find((n) => n.id === edge.source);
-  const tgt = spec.nodes.find((n) => n.id === edge.target);
-  return src?.type === "Input" && tgt?.type === "ReadGate";
+export function isCadenced(sourceNodeId: string): boolean {
+  return registry.has(sourceNodeId);
+}
+
+export function mayEmit(sourceNodeId: string): boolean {
+  return !awaiting.has(sourceNodeId);
+}
+
+export function markEmitted(sourceNodeId: string, _value: StateValue): void {
+  if (!registry.has(sourceNodeId)) return;
+  awaiting.set(sourceNodeId, { srcArrived: false, dstOutputDone: false });
+}
+
+function maybeClear(sourceNodeId: string): void {
+  const s = awaiting.get(sourceNodeId);
+  if (s && s.srcArrived && s.dstOutputDone) awaiting.delete(sourceNodeId);
+}
+
+// Called from PulseInstance on anim-end (true completion only). The
+// edge id matches the data leg of any latched entry; the fromNodeId
+// matches the destination leg. Both legs may fire from independent
+// PulseInstance completions; whichever lands second clears the latch.
+export function signalPulseComplete(edgeId: string, fromNodeId: string): void {
+  for (const [srcId, entry] of registry) {
+    const s = awaiting.get(srcId);
+    if (!s) continue;
+    if (entry.dataEdgeId === edgeId) {
+      s.srcArrived = true;
+      maybeClear(srcId);
+    }
+    if (entry.dstId === fromNodeId) {
+      s.dstOutputDone = true;
+      maybeClear(srcId);
+    }
+  }
 }
 
 export function resetCadence(): void {
-  awaitingAck.clear();
-  pendingRefire.clear();
-  lastValue.clear();
+  awaiting.clear();
 }

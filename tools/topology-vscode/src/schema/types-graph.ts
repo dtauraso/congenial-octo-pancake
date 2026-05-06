@@ -75,6 +75,19 @@ export type Spec = {
   cycleAnchor?: string;
   legend?: LegendRow[];
   notes?: Note[];
+  // Visualization-only back-pressure rules. Each entry says "destination
+  // tells gated source it's OK to send next visible pulse" once the
+  // destination's data cycle visibly completes. Read by the cadence
+  // layer; not part of sim event flow, not rendered, not in Go codegen.
+  cadenceAcks?: CadenceAck[];
+};
+
+export type CadenceAck = {
+  // Data destination — the node whose visible cycle gates the source.
+  source: string;
+  // Gated source — the node whose sim notifies are suppressed until
+  // both legs of the destination's visible cycle complete.
+  target: string;
 };
 
 export type NodeTypeDef = {

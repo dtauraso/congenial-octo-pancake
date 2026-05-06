@@ -18,17 +18,26 @@ export function emitEvents(rec: FireRecord): void {
     const inEdge = findEdge(state.spec, rec.inEdgeId);
     const srcNode = inEdge ? state.spec.nodes.find((n) => n.id === inEdge.source) : undefined;
     if (inEdge && srcNode?.type === "Input") {
-      notify({
-        type: "emit",
-        edgeId: inEdge.id,
-        fromNodeId: inEdge.source,
-        toNodeId: inEdge.target,
-        value: rec.inputValue,
-        tick: rec.tick,
-        pulseId: nextPulseId(),
-      });
-      if (cadence.isInputToReadGateChain(state.spec, inEdge.id)) {
-        cadence.markEmitted(inEdge.source, rec.inputValue);
+      const isCadenced = cadence.isCadenced(inEdge.source);
+      // Cadence suppresses sim notifies for any source declared
+      // gated via a `cadence-ack` edge in the spec. While awaiting
+      // both anim-end conditions (data-leg arrival + dst output),
+      // sim notifies on this edge are dropped — the "Go channel
+      // would have blocked the sender" semantic projected onto the
+      // canvas. Filter-only: never synthesizes pulses.
+      if (!isCadenced || cadence.mayEmit(inEdge.source)) {
+        notify({
+          type: "emit",
+          edgeId: inEdge.id,
+          fromNodeId: inEdge.source,
+          toNodeId: inEdge.target,
+          value: rec.inputValue,
+          tick: rec.tick,
+          pulseId: nextPulseId(),
+        });
+        if (isCadenced) {
+          cadence.markEmitted(inEdge.source, rec.inputValue);
+        }
       }
     }
   }
@@ -73,17 +82,7 @@ export function emitEvents(rec: FireRecord): void {
   if (rec.inEdgeId && state.concurrentEdges.has(rec.inEdgeId)) {
     const edge = findEdge(state.spec, rec.inEdgeId);
     if (edge) {
-      const gated = cadence.isInputToReadGateChain(state.spec, edge.id);
-      if (gated && !cadence.mayEmit(edge.source)) {
-        cadence.recordPending({
-          sourceNodeId: edge.source,
-          sourceHandle: edge.sourceHandle,
-          edgeId: edge.id,
-          toNodeId: edge.target,
-          value: rec.inputValue,
-        });
-      } else {
-        if (gated) cadence.markEmitted(edge.source, rec.inputValue);
+      {
         enqueueEmission(
           state.spec,
           state.world,
@@ -106,29 +105,14 @@ export function emitEvents(rec: FireRecord): void {
   }
 }
 
-// Renderer-driven cadence ack. Called from PulseInstance on first
-// mount: when the visible pulse for a ReadGate's outbound emission
-// begins traveling, free any in0 that's awaiting ack. No-op when the
-// emitter isn't a ReadGate. Spec lookup is by id so folded/headless
-// edges that never mount simply never trigger this — the cadence
-// stalls there, which is the design tradeoff (visual pacing requires
-// a visual signal).
-export function signalReadGateRenderStart(fromNodeId: string): void {
-  if (!state.spec || !state.world) return;
-  const node = state.spec.nodes.find((n) => n.id === fromNodeId);
-  if (node?.type !== "ReadGate") return;
-  cadence.ackFromReadGate(state.spec, fromNodeId, (p) => {
-    if (!state.spec || !state.world) return;
-    cadence.markEmitted(p.sourceNodeId, p.value);
-    enqueueEmission(state.spec, state.world, p.sourceNodeId, p.sourceHandle, p.value, state.world.tick + 1);
-    notify({
-      type: "emit",
-      edgeId: p.edgeId,
-      fromNodeId: p.sourceNodeId,
-      toNodeId: p.toNodeId,
-      value: p.value,
-      tick: state.world.tick,
-      pulseId: nextPulseId(),
-    });
-  });
+// Renderer-driven cadence signal. Called from PulseInstance on
+// anim-end (localT >= 1). Dispatches to the generic cadence latch,
+// which matches the edge id (data leg) and the fromNodeId (dst leg)
+// against entries built from `cadence-ack` edges in the spec. No
+// node-type knowledge here — the rule is in the spec.
+//
+// Folded/headless edges that never render-complete stall the cadence
+// (acceptable tradeoff — visual pacing requires a visual signal).
+export function signalPulseComplete(edgeId: string, fromNodeId: string): void {
+  cadence.signalPulseComplete(edgeId, fromNodeId);
 }

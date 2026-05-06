@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { EdgeRoute } from "../../../schema";
 import {
   subscribeState, isPlaying, getSimTime, extendPulse,
-  signalReadGateRenderStart,
+  signalPulseComplete,
 } from "../../../sim/runner";
 import { noteAnimStart, noteAnimEnd, noteAnimRerun } from "../timeline-probe";
 import { type PathGeom } from "./_geom";
@@ -55,12 +55,6 @@ export function PulseInstance({
       return;
     }
     noteAnimStart(edgeId, fromNodeId, toNodeId);
-    // Renderer-driven cadence ack: when this PulseInstance first
-    // begins traveling, free any Input awaiting ack from this
-    // emitter (no-op unless emitter is a ReadGate). This paces
-    // in0's re-emission to actual visible motion rather than to
-    // simulator tick rate.
-    if (isFirstRun) signalReadGateRenderStart(fromNodeId);
     const remainingMs = remainingArc / speedPxPerMs;
     // Distance-aware: tell the simulator how long this traversal will
     // really take so its timer fallback matches the visual. Re-runs
@@ -102,7 +96,13 @@ export function PulseInstance({
       const elapsed = getSimTime() - swapStart;
       const localT = Math.min(1, elapsed / remainingMs);
       arcTraveledRef.current = startArc + localT * remainingArc;
-      noteAnimEnd(edgeId, fromNodeId, toNodeId, localT >= 1, arcTraveledRef.current);
+      const completed = localT >= 1;
+      noteAnimEnd(edgeId, fromNodeId, toNodeId, completed, arcTraveledRef.current);
+      // Renderer-driven cadence signal: on true completion only (not
+      // remount-due-to-prop-change). The cadence latches two
+      // anim-end conditions per cycle (in0→RG arrival, RG output);
+      // both must fire before the next in0 sim notify is allowed.
+      if (completed) signalPulseComplete(edgeId, fromNodeId);
     };
   }, [geom, speedPxPerMs]);
 

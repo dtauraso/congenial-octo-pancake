@@ -9,7 +9,7 @@ import { notifyState } from "../event-bus";
 import { state, TICK_MIN, TICK_MAX } from "./_state";
 import { initWorldForRun } from "./_init";
 import { cancelCycleRestart } from "./cycle-restart";
-import { resetCadence } from "../../cadence/in0ReadGateAck";
+import { resetCadence, buildRegistry } from "../../cadence/in0ReadGateAck";
 
 export function getTickMs(): number {
   return state.tickMs;
@@ -28,7 +28,7 @@ export function setTickMs(ms: number): void {
 
 export function load(next: Spec): void {
   cancelCycleRestart();
-  resetCadence();
+  buildRegistry(next);
   state.spec = next;
   state.world = initWorldForRun(next);
   state.concurrentEdges = classifyConcurrentEdges(next);
@@ -38,6 +38,7 @@ export function load(next: Spec): void {
 }
 
 export function loadTrace(nextSpec: Spec, events: readonly TraceEvent[]): void {
+  buildRegistry(nextSpec);
   state.spec = nextSpec;
   state.world = initWorldForRun(nextSpec);
   if (state.world) state.world.queue = [];

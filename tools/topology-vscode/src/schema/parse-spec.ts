@@ -42,6 +42,15 @@ export function parseSpec(input: unknown): Spec {
     notes: opt(o.notes, (l) =>
       arr(l, "spec.notes").map((n, i) => parseNote(n, `spec.notes[${i}]`)),
     ),
+    cadenceAcks: opt(o.cadenceAcks, (l) =>
+      arr(l, "spec.cadenceAcks").map((a, i) => {
+        const ao = obj(a, `spec.cadenceAcks[${i}]`);
+        return {
+          source: str(ao.source, `spec.cadenceAcks[${i}].source`),
+          target: str(ao.target, `spec.cadenceAcks[${i}].target`),
+        };
+      }),
+    ),
   };
   validatePorts(spec);
   return spec;

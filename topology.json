@@ -122,5 +122,11 @@
       "height": 55,
       "text": "Cascade: i0 \u2192 i1 directly.\ni1 acks readGate after advancing \u2192\nbackpressure: one value per pipeline cycle."
     }
+  ],
+  "cadenceAcks": [
+    {
+      "source": "readGate1",
+      "target": "in08"
+    }
   ]
 }
