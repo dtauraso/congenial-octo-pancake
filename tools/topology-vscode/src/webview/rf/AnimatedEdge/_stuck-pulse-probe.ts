@@ -1,5 +1,5 @@
 import { vscode } from "../../save";
-import { state, liveSimTime } from "../../../sim/runner/_state";
+import { snapshotRunner } from "./_stuck-runner-snapshot";
 
 // Per-pulse instrumentation for the pulse-leak investigation
 // (task/pulse-leak-investigation). When stuck-anim triggers in the
@@ -120,23 +120,6 @@ function snapshotRows(): Array<Record<string, unknown>> {
     simNow: Math.round(e.lastSimNow),
     drift: Math.round(e.lastSimNow - e.lastSwapStart - e.lastElapsed),
   }));
-}
-
-function snapshotRunner(): Record<string, unknown> {
-  return {
-    playing: state.playing,
-    simAccumMs: state.simAccumMs,
-    simSegmentStartWall: state.simSegmentStartWall,
-    nowWall: performance.now(),
-    liveSimTime: liveSimTime(),
-    stepSimTime: state.stepSimTime,
-    activeAnimations: state.activeAnimations,
-    queueLen: state.world?.queue.length ?? null,
-    pendingSeeds: state.world?.pendingSeeds.length ?? null,
-    cycle: state.world?.cycle ?? null,
-    tick: state.world?.tick ?? null,
-    cycleRestartTimerSet: state.cycleRestartTimer !== null,
-  };
 }
 
 function dumpPulseProbeThird(): void {
