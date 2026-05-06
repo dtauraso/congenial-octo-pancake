@@ -9,14 +9,12 @@ export function RunnerProbe() {
   useEffect(() => {
     const id = setInterval(() => {
       setH((prev) => {
-        // Latch the first stuck reading so the label can be selected/copied
-        // without the 250ms refresh re-rendering it out from under the cursor.
-        // Clears once the runner returns to idle/ok.
-        if (prev.kind === "stuck-pending" || prev.kind === "stuck-anim") {
-          const next = probeRunner();
-          if (next.kind === "idle" || next.kind === "ok") return next;
-          return prev;
-        }
+        // Once stuck, latch permanently until page reload so the label
+        // stays selectable regardless of how the runner state oscillates.
+        // The runner may briefly flip stuck → ok → stuck (e.g. a delayed
+        // ack lands, queue grows by one, then restalls) which would otherwise
+        // clear the label between user attempts to copy it.
+        if (prev.kind === "stuck-pending" || prev.kind === "stuck-anim") return prev;
         return probeRunner();
       });
     }, POLL_MS);
