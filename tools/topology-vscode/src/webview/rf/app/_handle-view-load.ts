@@ -15,10 +15,14 @@ export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
   // bookmarks may not exist there).
   clearViewerHistory();
   markViewSynced(text ?? serializeViewerState(next));
-  // If the spec already loaded *and* the sidecar has folds, rebuild now
-  // so the folds (which live on viewerState, not the spec) appear.
-  if (ctx.lastSpec.current && next.folds && next.folds.length > 0) {
-    const flow = specToFlow(ctx.lastSpec.current, next.folds, next);
+  // If the spec already loaded, rebuild now so the freshly-installed
+  // viewerState (positions, folds, sublabels, edge routes) is applied.
+  // The "load" message races ahead of the async sidecar read and runs
+  // specToFlow with empty viewerState, so without this rebuild every
+  // node falls back to its default position (visually: stacked at the
+  // origin) whenever the sidecar lacks folds.
+  if (ctx.lastSpec.current) {
+    const flow = specToFlow(ctx.lastSpec.current, next.folds ?? [], next);
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
   }
