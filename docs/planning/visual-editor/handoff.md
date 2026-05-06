@@ -7,83 +7,64 @@ read this file first (no chat history needed) and proceed.
 
 ---
 
-Continuing on wirefold, branch `task/pulse-rules-per-node`
-(unpushed). Working tree clean except for the long-standing
-`topology.view.json` modification from prior branches.
+Continuing on wirefold, branch `task/fold-delete-crash` (unpushed).
+Working tree clean except for the long-standing `topology.view.json`
+modification carried across branches.
 
 State at handoff:
-  Branched off `task/pulse-animation-abstraction`. The two bugs the
-  C6 fix introduced (visual stacking on slow edges, frame stall
-  from N concurrent PulseInstances) have a structural fix:
+  Friction reported: deleting a fold node in folded mode appeared to
+  make almost the entire editor vanish; the only recovery was
+  removing the topology-diff overlay and reloading the topology.json
+  tab.
 
-  **Per-emitter-node-type animation rules.** Each node type owns
-  the rules for the pulses it emits — duration, completion
-  semantics, visual concurrency cap. The global
-  `PULSE_DEFAULT_DURATION_MS` is gone; lifecycle clock is now
-  `ruleForNodeType(srcNode.type).durationMs`.
+  Investigation (one-shot in-process probe wired through the existing
+  `.probe/*.json` mechanism, kept the bundle out of the shipped diff)
+  showed RF was producing a `select` change for the fold but never a
+  `remove` change after the Backspace keypress. The keydown event
+  itself reached the window with `defaultPrevented: false` and target
+  = the selected fold-placeholder div. RF v11's `useKeyPress` skips
+  global delete when the active element is the focused node DOM —
+  exactly what happens once you click a fold-placeholder.
 
-  Three new runner-side modules:
-  - [src/sim/runner/node-animation-rules.ts](../../tools/topology-vscode/src/sim/runner/node-animation-rules.ts)
-    — `NodeAnimationRule = { durationMs, completion, maxConcurrentPerEdge }`.
-    Per-type registry with a `DEFAULT_RULE` fallback.
-  - [src/sim/runner/pulse-completion.ts](../../tools/topology-vscode/src/sim/runner/pulse-completion.ts)
-    — renderer-or-timer race per pulseId. `armPulse` schedules a
-    timer; `signalRendererComplete(pulseId)` ends early. Whichever
-    fires first wins; loser is no-op.
-  - [src/sim/runner/pulse-concurrency.ts](../../tools/topology-vscode/src/sim/runner/pulse-concurrency.ts)
-    — per-edge visual-slot ledger. Renderer calls
-    `tryClaimVisualSlot(edgeId, cap)`; if false, skip rendering.
-    Independent of `state.activeAnimationsByEdge`.
+  Two fixes shipped in this branch:
 
-  `pulse-lifetimes.ts` now: looks up source node type from
-  `state.spec`, resolves rule, calls `noteEdgePulseStarted`,
-  `armPulse(pulseId, ..., () => noteEdgePulseEnded(edgeId))`. Always
-  balanced — coalesced visual emits still produce balanced
-  simulator-side lifecycles (contract C8).
+  1. **Webview-level keydown bypass for fold delete.** A capture-phase
+     handler at
+     [tools/topology-vscode/src/webview/rf/app.tsx](../../tools/topology-vscode/src/webview/rf/app.tsx)
+     calls `delH.onNodesDelete` directly with any selected fold nodes
+     when Backspace/Delete is pressed (skipping inputs / contenteditable
+     so it doesn't fight inline editors). This sidesteps the RF quirk.
 
-  AnimatedEdge: claims a visual slot per emit; if denied, skips
-  spawning a `<PulseInstance>`. On done, calls
-  `signalRendererComplete(ev.pulseId)` + `releaseVisualSlot(id)`.
-  On unmount, releases held slots so a re-mount doesn't hit the cap.
+  2. **Position fix in the diff-overlay path.**
+     `decorateForCompare` and `decorateForOnion` were calling
+     `specToFlow(visible, folds, {})` with an empty viewer-state, so
+     while a diff overlay was active every member's RF position fell
+     back to (0,0). The fold itself was unaffected (it uses
+     `fold.position` directly), so the bug stayed hidden until a
+     fold was deleted under the overlay — at which point all members
+     of the deleted fold appeared at the origin, looking "vanished"
+     from a panned viewport. Threaded `viewerState` through both
+     decorate paths.
 
-  `EmitEvent` gained a `pulseId: string` field, generated at each
-  notify site via `nextPulseId()` from event-bus.
+  Tests added:
+  - [tools/topology-vscode/test/diff-decorate.test.ts](../../tools/topology-vscode/test/diff-decorate.test.ts)
+    — locks down "decorateForCompare preserves member positions from
+    viewer state" (no (0,0) fallback).
+  - [tools/topology-vscode/test/fold.test.ts](../../tools/topology-vscode/test/fold.test.ts)
+    — locks down "deleting a collapsed fold restores members and
+    original edges as if the fold never existed."
 
-  Contracts updated:
-  - **C6** (updated) — duration is now per-emitter-type, not global.
-    Test split into `pulse-lifetime-view-agnostic.test.ts` (existing
-    invariant) + `pulse-duration-per-node-type.test.ts` (new).
-  - **C7** (new) — pulse-renderer-or-timer race. Test:
-    `pulse-renderer-or-timer.test.ts`.
-  - **C8** (new) — visual coalesce keeps simulator ledger balanced.
-    Test: `pulse-coalesce-balanced.test.ts`.
+  214/214 tests pass. tsc clean. check:loc clean. webview build clean.
 
-  212/212 tests pass (204 prior + 8 new across 3 contract test
-  files). tsc clean. check:loc clean (all new files ≤ 100 LOC).
-  go build clean. webview build clean.
-
-**Live verification status:** quick visual check by the user against
-the editor showed the prior symptoms (stacking on
-`i1.out->readGate.ack`, `msSinceLastFrame: 1615ms`) appear mostly
-fixed — no "it's still there" issues surfaced. Probe-dump-based
-confirmation was not performed; if regressions appear later, re-arm
-via `window.__resetPulseLeak()` and capture three time-spaced
-`.probe/stuck-pulse-last*.json` dumps. Suspect points if stacking
-returns: `tryClaimVisualSlot` call site at
-[src/webview/rf/AnimatedEdge.tsx:54](../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx#L54)
-and the unmount cleanup at line ~46.
+**Live verification status:** user verified the fix works in the
+editor ("working. ship it.").
 
 **Branch is mergeable to main pending user sign-off.**
 
-**Next session's first task:** await merge sign-off, then tune
-`NODE_ANIMATION_RULES` per-type using observations from real runs
-(current values are guesses calibrated against the old 2000ms
-global).
-
-**Tunable rules:** initial `NODE_ANIMATION_RULES` values are a guess
-calibrated against the global 2000ms baseline. After live runs, tune
-per-type. ChainInhibitor at 2500ms is the longest; ReadGate /
-DetectorLatch / SyncGate at 1500ms are the shortest. All cap=1.
+**Next session's first task:** await merge sign-off, then return to
+the dormant follow-ups. Tuning `NODE_ANIMATION_RULES` per-type
+remains the highest-priority dormant item — current values are
+guesses against the prior 2000ms global baseline.
 
 Probe instrumentation (carried forward, still active):
   - `.probe/stuck-pulse-last.json` — at first stuck-anim moment.
@@ -95,11 +76,7 @@ Probe instrumentation (carried forward, still active):
   - `window.__resetPulseLeak()` in console re-arms the one-shot.
 
 Open branches:
-  - task/pulse-rules-per-node (this branch, unpushed)
-  - task/pulse-animation-abstraction (parent, 4d4ae63 — can be
-    deleted once this branch lands)
-  - task/pulse-leak-investigation (8a2369a — instrumentation only,
-    no fix; can be deleted once this branch lands)
+  - task/fold-delete-crash (this branch, unpushed)
 
 Other recommended branches (dormant, not started):
   - visualize-gate-buffer-state

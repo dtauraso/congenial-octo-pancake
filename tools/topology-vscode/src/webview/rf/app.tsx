@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlowProvider, applyEdgeChanges, applyNodeChanges, useReactFlow,
   type Edge as RFEdge, type EdgeChange, type Node as RFNode, type NodeChange, type Viewport,
@@ -81,6 +81,25 @@ function Inner() {
 
   const edgeH = useEdgeHandlers(ctx);
   const delH = useDeleteHandlers(ctx);
+  // RF v11's useKeyPress ignores Backspace/Delete when activeElement is
+  // the focused node DOM itself, which is what happens when a
+  // fold-placeholder is clicked (it grabs focus, then RF declines to
+  // fire its global delete). Handle the keystroke ourselves: if any
+  // fold is selected, dispatch onNodesDelete with those folds.
+  useEffect(() => {
+    const handler = (ev: KeyboardEvent) => {
+      if (ev.key !== "Backspace" && ev.key !== "Delete") return;
+      const target = ev.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      const selectedFolds = nodes.filter((n) => n.type === "fold" && n.selected);
+      if (selectedFolds.length === 0) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      delH.onNodesDelete(selectedFolds);
+    };
+    window.addEventListener("keydown", handler, { capture: true });
+    return () => window.removeEventListener("keydown", handler, { capture: true } as EventListenerOptions);
+  }, [nodes, delH]);
   const ddH = useDragDrop(ctx);
   const dragH = useNodeDrag(ctx, guides, setGuides);
   const ctxH = useNodeContextHandlers(ctx);

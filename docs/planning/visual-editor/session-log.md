@@ -837,11 +837,25 @@ The diff-overlay aggravation is likely
 holding stale references to the fold id, which is why removing the
 diff (plus reloading the tab) is what cleared it.
 
-**Followups (candidates, not commitments):**
-- On fold removal, seed positions for orphaned members (e.g., scatter
-  around the deleted fold's last collapsed position) so they appear
-  where the fold was.
-- Or: refuse delete on a collapsed fold, prompting "delete fold and
-  members" vs "ungroup".
-- Audit `decorateFor*` for fold-id references that survive a fold
-  removal in the same tick.
+**Resolution:** the actual root cause (confirmed by an in-process
+diagnostic that tracked every keydown / RF node-change event for the
+fold) was that **React Flow v11 silently dropped the Backspace
+keypress** when a fold-placeholder div was the active element. RF's
+internal `useKeyPress` treats focus-on-the-node-DOM as "user is
+interacting with the node, don't fire global delete". Selection fired,
+keydown fired (defaultPrevented=false), but no `remove` change ever
+materialised — and therefore `onNodesDelete` never ran, so the fold
+was never deleted. The "vanishing" symptom was the absence of any
+visible feedback; the topology-diff overlay reload masked it because
+reload re-created the RF state from scratch.
+
+Fix: a webview-level keydown handler at
+[tools/topology-vscode/src/webview/rf/app.tsx](../../tools/topology-vscode/src/webview/rf/app.tsx)
+that, on Backspace/Delete, dispatches `delH.onNodesDelete` directly
+for any selected fold node, bypassing RF's quirk.
+
+A secondary bug surfaced during investigation:
+`decorateForCompare` / `decorateForOnion` called `specToFlow` with an
+empty viewer-state, dropping member positions to (0,0) under the diff
+overlay. Fixed in the same branch by threading `viewerState`
+through.
