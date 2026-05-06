@@ -28,6 +28,7 @@ export type WebviewToHostMsg =
   | { type: "pulse-probe-dump"; json: string }
   | { type: "stuck-pulse-dump"; json: string }
   | { type: "stuck-pulse-followup-dump"; json: string }
+  | { type: "stuck-pulse-third-dump"; json: string }
   | { type: "fold-halo-dump"; json: string }
   | { type: "runner-errors-dump"; json: string }
   | { type: "timeline-dump"; json: string };
@@ -46,7 +47,7 @@ export type HostToWebviewMsg =
 
 export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new Set([
   "ready", "save", "view-save", "run", "run-cancel", "compare-head", "compare-file",
-  "trace-load", "trace-clear", "pulse-probe-dump", "stuck-pulse-dump", "stuck-pulse-followup-dump", "fold-halo-dump", "runner-errors-dump", "timeline-dump",
+  "trace-load", "trace-clear", "pulse-probe-dump", "stuck-pulse-dump", "stuck-pulse-followup-dump", "stuck-pulse-third-dump", "fold-halo-dump", "runner-errors-dump", "timeline-dump",
 ]);
 
 export const HOST_TO_WEBVIEW_TYPES: ReadonlySet<HostToWebviewMsg["type"]> = new Set([
@@ -75,6 +76,7 @@ export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {
     case "pulse-probe-dump":
     case "stuck-pulse-dump":
     case "stuck-pulse-followup-dump":
+    case "stuck-pulse-third-dump":
     case "fold-halo-dump":
     case "runner-errors-dump":
       return typeof m.json === "string" ? (m as unknown as WebviewToHostMsg) : undefined;

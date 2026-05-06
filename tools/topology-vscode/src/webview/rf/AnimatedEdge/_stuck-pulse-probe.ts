@@ -76,20 +76,7 @@ let lastDumpText = "";
 export function dumpPulseProbe(): void {
   if (dumped) return;
   dumped = true;
-  const rows = [...live.values()].map((e) => ({
-    edge: e.edgeId,
-    id: e.id,
-    ageMs: Math.round(performance.now() - e.mountWall),
-    msSinceLastFrame: e.lastFrameWall ? Math.round(performance.now() - e.lastFrameWall) : null,
-    frames: e.frameCount,
-    rerun: e.rerunCount,
-    localT: Number(e.lastLocalT.toFixed(4)),
-    elapsed: Math.round(e.lastElapsed),
-    remainingMs: Math.round(e.remainingMs),
-    swapStart: Math.round(e.lastSwapStart),
-    simNow: Math.round(e.lastSimNow),
-    drift: Math.round(e.lastSimNow - e.lastSwapStart - e.lastElapsed),
-  }));
+  const rows = snapshotRows();
   lastDumpText = formatRows(rows);
   // eslint-disable-next-line no-console
   console.warn("[stuck-pulse-probe] dump on stuck-anim:", rows);
@@ -112,25 +99,14 @@ export function dumpPulseProbe(): void {
   // haven't advanced, the sim clock is frozen. If they have, the pulses
   // are merely slow and the leak is elsewhere (e.g. completion path).
   setTimeout(() => dumpPulseProbeFollowup(), 1500);
+  // And a third one ~30s later — by then the slow edge should have
+  // long completed; if cycle hasn't advanced, the system genuinely
+  // failed to restart and we have a real gating bug.
+  setTimeout(() => dumpPulseProbeThird(), 30000);
 }
 
-function snapshotRunner(): Record<string, unknown> {
-  return {
-    playing: state.playing,
-    simAccumMs: state.simAccumMs,
-    simSegmentStartWall: state.simSegmentStartWall,
-    nowWall: performance.now(),
-    liveSimTime: liveSimTime(),
-    stepSimTime: state.stepSimTime,
-    activeAnimations: state.activeAnimations,
-    queueLen: state.world?.queue.length ?? null,
-    pendingSeeds: state.world?.pendingSeeds.length ?? null,
-    cycleRestartTimerSet: state.cycleRestartTimer !== null,
-  };
-}
-
-function dumpPulseProbeFollowup(): void {
-  const rows = [...live.values()].map((e) => ({
+function snapshotRows(): Array<Record<string, unknown>> {
+  return [...live.values()].map((e) => ({
     edge: e.edgeId,
     id: e.id,
     ageMs: Math.round(performance.now() - e.mountWall),
@@ -144,6 +120,43 @@ function dumpPulseProbeFollowup(): void {
     simNow: Math.round(e.lastSimNow),
     drift: Math.round(e.lastSimNow - e.lastSwapStart - e.lastElapsed),
   }));
+}
+
+function snapshotRunner(): Record<string, unknown> {
+  return {
+    playing: state.playing,
+    simAccumMs: state.simAccumMs,
+    simSegmentStartWall: state.simSegmentStartWall,
+    nowWall: performance.now(),
+    liveSimTime: liveSimTime(),
+    stepSimTime: state.stepSimTime,
+    activeAnimations: state.activeAnimations,
+    queueLen: state.world?.queue.length ?? null,
+    pendingSeeds: state.world?.pendingSeeds.length ?? null,
+    cycle: state.world?.cycle ?? null,
+    tick: state.world?.tick ?? null,
+    cycleRestartTimerSet: state.cycleRestartTimer !== null,
+  };
+}
+
+function dumpPulseProbeThird(): void {
+  const rows = snapshotRows();
+  try {
+    const payload = {
+      capturedAt: new Date().toISOString(),
+      delayMsAfterFirst: 30000,
+      runner: snapshotRunner(),
+      rows,
+    };
+    vscode.postMessage({ type: "stuck-pulse-third-dump", json: JSON.stringify(payload, null, 2) });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[stuck-pulse-probe] third postMessage failed", err);
+  }
+}
+
+function dumpPulseProbeFollowup(): void {
+  const rows = snapshotRows();
   try {
     const payload = {
       capturedAt: new Date().toISOString(),
