@@ -1,4 +1,5 @@
 import { vscode } from "../../save";
+import { state, liveSimTime } from "../../../sim/runner/_state";
 
 // Per-pulse instrumentation for the pulse-leak investigation
 // (task/pulse-leak-investigation). When stuck-anim triggers in the
@@ -97,11 +98,63 @@ export function dumpPulseProbe(): void {
     if (navigator?.clipboard?.writeText) navigator.clipboard.writeText(lastDumpText).catch(() => {});
   } catch {/* clipboard may be unavailable in webview */}
   try {
-    const payload = { capturedAt: new Date().toISOString(), rows };
+    const payload = {
+      capturedAt: new Date().toISOString(),
+      runner: snapshotRunner(),
+      rows,
+    };
     vscode.postMessage({ type: "stuck-pulse-dump", json: JSON.stringify(payload, null, 2) });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[stuck-pulse-probe] postMessage failed", err);
+  }
+  // Schedule a follow-up snapshot 1500ms later. If localT/elapsed values
+  // haven't advanced, the sim clock is frozen. If they have, the pulses
+  // are merely slow and the leak is elsewhere (e.g. completion path).
+  setTimeout(() => dumpPulseProbeFollowup(), 1500);
+}
+
+function snapshotRunner(): Record<string, unknown> {
+  return {
+    playing: state.playing,
+    simAccumMs: state.simAccumMs,
+    simSegmentStartWall: state.simSegmentStartWall,
+    nowWall: performance.now(),
+    liveSimTime: liveSimTime(),
+    stepSimTime: state.stepSimTime,
+    activeAnimations: state.activeAnimations,
+    queueLen: state.world?.queue.length ?? null,
+    pendingSeeds: state.world?.pendingSeeds.length ?? null,
+    cycleRestartTimerSet: state.cycleRestartTimer !== null,
+  };
+}
+
+function dumpPulseProbeFollowup(): void {
+  const rows = [...live.values()].map((e) => ({
+    edge: e.edgeId,
+    id: e.id,
+    ageMs: Math.round(performance.now() - e.mountWall),
+    msSinceLastFrame: e.lastFrameWall ? Math.round(performance.now() - e.lastFrameWall) : null,
+    frames: e.frameCount,
+    rerun: e.rerunCount,
+    localT: Number(e.lastLocalT.toFixed(4)),
+    elapsed: Math.round(e.lastElapsed),
+    remainingMs: Math.round(e.remainingMs),
+    swapStart: Math.round(e.lastSwapStart),
+    simNow: Math.round(e.lastSimNow),
+    drift: Math.round(e.lastSimNow - e.lastSwapStart - e.lastElapsed),
+  }));
+  try {
+    const payload = {
+      capturedAt: new Date().toISOString(),
+      delayMsAfterFirst: 1500,
+      runner: snapshotRunner(),
+      rows,
+    };
+    vscode.postMessage({ type: "stuck-pulse-followup-dump", json: JSON.stringify(payload, null, 2) });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[stuck-pulse-probe] followup postMessage failed", err);
   }
 }
 
