@@ -27,6 +27,7 @@ export const state = {
   replayIndex: 0,
   stuckLogged: false,
   activeAnimations: 0,
+  activeAnimationsByEdge: {} as Record<string, number>,
   cycleRestartTimer: null as ReturnType<typeof setTimeout> | null,
 };
 

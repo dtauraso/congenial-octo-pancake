@@ -33,7 +33,10 @@ function detailTitle(h: RunnerHealth): string {
     return `Runner: queue empty, ${h.pendingSeeds} pendingSeeds remaining${next}. Auto-restart will not fire.`;
   }
   if (h.kind === "stuck-anim") {
-    return `Runner: queue + pendingSeeds drained, but ${h.activeAnimations} animations still in flight. Cycle-restart polling — likely a leaked PulseInstance counter.`;
+    const breakdown = Object.entries(h.byEdge)
+      .map(([id, n]) => `  ${id}: ${n}`)
+      .join("\n");
+    return `Runner: queue + pendingSeeds drained, but ${h.activeAnimations} animations still in flight. Cycle-restart polling — likely a leaked PulseInstance counter.\n\nLeaked by edge:\n${breakdown}`;
   }
   return "";
 }

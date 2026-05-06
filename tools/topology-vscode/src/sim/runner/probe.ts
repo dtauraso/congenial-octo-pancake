@@ -12,7 +12,7 @@ export type RunnerHealth =
   | { kind: "idle" }
   | { kind: "ok"; queue: number; activeAnimations: number }
   | { kind: "stuck-pending"; pendingSeeds: number; nextSeedAtTick?: number }
-  | { kind: "stuck-anim"; activeAnimations: number };
+  | { kind: "stuck-anim"; activeAnimations: number; byEdge: Record<string, number> };
 
 export function probeRunner(): RunnerHealth {
   if (!state.playing || !state.world) return { kind: "idle" };
@@ -28,7 +28,11 @@ export function probeRunner(): RunnerHealth {
     };
   }
   if (state.activeAnimations > 0 && state.cycleRestartTimer !== null) {
-    return { kind: "stuck-anim", activeAnimations: state.activeAnimations };
+    return {
+      kind: "stuck-anim",
+      activeAnimations: state.activeAnimations,
+      byEdge: { ...state.activeAnimationsByEdge },
+    };
   }
   return { kind: "ok", queue: 0, activeAnimations: state.activeAnimations };
 }
