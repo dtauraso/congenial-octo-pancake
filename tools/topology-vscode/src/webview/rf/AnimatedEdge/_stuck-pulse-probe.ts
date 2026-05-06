@@ -1,3 +1,5 @@
+import { vscode } from "../../save";
+
 // Per-pulse instrumentation for the pulse-leak investigation
 // (task/pulse-leak-investigation). When stuck-anim triggers in the
 // RunnerProbe, dumpPulseProbe() prints the last-known frame state of
@@ -96,13 +98,23 @@ export function dumpPulseProbe(): void {
   } catch {/* clipboard may be unavailable in webview */}
   try {
     const payload = { capturedAt: new Date().toISOString(), rows };
-    // Lazy import to avoid pulling vscode-host shim into modules that
-    // shouldn't depend on it during tests.
-    void import("../../save").then(({ vscode }) => {
-      vscode.postMessage({ type: "stuck-pulse-dump", json: JSON.stringify(payload, null, 2) });
-    }).catch(() => {});
-  } catch {/* host bridge may be unavailable */}
+    vscode.postMessage({ type: "stuck-pulse-dump", json: JSON.stringify(payload, null, 2) });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[stuck-pulse-probe] postMessage failed", err);
+  }
 }
+
+// Allow the user/console to retry the dump even after the one-shot
+// latch fired (e.g. when a reload didn't clear and we want a fresh
+// snapshot). Resets the `dumped` flag so the next stuck-anim transition
+// re-fires the file write.
+export function resetPulseProbeLatch(): void {
+  dumped = false;
+}
+try {
+  (window as unknown as { __resetPulseLeak?: () => void }).__resetPulseLeak = resetPulseProbeLatch;
+} catch {/* not in browser */}
 
 export function getPulseProbeDumpText(): string {
   return lastDumpText;

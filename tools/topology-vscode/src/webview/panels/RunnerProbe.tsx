@@ -23,6 +23,12 @@ export function RunnerProbe() {
     }, POLL_MS);
     return () => clearInterval(id);
   }, []);
+  // Belt-and-suspenders: also fire the dump from render. The setH-time
+  // call only runs on the prev → next transition, so a reload that lands
+  // already-stuck (or a re-mount of this component) would otherwise miss
+  // the transition. dumpPulseProbe has its own one-shot latch so this
+  // is idempotent.
+  if (h.kind === "stuck-anim") dumpPulseProbe();
   const mount = document.getElementById("run-mount");
   if (!mount) return null;
   if (h.kind === "idle" || h.kind === "ok") return null;
