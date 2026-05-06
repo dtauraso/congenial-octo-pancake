@@ -7,6 +7,13 @@ import App from "./rf/app";
 // fresh `.probe/fold-halo-last.json` is written by the heartbeat. Mirrors
 // the pulse-probe lifecycle (loaded transitively via AnimatedEdge).
 import "./rf/fold-halo-probe";
+import { installPulseLifetimes } from "../sim/runner/pulse-lifetimes";
+
+// Pulse lifetimes are owned by the runner layer, not by PulseInstance.
+// Install at webview boot so every emit registers a lifecycle even when
+// the rendering view layer (AnimatedEdge / fold-halo / future modes)
+// doesn't mount a component for that edge. See contract C6.
+installPulseLifetimes();
 import { flushSave, flushViewSave, setTopogenStatus } from "./save";
 import { parseHostToWebview } from "../messages";
 import { handleTraceLoaded, handleTraceError } from "./panels/TimelinePanel";

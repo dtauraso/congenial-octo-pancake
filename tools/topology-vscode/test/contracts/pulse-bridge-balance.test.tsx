@@ -1,17 +1,16 @@
 // @vitest-environment happy-dom
 //
 // Contract C4 (docs/planning/visual-editor/contracts.md):
-// PulseInstance's view→sim bridge calls noteEdgePulseStarted /
-// noteEdgePulseEnded as a balanced pair per mount lifetime — exactly
-// once on mount, exactly once on unmount, regardless of how many
-// times the geom/speed effect re-runs (window resize, RF re-layout).
+// PulseInstance owns rendering only. It does NOT touch
+// activeAnimations / activeAnimationsByEdge — those are the
+// pulse-lifetimes module's responsibility (contract C6). Any
+// geom/speed re-run, mount, or unmount of PulseInstance must leave
+// the simulator's per-edge counters untouched.
 //
-// The load-bearing comment in PulseInstance.tsx:88-92 splits the
-// bridge into its own [edgeId]-keyed effect for this reason. Folding
-// noteEdgePulseEnded into the [geom, speedPxPerMs] cleanup would
-// free the simulator's edge slot on every reflow; the resulting
-// counter drift was the original "stuck pulses + dropped slots"
-// regression. This test pins the split.
+// Why: the previous bridge lived in PulseInstance's useEffect and
+// silently broke when a view abstraction (fold-halo) suppressed the
+// component. Centralising lifecycle ownership in the runner layer
+// (pulse-lifetimes.ts) decouples correctness from React mount.
 
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup } from "@testing-library/react";
@@ -64,34 +63,30 @@ function harness(edgeId: string, geom: PathGeom) {
   );
 }
 
-describe("contract C4: pulse-bridge balance", () => {
-  it("activeAnimations returns to 0 after a mount/unmount", () => {
+describe("contract C4: PulseInstance does not own lifecycle", () => {
+  it("mount does not touch activeAnimations", () => {
     const { unmount } = render(harness("e1", geomA));
-    expect(state.activeAnimations).toBe(1);
+    expect(state.activeAnimations).toBe(0);
     unmount();
     expect(state.activeAnimations).toBe(0);
   });
 
-  it("rerender with new geom does NOT re-fire the bridge", () => {
-    // The regression this guards: if noteEdgePulseEnded lived inside
-    // the [geom, speedPxPerMs] effect's cleanup, this rerender would
-    // fire end+start again and the slot would be freed mid-flight.
+  it("rerender with new geom does not touch activeAnimations", () => {
     const { rerender, unmount } = render(harness("e1", geomA));
-    expect(state.activeAnimations).toBe(1);
+    expect(state.activeAnimations).toBe(0);
     rerender(harness("e1", geomB));
-    expect(state.activeAnimations).toBe(1);
+    expect(state.activeAnimations).toBe(0);
     rerender(harness("e1", geomA));
-    expect(state.activeAnimations).toBe(1);
+    expect(state.activeAnimations).toBe(0);
     unmount();
     expect(state.activeAnimations).toBe(0);
   });
 
-  it("multiple distinct edges balance independently", () => {
+  it("multiple distinct edges keep activeAnimations at 0", () => {
     const a = render(harness("e1", geomA));
     const b = render(harness("e2", geomA));
-    expect(state.activeAnimations).toBe(2);
+    expect(state.activeAnimations).toBe(0);
     a.unmount();
-    expect(state.activeAnimations).toBe(1);
     b.unmount();
     expect(state.activeAnimations).toBe(0);
   });

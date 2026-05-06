@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { EdgeRoute } from "../../../schema";
-import { subscribeState, isPlaying, getSimTime, noteEdgePulseEnded, noteEdgePulseStarted } from "../../../sim/runner";
+import { subscribeState, isPlaying, getSimTime } from "../../../sim/runner";
 import { noteAnimStart, noteAnimEnd, noteAnimRerun } from "../timeline-probe";
 import { type PathGeom } from "./_geom";
 import { PULSE_DASH_PX } from "./_constants";
@@ -92,15 +92,14 @@ export function PulseInstance({
     };
   }, [geom, speedPxPerMs]);
 
-  // Slot release runs exactly once per PulseInstance lifetime. Keeping
-  // it out of the [geom, speedPxPerMs] effect's cleanup is load-bearing:
-  // a window resize or React Flow re-layout re-runs that effect mid-
-  // flight, and folding noteEdgePulseEnded into its cleanup would free
-  // the simulator's edge slot every reflow.
+  // Lifecycle (noteEdgePulseStarted/Ended) used to live here as a
+  // [edgeId]-keyed effect. It now lives in src/sim/runner/pulse-lifetimes
+  // so it fires regardless of whether this component mounts (folded
+  // edges, headless replay, future view modes). See contract C6.
+  // The stuck-pulse probe still uses this effect to track per-mount
+  // diagnostic state.
   useEffect(() => {
-    noteEdgePulseStarted(edgeId);
     return () => {
-      noteEdgePulseEnded(edgeId);
       if (probeIdRef.current >= 0) pulseProbeUnmount(probeIdRef.current, probeCompletedRef.current);
     };
   }, [edgeId]);
