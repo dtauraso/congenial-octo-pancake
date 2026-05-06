@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { probeRunner, type RunnerHealth } from "../../sim/runner/probe";
-import { dumpPulseProbe } from "../rf/AnimatedEdge/_stuck-pulse-probe";
+import { dumpPulseProbe, getPulseProbeDumpText } from "../rf/AnimatedEdge/_stuck-pulse-probe";
 
 const POLL_MS = 250;
 
@@ -54,7 +54,8 @@ function detailTitle(h: RunnerHealth): string {
     const breakdown = Object.entries(h.byEdge)
       .map(([id, n]) => `  ${id}: ${n}`)
       .join("\n");
-    return `Runner: queue + pendingSeeds drained, but ${h.activeAnimations} animations still in flight. Cycle-restart polling — likely a leaked PulseInstance counter.\n\nLeaked by edge:\n${breakdown}`;
+    const dump = getPulseProbeDumpText();
+    return `Runner: queue + pendingSeeds drained, but ${h.activeAnimations} animations still in flight. Cycle-restart polling — likely a leaked PulseInstance counter.\n\nLeaked by edge:\n${breakdown}\n\nPulse probe (auto-copied to clipboard, also at window.__pulseLeakDump):\n${dump}`;
   }
   return "";
 }

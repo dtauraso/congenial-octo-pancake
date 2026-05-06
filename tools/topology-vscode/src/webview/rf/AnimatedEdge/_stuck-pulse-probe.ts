@@ -69,6 +69,7 @@ export function pulseProbeUnmount(id: number, completed: boolean): void {
 }
 
 let dumped = false;
+let lastDumpText = "";
 export function dumpPulseProbe(): void {
   if (dumped) return;
   dumped = true;
@@ -86,6 +87,23 @@ export function dumpPulseProbe(): void {
     simNow: Math.round(e.lastSimNow),
     drift: Math.round(e.lastSimNow - e.lastSwapStart - e.lastElapsed),
   }));
+  lastDumpText = formatRows(rows);
   // eslint-disable-next-line no-console
   console.warn("[stuck-pulse-probe] dump on stuck-anim:", rows);
+  try {
+    (window as unknown as { __pulseLeakDump?: unknown }).__pulseLeakDump = rows;
+    if (navigator?.clipboard?.writeText) navigator.clipboard.writeText(lastDumpText).catch(() => {});
+  } catch {/* clipboard may be unavailable in webview */}
+}
+
+export function getPulseProbeDumpText(): string {
+  return lastDumpText;
+}
+
+function formatRows(rows: Array<Record<string, unknown>>): string {
+  if (rows.length === 0) return "(no live pulses at stuck-anim)";
+  const keys = Object.keys(rows[0]);
+  const head = keys.join("\t");
+  const body = rows.map((r) => keys.map((k) => String(r[k])).join("\t")).join("\n");
+  return `${head}\n${body}`;
 }
