@@ -28,7 +28,7 @@ export function emitEvents(rec: FireRecord): void {
         pulseId: nextPulseId(),
       });
       if (cadence.isInputToReadGateChain(state.spec, inEdge.id)) {
-        cadence.markEmitted(inEdge.source);
+        cadence.markEmitted(inEdge.source, rec.inputValue);
       }
     }
   }
@@ -62,7 +62,7 @@ export function emitEvents(rec: FireRecord): void {
   if (firingNodeIsReadGate) {
     cadence.ackFromReadGate(state.spec, rec.nodeId, (p) => {
       if (!state.spec || !state.world) return;
-      cadence.markEmitted(p.sourceNodeId);
+      cadence.markEmitted(p.sourceNodeId, p.value);
       enqueueEmission(state.spec, state.world, p.sourceNodeId, p.sourceHandle, p.value, state.world.tick + 1);
       notify({
         type: "emit",
@@ -93,7 +93,7 @@ export function emitEvents(rec: FireRecord): void {
           value: rec.inputValue,
         });
       } else {
-        if (gated) cadence.markEmitted(edge.source);
+        if (gated) cadence.markEmitted(edge.source, rec.inputValue);
         enqueueEmission(
           state.spec,
           state.world,

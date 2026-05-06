@@ -13,6 +13,7 @@ import { reportRunnerError } from "../error-probe";
 import type { World } from "../simulator";
 import { state } from "./_state";
 import { initWorldForRun } from "./_init";
+import { resetCadence } from "../../cadence/in0ReadGateAck";
 
 const CYCLE_RESTART_QUIET_MS = 2000;
 const CYCLE_RESTART_RECHECK_MS = 250;
@@ -39,6 +40,9 @@ function tryCycleRestart(): void {
   }
   state.world = initWorldForRun(state.spec);
   state.stuckLogged = false;
+  // Cadence is paced by ack callbacks; after a full world re-init the
+  // ack channel restarts from the seed too.
+  resetCadence();
   // Lazy require to break the step → cycle-restart → step cycle.
   const { stepOnce } = require("./step") as typeof import("./step");
   try { stepOnce(); }
