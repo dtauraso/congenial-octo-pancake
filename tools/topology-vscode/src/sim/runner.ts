@@ -28,3 +28,6 @@ export {
 export { play, pause, isPlaying } from "./runner/playback";
 export { stepOnce, stepToNode, jumpTo } from "./runner/step";
 export { noteEdgePulseStarted, noteEdgePulseEnded } from "./runner/edge-anim";
+export { ruleForNodeType, ruleForNodeId, type NodeAnimationRule } from "./runner/node-animation-rules";
+export { signalRendererComplete } from "./runner/pulse-completion";
+export { tryClaimVisualSlot, releaseVisualSlot } from "./runner/pulse-concurrency";

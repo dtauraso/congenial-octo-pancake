@@ -47,6 +47,7 @@ describe("contract C6: pulse-lifetime-view-agnostic", () => {
       toNodeId: "b",
       value: 1,
       tick: 0,
+      pulseId: "test-p1",
     });
     expect(state.activeAnimations).toBe(1);
     expect(state.activeAnimationsByEdge.e1).toBe(1);
@@ -55,7 +56,7 @@ describe("contract C6: pulse-lifetime-view-agnostic", () => {
   it("ended fires after the default duration with no renderer mounted", () => {
     notify({
       type: "emit", edgeId: "e1", fromNodeId: "a", toNodeId: "b",
-      value: 1, tick: 0,
+      value: 1, tick: 0, pulseId: "test-p2",
     });
     expect(state.activeAnimations).toBe(1);
     vi.advanceTimersByTime(PULSE_DEFAULT_DURATION_MS - 1);
@@ -66,8 +67,8 @@ describe("contract C6: pulse-lifetime-view-agnostic", () => {
   });
 
   it("two emits on the same edge produce two balanced lifetimes", () => {
-    notify({ type: "emit", edgeId: "e1", fromNodeId: "a", toNodeId: "b", value: 1, tick: 0 });
-    notify({ type: "emit", edgeId: "e1", fromNodeId: "a", toNodeId: "b", value: 2, tick: 1 });
+    notify({ type: "emit", edgeId: "e1", fromNodeId: "a", toNodeId: "b", value: 1, tick: 0, pulseId: "test-p3a" });
+    notify({ type: "emit", edgeId: "e1", fromNodeId: "a", toNodeId: "b", value: 2, tick: 1, pulseId: "test-p3b" });
     expect(state.activeAnimations).toBe(2);
     expect(state.activeAnimationsByEdge.e1).toBe(2);
     vi.advanceTimersByTime(PULSE_DEFAULT_DURATION_MS + 1);

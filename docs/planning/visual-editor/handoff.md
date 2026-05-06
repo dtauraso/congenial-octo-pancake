@@ -7,102 +7,95 @@ read this file first (no chat history needed) and proceed.
 
 ---
 
-Continuing on wirefold, branch `task/pulse-animation-abstraction`
-(pushed, 4d4ae63). Working tree clean.
+Continuing on wirefold, branch `task/pulse-rules-per-node`
+(unpushed). Working tree clean except for the long-standing
+`topology.view.json` modification from prior branches.
 
 State at handoff:
-  Branched off `task/pulse-leak-investigation`. The root cause from
-  that branch was diagnosed and fixed:
+  Branched off `task/pulse-animation-abstraction`. The two bugs the
+  C6 fix introduced (visual stacking on slow edges, frame stall
+  from N concurrent PulseInstances) have a structural fix:
 
-  **Bug fixed (cycle-livelock under fold suppression):** the
-  `deferSlotFreeToView` slot release machinery required
-  `noteEdgeAnimEnded` to fire on every emitted pulse, but the
-  bridge that called it lived inside `PulseInstance.tsx`. When the
-  fold-halo collapsed `readGate1`'s edges, no `<AnimatedEdge>` /
-  `<PulseInstance>` mounted for them, the bridge never fired,
-  `edgeReleasePending.animEnded` stayed false forever, and the
-  `in0->readGate.chainIn` slot was held indefinitely. ChainIn
-  declined every step waiting for an ack that couldn't arrive
-  (i1's ack pulse was queued behind the held slot). cycle stayed
-  at 1.
+  **Per-emitter-node-type animation rules.** Each node type owns
+  the rules for the pulses it emits — duration, completion
+  semantics, visual concurrency cap. The global
+  `PULSE_DEFAULT_DURATION_MS` is gone; lifecycle clock is now
+  `ruleForNodeType(srcNode.type).durationMs`.
 
-  **Fix:** lift pulse lifecycle ownership out of the React
-  component into a runner-layer module
-  ([src/sim/runner/pulse-lifetimes.ts](../../tools/topology-vscode/src/sim/runner/pulse-lifetimes.ts))
-  that subscribes to `notify({type:"emit"})` on the event bus and
-  schedules `noteEdgePulseStarted` / `noteEdgePulseEnded` on its
-  own clock (`PULSE_DEFAULT_DURATION_MS = 2000`). Installed at
-  webview boot in
-  [src/webview/main.tsx](../../tools/topology-vscode/src/webview/main.tsx).
-  PulseInstance is now a pure renderer.
+  Three new runner-side modules:
+  - [src/sim/runner/node-animation-rules.ts](../../tools/topology-vscode/src/sim/runner/node-animation-rules.ts)
+    — `NodeAnimationRule = { durationMs, completion, maxConcurrentPerEdge }`.
+    Per-type registry with a `DEFAULT_RULE` fallback.
+  - [src/sim/runner/pulse-completion.ts](../../tools/topology-vscode/src/sim/runner/pulse-completion.ts)
+    — renderer-or-timer race per pulseId. `armPulse` schedules a
+    timer; `signalRendererComplete(pulseId)` ends early. Whichever
+    fires first wins; loser is no-op.
+  - [src/sim/runner/pulse-concurrency.ts](../../tools/topology-vscode/src/sim/runner/pulse-concurrency.ts)
+    — per-edge visual-slot ledger. Renderer calls
+    `tryClaimVisualSlot(edgeId, cap)`; if false, skip rendering.
+    Independent of `state.activeAnimationsByEdge`.
 
-  Verified via three time-spaced probes
-  (`.probe/stuck-pulse-last*.json`): cycle advances 5 → 7 → 13
-  across the same 30s window where it previously froze at 1.
+  `pulse-lifetimes.ts` now: looks up source node type from
+  `state.spec`, resolves rule, calls `noteEdgePulseStarted`,
+  `armPulse(pulseId, ..., () => noteEdgePulseEnded(edgeId))`. Always
+  balanced — coalesced visual emits still produce balanced
+  simulator-side lifecycles (contract C8).
+
+  AnimatedEdge: claims a visual slot per emit; if denied, skips
+  spawning a `<PulseInstance>`. On done, calls
+  `signalRendererComplete(ev.pulseId)` + `releaseVisualSlot(id)`.
+  On unmount, releases held slots so a re-mount doesn't hit the cap.
+
+  `EmitEvent` gained a `pulseId: string` field, generated at each
+  notify site via `nextPulseId()` from event-bus.
 
   Contracts updated:
-  - **C6** (new, registered) — pulse-lifetime-view-agnostic. Pins
-    that `notify(emit)` registers a balanced lifecycle regardless
-    of whether any renderer is subscribed.
-  - **C4** (inverted) — PulseInstance must NOT touch
-    `activeAnimations`. Lifecycle ownership is now C6's.
+  - **C6** (updated) — duration is now per-emitter-type, not global.
+    Test split into `pulse-lifetime-view-agnostic.test.ts` (existing
+    invariant) + `pulse-duration-per-node-type.test.ts` (new).
+  - **C7** (new) — pulse-renderer-or-timer race. Test:
+    `pulse-renderer-or-timer.test.ts`.
+  - **C8** (new) — visual coalesce keeps simulator ledger balanced.
+    Test: `pulse-coalesce-balanced.test.ts`.
 
-  204/204 tests pass. tsc clean. check:loc clean. build clean.
+  212/212 tests pass (204 prior + 8 new across 3 contract test
+  files). tsc clean. check:loc clean (all new files ≤ 100 LOC).
+  go build clean. webview build clean.
 
-**New bugs introduced by the fix (next session's work):**
+**What is NOT yet done — next session's first task:**
 
-The C6 design decouples lifecycle clock (2s default) from visual
-duration (path arc / `pulseSpeedPxPerMs`). On slow edges the visual
-takes ~10s while the simulator frees the slot every 2s and emits
-new pulses. Two consequences captured in
-`.probe/stuck-pulse-last-third.json` (May 5 19:17):
+  **Live verification was not run.** The simulator-side ledger is
+  proved correct by tests, but the original symptoms
+  (stacking on `i1.out->readGate.ack`, `msSinceLastFrame: 1615ms`)
+  were observed in the live editor, not in vitest. Next session
+  must:
 
-1. **Visual stacking on slow edges.** `i1.out->readGate.ack` had
-   6 simultaneous `<PulseInstance>` components in dump 3 (IDs 49,
-   54, 57, 64, 69, 72), each ~10s long. The diagram looks like
-   dots spawning on top of each other on long-arc edges.
+  1. Run the editor with stuck-pulse probe re-armed
+     (`window.__resetPulseLeak()`).
+  2. Drive the disruption flow that previously livelocked, then
+     stacked.
+  3. Capture three time-spaced `.probe/stuck-pulse-last*.json`
+     dumps.
+  4. Confirm:
+     - cycle still advances (no regression of pulse-leak fix).
+     - no edge has more than `rule.maxConcurrentPerEdge` simultaneous
+       `<PulseInstance>` components.
+     - `msSinceLastFrame` returns to ~16ms range.
+  5. If stacking persists despite the visual cap, suspect: rule
+     cap not being read on the AnimatedEdge subscribe path, or a
+     re-mount path that doesn't run the cleanup effect. Check
+     `tryClaimVisualSlot` call site at
+     [src/webview/rf/AnimatedEdge.tsx:54](../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx#L54)
+     and the unmount cleanup at line ~46.
 
-2. **Frame stall.** `msSinceLastFrame: 1615ms` for every active
-   pulse in dump 3 (rAF should be ~16ms). The render loop is
-   bogged down by N concurrent PulseInstances doing per-frame
-   geometry math (label placement, dash offset, label opacity).
+  If verification is clean, this branch is mergeable.
 
-User accepted these trade-offs to fix the livelock; both should
-be addressed before this lands on main. Three candidate
-directions, listed in order of decreasing scope:
+**Tunable rules:** initial `NODE_ANIMATION_RULES` values are a guess
+calibrated against the global 2000ms baseline. After live runs, tune
+per-type. ChainInhibitor at 2500ms is the longest; ReadGate /
+DetectorLatch / SyncGate at 1500ms are the shortest. All cap=1.
 
-- **A. Renderer-authoritative completion when mounted.**
-  Extend pulse-lifetimes so a renderer can register itself for an
-  edge. If registered, the lifecycle waits for the renderer's
-  signal (real arc-traversal time); if unregistered (folded /
-  headless), the default-duration timer fires. Preserves visual
-  fidelity AND fold correctness. Best long-term answer.
-
-- **B. Per-edge concurrency cap in the renderer.** Cap visual
-  pulse instances per edge to N (e.g. 1) by dropping/coalescing
-  overflow in `<AnimatedEdge>`. Solves stacking and frame stall;
-  doesn't address the simulator-vs-visual divergence on slow
-  edges (the user still sees one slow pulse representing many
-  simulator emissions).
-
-- **C. Shorten the long arc routes.** The original option B from
-  pulse-leak-investigation. Geometric fix to feedback-ack
-  routing so all edges have comparable arc lengths. Doesn't
-  generalize — any future long edge brings the bugs back.
-
-Recommended split:
-- New branch `task/pulse-renderer-authoritative` for A. Build
-  on top of this branch (lifecycle still owned by pulse-lifetimes,
-  but completion is "renderer-signals OR timer fallback, whichever
-  fires first"). Add contract C7: "if a renderer signals completion
-  before default duration, lifetime ends at signal; otherwise at
-  timer."
-- New branch `task/pulse-frame-stall-bound` for B as a defense in
-  depth — even with A, a pathological case (many overlapping
-  emissions before the renderer can complete) needs a cap.
-
-Probe instrumentation (from pulse-leak-investigation, still active
-on this branch):
+Probe instrumentation (carried forward, still active):
   - `.probe/stuck-pulse-last.json` — at first stuck-anim moment.
   - `.probe/stuck-pulse-last-followup.json` — 1.5s later.
   - `.probe/stuck-pulse-last-third.json` — 30s later.
@@ -111,10 +104,12 @@ on this branch):
     clipboard; mirrored on `window.__pulseLeakDump`.
   - `window.__resetPulseLeak()` in console re-arms the one-shot.
 
-Open branches (pushed, unmerged):
-  - task/pulse-animation-abstraction (this branch, 4d4ae63)
+Open branches:
+  - task/pulse-rules-per-node (this branch, unpushed)
+  - task/pulse-animation-abstraction (parent, 4d4ae63 — can be
+    deleted once this branch lands)
   - task/pulse-leak-investigation (8a2369a — instrumentation only,
-    no fix; can be deleted once this branch merges)
+    no fix; can be deleted once this branch lands)
 
 Other recommended branches (dormant, not started):
   - visualize-gate-buffer-state

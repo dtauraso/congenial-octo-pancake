@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BaseEdge, type EdgeProps } from "reactflow";
 import { KIND_COLORS, type EdgeRoute } from "../../schema";
-import { subscribe, subscribeState, getConcurrentEdges, getSimTime } from "../../sim/runner";
+import {
+  subscribe, subscribeState, getConcurrentEdges, getSimTime,
+  ruleForNodeId, signalRendererComplete,
+  tryClaimVisualSlot, releaseVisualSlot,
+} from "../../sim/runner";
 import { markerEndUrl } from "./MarkerDefs";
 import { dashForKind } from "./edge-style";
 import { buildPathGeom } from "./AnimatedEdge/_geom";
@@ -42,12 +46,28 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
     return subscribeState(update);
   }, [id]);
 
+  // Release any held visual slots if the edge itself unmounts (e.g.
+  // fold collapsed it). Without this the per-edge slot ledger leaks.
+  useEffect(() => {
+    return () => {
+      const held = len0Ref.current + len1Ref.current;
+      for (let i = 0; i < held; i++) releaseVisualSlot(id);
+    };
+  }, [id]);
+
   useEffect(() => {
     const unsub = subscribe((ev) => {
       if (ev.type !== "emit" || ev.edgeId !== id) return;
+      const rule = ruleForNodeId(ev.fromNodeId);
+      // Visual concurrency cap: if the edge already has cap pulses
+      // rendering, skip this one. The runner-side lifecycle (started/
+      // ended via pulse-lifetimes) still balances on its own —
+      // contract C8.
+      if (!tryClaimVisualSlot(id, rule.maxConcurrentPerEdge)) return;
       const key = ++pulseKeyRef.current;
       const pulse: Pulse = {
         key,
+        pulseId: ev.pulseId,
         value: formatRidingValue(ev.value),
         simStart: getSimTime(),
       };
@@ -64,14 +84,18 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
 
   // Drop-by-key, not slice(1): pulses animate concurrently and a
   // shorter-arc geometry change could let a later pulse finish first.
-  const advanceLane0 = useCallback((key: number) => {
+  const advanceLane0 = useCallback((key: number, pulseId: string) => {
+    signalRendererComplete(pulseId);
+    releaseVisualSlot(id);
     setPulses0((cur) => cur.filter((p) => p.key !== key));
     if (len0Ref.current > 0) len0Ref.current -= 1;
-  }, []);
-  const advanceLane1 = useCallback((key: number) => {
+  }, [id]);
+  const advanceLane1 = useCallback((key: number, pulseId: string) => {
+    signalRendererComplete(pulseId);
+    releaseVisualSlot(id);
     setPulses1((cur) => cur.filter((p) => p.key !== key));
     if (len1Ref.current > 0) len1Ref.current -= 1;
-  }, []);
+  }, [id]);
 
   const kind = data?.kind ?? "any";
   const stroke = KIND_COLORS[kind] ?? "#888";
@@ -106,7 +130,7 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
           value={p.value}
           speedPxPerMs={speed}
           simStart={p.simStart}
-          onDone={() => advanceLane0(p.key)}
+          onDone={() => advanceLane0(p.key, p.pulseId)}
         />
       ))}
       {concurrent && pulses1.map((p) => (
@@ -121,7 +145,7 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
           value={p.value}
           speedPxPerMs={speed}
           simStart={p.simStart}
-          onDone={() => advanceLane1(p.key)}
+          onDone={() => advanceLane1(p.key, p.pulseId)}
         />
       ))}
       {mid && label && (

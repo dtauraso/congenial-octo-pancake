@@ -7,7 +7,7 @@
 
 import { NODE_TYPES } from "../../schema";
 import { getHandler } from "../handlers";
-import { notify } from "../event-bus";
+import { notify, nextPulseId } from "../event-bus";
 import type { TraceEvent } from "../trace";
 import { state, liveSimTime, findEdge } from "./_state";
 import { pause } from "./playback";
@@ -60,6 +60,7 @@ function replayDispatch(ev: TraceEvent): void {
         toNodeId: edge.target,
         value: ev.value,
         tick: state.world.tick,
+        pulseId: nextPulseId(),
       });
     }
   }
