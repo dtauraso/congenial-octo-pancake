@@ -12,21 +12,55 @@ Working tree clean except for the long-standing `topology.view.json`
 modification carried across branches.
 
 State at handoff:
-  `task/fold-delete-crash` merged to main (commit b970639) and
-  the local branch deleted. Both fixes are live:
-  webview-level Backspace/Delete bypass for RF v11's fold-placeholder
-  keydown quirk, and viewerState threaded through `decorateForCompare`
-  / `decorateForOnion` so members keep their positions under a diff
-  overlay. User signed off live ("working. ship it.").
+  `task/animation-rules-tuning` merged to main (commit 6bdff59) and
+  the local + remote branches deleted. Two fixes are live:
 
-  Origin/main is in sync — nothing pending to push.
+  1. **Bike-brakes pause.** Pulse completion timers used wall-clock
+     `setTimeout(durationMs)`, which kept counting during pause and
+     silently completed pulses while frozen mid-arc. Added
+     `pauseAllPulseTimers` / `resumeAllPulseTimers` in
+     [pulse-completion.ts](../../tools/topology-vscode/src/sim/runner/pulse-completion.ts);
+     on pause we clear each armed timer and stash the remainder, on
+     resume we re-arm with the saved value. Wired into
+     [playback.ts](../../tools/topology-vscode/src/sim/runner/playback.ts)
+     `pause()` / `play()`. Sim time and rAF were already paused; this
+     closes the third clock.
 
-**Next task (highest-priority dormant follow-up):** tune
-`NODE_ANIMATION_RULES` per-type at
-[tools/topology-vscode/src/sim/runner/node-animation-rules.ts](../../tools/topology-vscode/src/sim/runner/node-animation-rules.ts).
-Current values are guesses set against the old 2000ms global baseline
-and have not been calibrated per node-type. Open a fresh
-`task/animation-rules-tuning` (or similar) branch when starting.
+  2. **View-load position rebuild.** The "load" message wins the race
+     against the async sidecar read, so `specToFlow` runs with an
+     empty `viewerState` and every node falls back to its default
+     position. The "view-load" handler used to only rebuild RF nodes
+     when `folds.length > 0`, so reloading any topology with no folds
+     left every node stacked at the origin. Fix in
+     [_handle-view-load.ts](../../tools/topology-vscode/src/webview/rf/app/_handle-view-load.ts):
+     drop the folds guard; always rebuild once the spec is present.
+
+  User signed off live ("things look good").
+
+  Origin/main is in sync. 214/214 tests pass; tsc clean; check:loc
+  clean.
+
+**Reframing of the original task:** the dormant "tune
+NODE_ANIMATION_RULES per-type" item was set up when the renderer was
+SVG with fixed node positions. With draggable RF nodes, edge length
+varies, so per-type fixed `durationMs` values can't track actual
+edge traversal time — short edges look slow, long edges look stacked.
+Tuning the per-type table is patching the wrong axis.
+
+**Next task — open question, not yet started.** Two options on the
+table for the running-mode mismatch (pause-freeze covers inspection):
+
+  1. **Distance-aware duration.** Per-pulse `durationMs` = edge length
+     (px) × per-type speed (px/ms), with min/max clamps. Per-type
+     rule becomes "speed + clamp" instead of fixed duration. Keeps
+     ChainInhibitor-dwells / ReadGate-snaps semantic intent but
+     adapts to layout.
+  2. **Renderer-driven completion only, drop the timer.** Let visual
+     finish whenever the path animation ends. Requires re-checking
+     contracts C6/C7/C8; the timer is the fallback for stuck pulses,
+     so removing it isn't free.
+
+  Recommend (1). Decide before opening a branch.
 
 Probe instrumentation (carried forward, still active on main):
   - `.probe/stuck-pulse-last.json` — at first stuck-anim moment.
@@ -41,6 +75,8 @@ Open branches:
   - none (on main, idle)
 
 Other recommended branches (dormant, not started):
+  - distance-aware-pulse-duration (the reframed successor to
+    animation-rules-tuning; see above)
   - visualize-gate-buffer-state
   - backpressure-slack-envelope
   - stepping-semantics-doc
