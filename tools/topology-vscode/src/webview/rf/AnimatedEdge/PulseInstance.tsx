@@ -6,7 +6,6 @@ import { type PathGeom } from "./_geom";
 import { PULSE_DASH_PX } from "./_constants";
 import { makeFrame } from "./_pulse-frame";
 import { pulseProbeMount, pulseProbeRerun, pulseProbeUnmount } from "./_stuck-pulse-probe";
-import { chordTraversalMs } from "./_chord-pace";
 
 export function PulseInstance({
   edgeId, fromNodeId, toNodeId, geom, route, stroke, value, pulseId, speedPxPerMs, simStart, onDone,
@@ -53,16 +52,7 @@ export function PulseInstance({
       return;
     }
     noteAnimStart(edgeId, fromNodeId, toNodeId);
-    // Chord-parameterized timing: total traversal duration is set by
-    // the straight-line endpoint distance, not arc length. snake and
-    // bezier routes have arc lengths well above their chord; without
-    // this, the dot would crawl along curvy edges while flying along
-    // straight ones, reading as "inconsistent speed". The dot still
-    // traces the real path arc, just on a chord-paced clock.
-    const p0 = path.getPointAtLength(0);
-    const p1 = path.getPointAtLength(svgArc);
-    const chordPx = Math.max(1, Math.hypot(p1.x - p0.x, p1.y - p0.y));
-    const remainingMs = chordTraversalMs(chordPx, speedPxPerMs, svgArc, remainingArc);
+    const remainingMs = remainingArc / speedPxPerMs;
     // Distance-aware: tell the simulator how long this traversal will
     // really take so its timer fallback matches the visual. Re-runs
     // on geom/speed changes so node drag updates the timer too.
