@@ -12,57 +12,58 @@ Working tree clean except for the long-standing `topology.view.json`
 modification carried across branches.
 
 State at handoff:
-  `task/animation-rules-tuning` merged to main (commit 6bdff59) and
-  the local + remote branches deleted. Two fixes are live:
+  `task/distance-aware-pulse-duration` merged to main and the local
+  + remote branches deleted. Three things landed:
 
-  1. **Bike-brakes pause.** Pulse completion timers used wall-clock
-     `setTimeout(durationMs)`, which kept counting during pause and
-     silently completed pulses while frozen mid-arc. Added
-     `pauseAllPulseTimers` / `resumeAllPulseTimers` in
-     [pulse-completion.ts](../../tools/topology-vscode/src/sim/runner/pulse-completion.ts);
-     on pause we clear each armed timer and stash the remainder, on
-     resume we re-arm with the saved value. Wired into
-     [playback.ts](../../tools/topology-vscode/src/sim/runner/playback.ts)
-     `pause()` / `play()`. Sim time and rAF were already paused; this
-     closes the third clock.
+  1. **Distance-aware pulse timer.** The simulator-side pulse timer
+     was a fixed per-emitter `durationMs` that ignored edge length,
+     so dragging a node mid-pulse desynchronized the timer from the
+     visible traversal. Replaced with `durationForLength(rule, lengthPx)
+     = clamp(length / globalSpeed, minMs, maxMs)`. PulseInstance
+     calls `extendPulse(pulseId, remainingMs)` once it measures the
+     real arc, and again on every geom/speed re-run, so node drag
+     keeps the timer matched to visible motion. Folded/headless
+     edges keep an initial reference-length timer (no visual to
+     diverge from).
 
-  2. **View-load position rebuild.** The "load" message wins the race
-     against the async sidecar read, so `specToFlow` runs with an
-     empty `viewerState` and every node falls back to its default
-     position. The "view-load" handler used to only rebuild RF nodes
-     when `folds.length > 0`, so reloading any topology with no folds
-     left every node stacked at the origin. Fix in
-     [_handle-view-load.ts](../../tools/topology-vscode/src/webview/rf/app/_handle-view-load.ts):
-     drop the folds guard; always rebuild once the spec is present.
+  2. **Single global pulse speed.** Per-emitter `speedPxPerMs` made
+     ChainInhibitor pulses crawl while ReadGate pulses zipped on the
+     same canvas. Rules now carry only `{ minMs, maxMs, completion,
+     maxConcurrentPerEdge }`; speed is one global (`pulseSpeedPxPerMs
+     = 0.08 px/ms at REF_TICK_MS = 400`). Contract C9 (test/contracts/
+     pulse-uniform-speed.test.ts) locks in: every registered rule
+     produces the same `effectiveSpeedPxPerMs` and `durationForLength`,
+     and rule shape has no `speedPxPerMs` field.
 
-  User signed off live ("things look good").
+  3. **Stop-hook auto-rebuilds.** The Stop hook (`scripts/stop-checks.sh`)
+     now runs `npm run build` whenever TS/TSX changed, so Cmd-R in
+     the host picks up the latest webview bundle without a manual
+     `npm run build`. Eliminates the "I reloaded but nothing changed"
+     surprise.
 
-  Origin/main is in sync. 214/214 tests pass; tsc clean; check:loc
-  clean.
+  Note: chord-pacing was tried (commit 44e04f5) and reverted (commit
+  b1e948a). Lesson logged for next time: arc-pacing keeps the dot at
+  uniform px/ms along its own trajectory; chord-pacing makes
+  equal-endpoint edges finish at the same time but inflates path-rate
+  on curvy edges, which reads as "inconsistent speed". User feedback
+  confirmed visually-uniform = arc-paced. Don't re-attempt chord
+  pacing unless the requirement explicitly changes.
 
-**Reframing of the original task:** the dormant "tune
-NODE_ANIMATION_RULES per-type" item was set up when the renderer was
-SVG with fixed node positions. With draggable RF nodes, edge length
-varies, so per-type fixed `durationMs` values can't track actual
-edge traversal time — short edges look slow, long edges look stacked.
-Tuning the per-type table is patching the wrong axis.
+  Tests: 218/218 pass; tsc clean; check:loc clean; build clean.
+  Origin/main in sync.
 
-**Next task — open question, not yet started.** Two options on the
-table for the running-mode mismatch (pause-freeze covers inspection):
+Contract registry status (docs/planning/visual-editor/contracts.md):
+  C6 ✅ pulse-lifetime-view-agnostic.
+  C7 ✅ renderer-or-timer race for pulse completion.
+  C8 ✅ visual concurrency cap doesn't desynchronise lifecycle ledger.
+  C9 ✅ uniform pulse speed across emitter types (new).
 
-  1. **Distance-aware duration.** Per-pulse `durationMs` = edge length
-     (px) × per-type speed (px/ms), with min/max clamps. Per-type
-     rule becomes "speed + clamp" instead of fixed duration. Keeps
-     ChainInhibitor-dwells / ReadGate-snaps semantic intent but
-     adapts to layout.
-  2. **Renderer-driven completion only, drop the timer.** Let visual
-     finish whenever the path animation ends. Requires re-checking
-     contracts C6/C7/C8; the timer is the fallback for stuck pulses,
-     so removing it isn't free.
+**The dormant "tune NODE_ANIMATION_RULES per-type" item from the prior
+handoff is now retired.** Distance-aware timing made per-type duration
+unnecessary; per-type speed proved actively harmful (reverted). The
+table now exists only for clamps/completion/cap.
 
-  Recommend (1). Decide before opening a branch.
-
-Probe instrumentation (carried forward, still active on main):
+Probe instrumentation (carried forward, still active):
   - `.probe/stuck-pulse-last.json` — at first stuck-anim moment.
   - `.probe/stuck-pulse-last-followup.json` — 1.5s later.
   - `.probe/stuck-pulse-last-third.json` — 30s later.
@@ -72,18 +73,32 @@ Probe instrumentation (carried forward, still active on main):
   - `window.__resetPulseLeak()` in console re-arms the one-shot.
 
 Open branches:
-  - none (on main, idle)
+  - none (on main, idle).
 
-Other recommended branches (dormant, not started):
-  - distance-aware-pulse-duration (the reframed successor to
-    animation-rules-tuning; see above)
-  - visualize-gate-buffer-state
-  - backpressure-slack-envelope
-  - stepping-semantics-doc
+Next options (dormant, not started — pick by friction, not order):
+  1. **visualize-gate-buffer-state.** Surface ReadGate / SyncGate
+     internal latch state in the editor so backpressure stalls are
+     diagnosable without console probes. Friction signal: any time a
+     stuck-pulse session ends with "the gate was waiting for X."
+  2. **backpressure-slack-envelope.** Define a per-edge slack budget
+     (max in-flight pulses across the latch chain) and assert it in a
+     contract test. Today the cap is `maxConcurrentPerEdge=1` per
+     rule but the chain-wide envelope is implicit. Friction signal:
+     pulse-leak debugging that hinges on counting in-flight pulses.
+  3. **stepping-semantics-doc.** Write up the step / play / pause /
+     scrub semantics in one place; current knowledge is scattered
+     across runner.ts, playback.ts, and chat history. Friction
+     signal: any future debug that requires re-deriving "what does
+     simTime do during pause."
+  4. **NODE_ANIMATION_RULES cleanup.** Now that all rules are
+     identical (just defaults), the registry is mostly noise. Could
+     collapse to `DEFAULT_RULE` + a small per-type overrides map.
+     Pure code-tidy; only do it if a related task already touches
+     this file.
 
 Branch hygiene: no merge to main without explicit sign-off. Delete merged branches without re-asking. Force-push needs sign-off.
 Cwd for tsc/tests/check:loc/build: tools/topology-vscode/ (Bash resets cwd — chain cd or use absolute paths).
-Stop hook now active: scripts/stop-checks.sh runs go build / tsc / check:loc on relevant changes and blocks stop on failure.
+Stop hook active: scripts/stop-checks.sh runs go build / tsc / check:loc / npm run build on relevant changes and blocks stop on failure.
 If user surfaces unrelated friction, log to docs/planning/visual-editor/session-log.md and open a fresh task/<short-kebab>.
 
 ALWAYS — at end of session, overwrite docs/planning/visual-editor/handoff.md with a freshly-rendered prompt tailored to the state you're leaving the branch in, and commit it on the task branch. Do not rely on chat history; the next AI may be a fresh model with no transcript. The rendered handoff must itself contain this same ALWAYS clause so the loop is self-perpetuating across sessions. Use docs/planning/visual-editor/continuation-prompt-template.md as the structural source of truth; update the template when an invariant changes.
