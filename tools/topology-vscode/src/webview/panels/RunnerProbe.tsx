@@ -7,7 +7,19 @@ const POLL_MS = 250;
 export function RunnerProbe() {
   const [h, setH] = useState<RunnerHealth>({ kind: "idle" });
   useEffect(() => {
-    const id = setInterval(() => setH(probeRunner()), POLL_MS);
+    const id = setInterval(() => {
+      setH((prev) => {
+        // Latch the first stuck reading so the label can be selected/copied
+        // without the 250ms refresh re-rendering it out from under the cursor.
+        // Clears once the runner returns to idle/ok.
+        if (prev.kind === "stuck-pending" || prev.kind === "stuck-anim") {
+          const next = probeRunner();
+          if (next.kind === "idle" || next.kind === "ok") return next;
+          return prev;
+        }
+        return probeRunner();
+      });
+    }, POLL_MS);
     return () => clearInterval(id);
   }, []);
   const mount = document.getElementById("run-mount");
