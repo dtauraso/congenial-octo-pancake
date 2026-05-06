@@ -7,61 +7,84 @@ read this file first (no chat history needed) and proceed.
 
 ---
 
-Continuing on wirefold, branch `main`. No active task branch.
+Continuing on wirefold, branch `task/in0-readgate-emission-ack`.
 Working tree clean except for the long-standing `topology.view.json`
 modification carried across branches.
 
 State at handoff:
-  `task/distance-aware-pulse-duration` merged to main and the local
-  + remote branches deleted. Three things landed:
+  Implemented the in0/readGate emission ack frame and laid down the
+  new sim-adjacent presentation-cadence layer at
+  `tools/topology-vscode/src/cadence/` as its housing. First (and
+  currently only) inhabitant: `cadence/in0ReadGateAck.ts`. The user
+  picked option 1 from the prior handoff (name the layer first, then
+  house the ack). The chosen name is **cadence** — narrow enough to
+  resist scope creep, clearly not sim state and not runtime.
 
-  1. **Distance-aware pulse timer.** The simulator-side pulse timer
-     was a fixed per-emitter `durationMs` that ignored edge length,
-     so dragging a node mid-pulse desynchronized the timer from the
-     visible traversal. Replaced with `durationForLength(rule, lengthPx)
-     = clamp(length / globalSpeed, minMs, maxMs)`. PulseInstance
-     calls `extendPulse(pulseId, remainingMs)` once it measures the
-     real arc, and again on every geom/speed re-run, so node drag
-     keeps the timer matched to visible motion. Folded/headless
-     edges keep an initial reference-length timer (no visual to
-     diverge from).
+  Tests 218/218, tsc/check:loc/build all clean. Go build clean.
+  Branch is one commit ahead of main; not yet pushed and not merged.
+  No sign-off yet on merging to main — wait for the user.
 
-  2. **Single global pulse speed.** Per-emitter `speedPxPerMs` made
-     ChainInhibitor pulses crawl while ReadGate pulses zipped on the
-     same canvas. Rules now carry only `{ minMs, maxMs, completion,
-     maxConcurrentPerEdge }`; speed is one global (`pulseSpeedPxPerMs
-     = 0.08 px/ms at REF_TICK_MS = 400`). Contract C9 (test/contracts/
-     pulse-uniform-speed.test.ts) locks in: every registered rule
-     produces the same `effectiveSpeedPxPerMs` and `durationForLength`,
-     and rule shape has no `speedPxPerMs` field.
+Frame as implemented — **in0/readGate emission ack:**
+  - Layer: TypeScript sim-side only. Back-channel internal to the
+    visualization. Not in Go, not in simulator event state, not on
+    canvas.
+  - Channel: `readGate → in0` ack signal.
+  - Trigger: the moment ReadGate's notify("emit") fires for an
+    outbound emission (the visible output pulse begins emitting).
+  - Effect: the Input feeding readGate.chainIn is permitted to emit
+    its next pulse. First emission is free; every subsequent
+    emission gates on the ack.
+  - Wiring (see commit 3240d62):
+    1. `emit.ts` self-pacer block — when re-firing on a concurrent
+       edge that is Input→ReadGate.chainIn, check `cadence.mayEmit`.
+       If gated, park a `PendingRefire` via `cadence.recordPending`
+       and return without enqueuing/notifying. If allowed, mark
+       emitted and proceed as before.
+    2. `emit.ts` seed-input notify block — when notifying an
+       Input-source emit on an Input→ReadGate.chainIn edge, call
+       `cadence.markEmitted` so the cadence starts awaiting ack.
+    3. `emit.ts` ReadGate outbound emit — after the rec.emissions
+       notify loop, if rec.nodeId is a ReadGate, call
+       `cadence.ackFromReadGate`. The ack callback clears
+       awaiting-state and replays any parked `PendingRefire`
+       (markEmitted, enqueueEmission, notify).
+    4. `load.ts` and `playback.ts` — `resetCadence()` is called on
+       load(), reset(), replay-restart, and at-rest play().
 
-  3. **Stop-hook auto-rebuilds.** The Stop hook (`scripts/stop-checks.sh`)
-     now runs `npm run build` whenever TS/TSX changed, so Cmd-R in
-     the host picks up the latest webview bundle without a manual
-     `npm run build`. Eliminates the "I reloaded but nothing changed"
-     surprise.
+Cadence layer guidance for next inhabitant:
+  - Module shape established by `in0ReadGateAck.ts`: module-scope
+    `Set`/`Map` for the back-channel state, plus a `resetCadence()`
+    that the runner calls on lifecycle boundaries. Add new resets
+    to load.ts/playback.ts as inhabitants arrive. If a third
+    inhabitant lands, it's worth aggregating resets behind a
+    `cadence/index.ts`.
+  - The handoff that defined the frame called out other things that
+    likely belong in this layer: per-pulse `durationForLength`
+    overrides currently scattered through PulseInstance, future
+    gate-buffer-state visualization signals, "show this pulse paused
+    while waiting for X" indicators. None of these are claimed work
+    — they're candidates if user friction surfaces them.
 
-  Note: chord-pacing was tried (commit 44e04f5) and reverted (commit
-  b1e948a). Lesson logged for next time: arc-pacing keeps the dot at
-  uniform px/ms along its own trajectory; chord-pacing makes
-  equal-endpoint edges finish at the same time but inflates path-rate
-  on curvy edges, which reads as "inconsistent speed". User feedback
-  confirmed visually-uniform = arc-paced. Don't re-attempt chord
-  pacing unless the requirement explicitly changes.
-
-  Tests: 218/218 pass; tsc clean; check:loc clean; build clean.
-  Origin/main in sync.
+Substrate working mode (carried forward, still active):
+  The user articulated, at length, why this work is substrate-shaped
+  (topology-as-logic, multi-scale timing, discrete causal sims) and
+  why the AI-shaped niche menus produce flat application-layer
+  framings that miss the substrate. The implication for collaboration:
+    - **Don't propose niche bundles.** User-named frames stand alone.
+    - **Don't offer "next options" menus proactively.** Wait for the
+      user to name the next frame.
+    - **Use Claude Code as a fabricator, not a co-designer.** The
+      formalizing belongs to the user; the TS scaffolding belongs
+      to the fabricator.
+    - **Frame-shaped requests will keep arriving.** Don't try to
+      reduce them to existing niches — they're substrate-driven and
+      will not fit.
 
 Contract registry status (docs/planning/visual-editor/contracts.md):
   C6 ✅ pulse-lifetime-view-agnostic.
   C7 ✅ renderer-or-timer race for pulse completion.
   C8 ✅ visual concurrency cap doesn't desynchronise lifecycle ledger.
-  C9 ✅ uniform pulse speed across emitter types (new).
-
-**The dormant "tune NODE_ANIMATION_RULES per-type" item from the prior
-handoff is now retired.** Distance-aware timing made per-type duration
-unnecessary; per-type speed proved actively harmful (reverted). The
-table now exists only for clamps/completion/cap.
+  C9 ✅ uniform pulse speed across emitter types.
 
 Probe instrumentation (carried forward, still active):
   - `.probe/stuck-pulse-last.json` — at first stuck-anim moment.
@@ -73,28 +96,22 @@ Probe instrumentation (carried forward, still active):
   - `window.__resetPulseLeak()` in console re-arms the one-shot.
 
 Open branches:
-  - none (on main, idle).
+  - `task/in0-readgate-emission-ack` — current, one commit ahead of
+    main, awaiting user verification + sign-off to merge.
 
-Next options (dormant, not started — pick by friction, not order):
-  1. **visualize-gate-buffer-state.** Surface ReadGate / SyncGate
-     internal latch state in the editor so backpressure stalls are
-     diagnosable without console probes. Friction signal: any time a
-     stuck-pulse session ends with "the gate was waiting for X."
-  2. **backpressure-slack-envelope.** Define a per-edge slack budget
-     (max in-flight pulses across the latch chain) and assert it in a
-     contract test. Today the cap is `maxConcurrentPerEdge=1` per
-     rule but the chain-wide envelope is implicit. Friction signal:
-     pulse-leak debugging that hinges on counting in-flight pulses.
-  3. **stepping-semantics-doc.** Write up the step / play / pause /
-     scrub semantics in one place; current knowledge is scattered
-     across runner.ts, playback.ts, and chat history. Friction
-     signal: any future debug that requires re-deriving "what does
-     simTime do during pause."
-  4. **NODE_ANIMATION_RULES cleanup.** Now that all rules are
-     identical (just defaults), the registry is mostly noise. Could
-     collapse to `DEFAULT_RULE` + a small per-type overrides map.
-     Pure code-tidy; only do it if a related task already touches
-     this file.
+Verification still needed before merge:
+  Tests pass and the build is clean, but the *visible* effect on a
+  running editor session has not been spot-checked yet. The user has
+  not driven the editor since the cadence wiring landed. Recommended
+  before merge: load a spec with an Input→ReadGate.chainIn edge that
+  was previously classified as concurrent, play it, and confirm
+  in0's re-emission visibly waits for readGate to begin emitting
+  before re-firing. If the visible cadence regresses (in0 fires
+  unconditionally, or stalls indefinitely), revert before merge.
+
+The four prior dormant niche options (visualize-gate-buffer-state,
+backpressure-slack-envelope, stepping-semantics-doc,
+NODE_ANIMATION_RULES cleanup) **are explicitly retired as a menu**.
 
 Branch hygiene: no merge to main without explicit sign-off. Delete merged branches without re-asking. Force-push needs sign-off.
 Cwd for tsc/tests/check:loc/build: tools/topology-vscode/ (Bash resets cwd — chain cd or use absolute paths).
