@@ -5,6 +5,7 @@ import {
 } from "reactflow";
 import { specToFlow } from "./adapter";
 import { RunButton } from "../panels/RunButton";
+import { RunnerProbe } from "../panels/RunnerProbe";
 import { SaveLifecycle } from "../SaveLifecycle";
 import { TimelinePanel } from "../panels/TimelinePanel";
 import { ViewsPanel } from "../panels/ViewsPanel";
@@ -121,6 +122,7 @@ export default function App() {
       <SaveLifecycle />
       <Inner />
       <RunButton />
+      <RunnerProbe />
       <ViewsPanel />
       <TimelinePanel />
     </ReactFlowProvider>
