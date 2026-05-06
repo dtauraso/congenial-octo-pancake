@@ -74,4 +74,22 @@ describe("decorateForCompare — collapsed fold diff counts", () => {
     const f = nodes.find((n) => n.id === "f1");
     expect((f!.data as { diffCounts?: unknown }).diffCounts).toBeUndefined();
   });
+
+  it("preserves member positions from viewerState (no (0,0) fallback)", () => {
+    // Regression: previously specToFlow was called with `{}`, so member
+    // positions fell back to (0,0). Symptom: deleting a collapsed fold
+    // while compare/onion mode was active stacked all members at the
+    // origin, looking like the editor had vanished.
+    const visible = spec([
+      { id: "a", type: "Generic" },
+      { id: "b", type: "Generic" },
+    ]);
+    const other = spec([{ id: "a", type: "Generic" }]);
+    const vs = { nodes: { a: { x: 100, y: 200 }, b: { x: 300, y: 400 } } };
+    const { nodes } = decorateForCompare(visible, other, [], vs);
+    const a = nodes.find((n) => n.id === "a")!;
+    const b = nodes.find((n) => n.id === "b")!;
+    expect(a.position).toEqual({ x: 100, y: 200 });
+    expect(b.position).toEqual({ x: 300, y: 400 });
+  });
 });

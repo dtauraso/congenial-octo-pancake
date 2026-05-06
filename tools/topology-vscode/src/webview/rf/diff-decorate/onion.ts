@@ -6,7 +6,7 @@
 
 import type { Edge as RFEdge, Node as RFNode } from "reactflow";
 import { KIND_COLORS, type Spec } from "../../../schema";
-import type { Fold } from "../../viewerState";
+import type { Fold, ViewerState } from "../../viewerState";
 import { specToFlow } from "../adapter";
 import { GHOST_PREFIX, appendClass, ghostNode } from "./ghost";
 
@@ -14,8 +14,9 @@ export function decorateForOnion(
   live: Spec,
   other: Spec,
   folds: Fold[],
+  vs: Pick<ViewerState, "nodes" | "edges"> = {},
 ): { nodes: RFNode[]; edges: RFEdge[] } {
-  const flow = specToFlow(live, folds, {});
+  const flow = specToFlow(live, folds, vs);
   // Live nodes get a marker class so the spacebar swap (.ghost-front
   // on the wrapper) can bump ghosts above them via CSS without
   // touching live's zIndex.
