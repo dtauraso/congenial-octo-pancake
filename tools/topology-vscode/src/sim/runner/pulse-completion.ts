@@ -19,15 +19,22 @@
 // call's onEnd is dropped).
 
 import type { PulseCompletion } from "./node-animation-rules";
+import { nowWall } from "./_state";
 
+// Bike-brakes pause: armed pulse timers are wall-clock setTimeouts, but
+// must NOT count time spent paused. On pause we clear each timer and
+// stash its remaining ms; on resume we re-arm with the saved remainder.
 type ArmedPulse = {
   edgeId: string;
   onEnd: () => void;
-  timer: ReturnType<typeof setTimeout>;
+  timer: ReturnType<typeof setTimeout> | null;
+  armedAtWall: number;
+  remainingMs: number;
   ended: boolean;
 };
 
 const armed: Map<string, ArmedPulse> = new Map();
+let paused = false;
 
 export function armPulse(
   pulseId: string,
@@ -41,10 +48,36 @@ export function armPulse(
     edgeId,
     onEnd,
     ended: false,
-    timer: setTimeout(() => endPulse(pulseId), durationMs),
+    armedAtWall: nowWall(),
+    remainingMs: durationMs,
+    timer: paused ? null : setTimeout(() => endPulse(pulseId), durationMs),
   };
   armed.set(pulseId, entry);
   return true;
+}
+
+export function pauseAllPulseTimers(): void {
+  if (paused) return;
+  paused = true;
+  const t = nowWall();
+  for (const entry of armed.values()) {
+    if (entry.ended || entry.timer === null) continue;
+    clearTimeout(entry.timer);
+    entry.timer = null;
+    const elapsed = t - entry.armedAtWall;
+    entry.remainingMs = Math.max(0, entry.remainingMs - elapsed);
+  }
+}
+
+export function resumeAllPulseTimers(): void {
+  if (!paused) return;
+  paused = false;
+  const t = nowWall();
+  for (const [pulseId, entry] of armed) {
+    if (entry.ended || entry.timer !== null) continue;
+    entry.armedAtWall = t;
+    entry.timer = setTimeout(() => endPulse(pulseId), entry.remainingMs);
+  }
 }
 
 export function signalRendererComplete(pulseId: string): void {
@@ -55,12 +88,13 @@ function endPulse(pulseId: string): void {
   const entry = armed.get(pulseId);
   if (!entry || entry.ended) return;
   entry.ended = true;
-  clearTimeout(entry.timer);
+  if (entry.timer !== null) clearTimeout(entry.timer);
   armed.delete(pulseId);
   entry.onEnd();
 }
 
 export function _resetPulseCompletion(): void {
-  for (const e of armed.values()) clearTimeout(e.timer);
+  for (const e of armed.values()) if (e.timer !== null) clearTimeout(e.timer);
   armed.clear();
+  paused = false;
 }

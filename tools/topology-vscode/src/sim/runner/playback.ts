@@ -6,6 +6,7 @@ import { state, nowWall } from "./_state";
 import { initWorldForRun, hasPendingWork } from "./_init";
 import { cancelCycleRestart, scheduleCycleRestart, logStuckPendingOnce } from "./cycle-restart";
 import { stepOnce } from "./step";
+import { pauseAllPulseTimers, resumeAllPulseTimers } from "./pulse-completion";
 
 export function rearmInterval(): void {
   if (state.intervalId) clearInterval(state.intervalId);
@@ -31,6 +32,7 @@ export function play(): void {
   }
   state.playing = true;
   state.simSegmentStartWall = nowWall();
+  resumeAllPulseTimers();
   // Step immediately so the user sees the first event without a 200ms
   // dead beat after pressing play. Wrap so a thrown handler doesn't
   // leave us in playing=true with no interval set (the "stuck pause"
@@ -51,6 +53,7 @@ export function pause(): void {
   if (!state.playing) return;
   state.simAccumMs += nowWall() - state.simSegmentStartWall;
   state.playing = false;
+  pauseAllPulseTimers();
   if (state.intervalId) {
     clearInterval(state.intervalId);
     state.intervalId = 0;
