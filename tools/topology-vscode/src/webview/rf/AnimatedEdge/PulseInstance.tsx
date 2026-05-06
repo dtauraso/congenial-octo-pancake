@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { EdgeRoute } from "../../../schema";
-import { subscribeState, isPlaying, getSimTime } from "../../../sim/runner";
+import { subscribeState, isPlaying, getSimTime, extendPulse } from "../../../sim/runner";
 import { noteAnimStart, noteAnimEnd, noteAnimRerun } from "../timeline-probe";
 import { type PathGeom } from "./_geom";
 import { PULSE_DASH_PX } from "./_constants";
@@ -8,7 +8,7 @@ import { makeFrame } from "./_pulse-frame";
 import { pulseProbeMount, pulseProbeRerun, pulseProbeUnmount } from "./_stuck-pulse-probe";
 
 export function PulseInstance({
-  edgeId, fromNodeId, toNodeId, geom, route, stroke, value, speedPxPerMs, simStart, onDone,
+  edgeId, fromNodeId, toNodeId, geom, route, stroke, value, pulseId, speedPxPerMs, simStart, onDone,
 }: {
   edgeId: string;
   fromNodeId: string;
@@ -17,6 +17,7 @@ export function PulseInstance({
   route: EdgeRoute;
   stroke: string;
   value: string;
+  pulseId: string;
   speedPxPerMs: number;
   simStart: number;
   onDone: () => void;
@@ -52,6 +53,10 @@ export function PulseInstance({
     }
     noteAnimStart(edgeId, fromNodeId, toNodeId);
     const remainingMs = remainingArc / speedPxPerMs;
+    // Distance-aware: tell the simulator how long this traversal will
+    // really take so its timer fallback matches the visual. Re-runs
+    // on geom/speed changes so node drag updates the timer too.
+    extendPulse(pulseId, remainingMs);
     if (!isFirstRun) {
       noteAnimRerun(edgeId, prevArc, startArc, svgArc, remainingMs);
       if (probeIdRef.current >= 0) pulseProbeRerun(probeIdRef.current, remainingMs);

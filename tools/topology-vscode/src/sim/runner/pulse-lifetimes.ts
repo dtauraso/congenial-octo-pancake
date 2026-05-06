@@ -18,7 +18,9 @@
 import { subscribe } from "../event-bus";
 import { noteEdgePulseStarted, noteEdgePulseEnded } from "./edge-anim";
 import { state } from "./_state";
-import { ruleForNodeType, DEFAULT_RULE } from "./node-animation-rules";
+import {
+  ruleForNodeType, DEFAULT_RULE, durationForLength, REF_EDGE_LENGTH_PX,
+} from "./node-animation-rules";
 import { armPulse, _resetPulseCompletion } from "./pulse-completion";
 import { _resetPulseConcurrency } from "./pulse-concurrency";
 
@@ -31,8 +33,13 @@ export function installPulseLifetimes(): void {
     const { edgeId, fromNodeId, pulseId } = ev;
     const srcType = state.spec?.nodes.find((n) => n.id === fromNodeId)?.type;
     const rule = ruleForNodeType(srcType);
+    // Initial duration from a reference length; PulseInstance will
+    // call extendPulse with the real arc once it mounts. Folded /
+    // headless edges keep this default — they have no visual to
+    // diverge from.
+    const initialMs = durationForLength(rule, REF_EDGE_LENGTH_PX);
     noteEdgePulseStarted(edgeId);
-    armPulse(pulseId, edgeId, rule.durationMs, rule.completion, () => {
+    armPulse(pulseId, edgeId, initialMs, rule.completion, () => {
       noteEdgePulseEnded(edgeId);
     });
   });
@@ -49,4 +56,6 @@ export function uninstallPulseLifetimes(): void {
 // Back-compat export: tests still reference this. With per-type rules
 // it's the registry default; node-specific tests should look up via
 // ruleForNodeType.
-export const PULSE_DEFAULT_DURATION_MS = DEFAULT_RULE.durationMs;
+export const PULSE_DEFAULT_DURATION_MS = durationForLength(
+  DEFAULT_RULE, REF_EDGE_LENGTH_PX,
+);
