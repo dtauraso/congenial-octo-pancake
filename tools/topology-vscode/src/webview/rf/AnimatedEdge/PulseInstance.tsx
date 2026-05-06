@@ -5,6 +5,7 @@ import { noteAnimStart, noteAnimEnd, noteAnimRerun } from "../timeline-probe";
 import { type PathGeom } from "./_geom";
 import { PULSE_DASH_PX } from "./_constants";
 import { makeFrame } from "./_pulse-frame";
+import { pulseProbeMount, pulseProbeRerun, pulseProbeUnmount } from "./_stuck-pulse-probe";
 
 export function PulseInstance({
   edgeId, fromNodeId, toNodeId, geom, route, stroke, value, speedPxPerMs, simStart, onDone,
@@ -30,6 +31,8 @@ export function PulseInstance({
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
   const arcTraveledRef = useRef(0);
+  const probeIdRef = useRef<number>(-1);
+  const probeCompletedRef = useRef(false);
 
   useEffect(() => {
     const path = pathRef.current;
@@ -51,6 +54,9 @@ export function PulseInstance({
     const remainingMs = remainingArc / speedPxPerMs;
     if (!isFirstRun) {
       noteAnimRerun(edgeId, prevArc, startArc, svgArc, remainingMs);
+      if (probeIdRef.current >= 0) pulseProbeRerun(probeIdRef.current, remainingMs);
+    } else {
+      probeIdRef.current = pulseProbeMount(edgeId, remainingMs);
     }
 
     let rafId = 0;
@@ -58,7 +64,8 @@ export function PulseInstance({
       edgeId, geom, route, path, label: labelRef.current,
       svgArc, startArc, remainingArc, remainingMs, swapStart,
       arcTraveledRef,
-      onComplete: () => doneRef.current(),
+      onComplete: () => { probeCompletedRef.current = true; doneRef.current(); },
+      probeId: probeIdRef.current,
     });
     const loop = () => { if (frame()) rafId = requestAnimationFrame(loop); else rafId = 0; };
     if (isPlaying()) rafId = requestAnimationFrame(loop);
@@ -92,7 +99,10 @@ export function PulseInstance({
   // the simulator's edge slot every reflow.
   useEffect(() => {
     noteEdgePulseStarted(edgeId);
-    return () => { noteEdgePulseEnded(edgeId); };
+    return () => {
+      noteEdgePulseEnded(edgeId);
+      if (probeIdRef.current >= 0) pulseProbeUnmount(probeIdRef.current, probeCompletedRef.current);
+    };
   }, [edgeId]);
 
   return (

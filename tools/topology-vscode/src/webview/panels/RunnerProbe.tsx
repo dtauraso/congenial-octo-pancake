@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { probeRunner, type RunnerHealth } from "../../sim/runner/probe";
+import { dumpPulseProbe } from "../rf/AnimatedEdge/_stuck-pulse-probe";
 
 const POLL_MS = 250;
 
@@ -15,7 +16,9 @@ export function RunnerProbe() {
         // ack lands, queue grows by one, then restalls) which would otherwise
         // clear the label between user attempts to copy it.
         if (prev.kind === "stuck-pending" || prev.kind === "stuck-anim") return prev;
-        return probeRunner();
+        const next = probeRunner();
+        if (next.kind === "stuck-anim") dumpPulseProbe();
+        return next;
       });
     }, POLL_MS);
     return () => clearInterval(id);
