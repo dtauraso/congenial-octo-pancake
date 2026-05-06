@@ -24,13 +24,37 @@ const EXCLUDE_PATH_FRAGMENTS = [
   "/test-fixtures/",
 ];
 
-function isSource(path) {
+// CLAUDE.md-directed reads that grow over time. The 200/100 rule extends
+// to these and any files split off from them (sibling files in the same
+// directory prefix).
+const INCLUDED_MD_PREFIXES = [
+  "docs/planning/visual-editor/session-log",
+  "docs/planning/visual-editor/audits",
+  "docs/planning/visual-editor/handoff",
+];
+
+function isSource(path, repoRelative) {
   for (const frag of EXCLUDE_PATH_FRAGMENTS) {
     if (path.includes(frag)) return false;
   }
   const dot = path.lastIndexOf(".");
   if (dot < 0) return false;
-  return SOURCE_EXTS.has(path.slice(dot));
+  const ext = path.slice(dot);
+  if (SOURCE_EXTS.has(ext)) return true;
+  if (ext === ".md") {
+    for (const pfx of INCLUDED_MD_PREFIXES) {
+      if (repoRelative === `${pfx}.md`) return true;
+      // split-off siblings: same dir, same basename prefix
+      const slash = pfx.lastIndexOf("/");
+      const dir = pfx.slice(0, slash);
+      const base = pfx.slice(slash + 1);
+      if (repoRelative.startsWith(`${dir}/${base}-`) && repoRelative.endsWith(".md")) {
+        return true;
+      }
+      if (repoRelative.startsWith(`${pfx}/`)) return true;
+    }
+  }
+  return false;
 }
 
 function listTrackedFiles() {
@@ -41,7 +65,7 @@ function listTrackedFiles() {
   return out
     .split("\n")
     .filter(Boolean)
-    .map((p) => `${repoRoot}/${p}`);
+    .map((p) => ({ abs: `${repoRoot}/${p}`, rel: p }));
 }
 
 function lineCount(path) {
@@ -54,10 +78,10 @@ function lineCount(path) {
 }
 
 const offenders = [];
-for (const path of listTrackedFiles()) {
-  if (!isSource(path)) continue;
-  const n = lineCount(path);
-  if (n >= TRIGGER) offenders.push({ path, n });
+for (const { abs, rel } of listTrackedFiles()) {
+  if (!isSource(abs, rel)) continue;
+  const n = lineCount(abs);
+  if (n >= TRIGGER) offenders.push({ path: abs, n });
 }
 
 offenders.sort((a, b) => b.n - a.n);
