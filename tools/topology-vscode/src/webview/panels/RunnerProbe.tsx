@@ -23,7 +23,12 @@ export function RunnerProbe() {
 
 function labelFor(h: RunnerHealth): string {
   if (h.kind === "stuck-pending") return `⚠ stuck-pending: ${h.pendingSeeds}`;
-  if (h.kind === "stuck-anim") return `⚠ stuck-anim: ${h.activeAnimations}`;
+  if (h.kind === "stuck-anim") {
+    const edges = Object.entries(h.byEdge)
+      .map(([id, n]) => (n > 1 ? `${id}×${n}` : id))
+      .join(", ");
+    return `⚠ stuck-anim: ${h.activeAnimations} [${edges}]`;
+  }
   return "";
 }
 
