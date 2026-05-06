@@ -31,7 +31,12 @@ export function RunnerProbe() {
   if (h.kind === "stuck-anim") dumpPulseProbe();
   const mount = document.getElementById("run-mount");
   if (!mount) return null;
-  if (h.kind === "idle" || h.kind === "ok") return null;
+  // stuck-anim is no longer a meaningful user-facing signal post-C6
+  // (lifecycle is decoupled from visual duration; activeAnimations > 0
+  // while cycleRestart polls is the expected steady state). Hide it
+  // from the toolbar while keeping the underlying probe state available
+  // to internal diagnostics.
+  if (h.kind === "idle" || h.kind === "ok" || h.kind === "stuck-anim") return null;
   return createPortal(
     <span className="runner-probe-stuck" title={detailTitle(h)}>
       {labelFor(h)}
