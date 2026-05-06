@@ -94,6 +94,14 @@ export function dumpPulseProbe(): void {
     (window as unknown as { __pulseLeakDump?: unknown }).__pulseLeakDump = rows;
     if (navigator?.clipboard?.writeText) navigator.clipboard.writeText(lastDumpText).catch(() => {});
   } catch {/* clipboard may be unavailable in webview */}
+  try {
+    const payload = { capturedAt: new Date().toISOString(), rows };
+    // Lazy import to avoid pulling vscode-host shim into modules that
+    // shouldn't depend on it during tests.
+    void import("../../save").then(({ vscode }) => {
+      vscode.postMessage({ type: "stuck-pulse-dump", json: JSON.stringify(payload, null, 2) });
+    }).catch(() => {});
+  } catch {/* host bridge may be unavailable */}
 }
 
 export function getPulseProbeDumpText(): string {
