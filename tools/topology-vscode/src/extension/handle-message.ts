@@ -88,6 +88,9 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
     case "trace-clear":
       return;
     case "pulse-probe-dump":
+    case "stuck-pulse-dump":
+    case "stuck-pulse-followup-dump":
+    case "stuck-pulse-third-dump":
     case "fold-halo-dump":
     case "runner-errors-dump":
     case "timeline-dump":

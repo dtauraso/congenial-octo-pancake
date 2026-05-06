@@ -41,6 +41,7 @@ export function pulseSpeedPxPerMs(): number {
 
 export type Pulse = {
   key: number;
+  pulseId: string;
   value: string;
   // Sim time at which this emit fired. Captured under fix-a's
   // step-pinned simTime so every pulse from one logical step shares

@@ -4,6 +4,7 @@ import { type PathGeom } from "./_geom";
 import { computeLabelPlacement, dotOpacity } from "./_pulse-label";
 import { type ProbeWorst, pulseProbeEnabled } from "./_pulse-probe";
 import { updateProbeWorst, flushProbe } from "./_pulse-probe-measure";
+import { pulseProbeFrame } from "./_stuck-pulse-probe";
 
 export type FrameCtx = {
   edgeId: string;
@@ -18,6 +19,7 @@ export type FrameCtx = {
   swapStart: number;
   arcTraveledRef: { current: number };
   onComplete: () => void;
+  probeId?: number;
 };
 
 // Returns a tick function that returns true while animation is in
@@ -30,10 +32,14 @@ export function makeFrame(ctx: FrameCtx): () => boolean {
 
   return () => {
     if (done) return false;
-    const elapsed = getSimTime() - ctx.swapStart;
+    const simNow = getSimTime();
+    const elapsed = simNow - ctx.swapStart;
     const localT = Math.min(1, elapsed / ctx.remainingMs);
     const arcTraveled = ctx.startArc + localT * ctx.remainingArc;
     ctx.arcTraveledRef.current = arcTraveled;
+    if (ctx.probeId !== undefined) {
+      pulseProbeFrame(ctx.probeId, localT, elapsed, ctx.swapStart, simNow);
+    }
 
     const overall = arcTraveled / ctx.svgArc;
     ctx.path.style.strokeDashoffset = String(-arcTraveled);

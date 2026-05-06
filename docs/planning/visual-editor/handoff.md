@@ -7,71 +7,104 @@ read this file first (no chat history needed) and proceed.
 
 ---
 
-Continuing on wirefold, branch main (no active task branch).
+Continuing on wirefold, branch `task/pulse-rules-per-node`
+(unpushed). Working tree clean except for the long-standing
+`topology.view.json` modification from prior branches.
 
 State at handoff:
-  Local main post-merge of task/audit-15-spec-view-split.
-  Pushed.
-  npm test → 197/197 pass. tsc --noEmit clean. npm run check:loc clean.
-  go build / go test ./... → clean.
-  Working tree: clean.
-  topology.json + topology.view.json now reflect post-migration shape (committed).
-  nodes/Wiring/Wiring.go regenerated to match current spec node IDs (64811c7).
+  Branched off `task/pulse-animation-abstraction`. The two bugs the
+  C6 fix introduced (visual stacking on slow edges, frame stall
+  from N concurrent PulseInstances) have a structural fix:
 
-Per-session decision summary:
-1. task/audit-15-spec-view-split (merged), five commits:
-   (a) cadb2ff — schema+types: dropped x, y, role, sublabel, value,
-       state from Node type; dropped route from Edge type. Added
-       NodeView { x, y, sublabel?, state? } and EdgeView { route? }
-       to ViewerState. Split viewerState.ts at 208 LOC into types +
-       viewerState.parse.ts to stay under the 200-LOC budget.
-   (b) f67c621 — adapters+readers+writers: spec-to-flow now takes a
-       ViewerState arg and reads position/sublabel/state from
-       vs.nodes[id] and route from vs.edges[id]; flow-to-spec stops
-       writing those fields. Writers (_on-node-drag, inline-edit)
-       patch viewerState instead of spec. Readers (NodeBody,
-       AnimatedEdge, _bounds, geom, ViewsPanel, _on-node-context,
-       ghost) all read from view. diff-core dropped position-based
-       moved detection.
-   (c) 865706f — migration shim (_handle-load.ts +
-       _migrate-legacy-fields.ts): on load, if raw topology.json has
-       legacy fields, seeds viewerState.nodes/edges before parseSpec
-       drops them. View wins on conflict. Schedules a view save
-       immediately so the migration persists.
-   (d) 9058073 — tests + fixtures updated for the split.
-   (e) 024efc9 — committed the migrated working-tree topology.json +
-       topology.view.json (positions, sublabels, states, routes moved
-       to view; role + value deleted entirely). Updated
-       audit-spec-view-hygiene.mjs viewAllowed set to include
-       `nodes` and `edges` keys on the view file.
-   Schema decisions confirmed: state moved to view (revisit if
-   topogen ever consumes it); role and value deleted as dead.
-   Audit count: 24 → 0.
+  **Per-emitter-node-type animation rules.** Each node type owns
+  the rules for the pulses it emits — duration, completion
+  semantics, visual concurrency cap. The global
+  `PULSE_DEFAULT_DURATION_MS` is gone; lifecycle clock is now
+  `ruleForNodeType(srcNode.type).durationMs`.
 
-Initial audit findings (NOT addressed — surfaced for follow-up):
-- #15 spec/view hygiene: CLEARED.
-- #11 doc drift: cleared for live docs. 57 remaining findings live
-  in phase-*.md historical docs with status banners — not blocking.
-- #14 channel naming: clean after _test.go exclusion.
+  Three new runner-side modules:
+  - [src/sim/runner/node-animation-rules.ts](../../tools/topology-vscode/src/sim/runner/node-animation-rules.ts)
+    — `NodeAnimationRule = { durationMs, completion, maxConcurrentPerEdge }`.
+    Per-type registry with a `DEFAULT_RULE` fallback.
+  - [src/sim/runner/pulse-completion.ts](../../tools/topology-vscode/src/sim/runner/pulse-completion.ts)
+    — renderer-or-timer race per pulseId. `armPulse` schedules a
+    timer; `signalRendererComplete(pulseId)` ends early. Whichever
+    fires first wins; loser is no-op.
+  - [src/sim/runner/pulse-concurrency.ts](../../tools/topology-vscode/src/sim/runner/pulse-concurrency.ts)
+    — per-edge visual-slot ledger. Renderer calls
+    `tryClaimVisualSlot(edgeId, cap)`; if false, skip rendering.
+    Independent of `state.activeAnimationsByEdge`.
 
-Contract registry status (docs/planning/visual-editor/contracts.md):
-  C1 ✅ ready-once + ready-once-hook (Tier 1+2)
-  C2 ✅ spec-data-roundtrip
-  C3 ✅ view-load-setviewport
-  C4 ✅ pulse-bridge-balance (Tier 3, happy-dom + <PulseInstance>)
-  C5 ✅ stuck-pending-precondition
+  `pulse-lifetimes.ts` now: looks up source node type from
+  `state.spec`, resolves rule, calls `noteEdgePulseStarted`,
+  `armPulse(pulseId, ..., () => noteEdgePulseEnded(edgeId))`. Always
+  balanced — coalesced visual emits still produce balanced
+  simulator-side lifecycles (contract C8).
 
-Open branches (pushed, unmerged):
-  (none)
+  AnimatedEdge: claims a visual slot per emit; if denied, skips
+  spawning a `<PulseInstance>`. On done, calls
+  `signalRendererComplete(ev.pulseId)` + `releaseVisualSlot(id)`.
+  On unmount, releases held slots so a re-mount doesn't hit the cap.
 
-Next options:
-1. Drive the editor and log fresh friction to session-log.md
-   (post-v0 default). Highest-value mode now that the registry-flagged
-   architectural rot is gone.
-2. Open one of the dormant recommended branches:
-   visualize-gate-buffer-state, backpressure-slack-envelope,
-   stepping-semantics-doc.
-3. (done — Wiring.go regen committed in 64811c7.)
+  `EmitEvent` gained a `pulseId: string` field, generated at each
+  notify site via `nextPulseId()` from event-bus.
+
+  Contracts updated:
+  - **C6** (updated) — duration is now per-emitter-type, not global.
+    Test split into `pulse-lifetime-view-agnostic.test.ts` (existing
+    invariant) + `pulse-duration-per-node-type.test.ts` (new).
+  - **C7** (new) — pulse-renderer-or-timer race. Test:
+    `pulse-renderer-or-timer.test.ts`.
+  - **C8** (new) — visual coalesce keeps simulator ledger balanced.
+    Test: `pulse-coalesce-balanced.test.ts`.
+
+  212/212 tests pass (204 prior + 8 new across 3 contract test
+  files). tsc clean. check:loc clean (all new files ≤ 100 LOC).
+  go build clean. webview build clean.
+
+**Live verification status:** quick visual check by the user against
+the editor showed the prior symptoms (stacking on
+`i1.out->readGate.ack`, `msSinceLastFrame: 1615ms`) appear mostly
+fixed — no "it's still there" issues surfaced. Probe-dump-based
+confirmation was not performed; if regressions appear later, re-arm
+via `window.__resetPulseLeak()` and capture three time-spaced
+`.probe/stuck-pulse-last*.json` dumps. Suspect points if stacking
+returns: `tryClaimVisualSlot` call site at
+[src/webview/rf/AnimatedEdge.tsx:54](../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx#L54)
+and the unmount cleanup at line ~46.
+
+**Branch is mergeable to main pending user sign-off.**
+
+**Next session's first task:** await merge sign-off, then tune
+`NODE_ANIMATION_RULES` per-type using observations from real runs
+(current values are guesses calibrated against the old 2000ms
+global).
+
+**Tunable rules:** initial `NODE_ANIMATION_RULES` values are a guess
+calibrated against the global 2000ms baseline. After live runs, tune
+per-type. ChainInhibitor at 2500ms is the longest; ReadGate /
+DetectorLatch / SyncGate at 1500ms are the shortest. All cap=1.
+
+Probe instrumentation (carried forward, still active):
+  - `.probe/stuck-pulse-last.json` — at first stuck-anim moment.
+  - `.probe/stuck-pulse-last-followup.json` — 1.5s later.
+  - `.probe/stuck-pulse-last-third.json` — 30s later.
+  - `RunnerProbe` toolbar latches `⚠ stuck-anim` / `⚠ stuck-pending`
+    once tripped, with full pulse table in tooltip; auto-copies to
+    clipboard; mirrored on `window.__pulseLeakDump`.
+  - `window.__resetPulseLeak()` in console re-arms the one-shot.
+
+Open branches:
+  - task/pulse-rules-per-node (this branch, unpushed)
+  - task/pulse-animation-abstraction (parent, 4d4ae63 — can be
+    deleted once this branch lands)
+  - task/pulse-leak-investigation (8a2369a — instrumentation only,
+    no fix; can be deleted once this branch lands)
+
+Other recommended branches (dormant, not started):
+  - visualize-gate-buffer-state
+  - backpressure-slack-envelope
+  - stepping-semantics-doc
 
 Branch hygiene: no merge to main without explicit sign-off. Delete merged branches without re-asking. Force-push needs sign-off.
 Cwd for tsc/tests/check:loc/build: tools/topology-vscode/ (Bash resets cwd — chain cd or use absolute paths).

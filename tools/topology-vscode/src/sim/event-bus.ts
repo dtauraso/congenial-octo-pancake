@@ -26,7 +26,13 @@ export type EmitEvent = {
   toNodeId: string;
   value: StateValue;
   tick: number;
+  pulseId: string;
 };
+
+let nextPulseSeq = 1;
+export function nextPulseId(): string {
+  return `p${nextPulseSeq++}`;
+}
 
 export type RunnerEvent = FireEvent | EmitEvent;
 export type RunnerListener = (e: RunnerEvent) => void;

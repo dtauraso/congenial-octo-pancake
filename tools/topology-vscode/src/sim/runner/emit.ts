@@ -3,7 +3,7 @@
 // regions visibly cycling.
 
 import { enqueueEmission, type FireRecord } from "../simulator";
-import { notify, type FireEvent } from "../event-bus";
+import { notify, nextPulseId, type FireEvent } from "../event-bus";
 import { state, findEdge } from "./_state";
 
 export function emitEvents(rec: FireRecord): void {
@@ -24,6 +24,7 @@ export function emitEvents(rec: FireRecord): void {
         toNodeId: inEdge.target,
         value: rec.inputValue,
         tick: rec.tick,
+        pulseId: nextPulseId(),
       });
     }
   }
@@ -46,6 +47,7 @@ export function emitEvents(rec: FireRecord): void {
           toNodeId: edge.target,
           value: em.value,
           tick: rec.tick,
+          pulseId: nextPulseId(),
         });
       }
     }
@@ -73,6 +75,7 @@ export function emitEvents(rec: FireRecord): void {
         toNodeId: edge.target,
         value: rec.inputValue,
         tick: state.world.tick,
+        pulseId: nextPulseId(),
       });
     }
   }

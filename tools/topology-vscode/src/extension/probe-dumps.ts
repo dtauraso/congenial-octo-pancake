@@ -8,12 +8,18 @@ import * as vscode from "vscode";
 
 type DumpType =
   | "pulse-probe-dump"
+  | "stuck-pulse-dump"
+  | "stuck-pulse-followup-dump"
+  | "stuck-pulse-third-dump"
   | "fold-halo-dump"
   | "runner-errors-dump"
   | "timeline-dump";
 
 const FILENAMES: Record<DumpType, string> = {
   "pulse-probe-dump": "pulse-last.json",
+  "stuck-pulse-dump": "stuck-pulse-last.json",
+  "stuck-pulse-followup-dump": "stuck-pulse-last-followup.json",
+  "stuck-pulse-third-dump": "stuck-pulse-last-third.json",
   "fold-halo-dump": "fold-halo-last.json",
   "runner-errors-dump": "runner-errors-last.json",
   "timeline-dump": "timeline-last.json",
