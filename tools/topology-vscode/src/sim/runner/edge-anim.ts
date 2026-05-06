@@ -9,12 +9,16 @@ import { reportRunnerError } from "../error-probe";
 import { state } from "./_state";
 import { stepOnce } from "./step";
 
-export function noteEdgePulseStarted(_edgeId: string): void {
+export function noteEdgePulseStarted(edgeId: string): void {
   state.activeAnimations++;
+  state.activeAnimationsByEdge[edgeId] = (state.activeAnimationsByEdge[edgeId] ?? 0) + 1;
 }
 
 export function noteEdgePulseEnded(edgeId: string): void {
   if (state.activeAnimations > 0) state.activeAnimations--;
+  const n = state.activeAnimationsByEdge[edgeId] ?? 0;
+  if (n > 1) state.activeAnimationsByEdge[edgeId] = n - 1;
+  else delete state.activeAnimationsByEdge[edgeId];
   if (!state.spec || !state.world) return;
   if (!state.world.deferSlotFreeToView) return;
   // Slot release is gated on (animEnded AND consumed). This call marks
