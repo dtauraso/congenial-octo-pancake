@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 import type { EdgeRoute } from "../../../schema";
-import { subscribeState, isPlaying, getSimTime, extendPulse } from "../../../sim/runner";
+import {
+  subscribeState, isPlaying, getSimTime, extendPulse,
+  signalReadGateRenderStart,
+} from "../../../sim/runner";
 import { noteAnimStart, noteAnimEnd, noteAnimRerun } from "../timeline-probe";
 import { type PathGeom } from "./_geom";
 import { PULSE_DASH_PX } from "./_constants";
@@ -52,6 +55,12 @@ export function PulseInstance({
       return;
     }
     noteAnimStart(edgeId, fromNodeId, toNodeId);
+    // Renderer-driven cadence ack: when this PulseInstance first
+    // begins traveling, free any Input awaiting ack from this
+    // emitter (no-op unless emitter is a ReadGate). This paces
+    // in0's re-emission to actual visible motion rather than to
+    // simulator tick rate.
+    if (isFirstRun) signalReadGateRenderStart(fromNodeId);
     const remainingMs = remainingArc / speedPxPerMs;
     // Distance-aware: tell the simulator how long this traversal will
     // really take so its timer fallback matches the visual. Re-runs

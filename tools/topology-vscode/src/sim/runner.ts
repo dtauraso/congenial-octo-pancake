@@ -33,4 +33,5 @@ export {
   type NodeAnimationRule,
 } from "./runner/node-animation-rules";
 export { signalRendererComplete, extendPulse } from "./runner/pulse-completion";
+export { signalReadGateRenderStart } from "./runner/emit";
 export { tryClaimVisualSlot, releaseVisualSlot } from "./runner/pulse-concurrency";

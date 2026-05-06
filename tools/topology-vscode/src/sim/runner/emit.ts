@@ -41,12 +41,9 @@ export function emitEvents(rec: FireRecord): void {
     ord: rec.ord,
   };
   notify(fireEvent);
-  let firingNodeIsReadGate = false;
   for (const em of rec.emissions) {
     for (const edge of state.spec.edges) {
       if (edge.source === rec.nodeId && edge.sourceHandle === em.port) {
-        const fromNode = state.spec.nodes.find((n) => n.id === rec.nodeId);
-        if (fromNode?.type === "ReadGate") firingNodeIsReadGate = true;
         notify({
           type: "emit",
           edgeId: edge.id,
@@ -59,22 +56,15 @@ export function emitEvents(rec: FireRecord): void {
       }
     }
   }
-  if (firingNodeIsReadGate) {
-    cadence.ackFromReadGate(state.spec, rec.nodeId, (p) => {
-      if (!state.spec || !state.world) return;
-      cadence.markEmitted(p.sourceNodeId, p.value);
-      enqueueEmission(state.spec, state.world, p.sourceNodeId, p.sourceHandle, p.value, state.world.tick + 1);
-      notify({
-        type: "emit",
-        edgeId: p.edgeId,
-        fromNodeId: p.sourceNodeId,
-        toNodeId: p.toNodeId,
-        value: p.value,
-        tick: state.world.tick,
-        pulseId: nextPulseId(),
-      });
-    });
-  }
+  // ReadGate's outbound emissions are notified above, but the cadence
+  // ack does not fire here — it fires when the renderer mounts the
+  // PulseInstance for that emission. See signalReadGateRenderStart.
+  // Sim-side ack would fire as fast as ticks (~400ms) regardless of
+  // visible pulse traversal time (~5–7s), so in0 would re-emit before
+  // the previous pulse cleared the edge. Renderer-side ack paces in0
+  // to actual visible motion.
+  // (renderer-driven cadence ack inserted by signalReadGateRenderStart;
+  // see the cadence section above.)
   // N1' concurrency-reveal self-pacer: pulse N just arrived at target
   // via rec.inEdgeId. If that edge is concurrent, fire pulse N+1 from
   // its source on the same port with the same value, scheduled one
@@ -114,4 +104,31 @@ export function emitEvents(rec: FireRecord): void {
       }
     }
   }
+}
+
+// Renderer-driven cadence ack. Called from PulseInstance on first
+// mount: when the visible pulse for a ReadGate's outbound emission
+// begins traveling, free any in0 that's awaiting ack. No-op when the
+// emitter isn't a ReadGate. Spec lookup is by id so folded/headless
+// edges that never mount simply never trigger this — the cadence
+// stalls there, which is the design tradeoff (visual pacing requires
+// a visual signal).
+export function signalReadGateRenderStart(fromNodeId: string): void {
+  if (!state.spec || !state.world) return;
+  const node = state.spec.nodes.find((n) => n.id === fromNodeId);
+  if (node?.type !== "ReadGate") return;
+  cadence.ackFromReadGate(state.spec, fromNodeId, (p) => {
+    if (!state.spec || !state.world) return;
+    cadence.markEmitted(p.sourceNodeId, p.value);
+    enqueueEmission(state.spec, state.world, p.sourceNodeId, p.sourceHandle, p.value, state.world.tick + 1);
+    notify({
+      type: "emit",
+      edgeId: p.edgeId,
+      fromNodeId: p.sourceNodeId,
+      toNodeId: p.toNodeId,
+      value: p.value,
+      tick: state.world.tick,
+      pulseId: nextPulseId(),
+    });
+  });
 }
