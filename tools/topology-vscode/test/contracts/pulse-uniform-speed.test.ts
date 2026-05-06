@@ -42,6 +42,37 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+import { chordTraversalMs } from "../../src/webview/rf/AnimatedEdge/_chord-pace";
+
+describe("contract C10: chord-paced traversal across edge routes", () => {
+  // Different routes (line/bezier, snake, below) produce wildly
+  // different arc-length-to-chord ratios. Pacing on arc length made
+  // curvy edges feel slow vs straight ones. Pacing on chord makes
+  // on-screen rate uniform regardless of route shape.
+  it("equal chord ⇒ equal total ms regardless of svg arc length", () => {
+    const speed = 0.08;
+    const chord = 400;
+    // straight edge: arc == chord
+    const straight = chordTraversalMs(chord, speed, chord, chord);
+    // snake-ish: arc 2× chord
+    const snake = chordTraversalMs(chord, speed, chord * 2, chord * 2);
+    // bezier-ish: arc 1.4× chord
+    const bezier = chordTraversalMs(chord, speed, chord * 1.4, chord * 1.4);
+    expect(straight).toBeCloseTo(chord / speed);
+    expect(snake).toBeCloseTo(straight);
+    expect(bezier).toBeCloseTo(straight);
+  });
+
+  it("remaining ms scales with remaining-arc fraction", () => {
+    const speed = 0.08;
+    const chord = 400;
+    const arc = 600;
+    const total = chordTraversalMs(chord, speed, arc, arc);
+    expect(chordTraversalMs(chord, speed, arc, arc / 2)).toBeCloseTo(total / 2);
+    expect(chordTraversalMs(chord, speed, arc, 0)).toBe(0);
+  });
+});
+
 describe("contract C9: uniform pulse speed across emitter types", () => {
   it("effectiveSpeedPxPerMs is identical for every registered rule", () => {
     const baseline = pulseSpeedPxPerMs();

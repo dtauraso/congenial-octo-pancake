@@ -4,7 +4,7 @@ import { KIND_COLORS, type EdgeRoute } from "../../schema";
 import {
   subscribe, subscribeState, getConcurrentEdges, getSimTime,
   ruleForNodeId, signalRendererComplete, extendPulse,
-  effectiveSpeedPxPerMs,
+  pulseSpeedPxPerMs,
   tryClaimVisualSlot, releaseVisualSlot,
 } from "../../sim/runner";
 import { markerEndUrl } from "./MarkerDefs";
@@ -114,9 +114,9 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
     ? midpoint(route, sourceX, sourceY, targetX, targetY, lane)
     : null;
 
-  // Speed comes from the per-emitter rule so the renderer's traversal
-  // and the simulator-side timer agree by construction.
-  const speed = effectiveSpeedPxPerMs(ruleForNodeId(source));
+  // Single global traversal speed (contract C9). Per-type rules vary
+  // only in completion/clamps/cap; visual rate is uniform.
+  const speed = pulseSpeedPxPerMs();
 
   return (
     <>
