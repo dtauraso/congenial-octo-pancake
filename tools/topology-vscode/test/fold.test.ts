@@ -114,6 +114,37 @@ describe("fold-aware specToFlow", () => {
     expect(round.nodes.some((n) => n.id === "fold0")).toBe(false);
   });
 
+  it("deleting a collapsed fold restores members and original edges (as if fold never existed)", () => {
+    const spec = makeSpec();
+    const vs: ViewerState = { nodes: { ...BASE_NODE_VIEWS } };
+    createFold(vs, ["b", "c"], [50, 50]);
+    // Sanity: fold collapsed → b/c hidden, e_ab/e_cd rerouted, e_bc dropped.
+    let flow = specToFlow(spec, vs.folds, vs);
+    expect(flow.nodes.some((n) => n.id === "b")).toBe(false);
+    expect(flow.nodes.some((n) => n.id === "c")).toBe(false);
+
+    // Mimic onNodesDelete fold-only branch: remove the fold from viewerState.
+    vs.folds = (vs.folds ?? []).filter((f) => f.id !== "fold0");
+
+    flow = specToFlow(spec, vs.folds, vs);
+    // Fold gone.
+    expect(flow.nodes.some((n) => n.type === "fold")).toBe(false);
+    // Members back at their original pre-fold positions.
+    const b = flow.nodes.find((n) => n.id === "b")!;
+    const c = flow.nodes.find((n) => n.id === "c")!;
+    expect(b.position).toEqual({ x: 100, y: 0 });
+    expect(c.position).toEqual({ x: 200, y: 0 });
+    // All three original edges between actual nodes restored.
+    const edgeIds = flow.edges.map((e) => e.id).sort();
+    expect(edgeIds).toEqual(["e_ab", "e_bc", "e_cd"]);
+    const eab = flow.edges.find((e) => e.id === "e_ab")!;
+    const ecd = flow.edges.find((e) => e.id === "e_cd")!;
+    expect(eab.source).toBe("a");
+    expect(eab.target).toBe("b");
+    expect(ecd.source).toBe("c");
+    expect(ecd.target).toBe("d");
+  });
+
   it("createFold rejects members already inside another fold (no nesting)", () => {
     const vs: ViewerState = {};
     createFold(vs, ["a", "b"], [0, 0]);

@@ -23,12 +23,12 @@ export function decorate(
     const visible = compareMode === "A-live" ? liveSpec : comparisonSpec;
     const other = compareMode === "A-live" ? comparisonSpec : liveSpec;
     if (visible && other) {
-      const decorated = decorateForCompare(visible, other, viewerState.folds ?? []);
+      const decorated = decorateForCompare(visible, other, viewerState.folds ?? [], viewerState);
       baseNodes = decorated.nodes;
       baseEdges = decorated.edges;
     }
   } else if (comparisonSpec && compareMode === "B-onion" && liveSpec) {
-    const decorated = decorateForOnion(liveSpec, comparisonSpec, viewerState.folds ?? []);
+    const decorated = decorateForOnion(liveSpec, comparisonSpec, viewerState.folds ?? [], viewerState);
     baseNodes = decorated.nodes;
     baseEdges = decorated.edges;
   }

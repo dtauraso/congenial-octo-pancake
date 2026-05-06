@@ -6,7 +6,7 @@
 import type { Edge as RFEdge, Node as RFNode } from "reactflow";
 import { KIND_COLORS, type Spec } from "../../../schema";
 import { diffSpecs } from "../../diff-core";
-import type { Fold } from "../../viewerState";
+import type { Fold, ViewerState } from "../../viewerState";
 import { specToFlow } from "../adapter";
 import { CONNECTOR_PREFIX, GHOST_PREFIX, appendClass, ghostNode } from "./ghost";
 import { computeFoldCounts } from "./fold-counts";
@@ -15,8 +15,9 @@ export function decorateForCompare(
   visible: Spec,
   other: Spec,
   folds: Fold[],
+  vs: Pick<ViewerState, "nodes" | "edges"> = {},
 ): { nodes: RFNode[]; edges: RFEdge[] } {
-  const flow = specToFlow(visible, folds, {});
+  const flow = specToFlow(visible, folds, vs);
   // diff(other, visible): nodes.added = on visible only; nodes.removed
   // = on other only. Orient so "added" lines up with visible-side
   // highlights regardless of which side is shown.
