@@ -21,7 +21,11 @@ import {
   visualSlotCount,
   _resetPulseConcurrency,
 } from "../../src/sim/runner/pulse-concurrency";
-import { DEFAULT_RULE } from "../../src/sim/runner/node-animation-rules";
+import {
+  DEFAULT_RULE, durationForLength, REF_EDGE_LENGTH_PX,
+} from "../../src/sim/runner/node-animation-rules";
+
+const DEFAULT_DURATION = durationForLength(DEFAULT_RULE, REF_EDGE_LENGTH_PX);
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -53,7 +57,7 @@ describe("contract C8: pulse-coalesce-balanced", () => {
     }
     expect(state.activeAnimations).toBe(4);
     expect(state.activeAnimationsByEdge.e1).toBe(4);
-    vi.advanceTimersByTime(DEFAULT_RULE.durationMs + 1);
+    vi.advanceTimersByTime(DEFAULT_DURATION + 1);
     expect(state.activeAnimations).toBe(0);
     expect(state.activeAnimationsByEdge.e1).toBeUndefined();
   });

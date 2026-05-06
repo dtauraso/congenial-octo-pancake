@@ -17,7 +17,11 @@ import {
   uninstallPulseLifetimes,
 } from "../../src/sim/runner/pulse-lifetimes";
 import { signalRendererComplete } from "../../src/sim/runner/pulse-completion";
-import { DEFAULT_RULE } from "../../src/sim/runner/node-animation-rules";
+import {
+  DEFAULT_RULE, durationForLength, REF_EDGE_LENGTH_PX,
+} from "../../src/sim/runner/node-animation-rules";
+
+const DEFAULT_DURATION = durationForLength(DEFAULT_RULE, REF_EDGE_LENGTH_PX);
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -44,7 +48,7 @@ describe("contract C7: pulse-renderer-or-timer", () => {
     signalRendererComplete("pr-a");
     expect(state.activeAnimations).toBe(0);
     // Timer firing later must NOT double-decrement.
-    vi.advanceTimersByTime(DEFAULT_RULE.durationMs + 100);
+    vi.advanceTimersByTime(DEFAULT_DURATION + 100);
     expect(state.activeAnimations).toBe(0);
   });
 
@@ -53,7 +57,7 @@ describe("contract C7: pulse-renderer-or-timer", () => {
       type: "emit", edgeId: "e1", fromNodeId: "a", toNodeId: "b",
       value: 1, tick: 0, pulseId: "pr-b",
     });
-    vi.advanceTimersByTime(DEFAULT_RULE.durationMs + 1);
+    vi.advanceTimersByTime(DEFAULT_DURATION + 1);
     expect(state.activeAnimations).toBe(0);
   });
 
@@ -62,7 +66,7 @@ describe("contract C7: pulse-renderer-or-timer", () => {
       type: "emit", edgeId: "e1", fromNodeId: "a", toNodeId: "b",
       value: 1, tick: 0, pulseId: "pr-c",
     });
-    vi.advanceTimersByTime(DEFAULT_RULE.durationMs + 1);
+    vi.advanceTimersByTime(DEFAULT_DURATION + 1);
     expect(state.activeAnimations).toBe(0);
     signalRendererComplete("pr-c");
     expect(state.activeAnimations).toBe(0);

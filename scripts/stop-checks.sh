@@ -29,6 +29,12 @@ if [ -n "$ts_changed" ]; then
     out+="check:loc failed:\n$loc_out\n\n"
     fail=1
   fi
+  # Rebuild the webview/extension bundle so Cmd-R in the host picks up
+  # the latest TS changes without a manual `npm run build`.
+  if ! build_out=$(cd tools/topology-vscode && npm run --silent build 2>&1); then
+    out+="webview build failed:\n$build_out\n\n"
+    fail=1
+  fi
 fi
 
 if [ $fail -ne 0 ]; then

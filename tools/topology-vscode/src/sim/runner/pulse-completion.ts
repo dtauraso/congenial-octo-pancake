@@ -84,6 +84,23 @@ export function signalRendererComplete(pulseId: string): void {
   endPulse(pulseId);
 }
 
+// Distance-aware: the renderer (PulseInstance) calls this once it
+// measures the real path arc, and again whenever geometry changes
+// (node drag re-runs its effect with a fresh remainingMs). The timer
+// is reset to the new remaining time so the simulator clock tracks
+// visible traversal. No-op while paused — pause stashed remainingMs
+// is the source of truth there; we update remainingMs but skip the
+// timer reset until resume.
+export function extendPulse(pulseId: string, newRemainingMs: number): void {
+  const entry = armed.get(pulseId);
+  if (!entry || entry.ended) return;
+  entry.remainingMs = Math.max(0, newRemainingMs);
+  if (paused) return;
+  if (entry.timer !== null) clearTimeout(entry.timer);
+  entry.armedAtWall = nowWall();
+  entry.timer = setTimeout(() => endPulse(pulseId), entry.remainingMs);
+}
+
 function endPulse(pulseId: string): void {
   const entry = armed.get(pulseId);
   if (!entry || entry.ended) return;

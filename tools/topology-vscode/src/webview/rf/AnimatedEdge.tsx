@@ -3,7 +3,8 @@ import { BaseEdge, type EdgeProps } from "reactflow";
 import { KIND_COLORS, type EdgeRoute } from "../../schema";
 import {
   subscribe, subscribeState, getConcurrentEdges, getSimTime,
-  ruleForNodeId, signalRendererComplete,
+  ruleForNodeId, signalRendererComplete, extendPulse,
+  effectiveSpeedPxPerMs,
   tryClaimVisualSlot, releaseVisualSlot,
 } from "../../sim/runner";
 import { markerEndUrl } from "./MarkerDefs";
@@ -12,7 +13,7 @@ import { buildPathGeom } from "./AnimatedEdge/_geom";
 import { midpoint } from "./AnimatedEdge/_geom";
 import {
   type EdgeData, type Pulse,
-  formatRidingValue, pulseSpeedPxPerMs,
+  formatRidingValue,
 } from "./AnimatedEdge/_constants";
 import { PulseInstance } from "./AnimatedEdge/PulseInstance";
 
@@ -113,7 +114,9 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
     ? midpoint(route, sourceX, sourceY, targetX, targetY, lane)
     : null;
 
-  const speed = pulseSpeedPxPerMs();
+  // Speed comes from the per-emitter rule so the renderer's traversal
+  // and the simulator-side timer agree by construction.
+  const speed = effectiveSpeedPxPerMs(ruleForNodeId(source));
 
   return (
     <>
@@ -128,6 +131,7 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
           route={route}
           stroke={stroke}
           value={p.value}
+          pulseId={p.pulseId}
           speedPxPerMs={speed}
           simStart={p.simStart}
           onDone={() => advanceLane0(p.key, p.pulseId)}
@@ -143,6 +147,7 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
           route={route}
           stroke={stroke}
           value={p.value}
+          pulseId={p.pulseId}
           speedPxPerMs={speed}
           simStart={p.simStart}
           onDone={() => advanceLane1(p.key, p.pulseId)}
