@@ -62,33 +62,23 @@ State at handoff:
   files). tsc clean. check:loc clean (all new files ≤ 100 LOC).
   go build clean. webview build clean.
 
-**What is NOT yet done — next session's first task:**
+**Live verification status:** quick visual check by the user against
+the editor showed the prior symptoms (stacking on
+`i1.out->readGate.ack`, `msSinceLastFrame: 1615ms`) appear mostly
+fixed — no "it's still there" issues surfaced. Probe-dump-based
+confirmation was not performed; if regressions appear later, re-arm
+via `window.__resetPulseLeak()` and capture three time-spaced
+`.probe/stuck-pulse-last*.json` dumps. Suspect points if stacking
+returns: `tryClaimVisualSlot` call site at
+[src/webview/rf/AnimatedEdge.tsx:54](../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx#L54)
+and the unmount cleanup at line ~46.
 
-  **Live verification was not run.** The simulator-side ledger is
-  proved correct by tests, but the original symptoms
-  (stacking on `i1.out->readGate.ack`, `msSinceLastFrame: 1615ms`)
-  were observed in the live editor, not in vitest. Next session
-  must:
+**Branch is mergeable to main pending user sign-off.**
 
-  1. Run the editor with stuck-pulse probe re-armed
-     (`window.__resetPulseLeak()`).
-  2. Drive the disruption flow that previously livelocked, then
-     stacked.
-  3. Capture three time-spaced `.probe/stuck-pulse-last*.json`
-     dumps.
-  4. Confirm:
-     - cycle still advances (no regression of pulse-leak fix).
-     - no edge has more than `rule.maxConcurrentPerEdge` simultaneous
-       `<PulseInstance>` components.
-     - `msSinceLastFrame` returns to ~16ms range.
-  5. If stacking persists despite the visual cap, suspect: rule
-     cap not being read on the AnimatedEdge subscribe path, or a
-     re-mount path that doesn't run the cleanup effect. Check
-     `tryClaimVisualSlot` call site at
-     [src/webview/rf/AnimatedEdge.tsx:54](../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx#L54)
-     and the unmount cleanup at line ~46.
-
-  If verification is clean, this branch is mergeable.
+**Next session's first task:** await merge sign-off, then tune
+`NODE_ANIMATION_RULES` per-type using observations from real runs
+(current values are guesses calibrated against the old 2000ms
+global).
 
 **Tunable rules:** initial `NODE_ANIMATION_RULES` values are a guess
 calibrated against the global 2000ms baseline. After live runs, tune
