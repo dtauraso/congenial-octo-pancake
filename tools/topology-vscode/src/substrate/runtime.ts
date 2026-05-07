@@ -49,7 +49,10 @@ export function resumeSubstrate(): void {
   _running = true;
   startSimClock();
   notifyState();
-  emitNext();
+  // Only kick off a fresh emission if nothing is in flight. If a pulse
+  // is mid-arc, its ack will trigger emitNext naturally — emitting
+  // here would race the ack and produce a duplicate token.
+  if (!state.awaitingAck) emitNext();
 }
 
 type SubstrateState = {
@@ -61,6 +64,11 @@ type SubstrateState = {
   toNodeId: string;
   tick: number;
   edgeReady: boolean;
+  // Token currently traversing the wire. emitNext sets it; pulse-ack
+  // clears it. Resume must not call emitNext while this is set, or
+  // we double-emit (in-flight pulse + new emission both compete for
+  // the cap=1 visual slot).
+  awaitingAck: boolean;
 };
 
 const state: SubstrateState = {
@@ -72,6 +80,7 @@ const state: SubstrateState = {
   toNodeId: "",
   tick: 0,
   edgeReady: false,
+  awaitingAck: false,
 };
 
 export function loadSubstrate(spec: Spec): void {
@@ -97,6 +106,7 @@ export function loadSubstrate(spec: Spec): void {
   state.toNodeId = edge.target;
   state.tick = 0;
   state.edgeReady = false;
+  state.awaitingAck = false;
   slog("loaded", { edgeId: edge.id, queue: state.queue.map(String) });
   notifyState();
   state.unsub = subscribe((ev) => {
@@ -110,6 +120,7 @@ export function loadSubstrate(spec: Spec): void {
       return;
     }
     if (ev.type === "pulse-ack" && ev.edgeId === state.edgeId) {
+      state.awaitingAck = false;
       emitNext();
     }
   });
@@ -122,6 +133,7 @@ export function stopSubstrate(): void {
   }
   state.spec = null;
   state.edgeReady = false;
+  state.awaitingAck = false;
   _running = false;
   stopSimClock();
   notifyState();
@@ -138,6 +150,7 @@ function emitNext(): void {
   }
   const value = state.queue.shift()!;
   state.tick += 1;
+  state.awaitingAck = true;
   const ev = {
     type: "emit" as const,
     edgeId: state.edgeId,
