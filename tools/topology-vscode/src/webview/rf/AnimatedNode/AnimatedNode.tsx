@@ -11,7 +11,6 @@ import type { AnimatedNodeData } from "./_types";
 
 export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   const { id, data, selected } = props;
-  const flashRef = useRef<HTMLDivElement | null>(null);
   const glowRef = useRef<HTMLDivElement | null>(null);
 
   const [stateText, setStateText] = useState<string[]>([]);
@@ -33,16 +32,6 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   useEffect(() => {
     const unsub = subscribe((ev) => {
       if (ev.type !== "fire" || ev.nodeId !== id) return;
-      const el = flashRef.current;
-      if (el) {
-        // Cancel any in-progress flash so a rapid retrigger restarts at
-        // full opacity instead of compositing a faded one.
-        el.getAnimations().forEach((a) => a.cancel());
-        el.animate(
-          [{ opacity: 0 }, { opacity: 0.5, offset: 0.5 }, { opacity: 0 }],
-          { duration: FLASH_DURATION_MS },
-        );
-      }
       const gl = glowRef.current;
       if (gl) {
         gl.getAnimations().forEach((a) => a.cancel());
@@ -95,7 +84,6 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
       {selected ? <StepButton id={id} stroke={data.stroke} /> : null}
       <SpecPanel id={id} data={data} />
       <div ref={glowRef} style={{ position: "absolute", inset: 0, borderRadius: radius, pointerEvents: "none", opacity: 0, zIndex: -1 }} />
-      <div ref={flashRef} style={{ position: "absolute", inset: 0, background: "white", opacity: 0, borderRadius: radius, pointerEvents: "none", zIndex: 0 }} />
       {data.inputs.length === 0 ? (
         <Handle type="target" position={Position.Left} style={HANDLE_STYLE_LEFT} isConnectable={false} />
       ) : (
