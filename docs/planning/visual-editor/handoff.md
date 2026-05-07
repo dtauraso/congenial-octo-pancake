@@ -8,9 +8,11 @@ read this file first (no chat history needed) and proceed.
 ---
 
 Continuing on wirefold, branch `task/runtime-substrate-rebuild` (off
-`main`, tip `fbaaa2a`). Gate A passed; this is the rebuild branch.
-Next work is **port-plan step 1**: stand up the chan→wire renderer
-against a trivial two-node topology.
+`main`). Gate A passed; this is the rebuild branch. Port-plan
+**step 1 is done in the editor** (new `src/substrate/` module, cap=0
+chosen, branched at [_handle-load.ts](../../../tools/topology-vscode/src/webview/rf/app/_handle-load.ts)).
+Next work is **port-plan step 2**: per-node running indicator +
+reloop glyph.
 
 State at handoff:
   Local on `task/runtime-substrate-rebuild`, no remote yet (push on
@@ -18,8 +20,24 @@ State at handoff:
   Working tree has `topology.view.json` modified (incidental editor
   pan/zoom from prior session; not part of rebuild work — leave it or
   discard, do not commit as a rebuild change).
-  Tests/build untouched this session — last verified 230/230 +
-  tsc/check:loc/build clean at 5a8948a.
+  Tests/build/tsc/check:loc clean at step 1 commit (218/218 vitest).
+
+## Step 1 build notes (decision audit)
+
+Initial sketch was a standalone HTML at
+`docs/planning/sim-substrate/chan-wire-driven.html` driven by an
+embedded topology snapshot. User flagged this as "test on HTML, then
+test in RF" double-build — corrected to land directly in the editor
+webview. The standalone HTML was deleted before commit. Lesson: the
+chan sketches were standalone *because they were specs*; step 1 is
+the renderer, which lives next to the mess it replaces. Future port
+steps should default to "in the editor" unless there's a reason
+otherwise.
+
+Substrate plugs into the existing event-bus by emitting `EmitEvent`
+(same shape the legacy runner emits), so AnimatedEdge renders
+unchanged. The 1500ms emit interval is a placeholder — step 3 (R1
+FIFO test) replaces it with an ack-driven release.
 
 ## What just landed (Gate A pass)
 
@@ -46,23 +64,41 @@ buffered-vs-unbuffered decision to port step 1.
 
 ## Next task — START HERE
 
-**Port-plan step 1: stand up the chan→wire renderer against a
-trivial two-node topology.** Spec lives in
-[../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
-§"Port plan". Visible-state spec is the chan sketches.
+**Port-plan step 2: per-node running indicator + reloop glyph.**
+Spec lives in [../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
+§"Visual layer" (item 2). No standalone sketch — prose-only spec.
+The glyph is on a node when its handler is currently executing; the
+reloop variant is for nodes whose own output feeds their own input.
+Pinned by R5 at step 3.
 
-In this commit, pick and document the buffered-vs-unbuffered choice
-(deferred at Gate A). Smallest viable two-node topology — likely
-unbuffered (cap=0) since that's "receiver waiting right now," which
-matches the existing in08→readGate1 shape.
+Land it in the same `src/substrate/` module that step 1 introduced.
+The substrate currently emits only `EmitEvent`; step 2 should emit
+`FireEvent` (same shape the legacy runner uses on the event-bus) so
+existing webview UI can pick up node-running state without a new
+message type. Verify in the editor that loading the 2-node topology
+shows tokens crossing the wire AND a running indicator on the
+firing node.
 
-Do **not** start step 2 (per-node running indicator) or step 3
-(R1–R5 contract tests) in the same commit. One step per commit per
-the plan doc.
+Do **not** start step 3 (R1–R5 contract tests) in the same commit.
+One step per commit per the plan doc.
 
-Budget for step 1: ~$5–$10. Model: sonnet for the mechanical edits
-once direction is clear; opus for the design call on cap=0 vs cap=1
-and where the renderer lives in the tree.
+Budget: ~$10. Same hard cap and reassess discipline as step 1
+(below) — if it spirals past $25, stop and write the broken-
+assumption note in rebuild-plan.md before continuing.
+
+## Hard cap and reassess trigger (carried forward from step 1)
+
+Each port-plan step gets a per-step hard cap (default $25 unless
+stated otherwise). If a step has not produced its working
+deliverable by the cap, stop and reassess: write a one-paragraph
+note in [../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
+naming which assumption broke (renderer location? buffered model?
+topology shape? something else?), and surface to the user before
+spending more. The point is to find substrate-design problems
+cheaply at the current step rather than later after more code has
+piled on top. Sunk-cost reasoning is the failure mode this cap
+defends against — do not raise the cap mid-spiral without explicit
+user sign-off.
 
 ## Rebuild plan summary (carried forward)
 

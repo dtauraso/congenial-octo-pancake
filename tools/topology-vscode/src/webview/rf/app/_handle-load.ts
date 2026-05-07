@@ -1,5 +1,7 @@
 import { parseSpec, type Spec } from "../../../schema";
-import { load as loadRunner, play as playRunner, reset as resetRunner } from "../../../sim/runner";
+import { load as loadRunner, pause as pauseRunner, play as playRunner, reset as resetRunner } from "../../../sim/runner";
+import { matchSubstrate } from "../../../substrate/match";
+import { loadSubstrate, stopSubstrate } from "../../../substrate/runtime";
 import { specToFlow } from "../adapter";
 import { clearSpecHistory, patchViewerState, setSpec, viewerState } from "../../state";
 import { scheduleViewSave } from "../../save";
@@ -30,14 +32,24 @@ export function handleLoad(ctx: AppCtx, text: string) {
     // would be incoherent (ids may not even exist there).
     clearSpecHistory();
     ctx.lastSpec.current = next;
-    loadRunner(next);
-    resetRunner();
-    // Defer auto-play one frame so AnimatedEdge subscribers and React
-    // Flow's first layout pass exist when the runner's initial stepOnce
-    // fires. Without this, the first emit dispatches into an empty
-    // subscriber set and the geom effect re-runs as RF settles,
-    // producing a startup anim-rerun storm.
-    requestAnimationFrame(() => playRunner());
+    if (matchSubstrate(next)) {
+      // Rebuild substrate path. Stop legacy runner and route this
+      // topology through the new module instead.
+      pauseRunner();
+      requestAnimationFrame(() => loadSubstrate(next));
+    } else {
+      // Legacy path. Stop the substrate in case the previous topology
+      // was running on it.
+      stopSubstrate();
+      loadRunner(next);
+      resetRunner();
+      // Defer auto-play one frame so AnimatedEdge subscribers and React
+      // Flow's first layout pass exist when the runner's initial stepOnce
+      // fires. Without this, the first emit dispatches into an empty
+      // subscriber set and the geom effect re-runs as RF settles,
+      // producing a startup anim-rerun storm.
+      requestAnimationFrame(() => playRunner());
+    }
     const flow = specToFlow(next, viewerState.folds, viewerState);
     const presentIds = new Set(flow.nodes.map((n) => n.id));
     const filtered = (viewerState.lastSelectionIds ?? []).filter((id) => presentIds.has(id));
