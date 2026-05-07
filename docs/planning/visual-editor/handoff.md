@@ -22,35 +22,36 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-07 evening):
-  `main` at HEAD `8daf317`. Two task branches merged in sequence:
-  - `task/wires` (revised step 1): Wire primitive, per-node loops,
-    AnimatedEdge wire-driven, toolbar pause off legacy state,
-    pulse-concurrency reset retired, PulseInstance off legacy sim
-    clock, sim/event-bus retired from substrate side. Trivial
-    Input→ReadGate animates on the wires runtime; pause/resume
-    behaves per design (in-flight pulse completes its arc).
-  - `task/node-visuals-strip` (this session): four legacy node-body
-    visuals removed from `AnimatedNode` — flash, glow, held tint,
-    buffered halo. All four archived verbatim in
-    [../sim-substrate/removed-node-visuals.md](../sim-substrate/removed-node-visuals.md)
-    along with restoration notes. `FLASH_DURATION_MS` deleted from
-    `_styles.ts` (last consumer gone). `portStyle` lost its 4th
-    `buffered` arg. `bufferedPorts()` is still exported (still used
-    by `fold-halo-probe` + tests).
+State at handoff (2026-05-07 late):
+  Active branch: `task/node-ticks` (cut from `main` at `8daf317`).
+  Three commits on it, each its own step:
 
-  Tests: 235/235 vitest still green from step-1 merge; no test
-  changes in the strip work. Build + tsc green. No LOC violations.
+  - `6554e07` — `subscribeNodeTicks` on wires runtime. `node-loop.ts`
+    fires `onTick` after each Input send and after each ReadGate
+    arrive (regardless of autoAck). Runtime exposes
+    `subscribeNodeTicks(fn)` + `publishTick(nodeId)`. Contract test
+    asserts tick count >= ack-cycle count.
+  - `33fe174` — visual #1 (flash) restored on AnimatedNode, driven by
+    `subscribeNodeTicks` (replacing legacy `subscribe(fire)`).
+    `FLASH_DURATION_MS` reinstated in `_styles.ts`.
+  - `54cd832` — visual #2 (glow ring) restored, sharing the same
+    tick subscription as flash.
 
-  Working tree: `topology.view.json` shows incidental pan/zoom drift;
-  not part of either merged branch — leave or discard.
+  Visual validation by user: flash + glow both fire on Input and
+  ReadGate per pulse; rapid retrigger restarts cleanly; pause stops
+  new pulses (in-flight completes arc — matches design); motion tween
+  + stateText label still work. Console errors: not verified.
+
+  Tests: 236/236 vitest green (one new contract test added). Build +
+  tsc green. No LOC violations (AnimatedNode.tsx at 144).
+
+  Working tree: `.claude/settings.json` has uncommitted allowlist
+  additions (compound git patterns); orthogonal to this branch — leave
+  or stash.
 
   Prior branches preserved as reference:
   `task/runtime-substrate-rebuild`, `task/wires`,
   `task/node-visuals-strip`. Do not delete.
-
-  Visual validation: edge animates; node body is now bare (no flash,
-  glow, tint, or halo). Stateful label and motion tween still work.
 
 ## Dev-loop
 
@@ -61,8 +62,10 @@ fired` / `hot-reload: re-rendering webview.html` to Output → Log
 
 ## Next move
 
-Start at [handoff-next-task.md](handoff-next-task.md). Spec for the
-node-tick stream is in
+Start at [handoff-next-task.md](handoff-next-task.md). Next is
+visual #3 (held tint) — needs a new per-node held-value stream
+(`subscribeNodeHeld`) on the wires runtime before the visual itself
+can be reinstated. Spec for the original tick stream is in
 [../sim-substrate/revised-step-2.md](../sim-substrate/revised-step-2.md)
 (D2 only — D1/D3 corner-glyph design is **vetoed**; restore originals
 instead, driven by the wires runtime).

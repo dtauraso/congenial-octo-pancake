@@ -1,49 +1,54 @@
 # Handoff — Next task (START HERE)
 
-**Step 1 merged. Node visuals stripped.** `task/wires` (revised step
-1) and `task/node-visuals-strip` are both on `main` (HEAD `8daf317`).
-Trivial Input→ReadGate animates on the wires runtime. The four legacy
-`AnimatedNode` visuals — flash, glow, held tint, buffered halo — have
-been removed and archived verbatim in
-[../sim-substrate/removed-node-visuals.md](../sim-substrate/removed-node-visuals.md)
-so they can be restored once the wires runtime publishes equivalent
-signals.
+**Branch:** `task/node-ticks` (active, not merged). Three commits on
+top of `main` (`8daf317`):
 
-What `AnimatedNode` still does after the strip: renders the box,
-border, port dots (no halo), `stateText` label, and the offset tween
-(visual #5, motion). Nothing else animates on the node itself — only
-the edge does, via revised step 1's wire-driven AE.
+- `6554e07` — `subscribeNodeTicks(fn)` on wires runtime. `node-loop`
+  fires `onTick` after each Input send and after each ReadGate
+  arrive. Contract test asserts tick count >= ack-cycle count.
+- `33fe174` — visual #1 (flash) restored, driven by
+  `subscribeNodeTicks`.
+- `54cd832` — visual #2 (glow ring) restored, same trigger.
 
-**This is the entry point for the next session.** The user vetoed the
-new corner-glyph design in [../sim-substrate/revised-step-2.md](../sim-substrate/revised-step-2.md);
-intent is to **restore the original visuals** (one at a time), driven
-by the wires runtime instead of `sim/runner`'s `subscribe()`. The
-spec doc still records D2 (a `subscribeNodeTicks` stream) — that part
-is still wanted; D1/D3 (corner glyph design) are dropped.
+User-confirmed visually: flash + glow fire on both Input and ReadGate
+per pulse; rapid retrigger clean; pause behaves per design.
 
-[rt]: /tools/topology-vscode/src/substrate/runtime.ts
+**Next: visual #3 (held tint).** Recolor node fill by held value
+(`+1` → `#ffab40`, `−1` → `#66bb6a`, else `data.fill`), with a
+CSS `transition: background-color ${tweenMs}ms linear` tween. Source
+in [../sim-substrate/removed-node-visuals.md](../sim-substrate/removed-node-visuals.md)
+section 3.
 
-## Suggested next commits (small, one visual at a time)
+The legacy version read `world.state[id].held` from `sim/runner`. The
+wires runtime doesn't expose held values yet — this needs a new
+substrate signal first.
 
-1. Add `subscribeNodeTicks(fn: (nodeId, ts) => void)` to
+## Suggested next commits
+
+1. Add `subscribeNodeHeld(fn: (nodeId, value) => void)` to
    [runtime-wires.ts](/tools/topology-vscode/src/substrate/runtime-wires.ts).
-   Producer: `node-loop.ts` publishes after each `inputLoop` send and
-   each `readGateLoop` ack. Contract test: tick count matches
-   send/ack count for the trivial topology.
-2. Restore visual #1 (flash) on the wires runtime — copy back from
-   the archive, swap the `subscribe(fire)` trigger for
-   `subscribeNodeTicks`. Verify visually.
-3. Same pattern for #2 (glow), #3 (held tint — needs wire's last
-   value), #4 (buffered halo — needs wire `state === "full"` info).
-   Each its own commit.
+   Producer: `node-loop.ts` publishes from `readGateLoop` on arrive
+   with the `StateValue` carried by the wire. Input side has no
+   "held" — only emit for receivers. Contract test: held value matches
+   the most-recently-arrived wire value for that node.
+2. Restore visual #3 (held tint) on AnimatedNode using
+   `subscribeNodeHeld`. Restore the `StateValue` import. One commit.
+3. Then visual #4 (buffered halo) — needs wire `state === "full"`
+   info; design that signal in its own commit (likely
+   `subscribeNodeBuffered(fn)` or read off the WireMap directly).
 
-Hold off on the corner glyph; if friction surfaces, revisit.
+## Open question for next session
+
+Should `subscribeNodeHeld` fire only on change, or on every arrive?
+The legacy code recomputed on every fire; firing on every arrive
+matches that. Tween only triggers if the value actually changed —
+React equality on `held` state handles it.
 
 ## Branch / scope
 
-Cut a fresh task branch from `main` (e.g. `task/node-ticks` or
-`task/restore-flash`). Trivial Input→ReadGate stays the only topology
-through this stretch.
+Stay on `task/node-ticks`. Trivial Input→ReadGate is still the only
+topology. Merge to `main` once all four visuals are restored, or
+sooner if a natural breakpoint emerges.
 
 ## Working tree note
 
