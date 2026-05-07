@@ -9,18 +9,10 @@ import { scheduleViewSave } from "../../save";
 import { migrateLegacyFields } from "./_migrate-legacy-fields";
 import type { AppCtx } from "./_ctx";
 
-// Dedupe identical "load" messages. React StrictMode (dev) and the
-// host's send-on-ready path can each fire load with the same text;
-// without this guard the substrate runs through stop+start twice, the
-// queue resets and emits two leading "0" pulses ("00 combination").
-let lastLoadedText: string | null = null;
-
 // Fresh "load" message: parse, install spec, kick the runner, then
 // reconcile any persisted selection against the new node set so stale
 // ids from a prior session don't leak through as ghost selections.
 export function handleLoad(ctx: AppCtx, text: string) {
-  if (text === lastLoadedText) return;
-  lastLoadedText = text;
   try {
     const rawJson = JSON.parse(text);
     // One-shot migration: extract x/y/sublabel/state/route from legacy spec
@@ -74,8 +66,6 @@ export function handleLoad(ctx: AppCtx, text: string) {
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
   } catch (err) {
-    // Reset cache on parse error so a corrected payload still loads.
-    lastLoadedText = null;
     console.error("invalid topology.json", err);
   }
 }
