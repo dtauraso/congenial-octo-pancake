@@ -22,6 +22,12 @@ Two primitives. Nothing else.
 2. **Per-node running indicator (with reloop).** A glyph on the node
    shows it is currently executing. The reloop variant shows a node
    that loops back on itself (its own output feeds its own input).
+   This primitive is spec'd in prose only — no standalone sketch
+   exists. It gets drawn for the first time in port-plan step 2 and
+   is pinned by R5 (animation step = state transition) at that point.
+   Treating prose-only as sufficient for Gate A is intentional: the
+   shape is trivial (one glyph toggling on/off; reloop is a
+   self-edge) and adding a sketch now would be ceremony.
 
 That is the entire visual vocabulary. Goroutines and selects are not
 separate visual primitives:
@@ -46,15 +52,15 @@ node-running state, not separately depict each contract.
 | R2 | **Select determinism.** When multiple cases are ready, the substrate picks the same case every run, given the same input. (See "select determinism choice" below.) |
 | R3 | **Scheduler determinism.** Given the same initial state and inputs, the runner produces byte-identical step-by-step state. |
 | R4 | **No goroutine runs twice per step.** Within one simulation step, each goroutine advances at most once. |
-| R5 | **Animation step equals state transition.** Each visible animation frame corresponds to exactly one state transition; no frame folds multiple transitions, no transition is silent. |
+| R5 | **Animation step equals state transition.** Each visible animation frame corresponds to exactly one state transition; no frame folds multiple transitions, no transition is silent. Sub-frame tweening of a value's position along a wire (as in chan-wire.html's 720-step traversal) does not violate R5 — the state transitions are at the endpoints (sender shift, receiver push); the in-flight position is a continuous visual cue, not a state. |
 
 Each contract gets a Go test under
 `internal/substrate/contracts/` (or equivalent) before any port.
 
 ### Select determinism choice
 
-The chan sketch used lowest-index. Go's runtime randomises. For the
-substrate, **lowest-index** is the chosen rule:
+The now-dropped select sketch used lowest-index. Go's runtime
+randomises. For the substrate, **lowest-index** is the chosen rule:
 
 - **Lowest-index** — trivial test stability, deterministic by
   construction, no PRNG seed plumbing. Picked.
@@ -98,6 +104,16 @@ the new shape is real, and the old reference is no longer needed.
 
 No re-ask required for this delete; it is pre-authorised by this
 plan.
+
+### Buffered vs unbuffered channels
+
+Substrate channels are buffered with a per-channel capacity (cap≥1).
+Unbuffered (cap=0) is the edge case noted in chan-wire.html where the
+"≥1 slot free" predicate becomes "receiver waiting right now."
+Whether the substrate exposes cap=0 as a first-class option is
+deferred to port-plan step 1 (renderer stand-up) — pick whichever
+matches the smallest viable two-node topology and document the
+choice in that commit. Not blocking for Gate A.
 
 ## Out of scope
 
