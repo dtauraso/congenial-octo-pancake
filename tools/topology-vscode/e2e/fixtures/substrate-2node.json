@@ -1,0 +1,44 @@
+{
+  "nodes": [
+    {
+      "id": "in08",
+      "type": "Input",
+      "data": {
+        "init": [
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "id": "readGate1",
+      "type": "ReadGate"
+    }
+  ],
+  "edges": [
+    {
+      "id": "in0.out->readGate.chainIn",
+      "source": "in08",
+      "sourceHandle": "out",
+      "target": "readGate1",
+      "targetHandle": "chainIn",
+      "kind": "chain",
+      "label": "inputToReadGate",
+      "data": {
+        "slots": 1
+      }
+    }
+  ],
+  "timing": {
+    "duration": "12s"
+  },
+  "legend": [
+    {
+      "kind": "chain",
+      "name": "Chain",
+      "desc": "Data flow: value advances one step along the pipeline"
+    }
+  ],
+  "notes": []
+}

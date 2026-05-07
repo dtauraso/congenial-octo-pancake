@@ -47,6 +47,9 @@ export function loadSubstrate(spec: Spec): void {
   state.fromNodeId = edge.source;
   state.toNodeId = edge.target;
   state.tick = 0;
+  // Step 1 debug probe: confirms the substrate path was taken and shows
+  // the queue we built. Remove once step 1 is verified end-to-end.
+  console.log("[substrate] loaded", { edgeId: edge.id, queue: state.queue });
   notifyState();
   state.intervalId = setInterval(emitNext, EMIT_INTERVAL_MS);
 }
@@ -70,13 +73,15 @@ function emitNext(): void {
   }
   const value = state.queue.shift()!;
   state.tick += 1;
-  notify({
-    type: "emit",
+  const ev = {
+    type: "emit" as const,
     edgeId: state.edgeId,
     fromNodeId: state.fromNodeId,
     toNodeId: state.toNodeId,
     value,
     tick: state.tick,
     pulseId: nextPulseId(),
-  });
+  };
+  console.log("[substrate] emit", ev);
+  notify(ev);
 }

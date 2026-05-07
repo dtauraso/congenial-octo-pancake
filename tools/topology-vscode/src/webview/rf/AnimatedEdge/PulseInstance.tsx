@@ -113,6 +113,8 @@ export function PulseInstance({
     <>
       <path
         ref={pathRef}
+        data-testid="pulse"
+        data-edge-id={edgeId}
         d={geom.d}
         fill="none"
         stroke={stroke}

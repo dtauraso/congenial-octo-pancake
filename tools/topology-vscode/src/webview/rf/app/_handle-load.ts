@@ -33,11 +33,13 @@ export function handleLoad(ctx: AppCtx, text: string) {
     clearSpecHistory();
     ctx.lastSpec.current = next;
     if (matchSubstrate(next)) {
+      console.log("[substrate] match", { nodes: next.nodes.length, edges: next.edges.length });
       // Rebuild substrate path. Stop legacy runner and route this
       // topology through the new module instead.
       pauseRunner();
       requestAnimationFrame(() => loadSubstrate(next));
     } else {
+      console.log("[substrate] no match", { types: next.nodes.map(n => n.type), kinds: next.edges.map(e => e.kind) });
       // Legacy path. Stop the substrate in case the previous topology
       // was running on it.
       stopSubstrate();
