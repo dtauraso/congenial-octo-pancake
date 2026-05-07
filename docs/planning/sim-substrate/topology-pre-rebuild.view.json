@@ -1,11 +1,25 @@
 {
   "camera": {
-    "x": 243.93175794353994,
-    "y": 34.36755000040703,
-    "zoom": 0.8544816358224904
+    "x": 155.30329251107455,
+    "y": -221.69719784368525,
+    "zoom": 1.025845411140924
   },
   "views": [],
-  "folds": [],
+  "folds": [
+    {
+      "id": "fold0",
+      "label": "fold0",
+      "memberIds": [
+        "readGate1",
+        "i0Test"
+      ],
+      "position": [
+        253.82758620689657,
+        274.18361544722774
+      ],
+      "collapsed": false
+    }
+  ],
   "bookmarks": [],
   "nodes": {
     "in08": {
@@ -14,8 +28,8 @@
       "sublabel": "Input"
     },
     "readGate1": {
-      "x": 169.90868823452453,
-      "y": 17.830961886487977,
+      "x": 253,
+      "y": 287,
       "sublabel": "AND"
     },
     "i0Test": {
@@ -44,8 +58,5 @@
     "i1.out->readGate.ack": {
       "route": "below"
     }
-  },
-  "lastSelectionIds": [
-    "readGate1"
-  ]
+  }
 }
