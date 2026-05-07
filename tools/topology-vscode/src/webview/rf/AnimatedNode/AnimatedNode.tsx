@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { KIND_COLORS } from "../../../schema";
+import { KIND_COLORS, type StateValue } from "../../../schema";
 import { subscribe, getWorld, getTickMs } from "../../../sim/runner";
-import { subscribeNodeTicks } from "../../../substrate/runtime-wires";
+import { subscribeNodeTicks, subscribeNodeHeld } from "../../../substrate/runtime-wires";
 import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT, FLASH_DURATION_MS } from "./_styles";
 import { StepButton } from "./StepButton";
 import { SpecPanel } from "./SpecPanel";
@@ -21,6 +21,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
     return { dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) };
   });
   const [tweenMs, setTweenMs] = useState<number>(getTickMs());
+  const [held, setHeld] = useState<StateValue | undefined>(undefined);
   const flashRef = useRef<HTMLDivElement | null>(null);
   const glowRef = useRef<HTMLDivElement | null>(null);
 
@@ -52,6 +53,13 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   }, [id, data.stroke]);
 
   useEffect(() => {
+    return subscribeNodeHeld((nodeId, value) => {
+      if (nodeId !== id) return;
+      setHeld(value);
+    });
+  }, [id]);
+
+  useEffect(() => {
     const unsub = subscribe((ev) => {
       if (ev.type !== "fire" || ev.nodeId !== id) return;
       setStateText([`${ev.inputPort}=${ev.inputValue}`]);
@@ -63,6 +71,9 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   }, [id]);
 
   const radius = data.shape === "pill" ? data.height / 2 : 4;
+  const heldNum = typeof held === "number" ? held : Number(held);
+  const heldFill = heldNum === 1 ? "#ffab40" : heldNum === -1 ? "#66bb6a" : null;
+  const fill = heldFill ?? data.fill;
 
   return (
     <div
@@ -71,7 +82,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         minWidth: data.width,
         width: "max-content",
         height: data.height,
-        background: data.fill,
+        background: fill,
         color: "#1a1a1a",
         border: `${selected ? 2 : 1}px solid ${data.stroke}`,
         borderRadius: radius,
@@ -81,7 +92,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         overflow: "visible",
         isolation: "isolate",
         transform: `translate(${offset.dx}px, ${offset.dy}px)`,
-        transition: `transform ${tweenMs}ms linear`,
+        transition: `transform ${tweenMs}ms linear, background-color ${tweenMs}ms linear`,
         willChange: "transform",
       }}
     >
