@@ -1,56 +1,54 @@
 # Handoff — Next task (START HERE)
 
-**Revised step 1 is done.** Commits 1–7 landed on `task/wires`. The
-matched (Input→ReadGate) path no longer touches `sim/event-bus`,
-`legacyRunnerState`, or `pulse-concurrency`. Spec at
-[../sim-substrate/revised-step-1.md](../sim-substrate/revised-step-1.md).
+**Step 1 merged. Node visuals stripped.** `task/wires` (revised step
+1) and `task/node-visuals-strip` are both on `main` (HEAD `8daf317`).
+Trivial Input→ReadGate animates on the wires runtime. The four legacy
+`AnimatedNode` visuals — flash, glow, held tint, buffered halo — have
+been removed and archived verbatim in
+[../sim-substrate/removed-node-visuals.md](../sim-substrate/removed-node-visuals.md)
+so they can be restored once the wires runtime publishes equivalent
+signals.
 
-Commits:
-- bf304d7 — Wire primitive + buildWires + contract test.
-- 30d6e28 — per-node loops + runtime-wires + contract test.
-- c89e246 — AnimatedEdge wire-driven hook + `_handle-load` swap.
-- 72318e1 — toolbar play/pause off legacy state.
-- 3921640 — `_resetPulseConcurrency` retired from legacy
-  `loadSubstrate`.
-- d7aaaae — PulseInstance + `_pulse-frame` read `performance.now()`;
-  `runtime-wires.ts` no longer touches `legacyRunnerState`.
-- HEAD — `sim/event-bus` substrate-side usage retired. TimelinePanel
-  subscribes via `subscribeWires` alongside `subscribeState`;
-  `runtime-wires.ts` no longer imports or pokes `notifyState()`.
+What `AnimatedNode` still does after the strip: renders the box,
+border, port dots (no halo), `stateText` label, and the offset tween
+(visual #5, motion). Nothing else animates on the node itself — only
+the edge does, via revised step 1's wire-driven AE.
 
-**Visual validation done (2026-05-07):** cold-open animates;
-pause/resume works — in-flight pulse completes its arc rather than
-halting mid-flight, which matches the design (pause gates new sends
-only; arcs finish on wall-clock time).
-
-**Next session:** start port-plan **step 2** per
-[handoff-rebuild-plan.md](handoff-rebuild-plan.md). Consider merging
-`task/wires` to `main` first (with sign-off) so step 2 cuts from a
-clean base.
+**This is the entry point for the next session.** The user vetoed the
+new corner-glyph design in [../sim-substrate/revised-step-2.md](../sim-substrate/revised-step-2.md);
+intent is to **restore the original visuals** (one at a time), driven
+by the wires runtime instead of `sim/runner`'s `subscribe()`. The
+spec doc still records D2 (a `subscribeNodeTicks` stream) — that part
+is still wanted; D1/D3 (corner glyph design) are dropped.
 
 [rt]: /tools/topology-vscode/src/substrate/runtime.ts
 
-## Why / branch / scope
+## Suggested next commits (small, one visual at a time)
 
-See [handoff-frame.md](handoff-frame.md) for the conceptual frame and
-[handoff-rebuild-plan.md](handoff-rebuild-plan.md) for the port plan.
-Branch is `task/wires` (cut from `task/runtime-substrate-rebuild` at
-1aeee65). Trivial Input→ReadGate only through this whole stretch;
-endpoint is `sim/event-bus` + `legacyRunnerState` + `pulse-concurrency`
-unused on the matched path.
+1. Add `subscribeNodeTicks(fn: (nodeId, ts) => void)` to
+   [runtime-wires.ts](/tools/topology-vscode/src/substrate/runtime-wires.ts).
+   Producer: `node-loop.ts` publishes after each `inputLoop` send and
+   each `readGateLoop` ack. Contract test: tick count matches
+   send/ack count for the trivial topology.
+2. Restore visual #1 (flash) on the wires runtime — copy back from
+   the archive, swap the `subscribe(fire)` trigger for
+   `subscribeNodeTicks`. Verify visually.
+3. Same pattern for #2 (glow), #3 (held tint — needs wire's last
+   value), #4 (buffered halo — needs wire `state === "full"` info).
+   Each its own commit.
 
-## Concrete commits (all landed)
+Hold off on the corner glyph; if friction surfaces, revisit.
 
-1. ✅ bf304d7 — `Wire` type + builder + contract test.
-2. ✅ 30d6e28 — per-node loops + runtime-wires + contract test.
-3. ✅ c89e246 — AnimatedEdge wire-driven hook + `_handle-load` swap.
-4. ✅ 72318e1 — toolbar play/pause off legacy state.
-5. ✅ 3921640 — `_resetPulseConcurrency` retired from legacy
-   `loadSubstrate`.
-6. ✅ d7aaaae — PulseInstance off legacy sim clock; rAF math reads
-   `performance.now()`.
-7. ✅ HEAD — `sim/event-bus` retired from substrate; TimelinePanel
-   subscribes to `subscribeWires`.
+## Branch / scope
+
+Cut a fresh task branch from `main` (e.g. `task/node-ticks` or
+`task/restore-flash`). Trivial Input→ReadGate stays the only topology
+through this stretch.
+
+## Working tree note
+
+`topology.view.json` shows incidental pan/zoom drift after editor
+sessions. Leave or discard; not part of any commit.
 
 ## ALWAYS clause
 
