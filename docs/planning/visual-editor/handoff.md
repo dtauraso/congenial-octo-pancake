@@ -8,15 +8,15 @@ read this file first (no chat history needed) and proceed.
 ---
 
 Continuing on wirefold, branch `task/sim-substrate-sketches` (off
-`main`, tip `c587db5`). This is a short-lived doc-only branch holding
-steps 1–3 of the cheapest-path plan. It will merge to `main` once
-step 3 lands and Gate A is signed off, then the rebuild work moves
-to a new branch `task/runtime-substrate-rebuild`.
+`main`, tip `783fbc5`). This is a short-lived doc-only branch holding
+steps 1–3 of the cheapest-path plan. Step 3 (rebuild-plan.md) has a
+draft in place; Gate A is review-pending. Once Gate A is signed off,
+this branch merges to `main` and the rebuild work moves to a new
+branch `task/runtime-substrate-rebuild`.
 
 State at handoff:
-  Local + origin/task/sim-substrate-sketches at c587db5.
-  Working tree carry: `M topology.view.json` (long-standing, do not
-  commit).
+  Local + origin/task/sim-substrate-sketches at 783fbc5.
+  Working tree clean.
   Tests/build untouched this session — last verified 230/230 +
   tsc/check:loc/build clean at 5a8948a.
 
@@ -60,6 +60,25 @@ on its own short-lived branch, mergeable as soon as it stabilises.
     index. Visual vocabulary collapses to chan→wire + per-node
     running indicator; see
     [memory/project_substrate_visual_vocabulary.md](../../../memory/project_substrate_visual_vocabulary.md).
+  - **Contracts marked obsolete (f28ecf2):** C6–C8 in
+    [contracts.md](contracts.md) carry **OBSOLETE** in the Tier
+    column; their subsystems are deleted in the rebuild.
+  - **Step 3 draft (783fbc5):**
+    [../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
+    drafted. Visual layer = chan→wire + per-node running indicator
+    (with reloop). Semantic contracts R1–R5. Select determinism =
+    lowest-index. Port plan, retire signal, out-of-scope, Gate A→
+    step 4 transition all spelled out.
+  - **Editor topology swapped to a 2-node pair (783fbc5):**
+    `topology.json` + `topology.view.json` at repo root now hold
+    `in08` (Input) → `readGate1` (ReadGate). Old 5-node cascade
+    archived to
+    [../sim-substrate/topology-pre-rebuild.json](../sim-substrate/topology-pre-rebuild.json)
+    and [.view.json](../sim-substrate/topology-pre-rebuild.view.json)
+    for re-import later. **Known: this pair does not animate** —
+    ReadGate ANDs chainIn + ack, no ack edge wired, so it never
+    fires. Left intentionally; user has been told and declined to
+    swap to Input → ChainInhibitor or self-ack.
 
 **Branch hygiene pass.** The repo had 18+ stale local/remote branches.
 Now only three remain: `main`, `task/in0-readgate-emission-ack`
@@ -99,9 +118,16 @@ combined. No cost markers needed (sub-$5 per CLAUDE.md).
 
 ## Next task — START HERE
 
-**Step 3 of the cheapest-path plan: write
-[../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
-including the fresh contract set.** Budget: ~$8. Model: opus.
+**Step 3 draft is in place at
+[../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md).
+Next is Gate A review: read the doc end-to-end against the chan
+sketches and confirm coherence, then merge to `main` and open
+`task/runtime-substrate-rebuild`.** Budget for review/revision:
+~$3. Model: opus.
+
+If review surfaces gaps, revise on this branch before opening the
+rebuild branch. Originally-planned step 3 detail is preserved below
+for reference.
 
 **Scope narrowed (2026-05-07):** the goro-sched and select sketch
 pairs were dropped. Only the chan pair remains. See
@@ -143,8 +169,9 @@ Do NOT skip ahead to step 4 before Gate A.
 
 ## What did NOT land this session
 
-  - No rebuild plan doc yet (step 3 next).
   - No code changes to the actual sim/runner/cadence tree.
+  - Gate A not yet signed off — rebuild-plan.md is a draft pending
+    review.
   - Chunks 4–7 of the prior in0-readgate-emission-ack plan and the
     structural-review-without-fixes task remain obsolete. Do not
     start them.
