@@ -122,6 +122,26 @@ describe("runtime-wires", () => {
     expect(held.has("i")).toBe(false);
   });
 
+  it("subscribeNodeBuffered: port marked while inFlight, cleared on ack", async () => {
+    const { subscribeNodeBuffered } = await import("../../src/substrate/runtime-wires");
+    const events: Array<{ nodeId: string; ports: string[] }> = [];
+    const off = subscribeNodeBuffered((nodeId, ports) => {
+      events.push({ nodeId, ports: [...ports] });
+    });
+    await startWiresRuntime(spec);
+    const wires = getWiresMap();
+    const wire = wires?.get("i->r");
+    if (!wire) throw new Error("wire missing");
+    while (wire.state !== "inFlight") await new Promise((r) => setTimeout(r, 0));
+    ackWire(wire);
+    await new Promise((r) => setTimeout(r, 0));
+    await stopWiresRuntime();
+    off();
+    const r = events.filter((e) => e.nodeId === "r");
+    expect(r.some((e) => e.ports.includes("in"))).toBe(true);
+    expect(r.some((e) => e.ports.length === 0)).toBe(true);
+  });
+
   it("subscribeNodeTicks: tick count matches send/ack count", async () => {
     const { subscribeNodeTicks } = await import("../../src/substrate/runtime-wires");
     const counts = new Map<string, number>();
