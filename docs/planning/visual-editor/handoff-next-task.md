@@ -1,30 +1,33 @@
 # Handoff — Next task (START HERE)
 
-**Continue retiring legacy on the matched path.** Spec is at
+**Revised step 1 is done.** Commits 1–7 landed on `task/wires`. The
+matched (Input→ReadGate) path no longer touches `sim/event-bus`,
+`legacyRunnerState`, or `pulse-concurrency`. Spec at
 [../sim-substrate/revised-step-1.md](../sim-substrate/revised-step-1.md).
-Commits 1–6 landed:
+
+Commits:
 - bf304d7 — Wire primitive + buildWires + contract test.
 - 30d6e28 — per-node loops + runtime-wires + contract test.
 - c89e246 — AnimatedEdge wire-driven hook + `_handle-load` swap.
 - 72318e1 — toolbar play/pause off legacy state.
 - 3921640 — `_resetPulseConcurrency` retired from legacy
   `loadSubstrate`.
-- d7aaaae — PulseInstance + `_pulse-frame` read `performance.now()`
-  instead of `getSimTime()`; both `simStart` producers emit
-  `performance.now()`; `runtime-wires.ts` no longer touches
-  `legacyRunnerState`. In-flight pulses now finish their arc on
-  wall-clock time regardless of pause; new emissions are gated at the
-  substrate, so visible behavior is unchanged on the trivial path.
+- d7aaaae — PulseInstance + `_pulse-frame` read `performance.now()`;
+  `runtime-wires.ts` no longer touches `legacyRunnerState`.
+- HEAD — `sim/event-bus` substrate-side usage retired. TimelinePanel
+  subscribes via `subscribeWires` alongside `subscribeState`;
+  `runtime-wires.ts` no longer imports or pokes `notifyState()`.
 
-**Commit 7 (next):** retire `sim/event-bus` substrate-side usage. The
-`notifyState()` calls in `runtime-wires.ts` (pause/resume/start/stop)
-exist only to refresh TimelinePanel. Add a `subscribeWires` effect in
-TimelinePanel alongside the existing `subscribeState` effect, then
-drop the `notifyState()` pokes and the `sim/event-bus` import from
-`runtime-wires.ts`.
+**Next session:**
+1. Visual validation pass on `topology.json`: cold-open animates,
+   pause stops new emissions (in-flight pulse completes its arc),
+   resume continues. Confirm post-clock-swap behavior visually.
+2. If green, start port-plan **step 2** per
+   [handoff-rebuild-plan.md](handoff-rebuild-plan.md). Otherwise
+   fix-forward on `task/wires`.
 
-Endpoint after commit 7: `sim/event-bus`, `legacyRunnerState`, and
-`pulse-concurrency` are all unused on the matched code path.
+Consider merging `task/wires` to `main` (with sign-off) once step 1
+is visually validated, before step 2 begins.
 
 [rt]: /tools/topology-vscode/src/substrate/runtime.ts
 
@@ -37,25 +40,18 @@ Branch is `task/wires` (cut from `task/runtime-substrate-rebuild` at
 endpoint is `sim/event-bus` + `legacyRunnerState` + `pulse-concurrency`
 unused on the matched path.
 
-## Concrete commits (remaining)
+## Concrete commits (all landed)
 
 1. ✅ bf304d7 — `Wire` type + builder + contract test.
 2. ✅ 30d6e28 — per-node loops + runtime-wires + contract test.
 3. ✅ c89e246 — AnimatedEdge wire-driven hook + `_handle-load` swap.
 4. ✅ 72318e1 — toolbar play/pause off legacy state.
 5. ✅ 3921640 — `_resetPulseConcurrency` retired from legacy
-   `loadSubstrate` (matched path was already off the ledger).
+   `loadSubstrate`.
 6. ✅ d7aaaae — PulseInstance off legacy sim clock; rAF math reads
-   `performance.now()`; `runtime-wires` no longer pokes
-   `legacyRunnerState`.
-7. Retire `sim/event-bus` substrate-side usage; switch TimelinePanel
-   to `subscribeWires` for wires-runtime state changes.
-
-## Open questions (decide during implementation)
-
-1. **TimelinePanel re-render source for wires state?** Simplest is to
-   add a `subscribeWires` effect alongside the existing
-   `subscribeState` effect.
+   `performance.now()`.
+7. ✅ HEAD — `sim/event-bus` retired from substrate; TimelinePanel
+   subscribes to `subscribeWires`.
 
 ## ALWAYS clause
 

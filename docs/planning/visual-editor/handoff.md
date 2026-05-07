@@ -35,24 +35,25 @@ revised foundation is at
 Start at [handoff-next-task.md](handoff-next-task.md).
 
 State at handoff:
-  `task/wires` at d7aaaae, pushed and tracking origin. Commits 1–6 of
+  `task/wires` at HEAD, pushed and tracking origin. Commits 1–7 of
   revised step 1 landed: `Wire` primitive (bf304d7), per-node loops
   + `runtime-wires` (30d6e28), AnimatedEdge wire-driven dispatch
   + `_handle-load` swap (c89e246), toolbar play/pause off legacy
   state (72318e1), `_resetPulseConcurrency` retired from legacy
   `loadSubstrate` (3921640), PulseInstance off the legacy sim clock
-  (d7aaaae). 235/235 vitest, build + tsc --noEmit green, no LOC
-  violations. The wires runtime owns its own pause flag; pause stops
-  new sends, in-flight pulse finishes its arc on wall-clock time and
-  acks. PulseInstance + `_pulse-frame` now read `performance.now()`
-  directly; `simStart` is a `performance.now()` timestamp on both
-  producers; `runtime-wires` no longer touches `legacyRunnerState`.
-  TransportControls picks the active runtime (wires → substrate →
-  legacy). User loaded `topology.json` earlier this thread and
-  confirmed cold-open animates; pause/resume + post-clock-swap visual
-  validation deferred to next session. `notifyState()` (legacy event
-  bus) is still poked from pause/resume/start/stop so TimelinePanel
-  re-renders — retires in commit 7 with a `subscribeWires` swap.
+  (d7aaaae), and `sim/event-bus` substrate-side usage retired —
+  TimelinePanel now subscribes to `subscribeWires` alongside
+  `subscribeState`, and `runtime-wires.ts` no longer imports or
+  pokes `notifyState()` (this commit). 235/235 vitest, build + tsc
+  --noEmit green, no LOC violations. The wires runtime owns its
+  own pause flag and listener set; pause stops new sends, in-flight
+  pulse finishes its arc on wall-clock time and acks. PulseInstance
+  + `_pulse-frame` read `performance.now()` directly. TransportControls
+  picks the active runtime (wires → substrate → legacy).
+  Endpoint reached: `sim/event-bus`, `legacyRunnerState`, and
+  `pulse-concurrency` are all unused on the matched (Input→ReadGate)
+  path. Pause/resume + post-clock-swap visual validation still
+  deferred — worth doing in the next session before starting step 2.
   Prior branch `task/runtime-substrate-rebuild` is preserved as
   reference; do not delete. Working tree has `topology.view.json`
   modified (incidental pan/zoom; not part of rebuild work — leave or
