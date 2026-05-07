@@ -1,11 +1,19 @@
 # Handoff — Next task (START HERE)
 
-**Implement revised step 1: replace global scheduling with per-edge
-Wire objects.** Spec is at
+**Continue revised step 1: per-node loop runtime on the new Wires.**
+Spec is at
 [../sim-substrate/revised-step-1.md](../sim-substrate/revised-step-1.md).
-Read it before touching code; it covers what `Wire` is, what gets
-deleted/decoupled, scope (in/out), and three open questions left for
-implementation-time judgment calls.
+Commit 1 (Wire primitive + buildWires + contract test) landed at
+bf340d7. Files: [src/substrate/wire.ts](/tools/topology-vscode/src/substrate/wire.ts),
+[src/substrate/build-wires.ts](/tools/topology-vscode/src/substrate/build-wires.ts),
+[test/contracts/wire-primitive.test.ts](/tools/topology-vscode/test/contracts/wire-primitive.test.ts).
+Nothing else in the repo touches them yet.
+
+**Commit 2 (next):** substrate runtime — per-node async loops that
+read inbound `Wire`s and write outbound. Two loops for Input→ReadGate.
+No legacy coupling: no `legacyRunnerState`, no `event-bus`, no
+`pulse-concurrency`. Use `ackWire` from wire.ts on the receive side.
+Keep ≤100 LOC per file (split if needed).
 
 ## Why this exists (the short version)
 
@@ -42,10 +50,9 @@ Endpoint that earns the user's eyes again: revised step 1 done,
 plus enough of steps 4–5 to retire `sim/event-bus`,
 `legacyRunnerState`, and `pulse-concurrency`. Then hand back.
 
-## Concrete first commits (suggested order)
+## Concrete commits (remaining)
 
-1. Define `Wire` type + builder (walk spec, instantiate one Wire per
-   edge, hand them to nodes by reference).
+1. ✅ bf340d7 — `Wire` type + builder + contract test.
 2. Substrate runtime: per-node loops reading inbound / writing
    outbound. Two loops for Input→ReadGate.
 3. Rewire `AnimatedEdge` to read its `Wire` via context (or RF edge

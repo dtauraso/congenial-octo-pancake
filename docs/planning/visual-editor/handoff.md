@@ -35,12 +35,14 @@ revised foundation is at
 Start at [handoff-next-task.md](handoff-next-task.md).
 
 State at handoff:
-  Fresh branch `task/wires` at 1aeee65 (not yet pushed at handoff
-  time — first commit on this branch should push with `-u`). Prior
-  branch `task/runtime-substrate-rebuild` is preserved as reference
-  for what we tried first; do not delete. Working tree has
-  `topology.view.json` modified (incidental pan/zoom; not part of
-  rebuild work — leave or discard, do not commit).
+  `task/wires` at bf340d7, pushed and tracking origin. Commit 1 of
+  revised step 1 landed: `Wire` primitive + `buildWires(spec)` +
+  contract test (6/6 passing, build green, no LOC violations). No
+  runtime yet — nothing is wired into the active code path. Prior
+  branch `task/runtime-substrate-rebuild` is preserved as reference;
+  do not delete. Working tree has `topology.view.json` modified
+  (incidental pan/zoom; not part of rebuild work — leave or discard,
+  do not commit).
 
 ## Dev-loop
 
