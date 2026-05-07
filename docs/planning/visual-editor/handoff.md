@@ -7,97 +7,96 @@ read this file first (no chat history needed) and proceed.
 
 ---
 
-Continuing on wirefold, branch `task/sim-substrate-sketches` (off
-`main`, tip `783fbc5`). This is a short-lived doc-only branch holding
-steps 1–3 of the cheapest-path plan. Step 3 (rebuild-plan.md) has a
-draft in place; Gate A is review-pending. Once Gate A is signed off,
-this branch merges to `main` and the rebuild work moves to a new
-branch `task/runtime-substrate-rebuild`.
+Continuing on wirefold, branch `task/runtime-substrate-rebuild` (off
+`main`, tip `fbaaa2a`). Gate A passed; this is the rebuild branch.
+Next work is **port-plan step 1**: stand up the chan→wire renderer
+against a trivial two-node topology.
 
 State at handoff:
-  Local + origin/task/sim-substrate-sketches at 783fbc5.
-  Working tree clean.
+  Local on `task/runtime-substrate-rebuild`, no remote yet (push on
+  first commit).
+  Working tree has `topology.view.json` modified (incidental editor
+  pan/zoom from prior session; not part of rebuild work — leave it or
+  discard, do not commit as a rebuild change).
   Tests/build untouched this session — last verified 230/230 +
   tsc/check:loc/build clean at 5a8948a.
 
-## Why a new branch (read first)
+## What just landed (Gate A pass)
 
-Steps 1–3 of the cheapest-path plan are doc-only sketches and a plan
-doc. They were briefly committed onto the parked
-`task/in0-readgate-emission-ack` branch and then moved off because
-the parked branch is "park, do not merge until rebuild's first green
-contract test." Putting docs there hid them from `main` for weeks.
-The new pattern: doc work that should be visible from `main` lives
-on its own short-lived branch, mergeable as soon as it stabilises.
-
-## What landed this session
-
-**Steps 1 and 2 of the cheapest-path plan executed; index page added.**
-
-  - **Step 1 (cf2beaa):** goroutine + scheduler HTML pair under
-    [../sim-substrate/](../sim-substrate/).
-    [goro-sched.html](../sim-substrate/goro-sched.html) — runQ FIFO →
-    single CPU slot with quantum bar → blocked set with reason.
-    [goro-sched-wire.html](../sim-substrate/goro-sched-wire.html) —
-    tokens flow runQ → CPU → exit, with park detour to a parked rail
-    and arc back to runQ on unblock. Single P, quantum=3, voluntary
-    park button.
-  - **Step 2 (d3b1feb):** select HTML pair.
-    [select.html](../sim-substrate/select.html) — readiness snapshot;
-    lowest-index ready non-default fires; default fires only when no
-    other ready.
-    [select-wire.html](../sim-substrate/select-wire.html) — parallel
-    feeler extension, one commits, the rest retract; parked-on-empty
-    path; auto-mode cycles four scenarios.
-  - **Tabbed index (b50b003 + c587db5):**
-    [index.html](../sim-substrate/index.html) wraps the sketches in a
-    single shell using iframes; deep-links via `#fragment`. Each
-    sketch hides its inner nav strip when loaded in an iframe
-    (`window !== window.parent`) so the wrapper's tabs are the only
-    visible tab row, but each file remains useful standalone.
-  - **Scope cut (10ffa00):** dropped the goro-sched and select sketch
-    pairs. Only the chan pair (snapshot + motion) remains in the
-    index. Visual vocabulary collapses to chan→wire + per-node
-    running indicator; see
-    [memory/project_substrate_visual_vocabulary.md](../../../memory/project_substrate_visual_vocabulary.md).
-  - **Contracts marked obsolete (f28ecf2):** C6–C8 in
-    [contracts.md](contracts.md) carry **OBSOLETE** in the Tier
-    column; their subsystems are deleted in the rebuild.
-  - **Step 3 draft (783fbc5):**
-    [../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
-    drafted. Visual layer = chan→wire + per-node running indicator
-    (with reloop). Semantic contracts R1–R5. Select determinism =
-    lowest-index. Port plan, retire signal, out-of-scope, Gate A→
-    step 4 transition all spelled out.
-  - **Editor topology swapped to a 2-node pair (783fbc5):**
-    `topology.json` + `topology.view.json` at repo root now hold
-    `in08` (Input) → `readGate1` (ReadGate). Old 5-node cascade
-    archived to
+`task/sim-substrate-sketches` merged to `main` at fbaaa2a and was
+deleted (local + remote). The merge brought:
+  - chan sketches (anim + wire) at
+    [../sim-substrate/chan-anim.html](../sim-substrate/chan-anim.html)
+    and [../sim-substrate/chan-wire.html](../sim-substrate/chan-wire.html).
+  - Tabbed [index.html](../sim-substrate/index.html).
+  - Pre-rebuild topology archived at
     [../sim-substrate/topology-pre-rebuild.json](../sim-substrate/topology-pre-rebuild.json)
-    and [.view.json](../sim-substrate/topology-pre-rebuild.view.json)
-    for re-import later. **Known: this pair does not animate** —
-    ReadGate ANDs chainIn + ack, no ack edge wired, so it never
-    fires. Left intentionally; user has been told and declined to
-    swap to Input → ChainInhibitor or self-ack.
+    and [.view.json](../sim-substrate/topology-pre-rebuild.view.json).
+  - Repo-root `topology.json` + `topology.view.json` swapped to a
+    2-node `in08 → readGate1` pair (does not animate; intentional).
+  - C6–C8 in [contracts.md](contracts.md) marked **OBSOLETE**.
+  - [rebuild-plan.md](../sim-substrate/rebuild-plan.md) — the spec
+    for this branch.
 
-**Branch hygiene pass.** The repo had 18+ stale local/remote branches.
-Now only three remain: `main`, `task/in0-readgate-emission-ack`
-(parked, do not merge), `task/sim-substrate-sketches` (this branch).
-Deleted: 5 merged-to-main locals, 7 merged remotes, 6 unmerged
-dead-end locals, 4 unmerged dead-end remotes. The chan sketches were
-copied off the parked branch (final state of a2b744b + 6ff06f1) onto
-this branch so all six sketches sit together.
+Gate A revisions made before merge: corrected lowest-index
+attribution (came from the dropped select sketch, not chan); flagged
+per-node running indicator as prose-only spec until port step 2;
+clarified R5 does not forbid sub-frame tweening; deferred
+buffered-vs-unbuffered decision to port step 1.
 
-**Spend this session: ~$3.** Well under the $13 budget for steps 1+2
-combined. No cost markers needed (sub-$5 per CLAUDE.md).
+## Next task — START HERE
 
-## How to view the sketches
+**Port-plan step 1: stand up the chan→wire renderer against a
+trivial two-node topology.** Spec lives in
+[../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
+§"Port plan". Visible-state spec is the chan sketches.
 
-  - VS Code Live Preview is installed (`ms-vscode.live-server`).
-    Open [../sim-substrate/index.html](../sim-substrate/index.html)
-    and run "Live Preview: Show Preview" — the six tabs swap between
-    sketches in a webview pane with full JS.
-  - Or open `index.html` in any browser via `file://`.
+In this commit, pick and document the buffered-vs-unbuffered choice
+(deferred at Gate A). Smallest viable two-node topology — likely
+unbuffered (cap=0) since that's "receiver waiting right now," which
+matches the existing in08→readGate1 shape.
+
+Do **not** start step 2 (per-node running indicator) or step 3
+(R1–R5 contract tests) in the same commit. One step per commit per
+the plan doc.
+
+Budget for step 1: ~$5–$10. Model: sonnet for the mechanical edits
+once direction is clear; opus for the design call on cap=0 vs cap=1
+and where the renderer lives in the tree.
+
+## Rebuild plan summary (carried forward)
+
+Visual primitives:
+  1. **chan → wire.** Spec'd by chan sketches.
+  2. **Per-node running indicator (with reloop).** Prose spec only;
+     drawn for the first time in port step 2.
+
+Semantic contracts (Go-side tests under `internal/substrate/contracts/`
+or equivalent):
+  - **R1** Channel FIFO.
+  - **R2** Select determinism = lowest-index.
+  - **R3** Scheduler determinism (byte-identical state given same
+    inputs).
+  - **R4** No goroutine runs twice per step.
+  - **R5** Animation step = state transition (sub-frame tweening of
+    in-flight position OK; endpoints are the transitions).
+
+Port plan steps:
+  1. Chan→wire renderer + trivial two-node topology. ← **next**
+  2. Per-node running indicator + reloop glyph.
+  3. R1–R5 contract tests (red until substrate satisfies them).
+  4. Pilot port: one inhibitor (smallest equivalent).
+  5. Bulk port: input sources → latches → inhibitors → detectors →
+     gates → partitions.
+  6. Delete probe machinery (`.probe/stuck-pulse-last.json` family,
+     `.probe/runner-errors-last.json`, `RunnerProbe` toolbar latches,
+     `window.__resetPulseLeak`).
+
+## Auto-retire signal for `task/in0-readgate-emission-ack`
+
+Pre-authorised by rebuild-plan.md: delete the parked branch (local
++ remote) on the **first green rebuild contract test** (any of
+R1–R5). No re-ask required.
 
 ## Conceptual frame (carried forward)
 
@@ -107,74 +106,11 @@ combined. No cost markers needed (sub-$5 per CLAUDE.md).
     [memory/feedback_visual_first_default.md](../../../memory/feedback_visual_first_default.md).
   - **The industry's projection bias.** Static abstractions get
     privileged because they're tractable for symbolic reasoners.
-    They're lossy compressions of the actual phenomenon. The substrate
-    rebuild rejects projection at every level: visuals before logic,
+    They're lossy compressions of the actual phenomenon. The
+    substrate rebuild rejects projection: visuals before logic,
     transitions before snapshots, motion before structure.
-  - **Snapshot + motion as a pair.** The chan sketch ships both
-    views. Snapshot answers "what is it holding?"; motion answers
-    "what is it doing?" (Goroutine and select were originally sketched
-    this way too but dropped on 2026-05-07; they are not separate
-    visual primitives.)
-
-## Next task — START HERE
-
-**Step 3 draft is in place at
-[../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md).
-Next is Gate A review: read the doc end-to-end against the chan
-sketches and confirm coherence, then merge to `main` and open
-`task/runtime-substrate-rebuild`.** Budget for review/revision:
-~$3. Model: opus.
-
-If review surfaces gaps, revise on this branch before opening the
-rebuild branch. Originally-planned step 3 detail is preserved below
-for reference.
-
-**Scope narrowed (2026-05-07):** the goro-sched and select sketch
-pairs were dropped. Only the chan pair remains. See
-[memory/project_substrate_visual_vocabulary.md](../../../memory/project_substrate_visual_vocabulary.md).
-The visual vocabulary is now two primitives: chan→wire + per-node
-running indicator (with reloop). Goroutine and select are not
-separate visual primitives; they are emergent from node-running +
-wire-firing.
-
-The plan doc must cover:
-  - **Visual layer:** chan→wire renderer + per-node running indicator
-    (with reloop). Reference the chan sketches as visible-state spec.
-    Do not propose separate visual primitives for goroutine lifecycle
-    or select fan-in.
-  - **Semantic contracts (Go-side tests, no visual counterpart
-    required):** channel FIFO, select determinism, scheduler
-    determinism, no-goroutine-runs-twice-per-step,
-    animation-step-equals-state-transition.
-  - **Port plan:** which existing topology pieces port to the new
-    substrate, and the order. Pilot first (one inhibitor) before
-    bulk port.
-  - **Auto-retire signal** for `task/in0-readgate-emission-ack`:
-    delete on first green rebuild contract test.
-
-**Determinism choice for select:** observed via wire-firing order in
-the visual layer, but pinned by a Go-side semantic test. Decide in
-the plan doc which the substrate uses and why. (Lowest-index =
-trivial test stability. Random = matches Go. Round-robin = fair,
-also test-stable.)
-
-After step 3 lands:
-  - **Gate A:** ~$22 spent across steps 1–3. Sketches + plan doc +
-    contract set must be coherent enough to commit to. If not, redo
-    step 3 before opening `task/runtime-substrate-rebuild`.
-  - **Step 4:** open `task/runtime-substrate-rebuild` and start the
-    first goroutine + chan implementation commit.
-
-Do NOT skip ahead to step 4 before Gate A.
-
-## What did NOT land this session
-
-  - No code changes to the actual sim/runner/cadence tree.
-  - Gate A not yet signed off — rebuild-plan.md is a draft pending
-    review.
-  - Chunks 4–7 of the prior in0-readgate-emission-ack plan and the
-    structural-review-without-fixes task remain obsolete. Do not
-    start them.
+  - **Snapshot + motion as a pair.** chan-wire (snapshot) +
+    chan-anim (motion).
 
 ## Substrate working mode (carried forward)
 
@@ -190,39 +126,13 @@ Do NOT skip ahead to step 4 before Gate A.
   See `memory/feedback_substrate_vs_coordinator_bias.md` and
   `memory/feedback_visual_first_default.md`.
 
-## Contract registry status (contracts.md)
-
-  C6–C8 are marked **OBSOLETE** in the registry — pinned cadence/
-  pulse/edgePending invariants whose subsystems the rebuild deletes.
-  Do not extend them. The rebuild plan (step 3) defines a fresh
-  contract set covering channel FIFO, select determinism, scheduler
-  determinism, no-goroutine-runs-twice-per-step, and
-  animation-step-equals-state-transition.
-
-  C1–C5 stay live; they pin host-message and editor-save-path
-  invariants that are not affected by the rebuild.
-
-## Probe instrumentation (carried forward, will be replaced)
-
-  - `.probe/stuck-pulse-last.json` / `-followup.json` / `-third.json`.
-  - `.probe/runner-errors-last.json` (stuck-pending entries).
-  - `.probe/timeline-last.json` for per-edge emit/anim sequences.
-  - `RunnerProbe` toolbar latches `⚠ stuck-anim` / `⚠ stuck-pending`.
-  - `window.__resetPulseLeak()` re-arms the one-shot.
-
-These die in step 8 of the cheapest-path plan (bulk port, deletes
-ride replacement commits). Don't invest in extending them.
-
 ## Open branches
 
-  - `main` — production trunk.
-  - `task/sim-substrate-sketches` — this branch. Doc-only. Mergeable
-    to `main` after Gate A (step 3 done).
+  - `main` — production trunk, tip fbaaa2a (Gate A merge).
+  - `task/runtime-substrate-rebuild` — this branch. Rebuild work.
   - `task/in0-readgate-emission-ack` — parked at dbab83c. Reference
-    for the old shape; **do not merge, do not delete** until the
-    rebuild is far enough along that the user explicitly retires it.
-    Auto-retire signal: delete on first green rebuild contract test.
-  - `task/runtime-substrate-rebuild` — to be created after Gate A.
+    for the old shape; **do not merge, do not delete** until first
+    green R1–R5 contract test (auto-retire signal).
 
 Branch hygiene: no merge to main without explicit sign-off. Delete merged branches without re-asking. Force-push needs sign-off.
 Cwd for tsc/tests/check:loc/build: tools/topology-vscode/ (Bash resets cwd — chain cd or use absolute paths).
