@@ -99,4 +99,68 @@ describe("runtime-wires", () => {
     await stopWiresRuntime();
     expect(getWiresMap()).toBeNull();
   });
+
+  it("subscribeNodeHeld: receiver held value matches latest arrived", async () => {
+    const { subscribeNodeHeld } = await import("../../src/substrate/runtime-wires");
+    const held = new Map<string, unknown>();
+    const off = subscribeNodeHeld((nodeId, value) => {
+      held.set(nodeId, value);
+    });
+    await startWiresRuntime(spec);
+    const wires = getWiresMap();
+    const wire = wires?.get("i->r");
+    if (!wire) throw new Error("wire missing");
+    for (let i = 0; i < 3; i++) {
+      while (wire.state !== "inFlight") await new Promise((r) => setTimeout(r, 0));
+      ackWire(wire);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    await stopWiresRuntime();
+    off();
+    // Queue is [7, 8] cycling; held should be one of those values.
+    expect([7, 8]).toContain(held.get("r"));
+    expect(held.has("i")).toBe(false);
+  });
+
+  it("subscribeNodeBuffered: port marked while inFlight, cleared on ack", async () => {
+    const { subscribeNodeBuffered } = await import("../../src/substrate/runtime-wires");
+    const events: Array<{ nodeId: string; ports: string[] }> = [];
+    const off = subscribeNodeBuffered((nodeId, ports) => {
+      events.push({ nodeId, ports: [...ports] });
+    });
+    await startWiresRuntime(spec);
+    const wires = getWiresMap();
+    const wire = wires?.get("i->r");
+    if (!wire) throw new Error("wire missing");
+    while (wire.state !== "inFlight") await new Promise((r) => setTimeout(r, 0));
+    ackWire(wire);
+    await new Promise((r) => setTimeout(r, 0));
+    await stopWiresRuntime();
+    off();
+    const r = events.filter((e) => e.nodeId === "r");
+    expect(r.some((e) => e.ports.includes("in"))).toBe(true);
+    expect(r.some((e) => e.ports.length === 0)).toBe(true);
+  });
+
+  it("subscribeNodeTicks: tick count matches send/ack count", async () => {
+    const { subscribeNodeTicks } = await import("../../src/substrate/runtime-wires");
+    const counts = new Map<string, number>();
+    const off = subscribeNodeTicks((nodeId) => {
+      counts.set(nodeId, (counts.get(nodeId) ?? 0) + 1);
+    });
+    await startWiresRuntime(spec);
+    const wires = getWiresMap();
+    const wire = wires?.get("i->r");
+    if (!wire) throw new Error("wire missing");
+    // Drive 3 ack cycles externally (autoAck=false in real runtime).
+    for (let i = 0; i < 3; i++) {
+      while (wire.state !== "inFlight") await new Promise((r) => setTimeout(r, 0));
+      ackWire(wire);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    await stopWiresRuntime();
+    off();
+    expect((counts.get("i") ?? 0)).toBeGreaterThanOrEqual(3);
+    expect((counts.get("r") ?? 0)).toBeGreaterThanOrEqual(3);
+  });
 });

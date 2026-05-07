@@ -1,54 +1,63 @@
 # Handoff — Next task (START HERE)
 
-**Step 1 merged. Node visuals stripped.** `task/wires` (revised step
-1) and `task/node-visuals-strip` are both on `main` (HEAD `8daf317`).
-Trivial Input→ReadGate animates on the wires runtime. The four legacy
-`AnimatedNode` visuals — flash, glow, held tint, buffered halo — have
-been removed and archived verbatim in
-[../sim-substrate/removed-node-visuals.md](../sim-substrate/removed-node-visuals.md)
-so they can be restored once the wires runtime publishes equivalent
-signals.
+**Branch:** `task/node-ticks` (active, not merged). Eight commits on
+top of `main` (`8daf317`). All four node visuals restored on the
+wires runtime:
 
-What `AnimatedNode` still does after the strip: renders the box,
-border, port dots (no halo), `stateText` label, and the offset tween
-(visual #5, motion). Nothing else animates on the node itself — only
-the edge does, via revised step 1's wire-driven AE.
+- `6554e07` — `subscribeNodeTicks(fn)` + flash/glow plumbing.
+- `33fe174` — visual #1 (flash).
+- `54cd832` — visual #2 (glow ring).
+- `0b3efa9` — `subscribeNodeHeld(fn)` on wires runtime.
+- `879e3d7` — visual #3 (held tint).
+- `b4a1bee` — `subscribeNodeBuffered(fn)` on wires runtime.
+- `8f13034` — visual #4 (buffered halo).
 
-**This is the entry point for the next session.** The user vetoed the
-new corner-glyph design in [../sim-substrate/revised-step-2.md](../sim-substrate/revised-step-2.md);
-intent is to **restore the original visuals** (one at a time), driven
-by the wires runtime instead of `sim/runner`'s `subscribe()`. The
-spec doc still records D2 (a `subscribeNodeTicks` stream) — that part
-is still wanted; D1/D3 (corner glyph design) are dropped.
+User-confirmed visually through 4/4: flash, glow, held tint,
+buffered halo all fire on Input + ReadGate per pulse; rapid
+retrigger clean; pause behaves per design.
 
-[rt]: /tools/topology-vscode/src/substrate/runtime.ts
+## Next: merge to main
 
-## Suggested next commits (small, one visual at a time)
+Per the prior `handoff-next-task.md` plan: "Merge to `main` once all
+four visuals are restored." That breakpoint is here.
 
-1. Add `subscribeNodeTicks(fn: (nodeId, ts) => void)` to
-   [runtime-wires.ts](/tools/topology-vscode/src/substrate/runtime-wires.ts).
-   Producer: `node-loop.ts` publishes after each `inputLoop` send and
-   each `readGateLoop` ack. Contract test: tick count matches
-   send/ack count for the trivial topology.
-2. Restore visual #1 (flash) on the wires runtime — copy back from
-   the archive, swap the `subscribe(fire)` trigger for
-   `subscribeNodeTicks`. Verify visually.
-3. Same pattern for #2 (glow), #3 (held tint — needs wire's last
-   value), #4 (buffered halo — needs wire `state === "full"` info).
-   Each its own commit.
+Pre-merge state:
+- 238/238 vitest green.
+- `npm run build` clean (extension + webview).
+- `npm run check:loc` clean (no files ≥ 200 LOC).
+- AnimatedNode at 144 LOC.
 
-Hold off on the corner glyph; if friction surfaces, revisit.
+Merge requires **user sign-off** per the workflow rule in CLAUDE.md
+("Sign-off IS still required for: merging a task branch into
+`main`…"). Do not merge without explicit approval in-session.
 
-## Branch / scope
+Suggested merge command once approved:
 
-Cut a fresh task branch from `main` (e.g. `task/node-ticks` or
-`task/restore-flash`). Trivial Input→ReadGate stays the only topology
-through this stretch.
+```
+git checkout main && git merge --no-ff task/node-ticks
+git push origin main
+```
+
+After merge, `task/node-ticks` can stay as a reference branch (do
+not delete — matches the convention used for prior task branches).
+
+## After the merge
+
+No queued substrate or visual work. Next task is **friction-driven**
+from [session-log.md](session-log.md): user drives the editor,
+narrates observations, assistant logs and acts. Do not invent a new
+visual or substrate task absent friction.
+
+Open question that surfaced during this branch (parked, not
+blocking): should `subscribeNodeHeld` debounce same-value arrives,
+or keep firing-on-every-arrive? Current choice is fire-on-every,
+React equality suppresses redundant tween. Revisit if a friction
+log entry calls it out.
 
 ## Working tree note
 
-`topology.view.json` shows incidental pan/zoom drift after editor
-sessions. Leave or discard; not part of any commit.
+`.claude/settings.json` and `topology.view.json` carry orthogonal
+uncommitted drift. Leave or stash — not part of this merge.
 
 ## ALWAYS clause
 

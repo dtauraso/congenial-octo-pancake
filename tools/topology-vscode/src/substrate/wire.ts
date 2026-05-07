@@ -21,6 +21,7 @@ export type WireState = "idle" | "inFlight" | "full";
 export type WireValue = unknown;
 
 export type ArriveListener = (value: WireValue) => void;
+export type AckListener = () => void;
 
 export interface Wire {
   readonly id: string;
@@ -29,6 +30,7 @@ export interface Wire {
   readonly pending: WireValue | null;
   send(value: WireValue): Promise<void>;
   onArrive(listener: ArriveListener): () => void;
+  onAck(listener: AckListener): () => void;
 }
 
 interface WireInternal extends Wire {
@@ -38,6 +40,7 @@ interface WireInternal extends Wire {
 
 export function createWire(id: string, cap: 0 | 1 = 0): Wire {
   const listeners = new Set<ArriveListener>();
+  const ackListeners = new Set<AckListener>();
   let waitingAck: (() => void) | null = null;
 
   const w: WireInternal = {
@@ -62,6 +65,11 @@ export function createWire(id: string, cap: 0 | 1 = 0): Wire {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+
+    onAck(listener: AckListener): () => void {
+      ackListeners.add(listener);
+      return () => ackListeners.delete(listener);
+    },
   };
 
   // Ack hook for the receiver loop. Internal to the substrate; nodes
@@ -75,6 +83,7 @@ export function createWire(id: string, cap: 0 | 1 = 0): Wire {
     const resume = waitingAck;
     waitingAck = null;
     if (resume) resume();
+    for (const fn of ackListeners) fn();
   };
 
   return w;

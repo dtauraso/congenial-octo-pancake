@@ -1,11 +1,14 @@
 import type React from "react";
 
+export const FLASH_DURATION_MS = 300;
+
 // Visible port dot. Sized large enough to be a real drag target, colored by
 // the port's edge kind so users can see which kinds connect to which.
 export function portStyle(
   side: "left" | "right",
   topPct: number,
   color: string,
+  buffered = false,
 ): React.CSSProperties {
   return {
     width: 8, height: 8, minWidth: 0, minHeight: 0,
@@ -13,6 +16,7 @@ export function portStyle(
     transform: "translate(0, -50%)",
     background: color, border: "1px solid #fff",
     borderRadius: 4,
+    boxShadow: buffered ? `0 0 0 2px ${color}` : undefined,
   };
 }
 

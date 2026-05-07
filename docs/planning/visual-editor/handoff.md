@@ -22,50 +22,59 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-07 evening):
-  `main` at HEAD `8daf317`. Two task branches merged in sequence:
-  - `task/wires` (revised step 1): Wire primitive, per-node loops,
-    AnimatedEdge wire-driven, toolbar pause off legacy state,
-    pulse-concurrency reset retired, PulseInstance off legacy sim
-    clock, sim/event-bus retired from substrate side. Trivial
-    Input→ReadGate animates on the wires runtime; pause/resume
-    behaves per design (in-flight pulse completes its arc).
-  - `task/node-visuals-strip` (this session): four legacy node-body
-    visuals removed from `AnimatedNode` — flash, glow, held tint,
-    buffered halo. All four archived verbatim in
-    [../sim-substrate/removed-node-visuals.md](../sim-substrate/removed-node-visuals.md)
-    along with restoration notes. `FLASH_DURATION_MS` deleted from
-    `_styles.ts` (last consumer gone). `portStyle` lost its 4th
-    `buffered` arg. `bufferedPorts()` is still exported (still used
-    by `fold-halo-probe` + tests).
+State at handoff (2026-05-07, end of session):
+  Active branch: `task/node-ticks` (cut from `main` at `8daf317`).
+  All four node visuals restored on the wires runtime — ready to
+  merge to `main` pending user sign-off. Eight commits on top of
+  `main`:
 
-  Tests: 235/235 vitest still green from step-1 merge; no test
-  changes in the strip work. Build + tsc green. No LOC violations.
+  - `6554e07` — `subscribeNodeTicks` on wires runtime. `node-loop.ts`
+    fires `onTick` after each Input send and after each ReadGate
+    arrive. Contract test: tick count >= ack-cycle count.
+  - `33fe174` — visual #1 (flash) restored on AnimatedNode, driven
+    by `subscribeNodeTicks`.
+  - `54cd832` — visual #2 (glow ring) restored, sharing the tick
+    subscription.
+  - `6f17f83` — interim handoff update (held tint next).
+  - `0b3efa9` — `subscribeNodeHeld` on wires runtime. Producer in
+    `readGateLoop` arrive path; emits `(nodeId, StateValue)` on
+    every arrive (tween-on-change handled by React equality).
+  - `879e3d7` — visual #3 (held tint) restored on AnimatedNode.
+  - `b4a1bee` — `subscribeNodeBuffered` on wires runtime. Tracks
+    wire `state === "full"` per receiver node.
+  - `8f13034` — visual #4 (buffered halo) restored. **All four
+    visuals now driven by wires runtime.**
 
-  Working tree: `topology.view.json` shows incidental pan/zoom drift;
-  not part of either merged branch — leave or discard.
+  Visual validation by user: through commit `8f13034` (4/4) — flash,
+  glow, held tint, buffered halo all confirmed firing on Input +
+  ReadGate per pulse; rapid retrigger clean; pause stops new pulses.
+  Console errors: not verified.
+
+  Tests: 238/238 vitest green (contract tests added for ticks, held,
+  buffered). Build + tsc green. `check:loc` clean.
+
+  Working tree: `.claude/settings.json` has uncommitted allowlist
+  additions; `topology.view.json` has incidental pan/zoom drift.
+  Both orthogonal to this branch — leave or stash.
 
   Prior branches preserved as reference:
   `task/runtime-substrate-rebuild`, `task/wires`,
   `task/node-visuals-strip`. Do not delete.
-
-  Visual validation: edge animates; node body is now bare (no flash,
-  glow, tint, or halo). Stateful label and motion tween still work.
 
 ## Dev-loop
 
 Edit → `npm run build` → topology tab refreshes in place. No Reload
 Window, no tab cycling. The watcher logs `[topology] bundleWatcher
 fired` / `hot-reload: re-rendering webview.html` to Output → Log
-(Extension Host) — check there if a fix appears not to have landed.
+(Extension Host).
 
 ## Next move
 
-Start at [handoff-next-task.md](handoff-next-task.md). Spec for the
-node-tick stream is in
-[../sim-substrate/revised-step-2.md](../sim-substrate/revised-step-2.md)
-(D2 only — D1/D3 corner-glyph design is **vetoed**; restore originals
-instead, driven by the wires runtime).
+Start at [handoff-next-task.md](handoff-next-task.md). Immediate
+next step is **merge `task/node-ticks` → `main`** (requires user
+sign-off per workflow). After merge, next work is friction-driven
+from [session-log.md](session-log.md) — no queued visual or
+substrate task.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
