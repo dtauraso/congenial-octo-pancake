@@ -1,68 +1,61 @@
 # Handoff — Next task (START HERE)
 
-**Step-1 follow-up: fix the play/pause toolbar button under the
-substrate path.** The button currently calls into `sim/runner`'s
-`play()`/`pause()`. Step 1 hijacks `legacyRunnerState.playing` and
-calls `pauseRunner()` on substrate-match, so the toolbar button now
-either no-ops (no spec loaded in legacy runner) or fights the
-substrate's own state.
-
-Note (post-d2f36c1): the substrate is now ack-driven, so "pause"
-means *don't emit the next token on receipt of the next ack*, and
-*also halt the in-flight pulse animation*. Pausing the in-flight
-pulse may need to plug into the existing `pauseAllPulseTimers` /
-`resumeAllPulseTimers` (sim/runner/pulse-completion) so the visible
-arc freezes. This is shoe-horn-able into option (b) below.
-
-**Surfaced friction (2026-05-07):** user reports "play/pause has a
-new bug" after step 1 wire-animation fix landed. Tokens animate
-correctly in auto-run, but the toolbar control is broken. Logging
-this here per the post-v0 friction-driven posture (CLAUDE.md).
-
-What "fixed" looks like:
-  - With the 2-node topology loaded, pressing pause halts token
-    emission AND halts the in-flight pulse animation.
-  - Pressing play resumes both.
-  - Reset (existing behavior) re-arms the input queue.
-  - Behavior should match the chan-wire.html sketch's intuition.
-
-Concrete scope candidates (Opus call, then sonnet edits):
-  (a) Make substrate own its own play/pause flag. Toolbar reads
-      from substrate when matched, legacy runner otherwise.
-      Decoupling move — likely correct but bigger.
-  (b) Have substrate mirror its play state into
-      `legacyRunnerState.playing` (already half-doing this) and
-      route toolbar's play/pause through a thin shim that toggles
-      both substrate's setInterval AND the flag. Smaller, keeps
-      step-1 hack shape.
-  (c) Defer play/pause until step 3's R1 contract test forces a
-      cleaner animation contract. Skip for now.
-
-Recommendation: (b) for this commit (cheapest, preserves the
-gated-hacks discipline in step 1 build notes), upgrade to (a) at
-step 3 when the substrate contract is being written anyway.
-
-Budget: ~$10. Same hard cap and reassess discipline (below).
-
-After this lands, then port-plan step 2 (per-node running indicator
-+ reloop glyph). Spec at
+**Port-plan step 2: per-node running indicator + reloop glyph.**
+Step 1 (chan→wire renderer + 2-node topology + working play/pause)
+is done and the substrate path is decoupled from the legacy runner.
+Step 2's spec lives at
 [../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
-§"Visual layer" item 2. Do not start it before play/pause works —
-the running indicator needs play/pause to be debuggable.
+§"Visual layer" item 2.
 
-Do **not** combine the play/pause fix with step 2 in one commit.
-One concern per commit per the plan doc.
+## What just landed (this branch, this session)
 
-## Hard cap and reassess trigger (carried forward from step 1)
+- Substrate is now ack-driven via an `edge-ready` bus event.
+  AnimatedEdge fires it from its subscribe useEffect; substrate
+  gates the first emit on receipt so the cap=0 loop can't drop the
+  leading token.
+- `loadSubstrate` runs synchronously before `setNodes`/`setEdges`
+  in `_handle-load.ts` so the substrate's emit-bus subscription is
+  registered before AE mounts and signals readiness.
+- Identical-text load messages are deduped to absorb React
+  StrictMode + send-on-ready double-fires.
+- Substrate owns `_running`; toolbar play/pause routes through
+  `pauseSubstrate`/`resumeSubstrate`. Sim clock freeze IS the
+  visual pause (PulseInstance no longer gates rAF on isPlaying).
+- `awaitingAck` flag prevents resume-during-in-flight from
+  injecting a duplicate token (was producing visible "11"/"00"
+  combinations).
+- Contract test: `test/contracts/substrate-ack-driven.test.ts`
+  (6 tests covering edge-ready handshake, ack-driven cadence,
+  queue refill, pause/resume invariants).
+- Integration test: `e2e/substrate-pause-resume.spec.ts` regression
+  guard for the pause-resume duplicate.
 
-Each port-plan step gets a per-step hard cap (default $25 unless
-stated otherwise). If a step has not produced its working
-deliverable by the cap, stop and reassess: write a one-paragraph
-note in [../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
-naming which assumption broke (renderer location? buffered model?
-topology shape? something else?), and surface to the user before
-spending more. The point is to find substrate-design problems
-cheaply at the current step rather than later after more code has
-piled on top. Sunk-cost reasoning is the failure mode this cap
-defends against — do not raise the cap mid-spiral without explicit
-user sign-off.
+## Still listed in step-1 build notes as a "coupling hack"
+
+Items 1 and 4 from
+[handoff-step1-notes.md](handoff-step1-notes.md) (visual-slot
+ledger reset and PulseAckEvent on the shared bus) remain. Items 2
+and 3 (legacyRunnerState.playing hijack and pauseRunner call) are
+gone — substrate now owns play state and resetRunner replaces
+pauseRunner.
+
+## Step 2 budget and ground rules
+
+Budget: $25 hard cap (default). One concern per commit. Do **not**
+fold step 2 into a step-1 follow-up commit — both are independently
+debuggable surfaces. Start step 2 only after the user confirms the
+play/pause behavior on the current topology.
+
+What "fixed" looks like for step 2:
+  - Each node renders its "running" state visibly (animation,
+    pulse, color shift — TBD per spec).
+  - The reloop glyph is visible at the moment the input queue
+    refills from spec.init (see substrate runtime's `emitNext`
+    refill branch).
+
+If a step-2 assumption breaks (renderer location, reloop trigger
+shape, etc.), stop at the cap and write a one-paragraph note in
+[../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
+naming which assumption broke. Sunk-cost reasoning is the failure
+mode this cap defends against — do not raise it without explicit
+sign-off.

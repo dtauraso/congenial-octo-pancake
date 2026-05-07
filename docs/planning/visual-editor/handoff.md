@@ -14,7 +14,7 @@ Read them in this order on a fresh session:
   2. [handoff-gate-a.md](handoff-gate-a.md) — what just merged
      to main (Gate A).
   3. [handoff-next-task.md](handoff-next-task.md) — **start
-     here** for the next commit (play/pause toolbar fix).
+     here** for the next commit (port-plan step 2).
   4. [handoff-rebuild-plan.md](handoff-rebuild-plan.md) — port
      plan, contracts R1–R5, auto-retire signal.
   5. [handoff-frame.md](handoff-frame.md) — conceptual frame,
@@ -25,19 +25,33 @@ Read them in this order on a fresh session:
 Continuing on wirefold, branch `task/runtime-substrate-rebuild` (off
 `main`, pushed). Gate A passed; this is the rebuild branch. Port-plan
 **step 1 is done AND visibly animates** in the real VS Code extension
-— tokens 0/1/0 from `data.init` traverse the chan→wire end-to-end,
-**ack-driven** (cap=0 unbuffered: each emit waits for the previous
-pulse to finish traversing). Verified by user 2026-05-07. Next work
-is a **step-1 follow-up: fix the play/pause toolbar button** before
-starting step 2 — see [handoff-next-task.md](handoff-next-task.md).
+with **working play/pause** — tokens 0/1 from `data.init` alternate
+through the chan→wire ack-driven loop (cap=0 unbuffered). Pause
+freezes mid-arc; resume continues without duplicating. Verified by
+user 2026-05-07. Next work is **port-plan step 2** (per-node running
+indicator + reloop glyph) — see
+[handoff-next-task.md](handoff-next-task.md).
 
 State at handoff:
-  Local on `task/runtime-substrate-rebuild`, pushed to origin.
+  Local on `task/runtime-substrate-rebuild`, pushed to origin
+  through commits 68e5ae6 (substrate decoupling), 788a8df (handoff
+  split), 33ccf27 (session-log entry), and the in-progress test +
+  pause/resume dedupe work.
   Working tree has `topology.view.json` modified (incidental editor
   pan/zoom; not part of rebuild work — leave or discard, do not
   commit).
-  Tests/build/tsc/check:loc clean. Last verified 218/218 vitest +
-  Playwright `substrate-step1` green at d2f36c1 (ack-driven emit).
+  Tests/build/tsc/check:loc clean. Last verified 224/224 vitest +
+  Playwright `substrate-step1` and `substrate-pause-resume` green.
+
+## Dev-loop gotcha
+
+VS Code's "Developer: Reload Window" does NOT pick up freshly built
+`out/webview.js`. **Close+reopen the topology tab** instead.
+Documented at
+[session-log/2026-05-07-reload-window-misses-webview-bundle.md](session-log/2026-05-07-reload-window-misses-webview-bundle.md).
+If a substrate fix appears not to have landed, this is the first
+thing to check — compare `.probe/substrate-log.jsonl` mtime against
+the build mtime before debugging the code.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
