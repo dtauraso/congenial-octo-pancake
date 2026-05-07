@@ -33,5 +33,3 @@ export const HANDLE_STYLE_RIGHT: React.CSSProperties = {
   transform: "translate(0, -50%)",
   background: "transparent", border: "none", pointerEvents: "none",
 };
-
-export const FLASH_DURATION_MS = 300;

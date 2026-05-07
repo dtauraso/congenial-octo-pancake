@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { KIND_COLORS, type StateValue } from "../../../schema";
 import { subscribe, getWorld, getTickMs } from "../../../sim/runner";
 import { bufferedPorts } from "../../../sim/handlers";
-import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT, FLASH_DURATION_MS } from "./_styles";
+import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT } from "./_styles";
 import { StepButton } from "./StepButton";
 import { SpecPanel } from "./SpecPanel";
 import { NodeBody } from "./NodeBody";
@@ -11,7 +11,6 @@ import type { AnimatedNodeData } from "./_types";
 
 export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   const { id, data, selected } = props;
-  const glowRef = useRef<HTMLDivElement | null>(null);
 
   const [stateText, setStateText] = useState<string[]>([]);
   // Phase 6 Chunk A: motion is a derived view of simulator state. On each
@@ -32,19 +31,6 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   useEffect(() => {
     const unsub = subscribe((ev) => {
       if (ev.type !== "fire" || ev.nodeId !== id) return;
-      const gl = glowRef.current;
-      if (gl) {
-        gl.getAnimations().forEach((a) => a.cancel());
-        gl.animate(
-          [
-            { boxShadow: `0 0 0 0 ${data.stroke}00`, opacity: 0 },
-            { boxShadow: `0 0 0 4px ${data.stroke}cc`, opacity: 0.8, offset: 0.4 },
-            { boxShadow: `0 0 0 2px ${data.stroke}66`, opacity: 0.4, offset: 0.7 },
-            { boxShadow: `0 0 0 0 ${data.stroke}00`, opacity: 0 },
-          ],
-          { duration: FLASH_DURATION_MS },
-        );
-      }
       setStateText([`${ev.inputPort}=${ev.inputValue}`]);
       const s = getWorld()?.state?.[id];
       setOffset({ dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) });
@@ -83,7 +69,6 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
     >
       {selected ? <StepButton id={id} stroke={data.stroke} /> : null}
       <SpecPanel id={id} data={data} />
-      <div ref={glowRef} style={{ position: "absolute", inset: 0, borderRadius: radius, pointerEvents: "none", opacity: 0, zIndex: -1 }} />
       {data.inputs.length === 0 ? (
         <Handle type="target" position={Position.Left} style={HANDLE_STYLE_LEFT} isConnectable={false} />
       ) : (

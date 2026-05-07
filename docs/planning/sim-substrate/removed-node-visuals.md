@@ -68,9 +68,57 @@ for the matching `nodeId`.
 
 ---
 
-## 2. Glow (outer box-shadow ring) — NOT YET REMOVED
+## 2. Glow (outer box-shadow ring) — REMOVED
 
-(placeholder — will be filled in when removed)
+Outer halo around the node. On `fire` event, an animated `boxShadow`
+in the node's stroke color expanded `0px → 4px → 2px → 0px` and faded
+`0 → 0.8 → 0.4 → 0` over 300ms (FLASH_DURATION_MS, shared with the
+flash). Reads as a brief radiating ring at the node edge.
+
+Trigger: same `subscribe()` `fire` event on `sim/runner` as flash.
+
+**Ref + animation block (was inside the `subscribe` callback):**
+
+```tsx
+const glowRef = useRef<HTMLDivElement | null>(null);
+
+const gl = glowRef.current;
+if (gl) {
+  gl.getAnimations().forEach((a) => a.cancel());
+  gl.animate(
+    [
+      { boxShadow: `0 0 0 0 ${data.stroke}00`, opacity: 0 },
+      { boxShadow: `0 0 0 4px ${data.stroke}cc`, opacity: 0.8, offset: 0.4 },
+      { boxShadow: `0 0 0 2px ${data.stroke}66`, opacity: 0.4, offset: 0.7 },
+      { boxShadow: `0 0 0 0 ${data.stroke}00`, opacity: 0 },
+    ],
+    { duration: FLASH_DURATION_MS },
+  );
+}
+```
+
+**Overlay div (zIndex -1, behind the node body):**
+
+```tsx
+<div
+  ref={glowRef}
+  style={{
+    position: "absolute",
+    inset: 0,
+    borderRadius: radius,
+    pointerEvents: "none",
+    opacity: 0,
+    zIndex: -1,
+  }}
+/>
+```
+
+`FLASH_DURATION_MS = 300` was removed from `_styles.ts` together with
+this commit (last consumer gone). Restore it there if you bring back
+either flash or glow.
+
+To restore on the wires runtime: same trigger as flash —
+`subscribeNodeTicks` per-node tick stream.
 
 ---
 
