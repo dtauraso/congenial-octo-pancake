@@ -23,7 +23,7 @@
 <body>
 <header>
   <h1>sim-substrate sketches</h1>
-  <p>Six visible-state sketches: three primitives (chan, goroutine+scheduler, select), each with a snapshot view and a motion view.</p>
+  <p>Visible-state sketches for the chan primitive: a snapshot view and a motion view.</p>
 </header>
 <nav class="tabs" id="tabs"></nav>
 <div class="frame-wrap"><iframe id="frame" src="chan-anim.html"></iframe></div>
@@ -32,10 +32,6 @@
 const TABS = [
   { id: 'chan-anim', label: 'Chan' },
   { id: 'chan-wire', label: 'Chan (wire)' },
-  { id: 'goro-sched', label: 'Goro+Sched' },
-  { id: 'goro-sched-wire', label: 'Goro+Sched (wire)' },
-  { id: 'select', label: 'Select' },
-  { id: 'select-wire', label: 'Select (wire)' },
 ];
 
 const tabsEl = document.getElementById('tabs');
