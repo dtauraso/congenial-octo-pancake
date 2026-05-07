@@ -1,7 +1,8 @@
 import { parseSpec, type Spec } from "../../../schema";
 import { load as loadRunner, play as playRunner, reset as resetRunner } from "../../../sim/runner";
 import { matchSubstrate } from "../../../substrate/match";
-import { loadSubstrate, stopSubstrate } from "../../../substrate/runtime";
+import { stopSubstrate } from "../../../substrate/runtime";
+import { startWiresRuntime, stopWiresRuntime } from "../../../substrate/runtime-wires";
 import { slog } from "../../../substrate/log";
 import { specToFlow } from "../adapter";
 import { clearSpecHistory, patchViewerState, setSpec, viewerState } from "../../state";
@@ -35,17 +36,19 @@ export function handleLoad(ctx: AppCtx, text: string) {
     ctx.lastSpec.current = next;
     if (matchSubstrate(next)) {
       slog("match", { nodes: next.nodes.length, edges: next.edges.length });
-      // Substrate path. Run synchronously BEFORE setNodes/setEdges so
-      // the substrate's emit-bus subscription is registered before
-      // AnimatedEdge mounts and fires its `edge-ready` signal — that
-      // signal is what unblocks the first emit in the ack-driven loop,
-      // and dropping it stalls the substrate forever.
-      loadSubstrate(next);
+      // Wires substrate path. Build wires + start node loops BEFORE
+      // setNodes/setEdges so AnimatedEdge sees a populated wires map
+      // on first render. The input loop's first send fires only after
+      // the readGate loop registers its onArrive listener (synchronous
+      // inside startWiresRuntime), so no edge-ready handshake is needed.
+      stopSubstrate();
+      void startWiresRuntime(next);
     } else {
       slog("no-match", { types: next.nodes.map((n) => n.type), kinds: next.edges.map((e) => e.kind) });
-      // Legacy path. Stop the substrate in case the previous topology
-      // was running on it.
+      // Legacy path. Stop both substrates in case a previous topology
+      // was running on either.
       stopSubstrate();
+      void stopWiresRuntime();
       loadRunner(next);
       resetRunner();
       // Defer auto-play one frame so AnimatedEdge subscribers and React

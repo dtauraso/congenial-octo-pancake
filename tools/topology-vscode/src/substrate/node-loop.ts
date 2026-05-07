@@ -35,13 +35,18 @@ export function inputLoop(out: Wire, queue: readonly StateValue[]): NodeLoop {
   };
 }
 
-// ReadGate: ack on arrival. Real read semantics land when the node
-// type is properly ported; for now this is enough to close the loop
-// and let the wire cycle.
-export function readGateLoop(inbound: Wire): NodeLoop {
+// ReadGate: with autoAck (default), acks via microtask on arrive — fast
+// path used by tests. With autoAck=false, the visual layer (commit 3)
+// drives ack on arc completion so the wire cycle is paced by the
+// renderer rather than the microtask queue.
+export function readGateLoop(
+  inbound: Wire,
+  opts: { autoAck?: boolean } = {},
+): NodeLoop {
+  const autoAck = opts.autoAck ?? true;
   let stopped = false;
   const off = inbound.onArrive(() => {
-    if (stopped) return;
+    if (stopped || !autoAck) return;
     queueMicrotask(() => {
       if (stopped) return;
       ackWire(inbound);

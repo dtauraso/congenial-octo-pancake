@@ -8,7 +8,7 @@ import { notify } from "../../../sim/event-bus";
 import { slog } from "../../../substrate/log";
 import { type Pulse, formatRidingValue } from "./_constants";
 
-export function usePulseLanes(id: string) {
+export function usePulseLanes(id: string, enabled: boolean = true) {
   const [pulses0, setPulses0] = useState<Pulse[]>([]);
   const [pulses1, setPulses1] = useState<Pulse[]>([]);
   const len0Ref = useRef(0);
@@ -36,6 +36,7 @@ export function usePulseLanes(id: string) {
   }, [id]);
 
   useEffect(() => {
+    if (!enabled) return;
     slog("ae-subscribed", { edgeId: id });
     const unsub = subscribe((ev) => {
       if (ev.type !== "emit") return;
@@ -66,7 +67,7 @@ export function usePulseLanes(id: string) {
     // the first emit and stalls the ack-driven loop.
     notify({ type: "edge-ready", edgeId: id });
     return unsub;
-  }, [id]);
+  }, [id, enabled]);
 
   // Drop-by-key, not slice(1): pulses animate concurrently and a
   // shorter-arc geometry change could let a later pulse finish first.
