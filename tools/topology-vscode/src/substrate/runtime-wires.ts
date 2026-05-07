@@ -5,7 +5,6 @@
 
 import type { Spec } from "../schema";
 import { readNodeInit } from "../sim/seeds";
-import { notifyState } from "../sim/event-bus";
 import { buildWires, type WireMap } from "./build-wires";
 import { ackWire } from "./wire";
 import { inputLoop, readGateLoop, type NodeLoop } from "./node-loop";
@@ -33,7 +32,6 @@ export function isWiresRuntimePaused(): boolean {
 export function pauseWiresRuntime(): void {
   if (!_running || _paused) return;
   _paused = true;
-  notifyState();
   bumpVersion();
 }
 
@@ -43,7 +41,6 @@ export function resumeWiresRuntime(): void {
   const waiters = _resumeWaiters;
   _resumeWaiters = [];
   for (const w of waiters) w();
-  notifyState();
   bumpVersion();
 }
 

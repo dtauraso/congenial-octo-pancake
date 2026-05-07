@@ -9,6 +9,7 @@ import {
   isReplaying,
   subscribeState,
 } from "../../sim/runner";
+import { subscribeWires } from "../../substrate/runtime-wires";
 import { useTrace, useViewerState } from "../state";
 import { Bookmarks } from "./TimelinePanel/Bookmarks";
 import { TraceStatus } from "./TimelinePanel/TraceStatus";
@@ -26,6 +27,11 @@ export function TimelinePanel() {
 
   useEffect(() => {
     const unsub = subscribeState(() => force((n) => n + 1));
+    return () => { unsub?.(); };
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeWires(() => force((n) => n + 1));
     return () => { unsub?.(); };
   }, []);
 
