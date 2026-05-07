@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { KIND_COLORS } from "../../../schema";
 import { subscribe, getWorld, getTickMs } from "../../../sim/runner";
-import { bufferedPorts } from "../../../sim/handlers";
 import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT } from "./_styles";
 import { StepButton } from "./StepButton";
 import { SpecPanel } from "./SpecPanel";
@@ -21,9 +20,6 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
     return { dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) };
   });
   const [tweenMs, setTweenMs] = useState<number>(getTickMs());
-  // Audit row #4: per-port "input X waiting" indicator. State already exists
-  // as state.__has_<port>=1; bufferedPorts() reads it.
-  const [buffered, setBuffered] = useState<string[]>(() => bufferedPorts(getWorld()?.state?.[id]));
 
   useEffect(() => {
     const unsub = subscribe((ev) => {
@@ -32,7 +28,6 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
       const s = getWorld()?.state?.[id];
       setOffset({ dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) });
       setTweenMs(getTickMs());
-      setBuffered(bufferedPorts(s));
     });
     return unsub;
   }, [id]);
@@ -71,8 +66,8 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
             id={p.name}
             type="target"
             position={Position.Left}
-            style={portStyle("left", ((i + 1) * 100) / (data.inputs.length + 1), KIND_COLORS[p.kind] ?? "#888", buffered.includes(p.name))}
-            title={`${p.name} (${p.kind})${buffered.includes(p.name) ? " — buffered, waiting for peer" : ""}`}
+            style={portStyle("left", ((i + 1) * 100) / (data.inputs.length + 1), KIND_COLORS[p.kind] ?? "#888")}
+            title={`${p.name} (${p.kind})`}
           />
         ))
       )}

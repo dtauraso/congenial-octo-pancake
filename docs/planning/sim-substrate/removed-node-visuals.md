@@ -172,6 +172,74 @@ AnimatedNode.tsx.
 
 ---
 
-## 4. Buffered halo (port-dot ring while waiting for peer) — NOT YET REMOVED
+## 4. Buffered halo (port-dot ring while waiting for peer) — REMOVED
 
-(placeholder — will be filled in when removed)
+Per-input-port indicator (NOT a node-body visual). When an input had
+received a value but was still waiting for its peer (AND-style join),
+that port's dot got a `boxShadow: 0 0 0 2px <port color>` ring. Steady
+on while waiting, off once the join fired or no longer buffered.
+
+Trigger: derived from `world.state[id].__has_<port>=1` via
+`bufferedPorts()` from `sim/handlers`; refreshed on each `fire`
+event from `sim/runner`'s `subscribe()`.
+
+`bufferedPorts` itself is still exported and still used by
+`fold-halo-probe.ts` and its tests — only AnimatedNode's consumption
+was removed.
+
+**State + subscribe wiring (was in AnimatedNode.tsx):**
+
+```tsx
+import { bufferedPorts } from "../../../sim/handlers";
+
+// Audit row #4: per-port "input X waiting" indicator. State already
+// exists as state.__has_<port>=1; bufferedPorts() reads it.
+const [buffered, setBuffered] = useState<string[]>(
+  () => bufferedPorts(getWorld()?.state?.[id]),
+);
+
+// inside the subscribe callback:
+setBuffered(bufferedPorts(s));
+```
+
+**Input handle render (passed `buffered.includes(p.name)` as the 4th
+`portStyle` arg + appended a tooltip suffix):**
+
+```tsx
+style={portStyle(
+  "left",
+  ((i + 1) * 100) / (data.inputs.length + 1),
+  KIND_COLORS[p.kind] ?? "#888",
+  buffered.includes(p.name),
+)}
+title={`${p.name} (${p.kind})${buffered.includes(p.name) ? " — buffered, waiting for peer" : ""}`}
+```
+
+**`portStyle` signature change in `_styles.ts` (4th `buffered` param
++ halo branch removed):**
+
+```ts
+export function portStyle(
+  side: "left" | "right",
+  topPct: number,
+  color: string,
+  buffered = false,
+): React.CSSProperties {
+  return {
+    width: 8, height: 8, minWidth: 0, minHeight: 0,
+    [side]: -4, top: `${topPct}%`,
+    transform: "translate(0, -50%)",
+    background: color, border: "1px solid #fff",
+    borderRadius: 4,
+    // Halo ring marks an input that has buffered a value and is waiting
+    // for its peer (AND-style joins). Distinct from the fire/glow pulse —
+    // halo is the idle "input X waiting" indicator (audit row #4).
+    ...(buffered ? { boxShadow: `0 0 0 2px ${color}` } : {}),
+  };
+}
+```
+
+To restore on the wires runtime: derive buffered ports from inbound
+Wires whose `state === "full"` and whose peers haven't acked. Restore
+`bufferedPorts` import in AnimatedNode (or replace with a wire-derived
+helper).
