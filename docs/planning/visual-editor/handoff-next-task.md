@@ -18,16 +18,15 @@ Commits:
   subscribes via `subscribeWires` alongside `subscribeState`;
   `runtime-wires.ts` no longer imports or pokes `notifyState()`.
 
-**Next session:**
-1. Visual validation pass on `topology.json`: cold-open animates,
-   pause stops new emissions (in-flight pulse completes its arc),
-   resume continues. Confirm post-clock-swap behavior visually.
-2. If green, start port-plan **step 2** per
-   [handoff-rebuild-plan.md](handoff-rebuild-plan.md). Otherwise
-   fix-forward on `task/wires`.
+**Visual validation done (2026-05-07):** cold-open animates;
+pause/resume works — in-flight pulse completes its arc rather than
+halting mid-flight, which matches the design (pause gates new sends
+only; arcs finish on wall-clock time).
 
-Consider merging `task/wires` to `main` (with sign-off) once step 1
-is visually validated, before step 2 begins.
+**Next session:** start port-plan **step 2** per
+[handoff-rebuild-plan.md](handoff-rebuild-plan.md). Consider merging
+`task/wires` to `main` first (with sign-off) so step 2 cuts from a
+clean base.
 
 [rt]: /tools/topology-vscode/src/substrate/runtime.ts
 

@@ -52,8 +52,8 @@ State at handoff:
   picks the active runtime (wires → substrate → legacy).
   Endpoint reached: `sim/event-bus`, `legacyRunnerState`, and
   `pulse-concurrency` are all unused on the matched (Input→ReadGate)
-  path. Pause/resume + post-clock-swap visual validation still
-  deferred — worth doing in the next session before starting step 2.
+  path. Visual validation done 2026-05-07: cold-open animates;
+  pause/resume works (in-flight pulse completes its arc per design).
   Prior branch `task/runtime-substrate-rebuild` is preserved as
   reference; do not delete. Working tree has `topology.view.json`
   modified (incidental pan/zoom; not part of rebuild work — leave or
