@@ -10,10 +10,11 @@ read this file first (no chat history needed) and proceed.
 Continuing on wirefold, branch `task/runtime-substrate-rebuild` (off
 `main`, pushed). Gate A passed; this is the rebuild branch. Port-plan
 **step 1 is done AND visibly animates** in the real VS Code extension
-— tokens 0/1/0 from `data.init` traverse the chan→wire end-to-end at
-the substrate's 1500ms emit interval, verified by user 2026-05-07.
-Next work is a **step-1 follow-up: fix the play/pause toolbar
-button** before starting step 2.
+— tokens 0/1/0 from `data.init` traverse the chan→wire end-to-end,
+**ack-driven** (cap=0 unbuffered: each emit waits for the previous
+pulse to finish traversing). Verified by user 2026-05-07. Next work
+is a **step-1 follow-up: fix the play/pause toolbar button** before
+starting step 2.
 
 State at handoff:
   Local on `task/runtime-substrate-rebuild`, pushed to origin.
@@ -21,7 +22,7 @@ State at handoff:
   pan/zoom; not part of rebuild work — leave or discard, do not
   commit).
   Tests/build/tsc/check:loc clean. Last verified 218/218 vitest +
-  Playwright `substrate-step1` green at e0ef402.
+  Playwright `substrate-step1` green at d2f36c1 (ack-driven emit).
 
 ## Step 1 build notes (decision audit)
 
@@ -37,10 +38,14 @@ otherwise.
 
 Substrate plugs into the existing event-bus by emitting `EmitEvent`
 (same shape the legacy runner emits), so AnimatedEdge renders
-unchanged. The 1500ms emit interval is a placeholder — step 3 (R1
-FIFO test) replaces it with an ack-driven release.
+unchanged. **As of d2f36c1**, the substrate is ack-driven: the bus
+carries a new `PulseAckEvent` that AnimatedEdge fires from
+`advanceLane0/1` when a pulse finishes traversing, and the substrate
+emits the next token on receipt. No timer. This was pulled forward
+from step 3 (originally an R1 FIFO concern) because the timer-based
+interval was visibly dropping every other token at cap=1.
 
-### Three coupling hacks gated to step-1 commit e0ef402
+### Coupling hacks gated to step-1 (commits e0ef402, d2f36c1)
 
 The substrate piggybacks on three pieces of legacy-runner state that
 must come out as the rebuild matures. Search `// Step 1` /
@@ -58,6 +63,12 @@ load-bearing for visible animation in the current shape:
      owned animation contract.
   3. `pauseRunner()` on substrate-match — halts legacy ticker so it
      doesn't compete. Comes out when legacy runner is fully retired.
+  4. `PulseAckEvent` on the shared event-bus + AnimatedEdge calling
+     `notify({type:"pulse-ack",...})` from `advanceLane0/1`. NOT a
+     hack — this is the correct cap=0 contract — but it's a new
+     load-bearing dependency the substrate has on AnimatedEdge's
+     completion path. Survives past step 1; documented here so the
+     coupling is visible.
 
 These are the load-bearing bits of the legacy coupling. Anything
 else legacy-shaped that the substrate ends up depending on should be
@@ -117,6 +128,13 @@ substrate path.** The button currently calls into `sim/runner`'s
 calls `pauseRunner()` on substrate-match, so the toolbar button now
 either no-ops (no spec loaded in legacy runner) or fights the
 substrate's own state.
+
+Note (post-d2f36c1): the substrate is now ack-driven, so "pause"
+means *don't emit the next token on receipt of the next ack*, and
+*also halt the in-flight pulse animation*. Pausing the in-flight
+pulse may need to plug into the existing `pauseAllPulseTimers` /
+`resumeAllPulseTimers` (sim/runner/pulse-completion) so the visible
+arc freezes. This is shoe-horn-able into option (b) below.
 
 **Surfaced friction (2026-05-07):** user reports "play/pause has a
 new bug" after step 1 wire-animation fix landed. Tokens animate
