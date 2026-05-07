@@ -50,13 +50,16 @@ on its own short-lived branch, mergeable as soon as it stabilises.
     feeler extension, one commits, the rest retract; parked-on-empty
     path; auto-mode cycles four scenarios.
   - **Tabbed index (b50b003 + c587db5):**
-    [index.html](../sim-substrate/index.html) wraps all six sketches
-    (chan-anim, chan-wire, goro-sched, goro-sched-wire, select,
-    select-wire) in a single shell using iframes; deep-links via
-    `#fragment`. Each sketch hides its inner nav strip when loaded in
-    an iframe (`window !== window.parent`) so the wrapper's tabs are
-    the only visible tab row, but each file remains useful
-    standalone.
+    [index.html](../sim-substrate/index.html) wraps the sketches in a
+    single shell using iframes; deep-links via `#fragment`. Each
+    sketch hides its inner nav strip when loaded in an iframe
+    (`window !== window.parent`) so the wrapper's tabs are the only
+    visible tab row, but each file remains useful standalone.
+  - **Scope cut (10ffa00):** dropped the goro-sched and select sketch
+    pairs. Only the chan pair (snapshot + motion) remains in the
+    index. Visual vocabulary collapses to chan→wire + per-node
+    running indicator; see
+    [memory/project_substrate_visual_vocabulary.md](../../../memory/project_substrate_visual_vocabulary.md).
 
 **Branch hygiene pass.** The repo had 18+ stale local/remote branches.
 Now only three remain: `main`, `task/in0-readgate-emission-ack`
@@ -88,10 +91,11 @@ combined. No cost markers needed (sub-$5 per CLAUDE.md).
     They're lossy compressions of the actual phenomenon. The substrate
     rebuild rejects projection at every level: visuals before logic,
     transitions before snapshots, motion before structure.
-  - **Snapshot + motion as a pair.** Every primitive sketch ships
-    both views — chan, goroutine+scheduler, and select all follow
-    this pattern. Snapshot answers "what is it holding?"; motion
-    answers "what is it doing?"
+  - **Snapshot + motion as a pair.** The chan sketch ships both
+    views. Snapshot answers "what is it holding?"; motion answers
+    "what is it doing?" (Goroutine and select were originally sketched
+    this way too but dropped on 2026-05-07; they are not separate
+    visual primitives.)
 
 ## Next task — START HERE
 
@@ -99,23 +103,34 @@ combined. No cost markers needed (sub-$5 per CLAUDE.md).
 [../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
 including the fresh contract set.** Budget: ~$8. Model: opus.
 
+**Scope narrowed (2026-05-07):** the goro-sched and select sketch
+pairs were dropped. Only the chan pair remains. See
+[memory/project_substrate_visual_vocabulary.md](../../../memory/project_substrate_visual_vocabulary.md).
+The visual vocabulary is now two primitives: chan→wire + per-node
+running indicator (with reloop). Goroutine and select are not
+separate visual primitives; they are emergent from node-running +
+wire-firing.
+
 The plan doc must cover:
-  - Substrate primitives (Chan, Goroutine, Scheduler, Select) and
-    how they compose. Reference the six sketches as visible-state
-    spec.
-  - Fresh contract set covering: channel FIFO, select determinism
-    rule, scheduler determinism, no-goroutine-runs-twice-per-step,
+  - **Visual layer:** chan→wire renderer + per-node running indicator
+    (with reloop). Reference the chan sketches as visible-state spec.
+    Do not propose separate visual primitives for goroutine lifecycle
+    or select fan-in.
+  - **Semantic contracts (Go-side tests, no visual counterpart
+    required):** channel FIFO, select determinism, scheduler
+    determinism, no-goroutine-runs-twice-per-step,
     animation-step-equals-state-transition.
-  - Port plan: which existing topology pieces port to the new
+  - **Port plan:** which existing topology pieces port to the new
     substrate, and the order. Pilot first (one inhibitor) before
     bulk port.
-  - Auto-retire signal for `task/in0-readgate-emission-ack`: delete
-    on first green rebuild contract test.
+  - **Auto-retire signal** for `task/in0-readgate-emission-ack`:
+    delete on first green rebuild contract test.
 
-**Determinism choice for select:** the sketch uses lowest-index;
-Go's runtime randomises. Decide here which the substrate uses and
-why. (Lowest-index = trivial test stability. Random = matches Go.
-Round-robin = fair, also test-stable.)
+**Determinism choice for select:** observed via wire-firing order in
+the visual layer, but pinned by a Go-side semantic test. Decide in
+the plan doc which the substrate uses and why. (Lowest-index =
+trivial test stability. Random = matches Go. Round-robin = fair,
+also test-stable.)
 
 After step 3 lands:
   - **Gate A:** ~$22 spent across steps 1–3. Sketches + plan doc +
