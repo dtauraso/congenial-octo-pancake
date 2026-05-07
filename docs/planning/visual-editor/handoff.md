@@ -24,34 +24,26 @@ Read them in this order on a fresh session:
 
 Continuing on wirefold, branch `task/runtime-substrate-rebuild` (off
 `main`, pushed). Gate A passed; this is the rebuild branch. Port-plan
-**step 1 is done AND visibly animates** in the real VS Code extension
-with **working play/pause** — tokens 0/1 from `data.init` alternate
-through the chan→wire ack-driven loop (cap=0 unbuffered). Pause
-freezes mid-arc; resume continues without duplicating. Verified by
-user 2026-05-07. Next work is **port-plan step 2** (per-node running
-indicator + reloop glyph) — see
-[handoff-next-task.md](handoff-next-task.md).
+**step 1 animates with working play/pause** — verified 2026-05-07.
+Bundle hot-reload landed (commit d7983ab): edit → `npm run build` →
+tab refreshes in place, no Reload Window. **Step 2 is blocked** by a
+stuck-pulse regression that surfaces on cold-open AND on every
+in-editor doc edit (renaming a node halts animation). Next work is
+diagnosing that — see [handoff-next-task.md](handoff-next-task.md).
 
 State at handoff:
   Local on `task/runtime-substrate-rebuild`, pushed to origin
-  through commits 68e5ae6 (substrate decoupling), 788a8df (handoff
-  split), 33ccf27 (session-log entry), and the in-progress test +
-  pause/resume dedupe work.
-  Working tree has `topology.view.json` modified (incidental editor
-  pan/zoom; not part of rebuild work — leave or discard, do not
-  commit).
-  Tests/build/tsc/check:loc clean. Last verified 224/224 vitest +
-  Playwright `substrate-step1` and `substrate-pause-resume` green.
+  through d7983ab (bundle hot-reload). Working tree has
+  `topology.view.json` and `topology.json` modified (incidental
+  editor pan/zoom; not part of rebuild work — leave or discard, do
+  not commit). Tests/build/tsc/check:loc clean as of last build.
 
-## Dev-loop gotcha
+## Dev-loop
 
-VS Code's "Developer: Reload Window" does NOT pick up freshly built
-`out/webview.js`. **Close+reopen the topology tab** instead.
-Documented at
-[session-log/2026-05-07-reload-window-misses-webview-bundle.md](session-log/2026-05-07-reload-window-misses-webview-bundle.md).
-If a substrate fix appears not to have landed, this is the first
-thing to check — compare `.probe/substrate-log.jsonl` mtime against
-the build mtime before debugging the code.
+Edit → `npm run build` → topology tab refreshes in place. No Reload
+Window, no tab cycling. The watcher logs `[topology] bundleWatcher
+fired` / `hot-reload: re-rendering webview.html` to Output → Log
+(Extension Host) — check there if a fix appears not to have landed.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
