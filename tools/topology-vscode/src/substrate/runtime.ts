@@ -15,6 +15,7 @@ import type { Spec, StateValue } from "../schema";
 import { readNodeInit } from "../sim/seeds";
 import { nextPulseId, notify, notifyState } from "../sim/event-bus";
 import { _resetPulseConcurrency } from "../sim/runner/pulse-concurrency";
+import { state as legacyRunnerState, nowWall } from "../sim/runner/_state";
 import { slog } from "./log";
 
 const EMIT_INTERVAL_MS = 1500;
@@ -46,6 +47,15 @@ export function loadSubstrate(spec: Spec): void {
   // first emit from claiming a slot. Step 6 deletes all of that;
   // until then we reset on entry so the substrate path starts clean.
   _resetPulseConcurrency();
+  // PulseInstance's animation rAF only starts when isPlaying() returns
+  // true (line 76 of PulseInstance.tsx). isPlaying reads the legacy
+  // runner's state.playing flag. Without this, substrate-driven pulses
+  // mount but never animate, never call onDone, and the slot ledger
+  // stays held — every subsequent emit is rejected. Forcing the flag
+  // is a step-1 hack; step 3+ replaces this coupling with a substrate-
+  // owned animation contract.
+  legacyRunnerState.playing = true;
+  legacyRunnerState.simSegmentStartWall = nowWall();
   const input = spec.nodes.find((n) => n.type === "Input")!;
   const edge = spec.edges[0];
   state.spec = spec;
