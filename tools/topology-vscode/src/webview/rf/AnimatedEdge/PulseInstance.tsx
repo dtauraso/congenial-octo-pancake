@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { EdgeRoute } from "../../../schema";
-import { getSimTime, extendPulse } from "../../../sim/runner";
+import { extendPulse } from "../../../sim/runner";
 import { noteAnimStart, noteAnimEnd, noteAnimRerun } from "../timeline-probe";
 import { type PathGeom } from "./_geom";
 import { PULSE_DASH_PX } from "./_constants";
@@ -23,9 +23,9 @@ export function PulseInstance({
   onDone: () => void;
 }) {
   // First run vs re-run from a geom/speed change. On first run, rAF
-  // math is rooted at simStart (the emit timestamp); on re-run, we
-  // rebase to getSimTime() because arcTraveledRef holds where we
-  // already were.
+  // math is rooted at simStart (the emit timestamp from
+  // performance.now()); on re-run, we rebase to performance.now()
+  // because arcTraveledRef holds where we already were.
   const firstRunRef = useRef(true);
   const pathRef = useRef<SVGPathElement | null>(null);
   const labelRef = useRef<SVGTextElement | null>(null);
@@ -43,7 +43,7 @@ export function PulseInstance({
 
     const isFirstRun = firstRunRef.current;
     const prevArc = arcTraveledRef.current;
-    const swapStart = isFirstRun ? simStart : getSimTime();
+    const swapStart = isFirstRun ? simStart : performance.now();
     firstRunRef.current = false;
     const startArc = Math.min(arcTraveledRef.current, svgArc);
     const remainingArc = svgArc - startArc;
@@ -73,16 +73,14 @@ export function PulseInstance({
       probeId: probeIdRef.current,
     });
     const loop = () => { if (frame()) rafId = requestAnimationFrame(loop); else rafId = 0; };
-    // Always start rAF; the sim clock (getSimTime) is the single
-    // source of truth for "are we moving." When paused, the clock
-    // freezes and the loop polls without visible motion. This avoids
-    // a race where mount-time isPlaying() reads false during a
-    // load/reset transient and the loop never starts.
+    // rAF always runs from mount to arc completion. Pause stops new
+    // emissions at the substrate; in-flight pulses finish their arc
+    // and ack normally — there is no global clock to freeze.
     rafId = requestAnimationFrame(loop);
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
-      const elapsed = getSimTime() - swapStart;
+      const elapsed = performance.now() - swapStart;
       const localT = Math.min(1, elapsed / remainingMs);
       arcTraveledRef.current = startArc + localT * remainingArc;
       noteAnimEnd(edgeId, fromNodeId, toNodeId, localT >= 1, arcTraveledRef.current);

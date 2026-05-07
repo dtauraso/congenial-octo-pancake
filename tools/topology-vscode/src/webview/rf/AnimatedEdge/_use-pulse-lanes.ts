@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  subscribe, subscribeState, getConcurrentEdges, getSimTime,
+  subscribe, subscribeState, getConcurrentEdges,
   ruleForNodeId, signalRendererComplete,
   tryClaimVisualSlot, releaseVisualSlot,
 } from "../../../sim/runner";
@@ -52,7 +52,7 @@ export function usePulseLanes(id: string, enabled: boolean = true) {
       const pulse: Pulse = {
         key, pulseId: ev.pulseId,
         value: formatRidingValue(ev.value),
-        simStart: getSimTime(),
+        simStart: performance.now(),
       };
       if (concurrentRef.current && len1Ref.current < len0Ref.current) {
         len1Ref.current += 1;

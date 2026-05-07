@@ -1,11 +1,10 @@
 // Wire-based substrate runtime for the trivial Input -> ReadGate
-// topology. No event-bus or pulse-concurrency coupling. The legacy
-// sim clock is still poked because PulseInstance reads getSimTime();
-// step 4-5 retires that read and this poke goes with it.
+// topology. No event-bus, pulse-concurrency, or sim-clock coupling.
+// PulseInstance reads performance.now() directly, so the renderer
+// owns its own timing.
 
 import type { Spec } from "../schema";
 import { readNodeInit } from "../sim/seeds";
-import { state as legacyRunnerState, nowWall } from "../sim/runner/_state";
 import { notifyState } from "../sim/event-bus";
 import { buildWires, type WireMap } from "./build-wires";
 import { ackWire } from "./wire";
@@ -30,10 +29,7 @@ export function isWiresRuntimePaused(): boolean {
 
 // Toolbar pause: stops issuing new sends. An in-flight pulse finishes
 // its arc and acks normally; the input loop then awaits the gate at
-// the top of its next iteration. The legacy sim clock stays running
-// while paused so the in-flight pulse's rAF math (PulseInstance reads
-// getSimTime) keeps advancing — that read retires in step 5 along
-// with the legacyRunnerState poke in startSimClock/stopSimClock.
+// the top of its next iteration.
 export function pauseWiresRuntime(): void {
   if (!_running || _paused) return;
   _paused = true;
@@ -76,18 +72,6 @@ function bumpVersion(): void {
   for (const fn of _listeners) fn();
 }
 
-function startSimClock(): void {
-  legacyRunnerState.simSegmentStartWall = nowWall();
-  legacyRunnerState.simAccumMs = 0;
-  legacyRunnerState.playing = true;
-}
-
-function stopSimClock(): void {
-  if (!legacyRunnerState.playing) return;
-  legacyRunnerState.simAccumMs += nowWall() - legacyRunnerState.simSegmentStartWall;
-  legacyRunnerState.playing = false;
-}
-
 export async function startWiresRuntime(spec: Spec): Promise<void> {
   await stopWiresRuntime();
   const input = spec.nodes.find((n) => n.type === "Input");
@@ -112,7 +96,6 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
   }
   const queue = readNodeInit(input.data);
   _running = true;
-  startSimClock();
   _loops = [
     readGateLoop(wire, { autoAck: false }),
     inputLoop(wire, queue, { awaitGate: awaitResumeGate }),
@@ -134,7 +117,6 @@ export async function stopWiresRuntime(): Promise<void> {
   const waiters = _resumeWaiters;
   _resumeWaiters = [];
   for (const w of waiters) w();
-  stopSimClock();
   const loops = _loops;
   const wires = _wires;
   _loops = [];

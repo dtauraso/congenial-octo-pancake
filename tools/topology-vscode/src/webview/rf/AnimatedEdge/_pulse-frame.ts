@@ -1,5 +1,4 @@
 import type { EdgeRoute } from "../../../schema";
-import { getSimTime } from "../../../sim/runner";
 import { type PathGeom } from "./_geom";
 import { computeLabelPlacement, dotOpacity } from "./_pulse-label";
 import { type ProbeWorst, pulseProbeEnabled } from "./_pulse-probe";
@@ -32,7 +31,7 @@ export function makeFrame(ctx: FrameCtx): () => boolean {
 
   return () => {
     if (done) return false;
-    const simNow = getSimTime();
+    const simNow = performance.now();
     const elapsed = simNow - ctx.swapStart;
     const localT = Math.min(1, elapsed / ctx.remainingMs);
     const arcTraveled = ctx.startArc + localT * ctx.remainingArc;

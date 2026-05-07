@@ -7,7 +7,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ackWire, type Wire } from "../../../substrate/wire";
-import { getSimTime } from "../../../sim/runner";
 import { slog } from "../../../substrate/log";
 import { type Pulse, formatRidingValue } from "./_constants";
 
@@ -29,7 +28,7 @@ export function usePulseLanesWire(id: string, wire: Wire) {
         key,
         pulseId: nextWirePulseId(),
         value: formatRidingValue(value),
-        simStart: getSimTime(),
+        simStart: performance.now(),
       };
       setPulses0((cur) => [...cur, pulse]);
     };
