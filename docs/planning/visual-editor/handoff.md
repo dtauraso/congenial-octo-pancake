@@ -35,12 +35,13 @@ revised foundation is at
 Start at [handoff-next-task.md](handoff-next-task.md).
 
 State at handoff:
-  `task/wires` at 72318e1, pushed and tracking origin. Commits 1–4 of
+  `task/wires` at 3921640, pushed and tracking origin. Commits 1–5 of
   revised step 1 landed: `Wire` primitive (bf304d7), per-node loops
   + `runtime-wires` (30d6e28), AnimatedEdge wire-driven dispatch
   + `_handle-load` swap (c89e246), toolbar play/pause off legacy
-  state (72318e1). 235/235 vitest, build + tsc --noEmit green, no
-  LOC violations. The wires runtime owns its own pause flag; pause
+  state (72318e1), `_resetPulseConcurrency` retired from legacy
+  `loadSubstrate` (3921640). 235/235 vitest, build + tsc --noEmit
+  green, no LOC violations. The wires runtime owns its own pause flag; pause
   stops new sends, in-flight pulse finishes its arc and acks.
   TransportControls now picks the active runtime (wires → substrate
   → legacy). User loaded `topology.json` and confirmed cold-open

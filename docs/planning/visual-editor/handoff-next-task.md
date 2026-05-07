@@ -1,40 +1,35 @@
 # Handoff — Next task (START HERE)
 
-**Start retiring legacy on the matched path.** Spec is at
+**Continue retiring legacy on the matched path.** Spec is at
 [../sim-substrate/revised-step-1.md](../sim-substrate/revised-step-1.md).
-Commits 1–4 landed:
+Commits 1–5 landed:
 - bf304d7 — Wire primitive + buildWires + contract test.
 - 30d6e28 — per-node loops + runtime-wires + contract test.
 - c89e246 — AnimatedEdge wire-driven hook + `_handle-load` swap.
-- 72318e1 — toolbar play/pause off legacy state. Wires runtime now has
-  `pauseWiresRuntime` / `resumeWiresRuntime` / `isWiresRuntimePaused`.
-  Pause stops the input loop's next `send`; in-flight pulse finishes
-  and acks. Sim clock stays running across pause so PulseInstance's
-  rAF math keeps advancing — retires together in step 5.
+- 72318e1 — toolbar play/pause off legacy state.
+- 3921640 — `_resetPulseConcurrency` retired from legacy
+  `loadSubstrate`. The matched path was already off the legacy ledger
+  (runtime-wires + usePulseLanesWire); the lingering reset call in
+  legacy `loadSubstrate` was a no-longer-needed defensive workaround
+  and is now gone.
 
-**Visual validation (recommended before commit 5):** open the matched
-Input→ReadGate topology, press pause mid-flight (in-flight pulse
-should finish its arc, then no new pulses), press play (next pulse
-fires). Step button should also pause the wires runtime.
+**Commit 6 (next):** retire `legacyRunnerState.{playing,
+simSegmentStartWall, simAccumMs}` coupling and the `getSimTime()`
+read. PulseInstance currently reads `getSimTime()` for rAF math, and
+`runtime-wires.ts` keeps the legacy clock running just to feed it.
+Cleanest swap (per the open-question note): pass a per-pulse start
+timestamp into PulseInstance and have it compute progress directly
+from `performance.now()` — no global clock needed. Then drop
+`startSimClock`/`stopSimClock` and the `legacyRunnerState` writes
+from `runtime-wires.ts`.
 
-**Commit 5 (next):** start ripping the legacy coupling on the matched
-path. Three things to retire, roughly in order:
+**Commit 7:** retire `sim/event-bus` substrate-side usage. The
+`notifyState()` calls in `runtime-wires.ts` (added in commit 4 to
+refresh TimelinePanel on pause/resume/start/stop) need a wires-side
+equivalent — simplest is a `subscribeWires` effect alongside the
+existing `subscribeState` effect in TimelinePanel.
 
-1. `_resetPulseConcurrency` calls in [runtime.ts][rt] and the
-   `pulse-concurrency` ledger reads in PulseInstance / probe code on
-   the matched path. The wires runtime never registers in that ledger,
-   so legacy probes shouldn't gate it.
-2. `legacyRunnerState.{playing, simSegmentStartWall, simAccumMs}`
-   coupling in `runtime-wires.ts` (`startSimClock`/`stopSimClock`) and
-   the `getSimTime()` read in PulseInstance. Replace with a wire-local
-   clock or inline rAF math that doesn't need a global flag.
-3. `sim/event-bus` substrate-side usage. The `notifyState()` calls in
-   `runtime-wires.ts` (added in commit 4 to refresh TimelinePanel)
-   need a wires-side equivalent — probably `subscribeWires`-driven
-   re-renders in TimelinePanel.
-
-Do these as separate commits if any one is non-trivial; bundle if
-mechanical. Endpoint: `sim/event-bus`, `legacyRunnerState`, and
+Endpoint after both: `sim/event-bus`, `legacyRunnerState`, and
 `pulse-concurrency` are all unused on the matched code path.
 
 [rt]: /tools/topology-vscode/src/substrate/runtime.ts
@@ -54,8 +49,8 @@ unused on the matched path.
 2. ✅ 30d6e28 — per-node loops + runtime-wires + contract test.
 3. ✅ c89e246 — AnimatedEdge wire-driven hook + `_handle-load` swap.
 4. ✅ 72318e1 — toolbar play/pause off legacy state.
-5. Retire `_resetPulseConcurrency` / `pulse-concurrency` reads on the
-   matched path.
+5. ✅ 3921640 — `_resetPulseConcurrency` retired from legacy
+   `loadSubstrate` (matched path was already off the ledger).
 6. Retire `legacyRunnerState.{playing, simSegmentStartWall,
    simAccumMs}` coupling and the `getSimTime()` read in PulseInstance.
 7. Retire `sim/event-bus` substrate-side usage; switch TimelinePanel

@@ -26,9 +26,10 @@ must come out as the rebuild matures. Search `// Step 1` /
 `legacyRunnerState` / `_resetPulseConcurrency` to find them. Each is
 load-bearing for visible animation in the current shape:
 
-  1. `_resetPulseConcurrency()` on loadSubstrate — clears the
-     visual-slot ledger that legacy probe machinery dirties. Removed
-     in step 6 alongside the rest of the probes.
+  1. ~~`_resetPulseConcurrency()` on loadSubstrate~~ — retired in
+     commit 3921640 (revised step 1, commit 5). The matched path runs
+     through runtime-wires.ts (no ledger coupling), so the defensive
+     reset in legacy loadSubstrate was no longer needed.
   2. `legacyRunnerState.playing = true` on loadSubstrate —
      PulseInstance.tsx:76 gates its rAF on `isPlaying()`, which
      reads `state.playing`. Without this, pulses mount but never
