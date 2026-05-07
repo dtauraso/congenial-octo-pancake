@@ -2,34 +2,28 @@
 
 **Continue retiring legacy on the matched path.** Spec is at
 [../sim-substrate/revised-step-1.md](../sim-substrate/revised-step-1.md).
-Commits 1–5 landed:
+Commits 1–6 landed:
 - bf304d7 — Wire primitive + buildWires + contract test.
 - 30d6e28 — per-node loops + runtime-wires + contract test.
 - c89e246 — AnimatedEdge wire-driven hook + `_handle-load` swap.
 - 72318e1 — toolbar play/pause off legacy state.
 - 3921640 — `_resetPulseConcurrency` retired from legacy
-  `loadSubstrate`. The matched path was already off the legacy ledger
-  (runtime-wires + usePulseLanesWire); the lingering reset call in
-  legacy `loadSubstrate` was a no-longer-needed defensive workaround
-  and is now gone.
+  `loadSubstrate`.
+- d7aaaae — PulseInstance + `_pulse-frame` read `performance.now()`
+  instead of `getSimTime()`; both `simStart` producers emit
+  `performance.now()`; `runtime-wires.ts` no longer touches
+  `legacyRunnerState`. In-flight pulses now finish their arc on
+  wall-clock time regardless of pause; new emissions are gated at the
+  substrate, so visible behavior is unchanged on the trivial path.
 
-**Commit 6 (next):** retire `legacyRunnerState.{playing,
-simSegmentStartWall, simAccumMs}` coupling and the `getSimTime()`
-read. PulseInstance currently reads `getSimTime()` for rAF math, and
-`runtime-wires.ts` keeps the legacy clock running just to feed it.
-Cleanest swap (per the open-question note): pass a per-pulse start
-timestamp into PulseInstance and have it compute progress directly
-from `performance.now()` — no global clock needed. Then drop
-`startSimClock`/`stopSimClock` and the `legacyRunnerState` writes
-from `runtime-wires.ts`.
+**Commit 7 (next):** retire `sim/event-bus` substrate-side usage. The
+`notifyState()` calls in `runtime-wires.ts` (pause/resume/start/stop)
+exist only to refresh TimelinePanel. Add a `subscribeWires` effect in
+TimelinePanel alongside the existing `subscribeState` effect, then
+drop the `notifyState()` pokes and the `sim/event-bus` import from
+`runtime-wires.ts`.
 
-**Commit 7:** retire `sim/event-bus` substrate-side usage. The
-`notifyState()` calls in `runtime-wires.ts` (added in commit 4 to
-refresh TimelinePanel on pause/resume/start/stop) need a wires-side
-equivalent — simplest is a `subscribeWires` effect alongside the
-existing `subscribeState` effect in TimelinePanel.
-
-Endpoint after both: `sim/event-bus`, `legacyRunnerState`, and
+Endpoint after commit 7: `sim/event-bus`, `legacyRunnerState`, and
 `pulse-concurrency` are all unused on the matched code path.
 
 [rt]: /tools/topology-vscode/src/substrate/runtime.ts
@@ -51,18 +45,15 @@ unused on the matched path.
 4. ✅ 72318e1 — toolbar play/pause off legacy state.
 5. ✅ 3921640 — `_resetPulseConcurrency` retired from legacy
    `loadSubstrate` (matched path was already off the ledger).
-6. Retire `legacyRunnerState.{playing, simSegmentStartWall,
-   simAccumMs}` coupling and the `getSimTime()` read in PulseInstance.
+6. ✅ d7aaaae — PulseInstance off legacy sim clock; rAF math reads
+   `performance.now()`; `runtime-wires` no longer pokes
+   `legacyRunnerState`.
 7. Retire `sim/event-bus` substrate-side usage; switch TimelinePanel
    to `subscribeWires` for wires-runtime state changes.
 
 ## Open questions (decide during implementation)
 
-1. **Wire-local clock vs renderer-local rAF math?** PulseInstance
-   currently reads `getSimTime()`. Cleanest swap is for PulseInstance
-   to receive a per-pulse start timestamp and compute progress from
-   `performance.now()` directly — no global clock needed.
-2. **TimelinePanel re-render source for wires state?** Simplest is to
+1. **TimelinePanel re-render source for wires state?** Simplest is to
    add a `subscribeWires` effect alongside the existing
    `subscribeState` effect.
 
