@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { KIND_COLORS, type StateValue } from "../../../schema";
 import { subscribe, getWorld, getTickMs } from "../../../sim/runner";
-import { subscribeNodeTicks, subscribeNodeHeld } from "../../../substrate/runtime-wires";
+import { subscribeNodeTicks, subscribeNodeHeld, subscribeNodeBuffered } from "../../../substrate/runtime-wires";
 import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT, FLASH_DURATION_MS } from "./_styles";
 import { StepButton } from "./StepButton";
 import { SpecPanel } from "./SpecPanel";
@@ -22,6 +22,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   });
   const [tweenMs, setTweenMs] = useState<number>(getTickMs());
   const [held, setHeld] = useState<StateValue | undefined>(undefined);
+  const [buffered, setBuffered] = useState<string[]>([]);
   const flashRef = useRef<HTMLDivElement | null>(null);
   const glowRef = useRef<HTMLDivElement | null>(null);
 
@@ -56,6 +57,13 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
     return subscribeNodeHeld((nodeId, value) => {
       if (nodeId !== id) return;
       setHeld(value);
+    });
+  }, [id]);
+
+  useEffect(() => {
+    return subscribeNodeBuffered((nodeId, ports) => {
+      if (nodeId !== id) return;
+      setBuffered(ports);
     });
   }, [id]);
 
@@ -130,8 +138,8 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
             id={p.name}
             type="target"
             position={Position.Left}
-            style={portStyle("left", ((i + 1) * 100) / (data.inputs.length + 1), KIND_COLORS[p.kind] ?? "#888")}
-            title={`${p.name} (${p.kind})`}
+            style={portStyle("left", ((i + 1) * 100) / (data.inputs.length + 1), KIND_COLORS[p.kind] ?? "#888", buffered.includes(p.name))}
+            title={`${p.name} (${p.kind})${buffered.includes(p.name) ? " — buffered, waiting for peer" : ""}`}
           />
         ))
       )}
