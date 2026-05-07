@@ -18,6 +18,7 @@ import { flushSave, flushViewSave, setTopogenStatus } from "./save";
 import { parseHostToWebview } from "../messages";
 import { handleTraceLoaded, handleTraceError } from "./panels/TimelinePanel";
 import { getSpec, setDimmed, setRunStatus } from "./state";
+import { pauseSubstrate, resumeSubstrate, isSubstrateRunning } from "../substrate/runtime";
 
 // Test-only hook for the Playwright e2e harness. The harness stub of
 // acquireVsCodeApi populates window.__wirefold_sent with every postMessage
@@ -32,6 +33,11 @@ import { getSpec, setDimmed, setRunStatus } from "./state";
   // *not* in the set; pass undefined to clear.
   applyDim: (members: string[] | undefined) =>
     setDimmed(members ? new Set(members) : null),
+  // Substrate play/pause hooks for e2e regression tests (pause+resume
+  // during an in-flight pulse must not duplicate the next token).
+  pauseSubstrate,
+  resumeSubstrate,
+  isSubstrateRunning,
 };
 
 const app = document.getElementById("app")!;

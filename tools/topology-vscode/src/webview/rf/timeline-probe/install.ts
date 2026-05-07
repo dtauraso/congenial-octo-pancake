@@ -51,6 +51,9 @@ if (typeof window !== "undefined") {
 
   subscribe((ev) => {
     if (!probeEnabled()) return;
+    if (ev.type === "pulse-ack" || ev.type === "edge-ready") {
+      return;
+    }
     if (ev.type === "fire") {
       push({
         wallTs: Date.now(),

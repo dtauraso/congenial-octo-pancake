@@ -58,18 +58,37 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
     // Hot-reload of the webview bundle (dev-loop). Gated on extension
     // mode rather than relying on the silent quirk that absolute-path
     // GlobPatterns never match for installed users.
+    // RelativePattern rooted at the extension's `out` dir — absolute
+    // string globs silently fail to match, which is why the watcher
+    // appeared dead in dev.
     const bundleWatcher =
       this.context.extensionMode === vscode.ExtensionMode.Development
         ? vscode.workspace.createFileSystemWatcher(
-            path.join(this.context.extensionPath, "out", "webview.js"),
+            new vscode.RelativePattern(
+              vscode.Uri.file(path.join(this.context.extensionPath, "out")),
+              "webview.js",
+            ),
           )
         : undefined;
     if (bundleWatcher) {
-      const reload = () => {
-        panel.webview.html = buildWebviewHtml(panel.webview, this.context.extensionPath);
+      console.log("[topology] bundleWatcher armed for", path.join(this.context.extensionPath, "out", "webview.js"));
+      // Re-render the HTML in place. The `?v=<mtime>` cache-buster
+      // baked into buildWebviewHtml's script/style URIs forces the
+      // webview to fetch the fresh bundle instead of serving the
+      // cached one. Debounced to absorb esbuild's multi-write builds.
+      let pending: NodeJS.Timeout | undefined;
+      const reload = (kind: string) => () => {
+        console.log("[topology] bundleWatcher fired:", kind);
+        if (pending) clearTimeout(pending);
+        pending = setTimeout(() => {
+          console.log("[topology] hot-reload: re-rendering webview.html");
+          panel.webview.html = buildWebviewHtml(panel.webview, this.context.extensionPath);
+        }, 150);
       };
-      bundleWatcher.onDidChange(reload);
-      bundleWatcher.onDidCreate(reload);
+      bundleWatcher.onDidChange(reload("change"));
+      bundleWatcher.onDidCreate(reload("create"));
+    } else {
+      console.log("[topology] bundleWatcher NOT armed — extensionMode:", this.context.extensionMode);
     }
 
     this.context.subscriptions.push(docSub, viewStateSub, topogen, runner);

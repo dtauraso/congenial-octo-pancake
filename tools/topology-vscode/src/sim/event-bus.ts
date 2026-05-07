@@ -34,7 +34,22 @@ export function nextPulseId(): string {
   return `p${nextPulseSeq++}`;
 }
 
-export type RunnerEvent = FireEvent | EmitEvent;
+export type PulseAckEvent = {
+  type: "pulse-ack";
+  edgeId: string;
+  pulseId: string;
+};
+
+// AnimatedEdge fires this from its subscribe useEffect so emitters
+// (substrate) can wait for a real listener before sending the first
+// token. Without it there's a race: substrate emits before AE mounts,
+// the emit is dropped, and the ack-driven loop stalls forever.
+export type EdgeReadyEvent = {
+  type: "edge-ready";
+  edgeId: string;
+};
+
+export type RunnerEvent = FireEvent | EmitEvent | PulseAckEvent | EdgeReadyEvent;
 export type RunnerListener = (e: RunnerEvent) => void;
 
 const listeners: RunnerListener[] = [];

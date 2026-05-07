@@ -1,12 +1,7 @@
 name: periodic-checks
 
 on:
-  schedule:
-    - cron: '17 8 * * *'
   workflow_dispatch:
-  push:
-    branches: [main]
-  pull_request:
 
 jobs:
   go:

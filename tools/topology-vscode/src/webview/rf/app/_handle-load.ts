@@ -1,5 +1,9 @@
 import { parseSpec, type Spec } from "../../../schema";
 import { load as loadRunner, play as playRunner, reset as resetRunner } from "../../../sim/runner";
+import { matchSubstrate } from "../../../substrate/match";
+import { stopSubstrate } from "../../../substrate/runtime";
+import { startWiresRuntime, stopWiresRuntime } from "../../../substrate/runtime-wires";
+import { slog } from "../../../substrate/log";
 import { specToFlow } from "../adapter";
 import { clearSpecHistory, patchViewerState, setSpec, viewerState } from "../../state";
 import { scheduleViewSave } from "../../save";
@@ -30,14 +34,30 @@ export function handleLoad(ctx: AppCtx, text: string) {
     // would be incoherent (ids may not even exist there).
     clearSpecHistory();
     ctx.lastSpec.current = next;
-    loadRunner(next);
-    resetRunner();
-    // Defer auto-play one frame so AnimatedEdge subscribers and React
-    // Flow's first layout pass exist when the runner's initial stepOnce
-    // fires. Without this, the first emit dispatches into an empty
-    // subscriber set and the geom effect re-runs as RF settles,
-    // producing a startup anim-rerun storm.
-    requestAnimationFrame(() => playRunner());
+    if (matchSubstrate(next)) {
+      slog("match", { nodes: next.nodes.length, edges: next.edges.length });
+      // Wires substrate path. Build wires + start node loops BEFORE
+      // setNodes/setEdges so AnimatedEdge sees a populated wires map
+      // on first render. The input loop's first send fires only after
+      // the readGate loop registers its onArrive listener (synchronous
+      // inside startWiresRuntime), so no edge-ready handshake is needed.
+      stopSubstrate();
+      void startWiresRuntime(next);
+    } else {
+      slog("no-match", { types: next.nodes.map((n) => n.type), kinds: next.edges.map((e) => e.kind) });
+      // Legacy path. Stop both substrates in case a previous topology
+      // was running on either.
+      stopSubstrate();
+      void stopWiresRuntime();
+      loadRunner(next);
+      resetRunner();
+      // Defer auto-play one frame so AnimatedEdge subscribers and React
+      // Flow's first layout pass exist when the runner's initial stepOnce
+      // fires. Without this, the first emit dispatches into an empty
+      // subscriber set and the geom effect re-runs as RF settles,
+      // producing a startup anim-rerun storm.
+      requestAnimationFrame(() => playRunner());
+    }
     const flow = specToFlow(next, viewerState.folds, viewerState);
     const presentIds = new Set(flow.nodes.map((n) => n.id));
     const filtered = (viewerState.lastSelectionIds ?? []).filter((id) => presentIds.has(id));

@@ -78,7 +78,10 @@ it explicitly above the substrate.
 Pilot first, then bulk port.
 
 1. **Stand up the chan→wire renderer** against a trivial two-node
-   topology. No real topology code yet.
+   topology in the editor webview (not a standalone HTML — the
+   rebuild lands next to the mess it replaces, otherwise step 4's
+   pilot port has nowhere to go and we end up doing integration
+   twice). cap=0 chosen (see below).
 2. **Add the per-node running indicator + reloop** glyph.
 3. **Write the R1–R5 contract tests** before porting any real
    topology code. Tests must be red until the substrate satisfies
@@ -107,13 +110,22 @@ plan.
 
 ### Buffered vs unbuffered channels
 
-Substrate channels are buffered with a per-channel capacity (cap≥1).
-Unbuffered (cap=0) is the edge case noted in chan-wire.html where the
-"≥1 slot free" predicate becomes "receiver waiting right now."
-Whether the substrate exposes cap=0 as a first-class option is
-deferred to port-plan step 1 (renderer stand-up) — pick whichever
-matches the smallest viable two-node topology and document the
-choice in that commit. Not blocking for Gate A.
+**Decided at port-plan step 1 (2026-05-07): cap=0 (unbuffered).**
+
+Rationale: the trivial `in08 → readGate1` topology models a value
+arriving at an AND-gated latch. `readGate` only consumes when every
+other input is also ready, which is exactly the "receiver waiting
+right now" predicate the chan-wire sketch names for cap=0. Treating
+the edge as cap=0 keeps the rebuild substrate honest about that —
+buffering would let a value sit "in the channel" with no node
+actually holding it, which is a category the topology has never
+needed.
+
+The legacy `topology.json` records `slots: 1` on this edge; that
+field is from the old buffered-everywhere model and is ignored by
+the rebuild substrate. Adding cap≥1 as a first-class option is
+deferred until a topology surfaces a real need for buffering between
+two specific nodes — discover, don't presume.
 
 ## Out of scope
 

@@ -21,3 +21,4 @@
 - [project_graph_node_pulse_coordination.md](project_graph_node_pulse_coordination.md) — Cross-node pulse coordination still off after unified-sim-clock work; next session needs a specific symptom before scanning
 - [feedback_file_size_budget.md](feedback_file_size_budget.md) — Refactor any source file ≥ 200 LOC; target ≤ 100 LOC. Run `npm run check:loc` from `tools/topology-vscode/`.
 - [project_substrate_visual_vocabulary.md](project_substrate_visual_vocabulary.md) — Sim-substrate visual vocabulary is chan→wire + per-node running indicator (with reloop); goroutine and select are not separate visual primitives
+- [feedback_substrate_vs_coordinator_bias.md](feedback_substrate_vs_coordinator_bias.md) — Before fixing substrate code, name the contract violated, not the symptom. Knob-tuning (interval, cap, timeout) is the wrong shape — find the missing local signal.
