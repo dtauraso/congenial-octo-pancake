@@ -14,6 +14,8 @@
 import type { Spec, StateValue } from "../schema";
 import { readNodeInit } from "../sim/seeds";
 import { nextPulseId, notify, notifyState } from "../sim/event-bus";
+import { _resetPulseConcurrency } from "../sim/runner/pulse-concurrency";
+import { slog } from "./log";
 
 const EMIT_INTERVAL_MS = 1500;
 
@@ -39,6 +41,11 @@ const state: SubstrateState = {
 
 export function loadSubstrate(spec: Spec): void {
   stopSubstrate();
+  // The legacy probe machinery (RunnerProbe, _stuck-pulse-probe) can
+  // leave stale entries in the visual-slot ledger that block our
+  // first emit from claiming a slot. Step 6 deletes all of that;
+  // until then we reset on entry so the substrate path starts clean.
+  _resetPulseConcurrency();
   const input = spec.nodes.find((n) => n.type === "Input")!;
   const edge = spec.edges[0];
   state.spec = spec;
@@ -47,9 +54,7 @@ export function loadSubstrate(spec: Spec): void {
   state.fromNodeId = edge.source;
   state.toNodeId = edge.target;
   state.tick = 0;
-  // Step 1 debug probe: confirms the substrate path was taken and shows
-  // the queue we built. Remove once step 1 is verified end-to-end.
-  console.log("[substrate] loaded", { edgeId: edge.id, queue: state.queue });
+  slog("loaded", { edgeId: edge.id, queue: state.queue.map(String) });
   notifyState();
   state.intervalId = setInterval(emitNext, EMIT_INTERVAL_MS);
 }
@@ -82,6 +87,6 @@ function emitNext(): void {
     tick: state.tick,
     pulseId: nextPulseId(),
   };
-  console.log("[substrate] emit", ev);
+  slog("emit", { edgeId: ev.edgeId, value: String(ev.value), pulseId: ev.pulseId, tick: ev.tick });
   notify(ev);
 }

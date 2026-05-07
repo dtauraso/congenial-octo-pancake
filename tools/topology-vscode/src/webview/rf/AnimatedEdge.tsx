@@ -9,6 +9,7 @@ import {
 } from "../../sim/runner";
 import { markerEndUrl } from "./MarkerDefs";
 import { dashForKind } from "./edge-style";
+import { slog } from "../../substrate/log";
 import { buildPathGeom } from "./AnimatedEdge/_geom";
 import { midpoint } from "./AnimatedEdge/_geom";
 import {
@@ -57,14 +58,21 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   }, [id]);
 
   useEffect(() => {
+    slog("ae-subscribed", { edgeId: id });
     const unsub = subscribe((ev) => {
-      if (ev.type !== "emit" || ev.edgeId !== id) return;
+      if (ev.type !== "emit") return;
+      if (ev.edgeId !== id) return;
       const rule = ruleForNodeId(ev.fromNodeId);
+      slog("ae-received", { edgeId: id, value: String(ev.value), cap: rule.maxConcurrentPerEdge });
       // Visual concurrency cap: if the edge already has cap pulses
       // rendering, skip this one. The runner-side lifecycle (started/
       // ended via pulse-lifetimes) still balances on its own —
       // contract C8.
-      if (!tryClaimVisualSlot(id, rule.maxConcurrentPerEdge)) return;
+      if (!tryClaimVisualSlot(id, rule.maxConcurrentPerEdge)) {
+        slog("ae-rejected", { edgeId: id, value: String(ev.value) });
+        return;
+      }
+      slog("ae-mounting", { edgeId: id, value: String(ev.value) });
       const key = ++pulseKeyRef.current;
       const pulse: Pulse = {
         key,
