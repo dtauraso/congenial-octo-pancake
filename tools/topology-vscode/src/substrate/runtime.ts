@@ -11,27 +11,67 @@ import type { Spec, StateValue } from "../schema";
 import { readNodeInit } from "../sim/seeds";
 import { nextPulseId, notify, notifyState, subscribe } from "../sim/event-bus";
 import { _resetPulseConcurrency } from "../sim/runner/pulse-concurrency";
+import { reset as resetRunner } from "../sim/runner";
 import { state as legacyRunnerState, nowWall } from "../sim/runner/_state";
 import { slog } from "./log";
 
+// liveSimTime() in _state.ts only advances while legacyRunnerState.
+// playing is true. PulseInstance's rAF math uses getSimTime() which
+// reads liveSimTime — so the substrate must drive that flag too,
+// otherwise pulses mount but freeze at startArc. We write playing +
+// simSegmentStartWall + simAccumMs the same way legacy play/pause do.
+function startSimClock(): void {
+  legacyRunnerState.simSegmentStartWall = nowWall();
+  legacyRunnerState.playing = true;
+}
+function stopSimClock(): void {
+  if (!legacyRunnerState.playing) return;
+  legacyRunnerState.simAccumMs += nowWall() - legacyRunnerState.simSegmentStartWall;
+  legacyRunnerState.playing = false;
+}
+
+let _running = false;
+export function isSubstrateRunning(): boolean {
+  return _running;
+}
+
+// Toolbar play/pause hooks. Pause halts emission of the next token on
+// ack receipt AND stops the sim clock so the in-flight pulse freezes
+// mid-arc. Resume re-arms emission and restarts the clock.
+export function pauseSubstrate(): void {
+  if (!_running) return;
+  _running = false;
+  stopSimClock();
+  notifyState();
+}
+export function resumeSubstrate(): void {
+  if (_running || !state.spec) return;
+  _running = true;
+  startSimClock();
+  notifyState();
+  emitNext();
+}
+
 type SubstrateState = {
-  unsubAck: (() => void) | null;
+  unsub: (() => void) | null;
   spec: Spec | null;
   queue: StateValue[];
   edgeId: string;
   fromNodeId: string;
   toNodeId: string;
   tick: number;
+  edgeReady: boolean;
 };
 
 const state: SubstrateState = {
-  unsubAck: null,
+  unsub: null,
   spec: null,
   queue: [],
   edgeId: "",
   fromNodeId: "",
   toNodeId: "",
   tick: 0,
+  edgeReady: false,
 };
 
 export function loadSubstrate(spec: Spec): void {
@@ -41,15 +81,13 @@ export function loadSubstrate(spec: Spec): void {
   // first emit from claiming a slot. Step 6 deletes all of that;
   // until then we reset on entry so the substrate path starts clean.
   _resetPulseConcurrency();
-  // PulseInstance's animation rAF only starts when isPlaying() returns
-  // true (line 76 of PulseInstance.tsx). isPlaying reads the legacy
-  // runner's state.playing flag. Without this, substrate-driven pulses
-  // mount but never animate, never call onDone, and the slot ledger
-  // stays held — every subsequent emit is rejected. Forcing the flag
-  // is a step-1 hack; step 3+ replaces this coupling with a substrate-
-  // owned animation contract.
-  legacyRunnerState.playing = true;
-  legacyRunnerState.simSegmentStartWall = nowWall();
+  // Decommission the legacy runner so its world/seeds/cycle-restart
+  // can't compete for the visual slot on this edge. Substrate owns
+  // play state from here on via _running.
+  resetRunner();
+  legacyRunnerState.simAccumMs = 0;
+  _running = true;
+  startSimClock();
   const input = spec.nodes.find((n) => n.type === "Input")!;
   const edge = spec.edges[0];
   state.spec = spec;
@@ -58,26 +96,39 @@ export function loadSubstrate(spec: Spec): void {
   state.fromNodeId = edge.source;
   state.toNodeId = edge.target;
   state.tick = 0;
+  state.edgeReady = false;
   slog("loaded", { edgeId: edge.id, queue: state.queue.map(String) });
   notifyState();
-  state.unsubAck = subscribe((ev) => {
-    if (ev.type !== "pulse-ack") return;
-    if (ev.edgeId !== state.edgeId) return;
-    emitNext();
+  state.unsub = subscribe((ev) => {
+    if (ev.type === "edge-ready" && ev.edgeId === state.edgeId) {
+      // First (and only first) ready signal kicks off emission. Late
+      // re-mounts of AE re-fire edge-ready; ignore once we're running.
+      if (!state.edgeReady) {
+        state.edgeReady = true;
+        emitNext();
+      }
+      return;
+    }
+    if (ev.type === "pulse-ack" && ev.edgeId === state.edgeId) {
+      emitNext();
+    }
   });
-  emitNext();
 }
 
 export function stopSubstrate(): void {
-  if (state.unsubAck) {
-    state.unsubAck();
-    state.unsubAck = null;
+  if (state.unsub) {
+    state.unsub();
+    state.unsub = null;
   }
   state.spec = null;
+  state.edgeReady = false;
+  _running = false;
+  stopSimClock();
   notifyState();
 }
 
 function emitNext(): void {
+  if (!_running) return;
   if (state.queue.length === 0) {
     if (state.spec) {
       const input = state.spec.nodes.find((n) => n.type === "Input");

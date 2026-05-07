@@ -8,16 +8,32 @@ import {
   setTickMs,
   stepOnce,
 } from "../../../sim/runner";
+import {
+  isSubstrateRunning,
+  pauseSubstrate,
+  resumeSubstrate,
+} from "../../../substrate/runtime";
 
 export function TransportControls({ label }: { label: string }) {
-  const playing = isPlaying();
+  // When the substrate path owns the topology, the legacy runner is
+  // reset and isPlaying() is false. Reflect substrate state on the
+  // button so the toggle controls whichever runtime is active.
+  const substrateActive = isSubstrateRunning();
+  const playing = substrateActive || isPlaying();
+  const toggle = () => {
+    if (substrateActive) { pauseSubstrate(); return; }
+    // Legacy path. Substrate-paused (spec loaded but _running=false)
+    // is invisible to isSubstrateRunning, so resumeSubstrate is a
+    // no-op when no substrate spec is loaded.
+    if (playing) pause(); else { resumeSubstrate(); play(); }
+  };
   return (
     <>
       <button
         type="button"
         className="timeline-play"
         title={playing ? "pause" : "play"}
-        onClick={() => (playing ? pause() : play())}
+        onClick={toggle}
       >
         {playing ? "⏸" : "▶"}
       </button>
@@ -25,7 +41,7 @@ export function TransportControls({ label }: { label: string }) {
         type="button"
         className="timeline-step"
         title="step one event"
-        onClick={() => { pause(); stepOnce(); }}
+        onClick={() => { pause(); pauseSubstrate(); stepOnce(); }}
       >
         ⏭
       </button>

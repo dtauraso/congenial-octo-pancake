@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { EdgeRoute } from "../../../schema";
-import { subscribeState, isPlaying, getSimTime, extendPulse } from "../../../sim/runner";
+import { getSimTime, extendPulse } from "../../../sim/runner";
 import { noteAnimStart, noteAnimEnd, noteAnimRerun } from "../timeline-probe";
 import { type PathGeom } from "./_geom";
 import { PULSE_DASH_PX } from "./_constants";
@@ -73,22 +73,14 @@ export function PulseInstance({
       probeId: probeIdRef.current,
     });
     const loop = () => { if (frame()) rafId = requestAnimationFrame(loop); else rafId = 0; };
-    if (isPlaying()) rafId = requestAnimationFrame(loop);
-
-    // Pause/resume rAF with play state — sim time alone would freeze
-    // the math, but rAF would still tick uselessly.
-    const unsubState = subscribeState(() => {
-      const playing = isPlaying();
-      if (!playing && rafId) {
-        cancelAnimationFrame(rafId);
-        rafId = 0;
-      } else if (playing && !rafId) {
-        rafId = requestAnimationFrame(loop);
-      }
-    });
+    // Always start rAF; the sim clock (getSimTime) is the single
+    // source of truth for "are we moving." When paused, the clock
+    // freezes and the loop polls without visible motion. This avoids
+    // a race where mount-time isPlaying() reads false during a
+    // load/reset transient and the loop never starts.
+    rafId = requestAnimationFrame(loop);
 
     return () => {
-      unsubState();
       if (rafId) cancelAnimationFrame(rafId);
       const elapsed = getSimTime() - swapStart;
       const localT = Math.min(1, elapsed / remainingMs);

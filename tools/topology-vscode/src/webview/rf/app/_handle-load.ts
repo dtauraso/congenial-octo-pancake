@@ -1,5 +1,5 @@
 import { parseSpec, type Spec } from "../../../schema";
-import { load as loadRunner, pause as pauseRunner, play as playRunner, reset as resetRunner } from "../../../sim/runner";
+import { load as loadRunner, play as playRunner, reset as resetRunner } from "../../../sim/runner";
 import { matchSubstrate } from "../../../substrate/match";
 import { loadSubstrate, stopSubstrate } from "../../../substrate/runtime";
 import { slog } from "../../../substrate/log";
@@ -9,10 +9,18 @@ import { scheduleViewSave } from "../../save";
 import { migrateLegacyFields } from "./_migrate-legacy-fields";
 import type { AppCtx } from "./_ctx";
 
+// Dedupe identical "load" messages. React StrictMode (dev) and the
+// host's send-on-ready path can each fire load with the same text;
+// without this guard the substrate runs through stop+start twice, the
+// queue resets and emits two leading "0" pulses ("00 combination").
+let lastLoadedText: string | null = null;
+
 // Fresh "load" message: parse, install spec, kick the runner, then
 // reconcile any persisted selection against the new node set so stale
 // ids from a prior session don't leak through as ghost selections.
 export function handleLoad(ctx: AppCtx, text: string) {
+  if (text === lastLoadedText) return;
+  lastLoadedText = text;
   try {
     const rawJson = JSON.parse(text);
     // One-shot migration: extract x/y/sublabel/state/route from legacy spec
@@ -35,10 +43,12 @@ export function handleLoad(ctx: AppCtx, text: string) {
     ctx.lastSpec.current = next;
     if (matchSubstrate(next)) {
       slog("match", { nodes: next.nodes.length, edges: next.edges.length });
-      // Rebuild substrate path. Stop legacy runner and route this
-      // topology through the new module instead.
-      pauseRunner();
-      requestAnimationFrame(() => loadSubstrate(next));
+      // Substrate path. Run synchronously BEFORE setNodes/setEdges so
+      // the substrate's emit-bus subscription is registered before
+      // AnimatedEdge mounts and fires its `edge-ready` signal — that
+      // signal is what unblocks the first emit in the ack-driven loop,
+      // and dropping it stalls the substrate forever.
+      loadSubstrate(next);
     } else {
       slog("no-match", { types: next.nodes.map((n) => n.type), kinds: next.edges.map((e) => e.kind) });
       // Legacy path. Stop the substrate in case the previous topology
@@ -64,6 +74,8 @@ export function handleLoad(ctx: AppCtx, text: string) {
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
   } catch (err) {
+    // Reset cache on parse error so a corrected payload still loads.
+    lastLoadedText = null;
     console.error("invalid topology.json", err);
   }
 }
