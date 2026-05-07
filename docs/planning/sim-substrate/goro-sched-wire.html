@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Goroutine + Scheduler (wire) — motion view</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 24px; color: #222; background: #fafafa; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.lede { color: #555; margin: 0 0 16px; max-width: 680px; }
+  nav.tabs { display: flex; gap: 0; border-bottom: 1px solid #ccc; margin-bottom: 16px; }
+  nav.tabs a { padding: 8px 16px; text-decoration: none; color: #555; border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; margin-bottom: -1px; }
+  nav.tabs a.active { background: #fff; border-color: #ccc; color: #222; font-weight: 600; }
+  nav.tabs a:hover:not(.active) { background: #eee; }
+  .controls { margin: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: inherit; padding: 6px 12px; cursor: pointer; }
+  .stage-wrap { background: #fff; border: 1px solid #ddd; width: 820px; }
+  svg { display: block; }
+  text { font: 12px/1 system-ui, sans-serif; pointer-events: none; user-select: none; }
+  .label { fill: #333; font-weight: 600; }
+  .sublabel { fill: #777; font-size: 11px; }
+  .rail { stroke: #333; stroke-width: 2; fill: none; }
+  .rail-arrow { fill: #333; }
+  .rail-soft { stroke: #aaa; stroke-width: 1.5; fill: none; stroke-dasharray: 4 3; }
+  .cpu-frame { fill: #fffbe8; stroke: #b08900; stroke-width: 1.5; }
+  .station { fill: #fff; stroke: #888; }
+  .g-runnable { fill: #2a6db0; }
+  .g-running { fill: #f1c40f; stroke: #b08900; stroke-width: 1.5; }
+  .g-blocked { fill: #b97a4a; }
+  .g-label { fill: #fff; font-weight: 600; font-size: 12px; }
+  .reason { fill: #444; font-size: 11px; }
+</style>
+</head>
+<body>
+<nav class="tabs">
+  <a href="goro-sched.html">Goro+Sched</a>
+  <a href="goro-sched-wire.html" class="active">Goro+Sched (wire)</a>
+  <a href="chan-anim.html">Chan</a>
+  <a href="chan-wire.html">Chan (wire)</a>
+</nav>
+<h1>Goroutine + Scheduler (wire) — motion view</h1>
+<p class="lede">
+A goroutine's life is a path. The wire goes runQ → CPU → exit (default) or
+runQ → CPU → blocked-rail → back to runQ (parked / unparked). The CPU is one
+station; only one token sits in it at a time. Once a token enters a segment
+it rides end-to-end without pausing — the act of dispatching, of running
+through the quantum, and of being parked are all motion, not snapshot.
+</p>
+<p class="lede">
+What is intentionally <em>not</em> shown: the buffer state of channels, the
+contents of the runQ as a static list, or the reason-for-blocking detail.
+Those are snapshot concerns and live on the other tab. Here the question is
+"what is the scheduler <em>doing</em> right now?"
+</p>
+
+<div class="controls">
+  <button id="spawn">spawn</button>
+  <button id="park">park current</button>
+  <button id="unblock">unblock</button>
+  <button id="auto">auto on</button>
+  <button id="reset">reset</button>
+</div>
+
+<div class="stage-wrap"><svg id="stage" width="820" height="320" viewBox="0 0 820 320"></svg></div>
+
+<script>
+// Geometry: queue → CPU → exit, with a parked detour below CPU
+const QX = 90, CPU_X = 410, EXIT_X = 730, Y_MAIN = 90;
+const CPU_W = 80, CPU_H = 60;
+const PARK_Y = 220;
+const TOKEN_R = 16;
+
+// Phases: 'queue→cpu' (dispatch), 'cpu' (running), 'cpu→exit' (done),
+// 'cpu→park' (blocking), 'park→queue' (waking).
+const STEPS_DISPATCH = 60;
+const STEPS_RUN = 90;
+const STEPS_EXIT = 60;
+const STEPS_PARK = 60;
+const STEPS_WAKE = 90;
+
+let nextId = 1;
+let queue = [];      // tokens waiting (rendered stacked behind QX)
+let parked = [];     // tokens stationary on park rail
+let active = null;   // { id, phase, pos } single token currently in motion or in CPU
+let willPark = false;
+let auto = false;
+let autoTimer = null;
+
+function spawn() {
+  const g = { id: nextId++ };
+  queue.push(g);
+  pump();
+  render();
+}
+
+function park() {
+  if (!active) return;
+  if (active.phase === 'cpu') willPark = true;
+}
+
+function unblock() {
+  if (parked.length === 0) return;
+  // Move oldest parked into a wake-flight back to the queue tail.
+  const g = parked.shift();
+  g.phase = 'park→queue';
+  g.pos = 0;
+  // We already have an active token in motion potentially; allow waker to coexist
+  // by pushing onto queue end-of-flight (visualized: it slides back along soft rail).
+  flights.push(g);
+  render();
+}
+
+let flights = []; // tokens flying along non-CPU rails (dispatch, exit, park, wake)
+
+function pump() {
+  if (active) return;
+  if (queue.length === 0) return;
+  const g = queue.shift();
+  active = { ...g, phase: 'queue→cpu', pos: 0 };
+  flights.push(active);
+}
+
+function tick() {
+  // advance every flight by one step
+  for (const f of flights) f.pos += 1;
+
+  // resolve completed flights
+  const stillFlying = [];
+  for (const f of flights) {
+    const limit = stepsFor(f.phase);
+    if (f.pos < limit) { stillFlying.push(f); continue; }
+    // arrived at end of phase
+    if (f.phase === 'queue→cpu') {
+      f.phase = 'cpu';
+      f.pos = 0;
+      stillFlying.push(f);
+    } else if (f.phase === 'cpu') {
+      // ran out quantum (or asked to park)
+      if (willPark) {
+        willPark = false;
+        f.phase = 'cpu→park';
+        f.pos = 0;
+        stillFlying.push(f);
+      } else {
+        f.phase = 'cpu→exit';
+        f.pos = 0;
+        stillFlying.push(f);
+      }
+    } else if (f.phase === 'cpu→exit') {
+      // gone
+      if (active && active.id === f.id) active = null;
+    } else if (f.phase === 'cpu→park') {
+      parked.push({ id: f.id });
+      if (active && active.id === f.id) active = null;
+    } else if (f.phase === 'park→queue') {
+      queue.push({ id: f.id });
+    }
+  }
+  flights = stillFlying;
+  pump();
+
+  if (auto) {
+    if (!active && queue.length === 0 && parked.length === 0 && flights.length === 0) {
+      // restart the demo
+      for (let i = 0; i < 3; i++) queue.push({ id: nextId++ });
+      pump();
+    }
+    if (parked.length >= 2) {
+      const g = parked.shift();
+      g.phase = 'park→queue';
+      g.pos = 0;
+      flights.push(g);
+    }
+  }
+  render();
+}
+
+function stepsFor(phase) {
+  switch (phase) {
+    case 'queue→cpu': return STEPS_DISPATCH;
+    case 'cpu': return STEPS_RUN;
+    case 'cpu→exit': return STEPS_EXIT;
+    case 'cpu→park': return STEPS_PARK;
+    case 'park→queue': return STEPS_WAKE;
+  }
+  return 1;
+}
+
+function posFor(f) {
+  const t = f.pos / stepsFor(f.phase);
+  switch (f.phase) {
+    case 'queue→cpu': return [QX + t * (CPU_X + CPU_W / 2 - QX), Y_MAIN];
+    case 'cpu': return [CPU_X + CPU_W / 2, Y_MAIN];
+    case 'cpu→exit': return [CPU_X + CPU_W / 2 + t * (EXIT_X - (CPU_X + CPU_W / 2)), Y_MAIN];
+    case 'cpu→park': return [CPU_X + CPU_W / 2, Y_MAIN + t * (PARK_Y - Y_MAIN)];
+    case 'park→queue': {
+      // arc from park rail back to queue tail
+      const startX = (parked.length > 0 ? QX + 200 + parked.length * 40 : QX + 200);
+      const endX = QX;
+      return [startX + t * (endX - startX), PARK_Y - t * (PARK_Y - Y_MAIN)];
+    }
+  }
+  return [0, 0];
+}
+
+function render() {
+  const svg = document.getElementById('stage');
+  const ns = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = '';
+  const mk = (tag, attrs) => {
+    const el = document.createElementNS(ns, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    svg.appendChild(el);
+    return el;
+  };
+  const text = (x, y, str, cls, anchor) => {
+    const t = mk('text', { x, y, class: cls || '' });
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = str;
+  };
+
+  // Labels
+  text(QX, Y_MAIN - 28, 'runQ', 'label', 'middle');
+  text(QX, Y_MAIN - 14, 'head waits to dispatch', 'sublabel', 'middle');
+  text(CPU_X + CPU_W / 2, Y_MAIN - 28, 'CPU', 'label', 'middle');
+  text(EXIT_X, Y_MAIN - 28, 'exit', 'label', 'middle');
+  text(EXIT_X, Y_MAIN - 14, 'goroutine returns', 'sublabel', 'middle');
+  text(CPU_X + CPU_W / 2 + 90, PARK_Y + 5, 'parked (chan / select)', 'sublabel');
+
+  // Main rail
+  mk('line', { x1: QX, y1: Y_MAIN, x2: CPU_X, y2: Y_MAIN, class: 'rail' });
+  mk('line', { x1: CPU_X + CPU_W, y1: Y_MAIN, x2: EXIT_X, y2: Y_MAIN, class: 'rail' });
+  mk('polygon', { points: `${EXIT_X},${Y_MAIN} ${EXIT_X - 12},${Y_MAIN - 6} ${EXIT_X - 12},${Y_MAIN + 6}`, class: 'rail-arrow' });
+
+  // CPU box
+  mk('rect', { x: CPU_X, y: Y_MAIN - CPU_H / 2, width: CPU_W, height: CPU_H, rx: 6, class: 'cpu-frame' });
+
+  // Park rail (soft) and wake arc indicator
+  mk('line', { x1: CPU_X + CPU_W / 2, y1: Y_MAIN + CPU_H / 2, x2: CPU_X + CPU_W / 2, y2: PARK_Y, class: 'rail-soft' });
+  mk('line', { x1: CPU_X + CPU_W / 2, y1: PARK_Y, x2: CPU_X + CPU_W / 2 + 200, y2: PARK_Y, class: 'rail-soft' });
+  mk('path', { d: `M ${QX + 200} ${PARK_Y} Q ${QX + 60} ${PARK_Y - 30} ${QX} ${Y_MAIN}`, class: 'rail-soft' });
+
+  // Stationary queued tokens (stacked left of QX)
+  queue.forEach((g, idx) => {
+    const x = QX - 4 - idx * (TOKEN_R * 2 + 4);
+    mk('circle', { cx: x, cy: Y_MAIN, r: TOKEN_R, class: 'g-runnable' });
+    text(x, Y_MAIN + 4, 'g' + g.id, 'g-label', 'middle');
+  });
+
+  // Stationary parked tokens (along park rail)
+  parked.forEach((g, idx) => {
+    const x = CPU_X + CPU_W / 2 + 60 + idx * (TOKEN_R * 2 + 6);
+    mk('circle', { cx: x, cy: PARK_Y, r: TOKEN_R, class: 'g-blocked' });
+    text(x, PARK_Y + 4, 'g' + g.id, 'g-label', 'middle');
+  });
+
+  // Flight tokens
+  for (const f of flights) {
+    const [x, y] = posFor(f);
+    const cls = (f.phase === 'cpu') ? 'g-running' :
+                (f.phase === 'cpu→park' || f.phase === 'park→queue') ? 'g-blocked' :
+                'g-runnable';
+    mk('circle', { cx: x, cy: y, r: TOKEN_R, class: cls });
+    text(x, y + 4, 'g' + f.id, 'g-label', 'middle');
+  }
+}
+
+document.getElementById('spawn').addEventListener('click', spawn);
+document.getElementById('park').addEventListener('click', park);
+document.getElementById('unblock').addEventListener('click', unblock);
+document.getElementById('reset').addEventListener('click', () => {
+  queue = []; parked = []; flights = []; active = null; willPark = false; nextId = 1;
+  render();
+});
+document.getElementById('auto').addEventListener('click', e => {
+  auto = !auto;
+  e.target.textContent = auto ? 'auto off' : 'auto on';
+  if (auto) autoTimer = setInterval(tick, 17);
+  else clearInterval(autoTimer);
+});
+
+render();
+</script>
+</body>
+</html>
