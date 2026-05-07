@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { KIND_COLORS, type StateValue } from "../../../schema";
+import { KIND_COLORS } from "../../../schema";
 import { subscribe, getWorld, getTickMs } from "../../../sim/runner";
-import { bufferedPorts } from "../../../sim/handlers";
-import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT, FLASH_DURATION_MS } from "./_styles";
+import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT } from "./_styles";
 import { StepButton } from "./StepButton";
 import { SpecPanel } from "./SpecPanel";
 import { NodeBody } from "./NodeBody";
@@ -11,8 +10,6 @@ import type { AnimatedNodeData } from "./_types";
 
 export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   const { id, data, selected } = props;
-  const flashRef = useRef<HTMLDivElement | null>(null);
-  const glowRef = useRef<HTMLDivElement | null>(null);
 
   const [stateText, setStateText] = useState<string[]>([]);
   // Phase 6 Chunk A: motion is a derived view of simulator state. On each
@@ -23,53 +20,19 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
     return { dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) };
   });
   const [tweenMs, setTweenMs] = useState<number>(getTickMs());
-  // Held-value tint driven from runner state (state.held) instead of a baked
-  // SMIL time loop: #ffab40 for +1, #66bb6a for −1, neutral otherwise.
-  const [held, setHeld] = useState<StateValue | undefined>(() => getWorld()?.state?.[id]?.held);
-  // Audit row #4: per-port "input X waiting" indicator. State already exists
-  // as state.__has_<port>=1; bufferedPorts() reads it.
-  const [buffered, setBuffered] = useState<string[]>(() => bufferedPorts(getWorld()?.state?.[id]));
 
   useEffect(() => {
     const unsub = subscribe((ev) => {
       if (ev.type !== "fire" || ev.nodeId !== id) return;
-      const el = flashRef.current;
-      if (el) {
-        // Cancel any in-progress flash so a rapid retrigger restarts at
-        // full opacity instead of compositing a faded one.
-        el.getAnimations().forEach((a) => a.cancel());
-        el.animate(
-          [{ opacity: 0 }, { opacity: 0.5, offset: 0.5 }, { opacity: 0 }],
-          { duration: FLASH_DURATION_MS },
-        );
-      }
-      const gl = glowRef.current;
-      if (gl) {
-        gl.getAnimations().forEach((a) => a.cancel());
-        gl.animate(
-          [
-            { boxShadow: `0 0 0 0 ${data.stroke}00`, opacity: 0 },
-            { boxShadow: `0 0 0 4px ${data.stroke}cc`, opacity: 0.8, offset: 0.4 },
-            { boxShadow: `0 0 0 2px ${data.stroke}66`, opacity: 0.4, offset: 0.7 },
-            { boxShadow: `0 0 0 0 ${data.stroke}00`, opacity: 0 },
-          ],
-          { duration: FLASH_DURATION_MS },
-        );
-      }
       setStateText([`${ev.inputPort}=${ev.inputValue}`]);
       const s = getWorld()?.state?.[id];
       setOffset({ dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) });
       setTweenMs(getTickMs());
-      setHeld(s?.held);
-      setBuffered(bufferedPorts(s));
     });
     return unsub;
   }, [id]);
 
   const radius = data.shape === "pill" ? data.height / 2 : 4;
-  const heldNum = typeof held === "number" ? held : Number(held);
-  const heldFill = heldNum === 1 ? "#ffab40" : heldNum === -1 ? "#66bb6a" : null;
-  const fill = heldFill ?? data.fill;
 
   return (
     <div
@@ -78,7 +41,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         minWidth: data.width,
         width: "max-content",
         height: data.height,
-        background: fill,
+        background: data.fill,
         color: "#1a1a1a",
         border: `${selected ? 2 : 1}px solid ${data.stroke}`,
         borderRadius: radius,
@@ -88,14 +51,12 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         overflow: "visible",
         isolation: "isolate",
         transform: `translate(${offset.dx}px, ${offset.dy}px)`,
-        transition: `transform ${tweenMs}ms linear, background-color ${tweenMs}ms linear`,
+        transition: `transform ${tweenMs}ms linear`,
         willChange: "transform",
       }}
     >
       {selected ? <StepButton id={id} stroke={data.stroke} /> : null}
       <SpecPanel id={id} data={data} />
-      <div ref={glowRef} style={{ position: "absolute", inset: 0, borderRadius: radius, pointerEvents: "none", opacity: 0, zIndex: -1 }} />
-      <div ref={flashRef} style={{ position: "absolute", inset: 0, background: "white", opacity: 0, borderRadius: radius, pointerEvents: "none", zIndex: 0 }} />
       {data.inputs.length === 0 ? (
         <Handle type="target" position={Position.Left} style={HANDLE_STYLE_LEFT} isConnectable={false} />
       ) : (
@@ -105,8 +66,8 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
             id={p.name}
             type="target"
             position={Position.Left}
-            style={portStyle("left", ((i + 1) * 100) / (data.inputs.length + 1), KIND_COLORS[p.kind] ?? "#888", buffered.includes(p.name))}
-            title={`${p.name} (${p.kind})${buffered.includes(p.name) ? " — buffered, waiting for peer" : ""}`}
+            style={portStyle("left", ((i + 1) * 100) / (data.inputs.length + 1), KIND_COLORS[p.kind] ?? "#888")}
+            title={`${p.name} (${p.kind})`}
           />
         ))
       )}

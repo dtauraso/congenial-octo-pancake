@@ -6,7 +6,6 @@ export function portStyle(
   side: "left" | "right",
   topPct: number,
   color: string,
-  buffered = false,
 ): React.CSSProperties {
   return {
     width: 8, height: 8, minWidth: 0, minHeight: 0,
@@ -14,10 +13,6 @@ export function portStyle(
     transform: "translate(0, -50%)",
     background: color, border: "1px solid #fff",
     borderRadius: 4,
-    // Halo ring marks an input that has buffered a value and is waiting
-    // for its peer (AND-style joins). Distinct from the fire/glow pulse —
-    // halo is the idle "input X waiting" indicator (audit row #4).
-    ...(buffered ? { boxShadow: `0 0 0 2px ${color}` } : {}),
   };
 }
 
@@ -33,5 +28,3 @@ export const HANDLE_STYLE_RIGHT: React.CSSProperties = {
   transform: "translate(0, -50%)",
   background: "transparent", border: "none", pointerEvents: "none",
 };
-
-export const FLASH_DURATION_MS = 300;
