@@ -13,14 +13,29 @@ import {
   pauseSubstrate,
   resumeSubstrate,
 } from "../../../substrate/runtime";
+import {
+  isWiresRuntimePaused,
+  isWiresRuntimeRunning,
+  pauseWiresRuntime,
+  resumeWiresRuntime,
+} from "../../../substrate/runtime-wires";
 
 export function TransportControls({ label }: { label: string }) {
-  // When the substrate path owns the topology, the legacy runner is
-  // reset and isPlaying() is false. Reflect substrate state on the
-  // button so the toggle controls whichever runtime is active.
+  // Three runtimes share this button: the wires runtime (matched
+  // Input->ReadGate path), the legacy substrate runtime, and the
+  // legacy sim runner. Reflect whichever is active.
+  const wiresActive = isWiresRuntimeRunning();
+  const wiresPaused = isWiresRuntimePaused();
   const substrateActive = isSubstrateRunning();
-  const playing = substrateActive || isPlaying();
+  const playing = wiresActive
+    ? !wiresPaused
+    : substrateActive || isPlaying();
   const toggle = () => {
+    if (wiresActive) {
+      if (wiresPaused) resumeWiresRuntime();
+      else pauseWiresRuntime();
+      return;
+    }
     if (substrateActive) { pauseSubstrate(); return; }
     // Legacy path. Substrate-paused (spec loaded but _running=false)
     // is invisible to isSubstrateRunning, so resumeSubstrate is a
@@ -41,7 +56,7 @@ export function TransportControls({ label }: { label: string }) {
         type="button"
         className="timeline-step"
         title="step one event"
-        onClick={() => { pause(); pauseSubstrate(); stepOnce(); }}
+        onClick={() => { pause(); pauseSubstrate(); pauseWiresRuntime(); stepOnce(); }}
       >
         ⏭
       </button>

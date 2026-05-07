@@ -17,12 +17,18 @@ export type NodeLoop = { stop(): Promise<void> };
 // Input: cycle through a fixed queue, sending each value on the
 // outbound wire. send() resolves only after the receiver acks, so
 // back-pressure falls out of the wire contract — no scheduler.
-export function inputLoop(out: Wire, queue: readonly StateValue[]): NodeLoop {
+export function inputLoop(
+  out: Wire,
+  queue: readonly StateValue[],
+  opts: { awaitGate?: () => Promise<void> } = {},
+): NodeLoop {
   let stopped = false;
   const done = (async () => {
     if (queue.length === 0) return;
     let i = 0;
     while (!stopped) {
+      if (opts.awaitGate) await opts.awaitGate();
+      if (stopped) break;
       await out.send(queue[i % queue.length]);
       i += 1;
     }

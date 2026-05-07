@@ -6,6 +6,7 @@
 import type { Spec } from "../schema";
 import { readNodeInit } from "../sim/seeds";
 import { state as legacyRunnerState, nowWall } from "../sim/runner/_state";
+import { notifyState } from "../sim/event-bus";
 import { buildWires, type WireMap } from "./build-wires";
 import { ackWire } from "./wire";
 import { inputLoop, readGateLoop, type NodeLoop } from "./node-loop";
@@ -14,11 +15,47 @@ import { slog } from "./log";
 let _loops: NodeLoop[] = [];
 let _wires: WireMap | null = null;
 let _running = false;
+let _paused = false;
+let _resumeWaiters: Array<() => void> = [];
 let _version = 0;
 const _listeners = new Set<() => void>();
 
 export function isWiresRuntimeRunning(): boolean {
   return _running;
+}
+
+export function isWiresRuntimePaused(): boolean {
+  return _paused;
+}
+
+// Toolbar pause: stops issuing new sends. An in-flight pulse finishes
+// its arc and acks normally; the input loop then awaits the gate at
+// the top of its next iteration. The legacy sim clock stays running
+// while paused so the in-flight pulse's rAF math (PulseInstance reads
+// getSimTime) keeps advancing — that read retires in step 5 along
+// with the legacyRunnerState poke in startSimClock/stopSimClock.
+export function pauseWiresRuntime(): void {
+  if (!_running || _paused) return;
+  _paused = true;
+  notifyState();
+  bumpVersion();
+}
+
+export function resumeWiresRuntime(): void {
+  if (!_running || !_paused) return;
+  _paused = false;
+  const waiters = _resumeWaiters;
+  _resumeWaiters = [];
+  for (const w of waiters) w();
+  notifyState();
+  bumpVersion();
+}
+
+function awaitResumeGate(): Promise<void> {
+  if (!_paused) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    _resumeWaiters.push(resolve);
+  });
 }
 
 export function getWiresMap(): WireMap | null {
@@ -76,7 +113,10 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
   const queue = readNodeInit(input.data);
   _running = true;
   startSimClock();
-  _loops = [readGateLoop(wire, { autoAck: false }), inputLoop(wire, queue)];
+  _loops = [
+    readGateLoop(wire, { autoAck: false }),
+    inputLoop(wire, queue, { awaitGate: awaitResumeGate }),
+  ];
   slog("wires-runtime: started", {
     edgeId: edge.id,
     queue: queue.map(String),
@@ -87,6 +127,13 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
 export async function stopWiresRuntime(): Promise<void> {
   if (!_running && _loops.length === 0 && !_wires) return;
   _running = false;
+  // Wake any pause waiters so the input loop unblocks and observes
+  // stopped=true on its next iteration. Without this, stop() would
+  // hang on a paused-and-stopped loop.
+  _paused = false;
+  const waiters = _resumeWaiters;
+  _resumeWaiters = [];
+  for (const w of waiters) w();
   stopSimClock();
   const loops = _loops;
   const wires = _wires;
