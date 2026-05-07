@@ -1,5 +1,6 @@
 import type { Spec } from "../../schema";
 import { getHandler } from "../handlers";
+import { drainReadySeeds } from "../input";
 import { freeEdgeSlot, noteEdgeConsumed } from "../slot-release";
 import { initWorld } from "./init-world";
 import { resolveProps, scheduleEmission } from "./schedule";
@@ -38,13 +39,11 @@ export function step(spec: Spec, world: World): World {
     if (head.readyAt > next.tick) next.tick = head.readyAt;
   }
 
-  // Drain pending seeds whose atTick has now arrived. Each goes through
-  // scheduleEmission so the slot check happens at the correct moment — a
-  // backpressured seed lands in edgePending like any other emission.
-  while (next.pendingSeeds.length > 0 && (next.pendingSeeds[0].atTick ?? 0) <= next.tick) {
-    const seed = next.pendingSeeds.shift()!;
-    scheduleEmission(next, idx, seed.nodeId, seed.outPort, seed.value, seed.atTick ?? 0, 0);
-  }
+  // Drain pending seeds whose atTick has arrived AND whose owning
+  // Input is ready (per the readiness seam). Stalled sources keep
+  // their seeds queued; nothing outside the Input module advances
+  // their cursor.
+  drainReadySeeds(next, idx);
   next.queue.sort(orderEvents);
 
   if (next.queue.length === 0) {
@@ -161,6 +160,12 @@ export function runUntil(
     if (pred(cur)) return cur;
     if (cur.queue.length === 0 && cur.pendingSeeds.length === 0) return cur;
     cur = step(spec, cur);
+    // Tight-loop guard: wasQuiescent with pendingSeeds remaining
+    // means every due seed was held by its readiness predicate.
+    // Step can't make progress until something outside the loop
+    // (e.g. the renderer's pulse-complete signal) unstalls a
+    // predicate, so bail instead of burning maxSteps.
+    if (cur.wasQuiescent && cur.pendingSeeds.length > 0) return cur;
   }
   throw new Error(
     `simulator.runUntil exceeded maxSteps=${maxSteps}; check for infinite loops`,

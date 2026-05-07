@@ -24,6 +24,7 @@
 // (test/contracts/cadence-back-pressure.test.ts) for the formal rule.
 
 import type { Spec, StateValue } from "../schema";
+import { register, unregister } from "../sim/readiness";
 
 type Latch = { srcArrived: boolean; dstOutputDone: boolean };
 type Entry = { dataEdgeId: string; dstId: string };
@@ -34,6 +35,7 @@ const registry = new Map<string, Entry>();
 const awaiting = new Map<string, Latch>();
 
 export function buildRegistry(spec: Spec): void {
+  for (const id of registry.keys()) unregister(id);
   registry.clear();
   awaiting.clear();
   for (const ack of spec.cadenceAcks ?? []) {
@@ -45,6 +47,7 @@ export function buildRegistry(spec: Spec): void {
     );
     if (!dataEdge) continue;
     registry.set(srcId, { dataEdgeId: dataEdge.id, dstId });
+    register(srcId, () => mayEmit(srcId));
   }
 }
 
