@@ -35,10 +35,11 @@ revised foundation is at
 Start at [handoff-next-task.md](handoff-next-task.md).
 
 State at handoff:
-  `task/wires` at bf340d7, pushed and tracking origin. Commit 1 of
-  revised step 1 landed: `Wire` primitive + `buildWires(spec)` +
-  contract test (6/6 passing, build green, no LOC violations). No
-  runtime yet — nothing is wired into the active code path. Prior
+  `task/wires` at 30d6e28, pushed and tracking origin. Commits 1–2
+  of revised step 1 landed: `Wire` primitive + `buildWires` (bf340d7),
+  per-node loops + `runtime-wires` (30d6e28). 234/234 vitest, build
+  green, no LOC violations. Nothing is wired into the active code
+  path yet — `startWiresRuntime` exists but no caller invokes it. Prior
   branch `task/runtime-substrate-rebuild` is preserved as reference;
   do not delete. Working tree has `topology.view.json` modified
   (incidental pan/zoom; not part of rebuild work — leave or discard,

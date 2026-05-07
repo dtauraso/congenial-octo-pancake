@@ -1,19 +1,28 @@
 # Handoff — Next task (START HERE)
 
-**Continue revised step 1: per-node loop runtime on the new Wires.**
+**Continue revised step 1: rewire AnimatedEdge to read its Wire.**
 Spec is at
 [../sim-substrate/revised-step-1.md](../sim-substrate/revised-step-1.md).
-Commit 1 (Wire primitive + buildWires + contract test) landed at
-bf340d7. Files: [src/substrate/wire.ts](/tools/topology-vscode/src/substrate/wire.ts),
-[src/substrate/build-wires.ts](/tools/topology-vscode/src/substrate/build-wires.ts),
-[test/contracts/wire-primitive.test.ts](/tools/topology-vscode/test/contracts/wire-primitive.test.ts).
-Nothing else in the repo touches them yet.
+Commits 1–2 landed:
+- bf340d7 — Wire primitive + buildWires + contract test.
+- 30d6e28 — per-node loops + runtime-wires + contract test
+  (4 cases). Files:
+  [src/substrate/node-loop.ts](/tools/topology-vscode/src/substrate/node-loop.ts),
+  [src/substrate/runtime-wires.ts](/tools/topology-vscode/src/substrate/runtime-wires.ts),
+  [test/contracts/node-loop.test.ts](/tools/topology-vscode/test/contracts/node-loop.test.ts).
+  `slog` was made test-safe (lazy webview import) so log.ts loads
+  in node envs without `window`. Nothing in the active code path
+  calls `startWiresRuntime` yet — it's wired but inert.
 
-**Commit 2 (next):** substrate runtime — per-node async loops that
-read inbound `Wire`s and write outbound. Two loops for Input→ReadGate.
-No legacy coupling: no `legacyRunnerState`, no `event-bus`, no
-`pulse-concurrency`. Use `ackWire` from wire.ts on the receive side.
-Keep ≤100 LOC per file (split if needed).
+**Commit 3 (next):** rewire `AnimatedEdge` to read its `Wire` (via
+React context, falling back to RF edge data if RF fights). Replace
+the bus subscribe with reading `wire.state` + `wire.pending` and
+driving the arc timer locally. The visual layer's arc completion
+should call `ackWire(wire)` so the input loop's `send` resolves and
+the next value flows. Once that works, swap the `loadSubstrate` call
+site in `_handle-load` over to `startWiresRuntime` for the matched
+topology, and prove the cold-open + rename-reload cases animate
+without any global-bus involvement.
 
 ## Why this exists (the short version)
 
@@ -53,10 +62,11 @@ plus enough of steps 4–5 to retire `sim/event-bus`,
 ## Concrete commits (remaining)
 
 1. ✅ bf340d7 — `Wire` type + builder + contract test.
-2. Substrate runtime: per-node loops reading inbound / writing
-   outbound. Two loops for Input→ReadGate.
+2. ✅ 30d6e28 — per-node loops + runtime-wires + contract test.
 3. Rewire `AnimatedEdge` to read its `Wire` via context (or RF edge
-   data — context is cleaner; fall back if RF fights).
+   data — context is cleaner; fall back if RF fights). The visual
+   arc-completion is what calls `ackWire`; this closes the cycle
+   that commit 2 leaves running on instantaneous microtask acks.
 4. Toolbar play/pause toggles a per-runtime flag, no
    `legacyRunnerState` coupling.
 5. Once the new path is alive on the matched topology, start ripping:
@@ -75,16 +85,6 @@ plus enough of steps 4–5 to retire `sim/event-bus`,
    is simpler.
 3. **RF edge data vs context for handing Wire to AnimatedEdge?**
    Context is cleaner; fall back to edge data if RF fights.
-
-## Recently landed on `task/runtime-substrate-rebuild` (now reference-only)
-
-- 7c59101 — dropped module-level `lastLoadedText` dedup; cold-open
-  + rename-triggered reloads animate cleanly without it. Confirmed
-  by user this session: 11/00 leading-pulse patterns are gone.
-- 1aeee65 — disabled periodic-checks auto-triggers (only
-  `workflow_dispatch` now); cuts CI failure-email noise during the
-  rebuild. Restore schedule/push/PR triggers when this lands on
-  main.
 
 ## ALWAYS clause
 
