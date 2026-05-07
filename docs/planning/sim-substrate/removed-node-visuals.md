@@ -122,9 +122,53 @@ To restore on the wires runtime: same trigger as flash —
 
 ---
 
-## 3. Held tint (fill recolor by held value) — NOT YET REMOVED
+## 3. Held tint (fill recolor by held value) — REMOVED
 
-(placeholder — will be filled in when removed)
+Node fill recolored by `world.state[id].held`: `+1` → `#ffab40`
+(orange), `−1` → `#66bb6a` (green), anything else → the node's
+default `data.fill`. Persistent — stayed tinted as long as the node
+held that value. Tween from old to new fill via CSS
+`transition: background-color ${tweenMs}ms linear` (tweenMs = current
+tick interval).
+
+Trigger: same `subscribe()` `fire` event on `sim/runner`; recomputed
+from `world.state[id].held` on each fire.
+
+**State + derived fill (was inside the component body):**
+
+```tsx
+import type { StateValue } from "../../../schema";
+
+// Held-value tint driven from runner state (state.held) instead of a
+// baked SMIL time loop: #ffab40 for +1, #66bb6a for −1, neutral
+// otherwise.
+const [held, setHeld] = useState<StateValue | undefined>(
+  () => getWorld()?.state?.[id]?.held,
+);
+
+// inside the subscribe callback:
+setHeld(s?.held);
+
+// derived just before the return:
+const heldNum = typeof held === "number" ? held : Number(held);
+const heldFill = heldNum === 1 ? "#ffab40" : heldNum === -1 ? "#66bb6a" : null;
+const fill = heldFill ?? data.fill;
+```
+
+**Container style change (was alongside the offset transition):**
+
+```tsx
+background: fill,
+transition: `transform ${tweenMs}ms linear, background-color ${tweenMs}ms linear`,
+```
+
+After removal: `background: data.fill` and `transition: transform
+${tweenMs}ms linear` (drops `background-color`).
+
+To restore on the wires runtime: subscribe to a per-node held-value
+stream (TBD — likely derived from each Wire's last-acked value at
+the receiving end). Restore the `StateValue` import in
+AnimatedNode.tsx.
 
 ---
 

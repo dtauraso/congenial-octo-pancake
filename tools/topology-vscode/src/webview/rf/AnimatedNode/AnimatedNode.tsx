@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { KIND_COLORS, type StateValue } from "../../../schema";
+import { KIND_COLORS } from "../../../schema";
 import { subscribe, getWorld, getTickMs } from "../../../sim/runner";
 import { bufferedPorts } from "../../../sim/handlers";
 import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT } from "./_styles";
@@ -21,9 +21,6 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
     return { dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) };
   });
   const [tweenMs, setTweenMs] = useState<number>(getTickMs());
-  // Held-value tint driven from runner state (state.held) instead of a baked
-  // SMIL time loop: #ffab40 for +1, #66bb6a for −1, neutral otherwise.
-  const [held, setHeld] = useState<StateValue | undefined>(() => getWorld()?.state?.[id]?.held);
   // Audit row #4: per-port "input X waiting" indicator. State already exists
   // as state.__has_<port>=1; bufferedPorts() reads it.
   const [buffered, setBuffered] = useState<string[]>(() => bufferedPorts(getWorld()?.state?.[id]));
@@ -35,16 +32,12 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
       const s = getWorld()?.state?.[id];
       setOffset({ dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) });
       setTweenMs(getTickMs());
-      setHeld(s?.held);
       setBuffered(bufferedPorts(s));
     });
     return unsub;
   }, [id]);
 
   const radius = data.shape === "pill" ? data.height / 2 : 4;
-  const heldNum = typeof held === "number" ? held : Number(held);
-  const heldFill = heldNum === 1 ? "#ffab40" : heldNum === -1 ? "#66bb6a" : null;
-  const fill = heldFill ?? data.fill;
 
   return (
     <div
@@ -53,7 +46,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         minWidth: data.width,
         width: "max-content",
         height: data.height,
-        background: fill,
+        background: data.fill,
         color: "#1a1a1a",
         border: `${selected ? 2 : 1}px solid ${data.stroke}`,
         borderRadius: radius,
@@ -63,7 +56,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         overflow: "visible",
         isolation: "isolate",
         transform: `translate(${offset.dx}px, ${offset.dy}px)`,
-        transition: `transform ${tweenMs}ms linear, background-color ${tweenMs}ms linear`,
+        transition: `transform ${tweenMs}ms linear`,
         willChange: "transform",
       }}
     >
