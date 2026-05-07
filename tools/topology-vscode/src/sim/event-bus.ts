@@ -34,7 +34,13 @@ export function nextPulseId(): string {
   return `p${nextPulseSeq++}`;
 }
 
-export type RunnerEvent = FireEvent | EmitEvent;
+export type PulseAckEvent = {
+  type: "pulse-ack";
+  edgeId: string;
+  pulseId: string;
+};
+
+export type RunnerEvent = FireEvent | EmitEvent | PulseAckEvent;
 export type RunnerListener = (e: RunnerEvent) => void;
 
 const listeners: RunnerListener[] = [];

@@ -9,6 +9,7 @@ import {
 } from "../../sim/runner";
 import { markerEndUrl } from "./MarkerDefs";
 import { dashForKind } from "./edge-style";
+import { notify } from "../../sim/event-bus";
 import { slog } from "../../substrate/log";
 import { buildPathGeom } from "./AnimatedEdge/_geom";
 import { midpoint } from "./AnimatedEdge/_geom";
@@ -98,12 +99,14 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
     releaseVisualSlot(id);
     setPulses0((cur) => cur.filter((p) => p.key !== key));
     if (len0Ref.current > 0) len0Ref.current -= 1;
+    notify({ type: "pulse-ack", edgeId: id, pulseId });
   }, [id]);
   const advanceLane1 = useCallback((key: number, pulseId: string) => {
     signalRendererComplete(pulseId);
     releaseVisualSlot(id);
     setPulses1((cur) => cur.filter((p) => p.key !== key));
     if (len1Ref.current > 0) len1Ref.current -= 1;
+    notify({ type: "pulse-ack", edgeId: id, pulseId });
   }, [id]);
 
   const kind = data?.kind ?? "any";

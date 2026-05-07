@@ -2,26 +2,20 @@
 // primitive for the matched 2-node topology by emitting EmitEvents on
 // the existing event-bus, so AnimatedEdge renders unchanged.
 //
-// Channel model: cap=0 (unbuffered). A token enters the wire only when
-// the receiver has finished consuming the previous token. We model
-// "finished consuming" as the AnimatedEdge having signalled completion,
-// but step 1 does not yet wire that ack back through the bus — instead
-// we space emissions by EMIT_INTERVAL_MS, which is conservative-enough
-// to avoid overlap given AnimatedEdge's traversal animation. Step 3's
-// R1 (FIFO) and R5 (animation step = state transition) tests will
-// replace this spacing with a real ack-driven release.
+// Channel model: cap=0 (unbuffered). The sender blocks until the
+// receiver consumes the previous token. We realise this by waiting
+// for AnimatedEdge's pulse-ack event before emitting the next token.
+// No timer — the visible traversal IS the back-pressure signal.
 
 import type { Spec, StateValue } from "../schema";
 import { readNodeInit } from "../sim/seeds";
-import { nextPulseId, notify, notifyState } from "../sim/event-bus";
+import { nextPulseId, notify, notifyState, subscribe } from "../sim/event-bus";
 import { _resetPulseConcurrency } from "../sim/runner/pulse-concurrency";
 import { state as legacyRunnerState, nowWall } from "../sim/runner/_state";
 import { slog } from "./log";
 
-const EMIT_INTERVAL_MS = 1500;
-
 type SubstrateState = {
-  intervalId: ReturnType<typeof setInterval> | null;
+  unsubAck: (() => void) | null;
   spec: Spec | null;
   queue: StateValue[];
   edgeId: string;
@@ -31,7 +25,7 @@ type SubstrateState = {
 };
 
 const state: SubstrateState = {
-  intervalId: null,
+  unsubAck: null,
   spec: null,
   queue: [],
   edgeId: "",
@@ -66,13 +60,18 @@ export function loadSubstrate(spec: Spec): void {
   state.tick = 0;
   slog("loaded", { edgeId: edge.id, queue: state.queue.map(String) });
   notifyState();
-  state.intervalId = setInterval(emitNext, EMIT_INTERVAL_MS);
+  state.unsubAck = subscribe((ev) => {
+    if (ev.type !== "pulse-ack") return;
+    if (ev.edgeId !== state.edgeId) return;
+    emitNext();
+  });
+  emitNext();
 }
 
 export function stopSubstrate(): void {
-  if (state.intervalId !== null) {
-    clearInterval(state.intervalId);
-    state.intervalId = null;
+  if (state.unsubAck) {
+    state.unsubAck();
+    state.unsubAck = null;
   }
   state.spec = null;
   notifyState();
