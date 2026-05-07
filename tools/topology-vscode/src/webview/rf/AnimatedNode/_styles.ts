@@ -1,5 +1,7 @@
 import type React from "react";
 
+export const FLASH_DURATION_MS = 300;
+
 // Visible port dot. Sized large enough to be a real drag target, colored by
 // the port's edge kind so users can see which kinds connect to which.
 export function portStyle(

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { KIND_COLORS } from "../../../schema";
 import { subscribe, getWorld, getTickMs } from "../../../sim/runner";
-import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT } from "./_styles";
+import { subscribeNodeTicks } from "../../../substrate/runtime-wires";
+import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT, FLASH_DURATION_MS } from "./_styles";
 import { StepButton } from "./StepButton";
 import { SpecPanel } from "./SpecPanel";
 import { NodeBody } from "./NodeBody";
@@ -20,6 +21,20 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
     return { dx: Number(s?.dx ?? 0), dy: Number(s?.dy ?? 0) };
   });
   const [tweenMs, setTweenMs] = useState<number>(getTickMs());
+  const flashRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    return subscribeNodeTicks((nodeId) => {
+      if (nodeId !== id) return;
+      const el = flashRef.current;
+      if (!el) return;
+      el.getAnimations().forEach((a) => a.cancel());
+      el.animate(
+        [{ opacity: 0 }, { opacity: 0.5, offset: 0.5 }, { opacity: 0 }],
+        { duration: FLASH_DURATION_MS },
+      );
+    });
+  }, [id]);
 
   useEffect(() => {
     const unsub = subscribe((ev) => {
@@ -55,6 +70,18 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         willChange: "transform",
       }}
     >
+      <div
+        ref={flashRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "white",
+          opacity: 0,
+          borderRadius: radius,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
       {selected ? <StepButton id={id} stroke={data.stroke} /> : null}
       <SpecPanel id={id} data={data} />
       {data.inputs.length === 0 ? (

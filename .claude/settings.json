@@ -10,9 +10,14 @@
       "Bash(npx tsc)",
       "Bash(npx tsc *)",
       "Bash(npx vitest run *)",
+      "Bash(npx vitest *)",
       "Bash(npx playwright test *)",
       "Bash(go build *)",
-      "Bash(go test *)"
+      "Bash(go test *)",
+      "Bash(git checkout *)",
+      "Bash(git stash *)",
+      "Bash(mkdir -p *)",
+      "Bash(cd *)"
     ]
   },
   "hooks": {
