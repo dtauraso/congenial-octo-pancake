@@ -8,19 +8,20 @@ read this file first (no chat history needed) and proceed.
 ---
 
 Continuing on wirefold, branch `task/runtime-substrate-rebuild` (off
-`main`). Gate A passed; this is the rebuild branch. Port-plan
-**step 1 is done in the editor** (new `src/substrate/` module, cap=0
-chosen, branched at [_handle-load.ts](../../../tools/topology-vscode/src/webview/rf/app/_handle-load.ts)).
-Next work is **port-plan step 2**: per-node running indicator +
-reloop glyph.
+`main`, pushed). Gate A passed; this is the rebuild branch. Port-plan
+**step 1 is done AND visibly animates** in the real VS Code extension
+— tokens 0/1/0 from `data.init` traverse the chan→wire end-to-end at
+the substrate's 1500ms emit interval, verified by user 2026-05-07.
+Next work is a **step-1 follow-up: fix the play/pause toolbar
+button** before starting step 2.
 
 State at handoff:
-  Local on `task/runtime-substrate-rebuild`, no remote yet (push on
-  first commit).
+  Local on `task/runtime-substrate-rebuild`, pushed to origin.
   Working tree has `topology.view.json` modified (incidental editor
-  pan/zoom from prior session; not part of rebuild work — leave it or
-  discard, do not commit as a rebuild change).
-  Tests/build/tsc/check:loc clean at step 1 commit (218/218 vitest).
+  pan/zoom; not part of rebuild work — leave or discard, do not
+  commit).
+  Tests/build/tsc/check:loc clean. Last verified 218/218 vitest +
+  Playwright `substrate-step1` green at e0ef402.
 
 ## Step 1 build notes (decision audit)
 
@@ -38,6 +39,52 @@ Substrate plugs into the existing event-bus by emitting `EmitEvent`
 (same shape the legacy runner emits), so AnimatedEdge renders
 unchanged. The 1500ms emit interval is a placeholder — step 3 (R1
 FIFO test) replaces it with an ack-driven release.
+
+### Three coupling hacks gated to step-1 commit e0ef402
+
+The substrate piggybacks on three pieces of legacy-runner state that
+must come out as the rebuild matures. Search `// Step 1` /
+`legacyRunnerState` / `_resetPulseConcurrency` to find them. Each is
+load-bearing for visible animation in the current shape:
+
+  1. `_resetPulseConcurrency()` on loadSubstrate — clears the
+     visual-slot ledger that legacy probe machinery dirties. Removed
+     in step 6 alongside the rest of the probes.
+  2. `legacyRunnerState.playing = true` on loadSubstrate —
+     PulseInstance.tsx:76 gates its rAF on `isPlaying()`, which
+     reads `state.playing`. Without this, pulses mount but never
+     animate, never call `onDone`, slot stays held, every subsequent
+     emit gets `ae-rejected`. Step 3+ replaces with a substrate-
+     owned animation contract.
+  3. `pauseRunner()` on substrate-match — halts legacy ticker so it
+     doesn't compete. Comes out when legacy runner is fully retired.
+
+These are the load-bearing bits of the legacy coupling. Anything
+else legacy-shaped that the substrate ends up depending on should be
+added to this list at the same time it's introduced.
+
+### Automated logging
+
+`.probe/substrate-log.jsonl` captures every substrate event (match,
+loaded, emit, ae-subscribed, ae-received, ae-rejected, ae-mounting)
+with `{ts, label, data}` per line. Webview's `slog()` posts to
+extension; extension `appendSubstrateLog` writes via `fs.appendFile`
+with a promise queue (vscode.workspace.fs read-then-write races on
+bursty per-emit traffic). To debug: `rm .probe/substrate-log.jsonl`,
+reload editor, read the file. Step 6 deletes alongside other probes.
+
+### Playwright e2e
+
+`tools/topology-vscode/e2e/substrate-step1.spec.ts` asserts in the
+harness that match → loaded → emit → AnimatedEdge subscribes →
+PulseInstance mounts a `data-testid="pulse"` path. Run with
+`npx playwright test substrate-step1`. ~3s. NOTE: the harness does
+NOT reproduce real-VS-Code behavior fully — the bug that broke
+visible animation passed in the harness because the harness happens
+to land in a state where the legacy `state.playing` flag is true.
+Treat green harness as necessary-not-sufficient for "step 1 works."
+Real-editor verification (reload + read substrate-log.jsonl + see
+tokens) remains the truth.
 
 ## What just landed (Gate A pass)
 
@@ -64,27 +111,51 @@ buffered-vs-unbuffered decision to port step 1.
 
 ## Next task — START HERE
 
-**Port-plan step 2: per-node running indicator + reloop glyph.**
-Spec lives in [../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
-§"Visual layer" (item 2). No standalone sketch — prose-only spec.
-The glyph is on a node when its handler is currently executing; the
-reloop variant is for nodes whose own output feeds their own input.
-Pinned by R5 at step 3.
+**Step-1 follow-up: fix the play/pause toolbar button under the
+substrate path.** The button currently calls into `sim/runner`'s
+`play()`/`pause()`. Step 1 hijacks `legacyRunnerState.playing` and
+calls `pauseRunner()` on substrate-match, so the toolbar button now
+either no-ops (no spec loaded in legacy runner) or fights the
+substrate's own state.
 
-Land it in the same `src/substrate/` module that step 1 introduced.
-The substrate currently emits only `EmitEvent`; step 2 should emit
-`FireEvent` (same shape the legacy runner uses on the event-bus) so
-existing webview UI can pick up node-running state without a new
-message type. Verify in the editor that loading the 2-node topology
-shows tokens crossing the wire AND a running indicator on the
-firing node.
+**Surfaced friction (2026-05-07):** user reports "play/pause has a
+new bug" after step 1 wire-animation fix landed. Tokens animate
+correctly in auto-run, but the toolbar control is broken. Logging
+this here per the post-v0 friction-driven posture (CLAUDE.md).
 
-Do **not** start step 3 (R1–R5 contract tests) in the same commit.
-One step per commit per the plan doc.
+What "fixed" looks like:
+  - With the 2-node topology loaded, pressing pause halts token
+    emission AND halts the in-flight pulse animation.
+  - Pressing play resumes both.
+  - Reset (existing behavior) re-arms the input queue.
+  - Behavior should match the chan-wire.html sketch's intuition.
 
-Budget: ~$10. Same hard cap and reassess discipline as step 1
-(below) — if it spirals past $25, stop and write the broken-
-assumption note in rebuild-plan.md before continuing.
+Concrete scope candidates (Opus call, then sonnet edits):
+  (a) Make substrate own its own play/pause flag. Toolbar reads
+      from substrate when matched, legacy runner otherwise.
+      Decoupling move — likely correct but bigger.
+  (b) Have substrate mirror its play state into
+      `legacyRunnerState.playing` (already half-doing this) and
+      route toolbar's play/pause through a thin shim that toggles
+      both substrate's setInterval AND the flag. Smaller, keeps
+      step-1 hack shape.
+  (c) Defer play/pause until step 3's R1 contract test forces a
+      cleaner animation contract. Skip for now.
+
+Recommendation: (b) for this commit (cheapest, preserves the
+gated-hacks discipline in step 1 build notes), upgrade to (a) at
+step 3 when the substrate contract is being written anyway.
+
+Budget: ~$10. Same hard cap and reassess discipline (below).
+
+After this lands, then port-plan step 2 (per-node running indicator
++ reloop glyph). Spec at
+[../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
+§"Visual layer" item 2. Do not start it before play/pause works —
+the running indicator needs play/pause to be debuggable.
+
+Do **not** combine the play/pause fix with step 2 in one commit.
+One concern per commit per the plan doc.
 
 ## Hard cap and reassess trigger (carried forward from step 1)
 
