@@ -7,6 +7,7 @@
 // the toolbar without requiring devtools console access.
 
 import { state } from "./_state";
+import { ready } from "../readiness";
 
 export type RunnerHealth =
   | { kind: "idle" }
@@ -21,6 +22,10 @@ export function probeRunner(): RunnerHealth {
     return { kind: "ok", queue: w.queue.length, activeAnimations: state.activeAnimations };
   }
   if (w.pendingSeeds.length > 0) {
+    // All-stalled-by-readiness is expected back-pressure, not stuck.
+    if (w.pendingSeeds.every((s) => !ready(s.nodeId))) {
+      return { kind: "ok", queue: 0, activeAnimations: state.activeAnimations };
+    }
     return {
       kind: "stuck-pending",
       pendingSeeds: w.pendingSeeds.length,

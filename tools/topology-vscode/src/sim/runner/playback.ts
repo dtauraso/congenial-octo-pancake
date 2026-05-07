@@ -8,6 +8,7 @@ import { cancelCycleRestart, scheduleCycleRestart, logStuckPendingOnce } from ".
 import { stepOnce } from "./step";
 import { pauseAllPulseTimers, resumeAllPulseTimers } from "./pulse-completion";
 import { resetCadence } from "../../cadence/in0ReadGateAck";
+import { ready } from "../readiness";
 
 export function rearmInterval(): void {
   if (state.intervalId) clearInterval(state.intervalId);
@@ -82,6 +83,11 @@ function tick(): void {
   if (state.world.queue.length === 0) {
     if (state.world.pendingSeeds.length === 0) {
       scheduleCycleRestart();
+    } else if (state.world.pendingSeeds.every((s) => !ready(s.nodeId))) {
+      // Every due seed is held by its readiness predicate
+      // (e.g. cadence awaiting). Not stuck — just back-pressured.
+      // The next pulse-complete signal will unstall a predicate and
+      // edge-anim's stepOnce hook will resume drainage.
     } else {
       logStuckPendingOnce(state.world);
     }
