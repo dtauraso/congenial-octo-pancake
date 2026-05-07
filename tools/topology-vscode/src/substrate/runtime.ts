@@ -10,7 +10,6 @@
 import type { Spec, StateValue } from "../schema";
 import { readNodeInit } from "../sim/seeds";
 import { nextPulseId, notify, notifyState, subscribe } from "../sim/event-bus";
-import { _resetPulseConcurrency } from "../sim/runner/pulse-concurrency";
 import { reset as resetRunner } from "../sim/runner";
 import { state as legacyRunnerState, nowWall } from "../sim/runner/_state";
 import { slog } from "./log";
@@ -85,11 +84,6 @@ const state: SubstrateState = {
 
 export function loadSubstrate(spec: Spec): void {
   stopSubstrate();
-  // The legacy probe machinery (RunnerProbe, _stuck-pulse-probe) can
-  // leave stale entries in the visual-slot ledger that block our
-  // first emit from claiming a slot. Step 6 deletes all of that;
-  // until then we reset on entry so the substrate path starts clean.
-  _resetPulseConcurrency();
   // Decommission the legacy runner so its world/seeds/cycle-restart
   // can't compete for the visual slot on this edge. Substrate owns
   // play state from here on via _running.
