@@ -22,19 +22,34 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   });
   const [tweenMs, setTweenMs] = useState<number>(getTickMs());
   const flashRef = useRef<HTMLDivElement | null>(null);
+  const glowRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     return subscribeNodeTicks((nodeId) => {
       if (nodeId !== id) return;
       const el = flashRef.current;
-      if (!el) return;
-      el.getAnimations().forEach((a) => a.cancel());
-      el.animate(
-        [{ opacity: 0 }, { opacity: 0.5, offset: 0.5 }, { opacity: 0 }],
-        { duration: FLASH_DURATION_MS },
-      );
+      if (el) {
+        el.getAnimations().forEach((a) => a.cancel());
+        el.animate(
+          [{ opacity: 0 }, { opacity: 0.5, offset: 0.5 }, { opacity: 0 }],
+          { duration: FLASH_DURATION_MS },
+        );
+      }
+      const gl = glowRef.current;
+      if (gl) {
+        gl.getAnimations().forEach((a) => a.cancel());
+        gl.animate(
+          [
+            { boxShadow: `0 0 0 0 ${data.stroke}00`, opacity: 0 },
+            { boxShadow: `0 0 0 4px ${data.stroke}cc`, opacity: 0.8, offset: 0.4 },
+            { boxShadow: `0 0 0 2px ${data.stroke}66`, opacity: 0.4, offset: 0.7 },
+            { boxShadow: `0 0 0 0 ${data.stroke}00`, opacity: 0 },
+          ],
+          { duration: FLASH_DURATION_MS },
+        );
+      }
     });
-  }, [id]);
+  }, [id, data.stroke]);
 
   useEffect(() => {
     const unsub = subscribe((ev) => {
@@ -70,6 +85,17 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         willChange: "transform",
       }}
     >
+      <div
+        ref={glowRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: radius,
+          pointerEvents: "none",
+          opacity: 0,
+          zIndex: -1,
+        }}
+      />
       <div
         ref={flashRef}
         style={{
