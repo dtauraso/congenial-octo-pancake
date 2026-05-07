@@ -20,7 +20,7 @@ export type NodeLoop = { stop(): Promise<void> };
 export function inputLoop(
   out: Wire,
   queue: readonly StateValue[],
-  opts: { awaitGate?: () => Promise<void> } = {},
+  opts: { awaitGate?: () => Promise<void>; onTick?: () => void } = {},
 ): NodeLoop {
   let stopped = false;
   const done = (async () => {
@@ -30,6 +30,7 @@ export function inputLoop(
       if (opts.awaitGate) await opts.awaitGate();
       if (stopped) break;
       await out.send(queue[i % queue.length]);
+      opts.onTick?.();
       i += 1;
     }
   })();
@@ -47,12 +48,14 @@ export function inputLoop(
 // renderer rather than the microtask queue.
 export function readGateLoop(
   inbound: Wire,
-  opts: { autoAck?: boolean } = {},
+  opts: { autoAck?: boolean; onTick?: () => void } = {},
 ): NodeLoop {
   const autoAck = opts.autoAck ?? true;
   let stopped = false;
   const off = inbound.onArrive(() => {
-    if (stopped || !autoAck) return;
+    if (stopped) return;
+    opts.onTick?.();
+    if (!autoAck) return;
     queueMicrotask(() => {
       if (stopped) return;
       ackWire(inbound);

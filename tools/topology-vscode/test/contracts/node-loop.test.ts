@@ -99,4 +99,26 @@ describe("runtime-wires", () => {
     await stopWiresRuntime();
     expect(getWiresMap()).toBeNull();
   });
+
+  it("subscribeNodeTicks: tick count matches send/ack count", async () => {
+    const { subscribeNodeTicks } = await import("../../src/substrate/runtime-wires");
+    const counts = new Map<string, number>();
+    const off = subscribeNodeTicks((nodeId) => {
+      counts.set(nodeId, (counts.get(nodeId) ?? 0) + 1);
+    });
+    await startWiresRuntime(spec);
+    const wires = getWiresMap();
+    const wire = wires?.get("i->r");
+    if (!wire) throw new Error("wire missing");
+    // Drive 3 ack cycles externally (autoAck=false in real runtime).
+    for (let i = 0; i < 3; i++) {
+      while (wire.state !== "inFlight") await new Promise((r) => setTimeout(r, 0));
+      ackWire(wire);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    await stopWiresRuntime();
+    off();
+    expect((counts.get("i") ?? 0)).toBeGreaterThanOrEqual(3);
+    expect((counts.get("r") ?? 0)).toBeGreaterThanOrEqual(3);
+  });
 });

@@ -17,6 +17,19 @@ let _paused = false;
 let _resumeWaiters: Array<() => void> = [];
 let _version = 0;
 const _listeners = new Set<() => void>();
+const _tickListeners = new Set<(nodeId: string, ts: number) => void>();
+
+export function subscribeNodeTicks(
+  fn: (nodeId: string, ts: number) => void,
+): () => void {
+  _tickListeners.add(fn);
+  return () => _tickListeners.delete(fn);
+}
+
+function publishTick(nodeId: string): void {
+  const ts = performance.now();
+  for (const fn of _tickListeners) fn(nodeId, ts);
+}
 
 export function isWiresRuntimeRunning(): boolean {
   return _running;
@@ -94,8 +107,11 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
   const queue = readNodeInit(input.data);
   _running = true;
   _loops = [
-    readGateLoop(wire, { autoAck: false }),
-    inputLoop(wire, queue, { awaitGate: awaitResumeGate }),
+    readGateLoop(wire, { autoAck: false, onTick: () => publishTick(readGate.id) }),
+    inputLoop(wire, queue, {
+      awaitGate: awaitResumeGate,
+      onTick: () => publishTick(input.id),
+    }),
   ];
   slog("wires-runtime: started", {
     edgeId: edge.id,
