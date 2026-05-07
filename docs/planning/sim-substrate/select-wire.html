@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Select (wire) — motion view</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 24px; color: #222; background: #fafafa; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.lede { color: #555; margin: 0 0 16px; max-width: 680px; }
+  nav.tabs { display: flex; gap: 0; border-bottom: 1px solid #ccc; margin-bottom: 16px; }
+  nav.tabs a { padding: 8px 16px; text-decoration: none; color: #555; border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; margin-bottom: -1px; }
+  nav.tabs a.active { background: #fff; border-color: #ccc; color: #222; font-weight: 600; }
+  nav.tabs a:hover:not(.active) { background: #eee; }
+  .controls { margin: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: inherit; padding: 6px 12px; cursor: pointer; }
+  .stage-wrap { background: #fff; border: 1px solid #ddd; width: 820px; }
+  svg { display: block; }
+  text { font: 12px/1 system-ui, sans-serif; pointer-events: none; user-select: none; }
+  .label { fill: #333; font-weight: 600; }
+  .sublabel { fill: #777; font-size: 11px; }
+  .feeler { stroke: #bbb; stroke-width: 2; fill: none; stroke-dasharray: 5 4; }
+  .feeler.lit { stroke: #2a6db0; stroke-dasharray: none; }
+  .feeler.fired { stroke: #b08900; stroke-width: 3; stroke-dasharray: none; }
+  .case-stub { fill: #fff; stroke: #888; }
+  .case-stub.ready { fill: #e8f4ff; stroke: #2a6db0; }
+  .case-stub.fired { fill: #fff8d6; stroke: #b08900; stroke-width: 2; }
+  .case-text { fill: #222; font-family: ui-monospace, monospace; font-size: 11px; }
+  .g-token { fill: #f1c40f; stroke: #b08900; stroke-width: 1.5; }
+  .g-token.parked { fill: #b97a4a; stroke: #6b4324; }
+  .g-label { fill: #fff; font-weight: 600; font-size: 12px; }
+  .arrow { fill: #b08900; }
+</style>
+</head>
+<body>
+<nav class="tabs">
+  <a href="select.html">Select</a>
+  <a href="select-wire.html" class="active">Select (wire)</a>
+  <a href="goro-sched.html">Goro+Sched</a>
+  <a href="goro-sched-wire.html">Goro+Sched (wire)</a>
+  <a href="chan-anim.html">Chan</a>
+  <a href="chan-wire.html">Chan (wire)</a>
+</nav>
+<h1>Select (wire) — motion view</h1>
+<p class="lede">
+A goroutine reaches a select. It extends a <em>feeler</em> to every case at
+once, in parallel — no case is checked first or last; the wires are
+simultaneous. Each feeler lights up if its case is ready. If at least one
+feeler is lit, exactly one is chosen (the rule: lowest-index lit; the
+rebuild plan picks its own determinism story), the goroutine commits along
+that wire, and the unchosen feelers retract. If no feeler is lit and no
+default exists, the goroutine parks at the select fan-out and waits.
+</p>
+<p class="lede">
+What this view emphasises: the parallel reach, the moment of commit, and
+the asymmetry between the lit-and-chosen wire and the lit-but-not-chosen
+wires that retract. Static readiness flags belong to the snapshot view.
+</p>
+
+<div class="controls">
+  <button id="extend">extend feelers</button>
+  <button id="commit">commit</button>
+  <button id="retract">retract (parked)</button>
+  <button id="reset">reset</button>
+  <button id="auto">auto on</button>
+  <span id="phase" style="margin-left:12px; color:#555;"></span>
+</div>
+
+<div class="stage-wrap"><svg id="stage" width="820" height="320" viewBox="0 0 820 320"></svg></div>
+
+<script>
+const cases = [
+  { kind: 'recv', chan: 'in', ready: false },
+  { kind: 'send', chan: 'out', ready: true },
+  { kind: 'recv', chan: 'quit', ready: true },
+];
+const GX = 110, GY = 200;
+const CX = 600;
+const STUB_W = 150, STUB_H = 40;
+const N = cases.length;
+
+// Phase machine: idle -> extending -> evaluated -> committing -> done
+//                                              -> parked (retract)
+let phase = 'idle';
+let prog = 0; // 0..1 within phase
+let chosen = null;
+let auto = false;
+let autoTimer = null;
+let scenario = 0; // cycles through scenarios in auto mode
+
+const SCENARIOS = [
+  [false, true, true],   // commit case 1
+  [false, false, true],  // commit case 2
+  [false, false, false], // park
+  [true, true, false],   // commit case 0
+];
+
+function applyScenario(idx) {
+  const s = SCENARIOS[idx % SCENARIOS.length];
+  for (let i = 0; i < N; i++) cases[i].ready = s[i];
+}
+
+function caseY(i) {
+  const TOTAL_H = N * STUB_H + (N - 1) * 24;
+  return GY - TOTAL_H / 2 + i * (STUB_H + 24) + STUB_H / 2;
+}
+
+function pickChosen() {
+  for (let i = 0; i < N; i++) if (cases[i].ready) return i;
+  return null;
+}
+
+function step() {
+  if (phase === 'idle') {
+    if (auto) applyScenario(scenario++);
+    phase = 'extending'; prog = 0;
+  } else if (phase === 'extending') {
+    prog += 1 / 30;
+    if (prog >= 1) {
+      prog = 1;
+      chosen = pickChosen();
+      phase = 'evaluated';
+      // brief pause then auto-progress
+      setTimeout(() => {
+        if (phase !== 'evaluated') return;
+        if (chosen === null) { phase = 'retracting'; prog = 0; }
+        else { phase = 'committing'; prog = 0; }
+      }, 350);
+    }
+  } else if (phase === 'committing') {
+    prog += 1 / 40;
+    if (prog >= 1) { phase = 'done'; setTimeout(() => { if (phase === 'done') resetCycle(); }, 500); }
+  } else if (phase === 'retracting') {
+    prog += 1 / 30;
+    if (prog >= 1) { phase = 'parked'; setTimeout(() => { if (phase === 'parked') resetCycle(); }, 700); }
+  }
+  render();
+}
+
+function resetCycle() {
+  phase = 'idle'; prog = 0; chosen = null;
+  render();
+}
+
+function render() {
+  const svg = document.getElementById('stage');
+  const ns = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = '';
+  const mk = (tag, attrs) => {
+    const el = document.createElementNS(ns, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    svg.appendChild(el);
+    return el;
+  };
+  const text = (x, y, str, cls, anchor) => {
+    const t = mk('text', { x, y, class: cls || '' });
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = str;
+  };
+
+  // Case stubs
+  for (let i = 0; i < N; i++) {
+    const cy = caseY(i);
+    let cls = 'case-stub';
+    if (phase === 'committing' || phase === 'done') {
+      if (i === chosen) cls += ' fired';
+    } else if (phase !== 'idle' && cases[i].ready) {
+      cls += ' ready';
+    }
+    mk('rect', { x: CX, y: cy - STUB_H / 2, width: STUB_W, height: STUB_H, rx: 4, class: cls });
+    const expr = cases[i].kind === 'recv' ? `<-${cases[i].chan}` : `${cases[i].chan}<-`;
+    text(CX + 10, cy - 4, `case ${i}`, 'case-text');
+    text(CX + 10, cy + 12, expr, 'case-text');
+  }
+
+  // Feelers
+  for (let i = 0; i < N; i++) {
+    const cy = caseY(i);
+    const x0 = GX + 26, y0 = GY;
+    const x1 = CX, y1 = cy;
+    let endX = x0, endY = y0;
+    let cls = 'feeler';
+    if (phase === 'extending') {
+      endX = x0 + prog * (x1 - x0);
+      endY = y0 + prog * (y1 - y0);
+    } else if (phase === 'evaluated') {
+      endX = x1; endY = y1;
+      if (cases[i].ready) cls += ' lit';
+    } else if (phase === 'committing') {
+      endX = x1; endY = y1;
+      if (i === chosen) cls += ' fired';
+      else if (cases[i].ready) {
+        // retracting unchosen lit feelers
+        const t = 1 - prog;
+        endX = x0 + t * (x1 - x0);
+        endY = y0 + t * (y1 - y0);
+        cls += ' lit';
+      } else {
+        endX = x0; endY = y0;
+      }
+    } else if (phase === 'done') {
+      if (i === chosen) { endX = x1; endY = y1; cls += ' fired'; }
+      else { endX = x0; endY = y0; }
+    } else if (phase === 'retracting') {
+      const t = 1 - prog;
+      endX = x0 + t * (x1 - x0);
+      endY = y0 + t * (y1 - y0);
+      if (cases[i].ready) cls += ' lit';
+    } else if (phase === 'parked') {
+      endX = x0; endY = y0;
+    }
+    if (Math.abs(endX - x0) > 1 || Math.abs(endY - y0) > 1) {
+      mk('line', { x1: x0, y1: y0, x2: endX, y2: endY, class: cls });
+      if (cls.includes('fired')) {
+        // arrowhead at case end
+        const dx = endX - x0, dy = endY - y0, len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len, uy = dy / len;
+        const px = -uy, py = ux;
+        const ax = endX - 12 * ux, ay = endY - 12 * uy;
+        mk('polygon', { points: `${endX},${endY} ${ax + 6 * px},${ay + 6 * py} ${ax - 6 * px},${ay - 6 * py}`, class: 'arrow' });
+      }
+    }
+  }
+
+  // Goroutine token
+  let gx = GX, gy = GY;
+  if (phase === 'committing' && chosen !== null) {
+    const cy = caseY(chosen);
+    gx = GX + prog * (CX - GX);
+    gy = GY + prog * (cy - GY);
+  } else if (phase === 'done' && chosen !== null) {
+    gx = CX; gy = caseY(chosen);
+  }
+  const tokCls = (phase === 'parked') ? 'g-token parked' : 'g-token';
+  mk('circle', { cx: gx, cy: gy, r: 22, class: tokCls });
+  text(gx, gy + 5, 'g1', 'g-label', 'middle');
+
+  // Status text
+  const phases = {
+    idle: 'idle — click extend to start',
+    extending: 'extending feelers in parallel',
+    evaluated: 'feelers settled — picking lowest-index ready',
+    committing: 'committing along chosen wire; others retract',
+    done: 'committed',
+    retracting: 'no case ready, no default — retracting',
+    parked: 'parked at select',
+  };
+  document.getElementById('phase').textContent = phases[phase] || '';
+}
+
+// Animation tick
+let animTimer = null;
+function startAnim() {
+  if (animTimer) return;
+  animTimer = setInterval(() => {
+    if (phase === 'extending' || phase === 'committing' || phase === 'retracting') step();
+  }, 17);
+}
+function stopAnim() { clearInterval(animTimer); animTimer = null; }
+
+document.getElementById('extend').addEventListener('click', () => {
+  if (phase !== 'idle') resetCycle();
+  step();
+  startAnim();
+});
+document.getElementById('commit').addEventListener('click', () => {
+  if (phase === 'evaluated' && chosen !== null) { phase = 'committing'; prog = 0; startAnim(); }
+});
+document.getElementById('retract').addEventListener('click', () => {
+  if (phase === 'evaluated' && chosen === null) { phase = 'retracting'; prog = 0; startAnim(); }
+});
+document.getElementById('reset').addEventListener('click', () => {
+  resetCycle();
+  cases[0].ready = false; cases[1].ready = true; cases[2].ready = true;
+  scenario = 0;
+  render();
+});
+document.getElementById('auto').addEventListener('click', e => {
+  auto = !auto;
+  e.target.textContent = auto ? 'auto off' : 'auto on';
+  if (auto) {
+    autoTimer = setInterval(() => { if (phase === 'idle') step(); }, 200);
+    startAnim();
+  } else {
+    clearInterval(autoTimer); autoTimer = null;
+  }
+});
+
+render();
+</script>
+</body>
+</html>

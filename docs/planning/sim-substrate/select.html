@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Select — visible-state snapshot</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 24px; color: #222; background: #fafafa; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.lede { color: #555; margin: 0 0 16px; max-width: 680px; }
+  nav.tabs { display: flex; gap: 0; border-bottom: 1px solid #ccc; margin-bottom: 16px; }
+  nav.tabs a { padding: 8px 16px; text-decoration: none; color: #555; border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; margin-bottom: -1px; }
+  nav.tabs a.active { background: #fff; border-color: #ccc; color: #222; font-weight: 600; }
+  nav.tabs a:hover:not(.active) { background: #eee; }
+  .controls { margin: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: inherit; padding: 6px 12px; cursor: pointer; }
+  .stage-wrap { background: #fff; border: 1px solid #ddd; width: 820px; }
+  svg { display: block; }
+  text { font: 12px/1 system-ui, sans-serif; pointer-events: none; user-select: none; }
+  .label { fill: #333; font-weight: 600; }
+  .sublabel { fill: #777; font-size: 11px; }
+  .case-frame { fill: #fff; stroke: #888; }
+  .case-frame.ready { fill: #e8f4ff; stroke: #2a6db0; }
+  .case-frame.fired { fill: #fff8d6; stroke: #b08900; stroke-width: 2; }
+  .case-frame.notready { fill: #f7f7f7; stroke: #bbb; stroke-dasharray: 4 3; }
+  .case-frame.default { fill: #f7f7f7; stroke: #888; stroke-dasharray: 4 3; }
+  .case-frame.default.fired { fill: #fff8d6; stroke: #b08900; stroke-width: 2; stroke-dasharray: none; }
+  .g-token { fill: #f1c40f; stroke: #b08900; stroke-width: 1.5; }
+  .g-label { fill: #fff; font-weight: 600; }
+  .arrow { fill: #2a6db0; }
+  .case-text { fill: #222; font-family: ui-monospace, monospace; font-size: 12px; }
+  .case-status { font-family: ui-monospace, monospace; font-size: 11px; }
+  .case-status.ready { fill: #2a6db0; font-weight: 600; }
+  .case-status.notready { fill: #999; }
+  .case-status.fired { fill: #b08900; font-weight: 700; }
+  .log { font-family: ui-monospace, monospace; font-size: 12px; white-space: pre; background: #111; color: #ddd; padding: 8px; margin-top: 12px; max-height: 160px; overflow: auto; }
+</style>
+</head>
+<body>
+<nav class="tabs">
+  <a href="select.html" class="active">Select</a>
+  <a href="select-wire.html">Select (wire)</a>
+  <a href="goro-sched.html">Goro+Sched</a>
+  <a href="goro-sched-wire.html">Goro+Sched (wire)</a>
+  <a href="chan-anim.html">Chan</a>
+  <a href="chan-wire.html">Chan (wire)</a>
+</nav>
+<h1>Select — visible-state snapshot</h1>
+<p class="lede">
+A goroutine is parked at a <code>select</code>. Each case is one chan op
+(send or recv) plus a readiness predicate. A case is <em>ready</em> when its
+op would not block: send-case ready ⇔ the chan has a free slot or a waiting
+receiver; recv-case ready ⇔ the chan has a buffered item or a waiting
+sender. <em>default</em>, if present, is always ready and fires only when
+no other case is ready.
+</p>
+<p class="lede">
+Visible-state firing rule: collect all ready cases. If the set is non-empty
+and contains non-default cases, pick the lowest-index ready non-default
+case (this sketch uses lowest-index for determinism — Go's runtime randomises;
+the rebuild plan will pick its own rule). If only default is ready, fire
+default. If the set is empty, the goroutine remains parked.
+</p>
+
+<div class="controls">
+  <button id="toggle0">toggle case 0 ready</button>
+  <button id="toggle1">toggle case 1 ready</button>
+  <button id="toggle2">toggle case 2 ready</button>
+  <button id="toggleDefault">toggle default present</button>
+  <button id="fire">fire</button>
+  <button id="reset">reset</button>
+</div>
+
+<div class="stage-wrap"><svg id="stage" width="820" height="380" viewBox="0 0 820 380"></svg></div>
+
+<div class="log" id="log"></div>
+
+<script>
+const cases = [
+  { kind: 'recv', chan: 'in', ready: true },
+  { kind: 'send', chan: 'out', ready: false },
+  { kind: 'recv', chan: 'quit', ready: false },
+];
+let hasDefault = true;
+let firedIdx = null; // 0..2 or 'default' or null
+
+const log = [];
+function logLine(m) {
+  log.push(m);
+  if (log.length > 40) log.shift();
+  document.getElementById('log').textContent = log.join('\n');
+}
+
+function pickFire() {
+  for (let i = 0; i < cases.length; i++) {
+    if (cases[i].ready) return i;
+  }
+  if (hasDefault) return 'default';
+  return null;
+}
+
+function fire() {
+  const choice = pickFire();
+  if (choice === null) {
+    logLine('select: parked — no case ready, no default');
+    firedIdx = null;
+  } else if (choice === 'default') {
+    logLine('select: default fires (no other case ready)');
+    firedIdx = 'default';
+  } else {
+    const c = cases[choice];
+    logLine(`select: case ${choice} fires (${c.kind} ${c.chan})`);
+    firedIdx = choice;
+  }
+  render();
+}
+
+function render() {
+  const svg = document.getElementById('stage');
+  const ns = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = '';
+  const mk = (tag, attrs) => {
+    const el = document.createElementNS(ns, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    svg.appendChild(el);
+    return el;
+  };
+  const text = (x, y, str, cls, anchor) => {
+    const t = mk('text', { x, y, class: cls || '' });
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = str;
+  };
+
+  // Goroutine on left, parked at select
+  const GX = 90, GY = 200;
+  mk('circle', { cx: GX, cy: GY, r: 26, class: 'g-token' });
+  text(GX, GY + 5, 'g1', 'g-label', 'middle');
+  text(GX, GY - 36, 'goroutine', 'label', 'middle');
+  text(GX, GY + 50, 'parked at select', 'sublabel', 'middle');
+
+  // Cases stacked on the right
+  const CX = 280, CW = 460, CH = 56, CGAP = 12;
+  const totalCases = cases.length + (hasDefault ? 1 : 0);
+  const blockH = totalCases * CH + (totalCases - 1) * CGAP;
+  const CY0 = GY - blockH / 2;
+
+  text(CX, CY0 - 14, 'select cases', 'label');
+
+  for (let i = 0; i < cases.length; i++) {
+    const c = cases[i];
+    const y = CY0 + i * (CH + CGAP);
+    let cls = 'case-frame';
+    if (firedIdx === i) cls += ' fired';
+    else if (c.ready) cls += ' ready';
+    else cls += ' notready';
+    mk('rect', { x: CX, y, width: CW, height: CH, rx: 4, class: cls });
+
+    const expr = c.kind === 'recv' ? `v := <-${c.chan}` : `${c.chan} <- v`;
+    text(CX + 14, y + 22, `case ${i}:`, 'case-text');
+    text(CX + 80, y + 22, expr, 'case-text');
+    let status, scls;
+    if (firedIdx === i) { status = '★ fired'; scls = 'case-status fired'; }
+    else if (c.ready) { status = 'ready'; scls = 'case-status ready'; }
+    else { status = 'not ready (would block)'; scls = 'case-status notready'; }
+    text(CX + 14, y + 42, status, scls);
+
+    // Connector line from goroutine to case
+    const lineCls = (firedIdx === i) ? 'arrow' : '';
+    const stroke = (firedIdx === i) ? '#b08900' : '#ccc';
+    const sw = (firedIdx === i) ? 2.5 : 1.5;
+    mk('line', { x1: GX + 26, y1: GY, x2: CX, y2: y + CH / 2, stroke, 'stroke-width': sw, fill: 'none' });
+  }
+
+  if (hasDefault) {
+    const i = cases.length;
+    const y = CY0 + i * (CH + CGAP);
+    let cls = 'case-frame default';
+    if (firedIdx === 'default') cls += ' fired';
+    mk('rect', { x: CX, y, width: CW, height: CH, rx: 4, class: cls });
+    text(CX + 14, y + 22, 'default:', 'case-text');
+    text(CX + 80, y + 22, '(fallthrough)', 'case-text');
+    const status = (firedIdx === 'default') ? '★ fired' : 'available iff no other ready';
+    const scls = (firedIdx === 'default') ? 'case-status fired' : 'case-status notready';
+    text(CX + 14, y + 42, status, scls);
+    const stroke = (firedIdx === 'default') ? '#b08900' : '#ccc';
+    const sw = (firedIdx === 'default') ? 2.5 : 1.5;
+    mk('line', { x1: GX + 26, y1: GY, x2: CX, y2: y + CH / 2, stroke, 'stroke-width': sw, fill: 'none' });
+  }
+
+  // Resize
+  const wantH = Math.max(380, CY0 + blockH + 40);
+  svg.setAttribute('viewBox', `0 0 820 ${wantH}`);
+  svg.setAttribute('height', wantH);
+}
+
+document.getElementById('toggle0').addEventListener('click', () => { cases[0].ready = !cases[0].ready; firedIdx = null; render(); });
+document.getElementById('toggle1').addEventListener('click', () => { cases[1].ready = !cases[1].ready; firedIdx = null; render(); });
+document.getElementById('toggle2').addEventListener('click', () => { cases[2].ready = !cases[2].ready; firedIdx = null; render(); });
+document.getElementById('toggleDefault').addEventListener('click', () => { hasDefault = !hasDefault; firedIdx = null; render(); });
+document.getElementById('fire').addEventListener('click', fire);
+document.getElementById('reset').addEventListener('click', () => {
+  cases[0].ready = true; cases[1].ready = false; cases[2].ready = false;
+  hasDefault = true; firedIdx = null; log.length = 0;
+  document.getElementById('log').textContent = '';
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
