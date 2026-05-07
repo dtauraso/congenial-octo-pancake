@@ -3,7 +3,7 @@
 // PulseInstance reads performance.now() directly, so the renderer
 // owns its own timing.
 
-import type { Spec } from "../schema";
+import type { Spec, StateValue } from "../schema";
 import { readNodeInit } from "../sim/seeds";
 import { buildWires, type WireMap } from "./build-wires";
 import { ackWire } from "./wire";
@@ -18,6 +18,7 @@ let _resumeWaiters: Array<() => void> = [];
 let _version = 0;
 const _listeners = new Set<() => void>();
 const _tickListeners = new Set<(nodeId: string, ts: number) => void>();
+const _heldListeners = new Set<(nodeId: string, value: StateValue) => void>();
 
 export function subscribeNodeTicks(
   fn: (nodeId: string, ts: number) => void,
@@ -29,6 +30,17 @@ export function subscribeNodeTicks(
 function publishTick(nodeId: string): void {
   const ts = performance.now();
   for (const fn of _tickListeners) fn(nodeId, ts);
+}
+
+export function subscribeNodeHeld(
+  fn: (nodeId: string, value: StateValue) => void,
+): () => void {
+  _heldListeners.add(fn);
+  return () => _heldListeners.delete(fn);
+}
+
+function publishHeld(nodeId: string, value: StateValue): void {
+  for (const fn of _heldListeners) fn(nodeId, value);
 }
 
 export function isWiresRuntimeRunning(): boolean {
@@ -104,6 +116,7 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
     _wires = null;
     return;
   }
+  wire.onArrive((v) => publishHeld(readGate.id, v as StateValue));
   const queue = readNodeInit(input.data);
   _running = true;
   _loops = [

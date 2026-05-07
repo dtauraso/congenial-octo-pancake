@@ -100,6 +100,28 @@ describe("runtime-wires", () => {
     expect(getWiresMap()).toBeNull();
   });
 
+  it("subscribeNodeHeld: receiver held value matches latest arrived", async () => {
+    const { subscribeNodeHeld } = await import("../../src/substrate/runtime-wires");
+    const held = new Map<string, unknown>();
+    const off = subscribeNodeHeld((nodeId, value) => {
+      held.set(nodeId, value);
+    });
+    await startWiresRuntime(spec);
+    const wires = getWiresMap();
+    const wire = wires?.get("i->r");
+    if (!wire) throw new Error("wire missing");
+    for (let i = 0; i < 3; i++) {
+      while (wire.state !== "inFlight") await new Promise((r) => setTimeout(r, 0));
+      ackWire(wire);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    await stopWiresRuntime();
+    off();
+    // Queue is [7, 8] cycling; held should be one of those values.
+    expect([7, 8]).toContain(held.get("r"));
+    expect(held.has("i")).toBe(false);
+  });
+
   it("subscribeNodeTicks: tick count matches send/ack count", async () => {
     const { subscribeNodeTicks } = await import("../../src/substrate/runtime-wires");
     const counts = new Map<string, number>();
