@@ -20,3 +20,4 @@
 - [feedback_per_emit_simtime_anchoring.md](feedback_per_emit_simtime_anchoring.md) — For emit→pulse animations, anchor each instance at its emit simTime and render concurrently; head-of-queue serial mount is the wrong shape (validated 2026-05-04)
 - [project_graph_node_pulse_coordination.md](project_graph_node_pulse_coordination.md) — Cross-node pulse coordination still off after unified-sim-clock work; next session needs a specific symptom before scanning
 - [feedback_file_size_budget.md](feedback_file_size_budget.md) — Refactor any source file ≥ 200 LOC; target ≤ 100 LOC. Run `npm run check:loc` from `tools/topology-vscode/`.
+- [feedback_substrate_vs_coordinator_bias.md](feedback_substrate_vs_coordinator_bias.md) — Bias toward locality/composition/source-owned predicates; coordinator-shaped fixes are training-data drift, surface the shape concern before drafting
