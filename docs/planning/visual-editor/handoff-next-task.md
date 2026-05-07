@@ -1,90 +1,73 @@
 # Handoff — Next task (START HERE)
 
-**Continue revised step 1: rewire AnimatedEdge to read its Wire.**
-Spec is at
+**Continue revised step 1: toolbar play/pause off legacy state, then
+start retiring legacy.** Spec is at
 [../sim-substrate/revised-step-1.md](../sim-substrate/revised-step-1.md).
-Commits 1–2 landed:
-- bf340d7 — Wire primitive + buildWires + contract test.
-- 30d6e28 — per-node loops + runtime-wires + contract test
-  (4 cases). Files:
-  [src/substrate/node-loop.ts](/tools/topology-vscode/src/substrate/node-loop.ts),
-  [src/substrate/runtime-wires.ts](/tools/topology-vscode/src/substrate/runtime-wires.ts),
-  [test/contracts/node-loop.test.ts](/tools/topology-vscode/test/contracts/node-loop.test.ts).
-  `slog` was made test-safe (lazy webview import) so log.ts loads
-  in node envs without `window`. Nothing in the active code path
-  calls `startWiresRuntime` yet — it's wired but inert.
+Commits 1–3 landed:
+- bf304d7 — Wire primitive + buildWires + contract test.
+- 30d6e28 — per-node loops + runtime-wires + contract test.
+- c89e246 — AnimatedEdge dispatches to a wire-driven lanes hook when
+  a `Wire` exists for the edge; `_handle-load` calls
+  `startWiresRuntime` for matched Input→ReadGate topologies.
+  `readGateLoop` gained `autoAck` (default true; runtime-wires passes
+  false so the renderer paces ack). `runtime-wires.stop()` drains
+  in-flight wires so input loops wind down cleanly. Files:
+  [src/webview/rf/AnimatedEdge.tsx](/tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx),
+  [src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts](/tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts),
+  [src/webview/rf/app/_handle-load.ts](/tools/topology-vscode/src/webview/rf/app/_handle-load.ts).
 
-**Commit 3 (next):** rewire `AnimatedEdge` to read its `Wire` (via
-React context, falling back to RF edge data if RF fights). Replace
-the bus subscribe with reading `wire.state` + `wire.pending` and
-driving the arc timer locally. The visual layer's arc completion
-should call `ackWire(wire)` so the input loop's `send` resolves and
-the next value flows. Once that works, swap the `loadSubstrate` call
-site in `_handle-load` over to `startWiresRuntime` for the matched
-topology, and prove the cold-open + rename-reload cases animate
-without any global-bus involvement.
+**Visual validation (recommended before commit 4):** open the matched
+Input→ReadGate topology and confirm cold-open animates, then rename
+either node and confirm reload re-animates without stalling. The
+legacy event bus is no longer in the active path for matched specs;
+PulseInstance still reads `getSimTime()` (retires step 4-5).
 
-## Why this exists (the short version)
+**Commit 4 (next):** Toolbar play/pause must toggle a per-runtime flag
+on the wires runtime instead of `legacyRunnerState.playing`. Today
+runtime-wires writes that flag itself as a stand-in for the legacy
+sim clock. Decide: either give Wire its own arc timer (sketches lean
+this way) and let pause freeze the renderer locally, or keep the
+"runtime stops calling send on pause; in-flight pulse finishes its
+arc" semantics. Latter is simpler — pick that unless it makes step 5
+awkward.
 
-Original step 1 stood up a substrate that animates, but it rides the
-**legacy global event bus** (`sim/event-bus`), the **legacy sim
-clock** (`legacyRunnerState`), and the **pulse-concurrency ledger**.
-The chan sketches don't have any of those — they have point-to-point
-sender→wire→receiver. Layering on shared mailboxes produced the
-stuck-pulse-on-load bug class; the dedup we removed in 7c59101 was
-masking it, not fixing it. The real fix is to retire the global
-scheduling system.
+**Commit 5+ (after pause works):** start ripping. `_resetPulseConcurrency`
+calls in [runtime.ts][rt], `legacyRunnerState.{playing,
+simSegmentStartWall, simAccumMs}` coupling in runtime-wires + PulseInstance,
+then the `sim/event-bus` substrate-side usage. Endpoint: `sim/event-bus`,
+`legacyRunnerState`, and `pulse-concurrency` are all unused on the
+matched code path.
 
-The user explicitly chose to defer all visual validation until global
-scheduling is gone. Don't ask for editor checks mid-stream — push
-through to "no global scheduling left," then hand back.
+[rt]: /tools/topology-vscode/src/substrate/runtime.ts
 
-## Branch
+## Why / branch / scope
 
-This is `task/wires`, cut from `task/runtime-substrate-rebuild` at
-1aeee65. Fresh branch on purpose: the architectural reset is
-non-trivial and the prior branch's commits are "what we tried first."
-`task/runtime-substrate-rebuild` stays as reference; do not delete.
-
-## Scope of this stretch (~$150–250)
-
-User has signed off on:
-- **Trivial topology only.** Keep Input→ReadGate as the only test
-  case through this whole stretch. Don't port more node types than
-  needed to prove the legacy runner is dead.
-- **One-node-at-a-time bulk port comes after**, not now. That's
-  steps 4–5 territory and stays separate.
-
-Endpoint that earns the user's eyes again: revised step 1 done,
-plus enough of steps 4–5 to retire `sim/event-bus`,
-`legacyRunnerState`, and `pulse-concurrency`. Then hand back.
+See [handoff-frame.md](handoff-frame.md) for the conceptual frame and
+[handoff-rebuild-plan.md](handoff-rebuild-plan.md) for the port plan.
+Branch is `task/wires` (cut from `task/runtime-substrate-rebuild` at
+1aeee65). Trivial Input→ReadGate only through this whole stretch;
+endpoint is `sim/event-bus` + `legacyRunnerState` + `pulse-concurrency`
+unused on the matched path.
 
 ## Concrete commits (remaining)
 
-1. ✅ bf340d7 — `Wire` type + builder + contract test.
+1. ✅ bf304d7 — `Wire` type + builder + contract test.
 2. ✅ 30d6e28 — per-node loops + runtime-wires + contract test.
-3. Rewire `AnimatedEdge` to read its `Wire` via context (or RF edge
-   data — context is cleaner; fall back if RF fights). The visual
-   arc-completion is what calls `ackWire`; this closes the cycle
-   that commit 2 leaves running on instantaneous microtask acks.
+3. ✅ c89e246 — AnimatedEdge wire-driven hook + `_handle-load` swap.
 4. Toolbar play/pause toggles a per-runtime flag, no
    `legacyRunnerState` coupling.
-5. Once the new path is alive on the matched topology, start ripping:
-   `_resetPulseConcurrency` calls in [runtime.ts][rt],
-   `legacyRunnerState.{playing,simSegmentStartWall,simAccumMs}`
-   coupling, then the `sim/event-bus` substrate-side usage.
-
-[rt]: /tools/topology-vscode/src/substrate/runtime.ts
+5. Once pause works, start ripping: `_resetPulseConcurrency` calls
+   in [runtime.ts][rt], `legacyRunnerState.{playing,
+   simSegmentStartWall, simAccumMs}` coupling, then the
+   `sim/event-bus` substrate-side usage.
 
 ## Open questions (decide during implementation)
 
 1. **Wire owns its arc timer, or visual layer does?** Sketches put
-   it on the wire. Default to that unless R5 gets awkward.
+   it on the wire. Default to that unless step 5 gets awkward.
 2. **Pause semantics?** Either wire freezes mid-arc, or runtime
    stops calling `send` (in-flight finishes, no new sends). Latter
    is simpler.
-3. **RF edge data vs context for handing Wire to AnimatedEdge?**
-   Context is cleaner; fall back to edge data if RF fights.
 
 ## ALWAYS clause
 

@@ -35,15 +35,23 @@ revised foundation is at
 Start at [handoff-next-task.md](handoff-next-task.md).
 
 State at handoff:
-  `task/wires` at 30d6e28, pushed and tracking origin. Commits 1–2
-  of revised step 1 landed: `Wire` primitive + `buildWires` (bf340d7),
-  per-node loops + `runtime-wires` (30d6e28). 234/234 vitest, build
-  green, no LOC violations. Nothing is wired into the active code
-  path yet — `startWiresRuntime` exists but no caller invokes it. Prior
-  branch `task/runtime-substrate-rebuild` is preserved as reference;
-  do not delete. Working tree has `topology.view.json` modified
-  (incidental pan/zoom; not part of rebuild work — leave or discard,
-  do not commit).
+  `task/wires` at c89e246, pushed and tracking origin. Commits 1–3 of
+  revised step 1 landed: `Wire` primitive (bf340d7), per-node loops
+  + `runtime-wires` (30d6e28), AnimatedEdge wire-driven dispatch
+  + `_handle-load` swap (c89e246). 235/235 vitest, build + types
+  green, no LOC violations. The active code path now calls
+  `startWiresRuntime` for matched Input→ReadGate topologies;
+  `loadSubstrate` (the bus-driven runtime in `substrate/runtime.ts`)
+  is no longer invoked anywhere. The legacy sim clock
+  (`legacyRunnerState.playing`) is still poked from runtime-wires
+  because PulseInstance reads `getSimTime()` for rAF math — that read
+  retires in step 4-5 along with this poke. Visual validation has
+  NOT been run yet (per the deferred-checks rule); next session may
+  want to verify cold-open + rename-reload animate before continuing.
+  Prior branch `task/runtime-substrate-rebuild` is preserved as
+  reference; do not delete. Working tree has `topology.view.json`
+  modified (incidental pan/zoom; not part of rebuild work — leave or
+  discard, do not commit).
 
 ## Dev-loop
 
