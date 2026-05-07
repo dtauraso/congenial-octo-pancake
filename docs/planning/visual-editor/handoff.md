@@ -35,23 +35,25 @@ revised foundation is at
 Start at [handoff-next-task.md](handoff-next-task.md).
 
 State at handoff:
-  `task/wires` at c89e246, pushed and tracking origin. Commits 1–3 of
-  revised step 1 landed: `Wire` primitive (bf340d7), per-node loops
+  `task/wires` at 72318e1, pushed and tracking origin. Commits 1–4 of
+  revised step 1 landed: `Wire` primitive (bf304d7), per-node loops
   + `runtime-wires` (30d6e28), AnimatedEdge wire-driven dispatch
-  + `_handle-load` swap (c89e246). 235/235 vitest, build + types
-  green, no LOC violations. The active code path now calls
-  `startWiresRuntime` for matched Input→ReadGate topologies;
-  `loadSubstrate` (the bus-driven runtime in `substrate/runtime.ts`)
-  is no longer invoked anywhere. The legacy sim clock
-  (`legacyRunnerState.playing`) is still poked from runtime-wires
-  because PulseInstance reads `getSimTime()` for rAF math — that read
-  retires in step 4-5 along with this poke. Visual validation has
-  NOT been run yet (per the deferred-checks rule); next session may
-  want to verify cold-open + rename-reload animate before continuing.
-  Prior branch `task/runtime-substrate-rebuild` is preserved as
-  reference; do not delete. Working tree has `topology.view.json`
-  modified (incidental pan/zoom; not part of rebuild work — leave or
-  discard, do not commit).
+  + `_handle-load` swap (c89e246), toolbar play/pause off legacy
+  state (72318e1). 235/235 vitest, build + tsc --noEmit green, no
+  LOC violations. The wires runtime owns its own pause flag; pause
+  stops new sends, in-flight pulse finishes its arc and acks.
+  TransportControls now picks the active runtime (wires → substrate
+  → legacy). User loaded `topology.json` and confirmed cold-open
+  animates; pause/resume visual validation deferred to next session.
+  The legacy sim clock (`legacyRunnerState.playing`) is still poked
+  from runtime-wires because PulseInstance reads `getSimTime()` for
+  rAF math — retires in step 5/6. `notifyState()` (legacy event bus)
+  is also poked from pause/resume so TimelinePanel re-renders;
+  retires in step 7 with a `subscribeWires` swap. Prior branch
+  `task/runtime-substrate-rebuild` is preserved as reference; do not
+  delete. Working tree has `topology.view.json` modified (incidental
+  pan/zoom; not part of rebuild work — leave or discard, do not
+  commit).
 
 ## Dev-loop
 
