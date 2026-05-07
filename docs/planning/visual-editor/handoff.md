@@ -22,21 +22,25 @@ Read them in this order on a fresh session:
 
 ---
 
-Continuing on wirefold, branch `task/runtime-substrate-rebuild` (off
-`main`, pushed). Gate A passed; this is the rebuild branch. Port-plan
-**step 1 animates with working play/pause** — verified 2026-05-07.
-Bundle hot-reload landed (commit d7983ab): edit → `npm run build` →
-tab refreshes in place, no Reload Window. **Step 2 is blocked** by a
-stuck-pulse regression that surfaces on cold-open AND on every
-in-editor doc edit (renaming a node halts animation). Next work is
-diagnosing that — see [handoff-next-task.md](handoff-next-task.md).
+Continuing on wirefold, branch `task/wires` (cut from
+`task/runtime-substrate-rebuild` at 1aeee65, fresh branch by user
+request). The original step-1 substrate animates, but it rides the
+global event bus + sim clock + pulse-concurrency ledger — i.e. it
+layers on the very scheduling system the rebuild is supposed to
+replace. Stuck-pulse-on-load was a symptom of that, not a fix
+target. User decision this session: **retire global scheduling
+before doing anything else**, including step 2. Spec for the
+revised foundation is at
+[../sim-substrate/revised-step-1.md](../sim-substrate/revised-step-1.md).
+Start at [handoff-next-task.md](handoff-next-task.md).
 
 State at handoff:
-  Local on `task/runtime-substrate-rebuild`, pushed to origin
-  through d7983ab (bundle hot-reload). Working tree has
-  `topology.view.json` and `topology.json` modified (incidental
-  editor pan/zoom; not part of rebuild work — leave or discard, do
-  not commit). Tests/build/tsc/check:loc clean as of last build.
+  Fresh branch `task/wires` at 1aeee65 (not yet pushed at handoff
+  time — first commit on this branch should push with `-u`). Prior
+  branch `task/runtime-substrate-rebuild` is preserved as reference
+  for what we tried first; do not delete. Working tree has
+  `topology.view.json` modified (incidental pan/zoom; not part of
+  rebuild work — leave or discard, do not commit).
 
 ## Dev-loop
 

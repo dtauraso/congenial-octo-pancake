@@ -1,61 +1,92 @@
 # Handoff — Next task (START HERE)
 
-**Diagnose stuck-pulse-on-load.** This blocks port-plan step 2.
+**Implement revised step 1: replace global scheduling with per-edge
+Wire objects.** Spec is at
+[../sim-substrate/revised-step-1.md](../sim-substrate/revised-step-1.md).
+Read it before touching code; it covers what `Wire` is, what gets
+deleted/decoupled, scope (in/out), and three open questions left for
+implementation-time judgment calls.
 
-## Symptom
+## Why this exists (the short version)
 
-Open the topology editor cold (or rename any node, which fires a
-doc edit and re-loads the spec): the substrate emits the first
-pulse but the loop stalls. Play button is a no-op (`_running` is
-already true; toggling has no visible effect).
+Original step 1 stood up a substrate that animates, but it rides the
+**legacy global event bus** (`sim/event-bus`), the **legacy sim
+clock** (`legacyRunnerState`), and the **pulse-concurrency ledger**.
+The chan sketches don't have any of those — they have point-to-point
+sender→wire→receiver. Layering on shared mailboxes produced the
+stuck-pulse-on-load bug class; the dedup we removed in 7c59101 was
+masking it, not fixing it. The real fix is to retire the global
+scheduling system.
 
-`.probe/substrate-log.jsonl` shows the failure shape:
+The user explicitly chose to defer all visual validation until global
+scheduling is gone. Don't ask for editor checks mid-stream — push
+through to "no global scheduling left," then hand back.
 
-```
-match → loaded (queue: 0,1) → ae-subscribed → emit("0") →
-ae-received → ae-mounting → ae-subscribed
-```
+## Branch
 
-Note the second `ae-subscribed` AFTER `ae-received`. The
-AnimatedEdge re-subscribed (likely React StrictMode unmount/remount
-or a re-render) AFTER the pulse was delivered to the original
-subscription. The pulse goes to the disposed subscription; the new
-one waits forever; substrate waits for an ack that never comes.
+This is `task/wires`, cut from `task/runtime-substrate-rebuild` at
+1aeee65. Fresh branch on purpose: the architectural reset is
+non-trivial and the prior branch's commits are "what we tried first."
+`task/runtime-substrate-rebuild` stays as reference; do not delete.
 
-Prior `.probe/stuck-pulse-last*.json` files exist from earlier
-debugging — this is not the first occurrence.
+## Scope of this stretch (~$150–250)
 
-## Where to look
+User has signed off on:
+- **Trivial topology only.** Keep Input→ReadGate as the only test
+  case through this whole stretch. Don't port more node types than
+  needed to prove the legacy runner is dead.
+- **One-node-at-a-time bulk port comes after**, not now. That's
+  steps 4–5 territory and stays separate.
 
-- `tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx` (or
-  wherever AE lives) — the subscribe useEffect, its cleanup, and
-  the `edge-ready` emit timing.
-- `tools/topology-vscode/src/substrate/runtime.ts` — the
-  edge-ready handshake and first-emit gating. The fix in 68e5ae6
-  was supposed to prevent dropping the leading token; it's
-  regressing under remount.
-- `tools/topology-vscode/src/webview/rf/app/_handle-load.ts` —
-  `lastLoadedText` dedup (added in f72e7ca). Module-level state
-  may interact badly with re-mounts.
+Endpoint that earns the user's eyes again: revised step 1 done,
+plus enough of steps 4–5 to retire `sim/event-bus`,
+`legacyRunnerState`, and `pulse-concurrency`. Then hand back.
 
-## Why "rename stops animation" is the same bug
+## Concrete first commits (suggested order)
 
-Inline-edit on a node mutates `topology.json`, which fires
-`onDidChangeTextDocument`, which posts a fresh `load` to the
-webview. The webview calls `loadSubstrate(next)` which stops and
-restarts the substrate. The restart hits the same stuck-pulse
-mode as cold-open.
+1. Define `Wire` type + builder (walk spec, instantiate one Wire per
+   edge, hand them to nodes by reference).
+2. Substrate runtime: per-node loops reading inbound / writing
+   outbound. Two loops for Input→ReadGate.
+3. Rewire `AnimatedEdge` to read its `Wire` via context (or RF edge
+   data — context is cleaner; fall back if RF fights).
+4. Toolbar play/pause toggles a per-runtime flag, no
+   `legacyRunnerState` coupling.
+5. Once the new path is alive on the matched topology, start ripping:
+   `_resetPulseConcurrency` calls in [runtime.ts][rt],
+   `legacyRunnerState.{playing,simSegmentStartWall,simAccumMs}`
+   coupling, then the `sim/event-bus` substrate-side usage.
 
-## Step 2 (deferred)
+[rt]: /tools/topology-vscode/src/substrate/runtime.ts
 
-Per-node running indicator + reloop glyph. Spec at
-[../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md)
-§"Visual layer" item 2. Cannot validate visually until stuck-pulse
-is fixed. Resume only after cold-open animates reliably.
+## Open questions (decide during implementation)
 
-## Bundle hot-reload (already landed, d7983ab)
+1. **Wire owns its arc timer, or visual layer does?** Sketches put
+   it on the wire. Default to that unless R5 gets awkward.
+2. **Pause semantics?** Either wire freezes mid-arc, or runtime
+   stops calling `send` (in-flight finishes, no new sends). Latter
+   is simpler.
+3. **RF edge data vs context for handing Wire to AnimatedEdge?**
+   Context is cleaner; fall back to edge data if RF fights.
 
-Edit → `npm run build` → topology tab refreshes in place. Use the
-Output → Log (Extension Host) panel to confirm the watcher fired:
-`[topology] bundleWatcher fired: change` then
-`hot-reload: re-rendering webview.html`.
+## Recently landed on `task/runtime-substrate-rebuild` (now reference-only)
+
+- 7c59101 — dropped module-level `lastLoadedText` dedup; cold-open
+  + rename-triggered reloads animate cleanly without it. Confirmed
+  by user this session: 11/00 leading-pulse patterns are gone.
+- 1aeee65 — disabled periodic-checks auto-triggers (only
+  `workflow_dispatch` now); cuts CI failure-email noise during the
+  rebuild. Restore schedule/push/PR triggers when this lands on
+  main.
+
+## ALWAYS clause
+
+At end of session, overwrite this file (and the sibling
+`handoff-*.md` files) with a freshly-rendered prompt tailored to the
+state you're leaving the branch in, and commit on the task branch.
+Do not rely on chat history; the next AI may be a fresh model with
+no transcript. The rendered handoff must itself contain this same
+ALWAYS clause so the loop is self-perpetuating across sessions. Use
+[continuation-prompt-template.md](continuation-prompt-template.md)
+as the structural source of truth; update the template when an
+invariant changes. Keep each file ≤100 LOC per the budget rule.
