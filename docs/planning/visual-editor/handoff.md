@@ -22,35 +22,34 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-08, end of fifth session):
-  Active branch: `task/node-ticks` at `4827ea2` (pushed). `main`
-  still at `392602f` — three commits accumulated on this branch
-  (two pause-freeze remount fixes + one Wire API extension) and not
-  yet merged.
+State at handoff (2026-05-08, end of sixth session):
+  Active branch: `task/node-ticks` at `1a918b1` (pushed). `main`
+  still at `392602f` — five commits on this branch and not yet
+  merged.
 
   This session added:
 
-  - **Wire ready/value back-channel API** (`4827ea2`).
-    Predictive readiness signals for sender gates and a symmetric
-    value-presence signal for receiver loops, so future AND-gate
-    and select-style node loops can compose multi-input topologies
-    without racing `awaitReady()` against `send()`. New surface on
-    `Wire`: `ready` / `onReadyChange` / `awaitReady` (sender side,
-    level + edge), `hasValue` / `onValueChange` / `awaitValue`
-    (receiver side, same shape). `awaitReady` is level-triggered
-    (resolves immediately if idle); `onReadyChange` is edge-triggered
-    so AND gates fire once per cycle. `awaitValue` does NOT ack —
-    receiver must call `ackWire` explicitly. Emissions are wired
-    into existing `send` and `_ack` transitions; no node-loop or
-    runtime consumer changes yet, so the new API is inert in the
-    running editor. 9 new contract tests in
-    `test/contracts/wire-primitive.test.ts`. Architectural invariant
-    pinned during design: one sender per Wire — contention happens
-    at receiver nodes with multiple inbound wires, not at the wire
-    layer, so there is no TOCTOU between `awaitReady` and `send`.
+  - **inputLoop gates on awaitReady before send** (`d01973e`).
+    Replaced the implicit ack-wait inside `out.send(v)` with an
+    explicit `await out.awaitReady(); await out.send(v)`. Behavior
+    unchanged in the single-sender Input→ReadGate topology; this is
+    the shape future gated/multi-input loops compose with.
+
+  - **andGateLoop primitive for multi-input joins** (`1a918b1`).
+    First real consumer of the wire back-channels from `4827ea2`.
+    Loop body: `Promise.all(inbound.map(w => w.awaitValue()))` →
+    `reduce(values)` → `await out.awaitReady()` → `await out.send`
+    → `ackWire` each inbound. Stop uses a per-iteration "wake"
+    race rather than racing against a long-lived stop signal, so
+    the loop body never accumulates Promise reaction records on a
+    never-resolving promise (V8's Promise.race-leak pitfall —
+    discovered the hard way: an earlier attempt OOM'd vitest).
+    Two contract tests in `test/contracts/node-loop.test.ts`
+    (basic join + slow-input). 248/248 green; tsc + build clean.
 
   Prior session on this branch:
 
+  - **Wire ready/value back-channel API** (`4827ea2`).
   - **Paint one frame on mid-pause remount** (`e5b20d7`).
   - **Pause-freeze on PulseInstance remount** (`a0260fb`).
 
@@ -81,12 +80,14 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Start at [handoff-next-task.md](handoff-next-task.md). The Wire API
-is now ready to thread through `inputLoop` and a new multi-input
-node loop (likely `andGateLoop`). That's the first commit where the
-`4827ea2` API earns its keep. Still optional — the broader posture
-remains friction-driven; if no editor friction surfaces, drive the
-substrate forward.
+Start at [handoff-next-task.md](handoff-next-task.md). Substrate
+primitives are in place; the next move is the first real **node
+port** that uses `andGateLoop` end-to-end (most natural target:
+`ChainInhibitorNode` in the substrate runtime, which requires
+widening `matchSubstrate` and `runtime-wires` past the trivial
+Input→ReadGate shape). Still optional — the broader posture remains
+friction-driven; if no editor friction surfaces, drive the substrate
+forward.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

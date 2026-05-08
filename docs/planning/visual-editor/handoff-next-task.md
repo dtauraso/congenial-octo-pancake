@@ -1,13 +1,10 @@
 # Handoff — Next task (START HERE)
 
-**State:** `main` at `392602f`. `task/node-ticks` at `4827ea2`
-(pushed, not yet merged) carrying two pause-freeze remount fixes
-plus the Wire ready/value back-channel API.
-
-**Next session is the consumer commit.** The API in `4827ea2` is
-inert until something calls `awaitReady` / `awaitValue`. That is
-explicitly the job of the next session — do not re-design the API,
-do not commit on this branch in the meantime.
+**State:** `main` at `392602f`. `task/node-ticks` at `1a918b1`
+(pushed, not yet merged) carrying two pause-freeze remount fixes,
+the Wire ready/value back-channel API, and now the first two
+consumer commits: `inputLoop` gates on `awaitReady`, and a generic
+`andGateLoop` primitive lives in `src/substrate/node-loop.ts`.
 
 ## What's done
 
@@ -18,41 +15,33 @@ do not commit on this branch in the meantime.
 - Wire gained predictive back-channels (`4827ea2`):
     - sender side: `ready`, `onReadyChange(fn)`, `awaitReady()`
     - receiver side: `hasValue`, `onValueChange(fn)`, `awaitValue()`
-  Level-triggered awaits resolve immediately if the condition holds;
-  change listeners are edge-triggered. `awaitValue` does NOT ack;
-  receiver must call `ackWire` explicitly. Architectural invariant
-  pinned: one sender per wire — contention is modeled at receiver
-  nodes with N inbound wires, not at the wire layer. 9 new contract
-  tests; 246/246 green; tsc + build clean.
+- `inputLoop` now does `awaitReady` then `send` (`d01973e`).
+- `andGateLoop(inbound[], out, reduce)` primitive (`1a918b1`):
+  Promise.all(awaitValue) → reduce → awaitReady → send → ackWire
+  each inbound. Stop uses a per-iteration wake race (don't
+  resurrect the long-lived-stop-signal pattern — V8 leaks reaction
+  records). 248/248 green; tsc + build clean.
 
 ## What the next session should do
 
-Thread the new API through a real consumer. Two pieces, ideally
-landed as separate commits:
+Land the **first multi-input node port** that actually wires
+`andGateLoop` into `runtime-wires.ts`. Steps:
 
-1. **`inputLoop` uses `awaitReady`.** Replace the implicit ack-wait
-   inside `await out.send(v)` with an explicit predictive gate:
-   `await out.awaitReady(); await out.send(v);`. Today's behavior
-   is unchanged (single-sender topology), but this is the shape
-   future gated loops will compose with. Verify all existing tests
-   stay green; no editor-visible change.
+1. Pick a target node — `ChainInhibitorNode` is the most natural
+   (the topology's whole point). A two-input AND would also work
+   as a proof of concept. Either way it's a real port, not a
+   primitive.
+2. Widen `matchSubstrate` (`src/substrate/match.ts`) to admit the
+   chosen topology. Keep it strict — silent broadening masks bugs.
+3. Wire it in `startWiresRuntime`: build inbound + outbound wires
+   per node, instantiate `andGateLoop` with the node's reduce
+   semantics, publish ticks/held/buffered the same way the
+   Input→ReadGate path does.
+4. Add an end-to-end test that drives the topology and observes
+   the wire cycle.
 
-2. **First multi-input node loop.** Pilot port — most natural
-   target is `ChainInhibitorNode` or a thin `andGateLoop(inbound[])`
-   used internally by it. Loop body shape:
-   ```ts
-   while (!stopped) {
-     const vs = await Promise.all(inbound.map(w => w.awaitValue()));
-     // …compute…
-     await out.awaitReady();
-     await out.send(result);
-     for (const w of inbound) ackWire(w);
-   }
-   ```
-   This extends `match.ts` beyond the trivial Input→ReadGate
-   predicate and is the first commit where the new API earns its
-   keep. Coordinate with port-plan steps 4–6 in
-   [../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md).
+Coordinate with port-plan steps 4–6 in
+[../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md).
 
 ## What's NOT done (and why it's parked)
 
