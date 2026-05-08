@@ -22,34 +22,37 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-07, end of fourth session):
-  Active branch: `task/node-ticks` at `e5b20d7` (pushed). `main`
-  still at `392602f` — two pause-freeze fixes accumulated on this
-  branch are not yet merged.
+State at handoff (2026-05-08, end of fifth session):
+  Active branch: `task/node-ticks` at `4827ea2` (pushed). `main`
+  still at `392602f` — three commits accumulated on this branch
+  (two pause-freeze remount fixes + one Wire API extension) and not
+  yet merged.
 
   This session added:
 
-  - **Paint one frame on mid-pause remount** (`e5b20d7`).
-    Follow-on friction from the prior fix: with the runtime paused,
-    dragging a node detached the pulse label from the pulse dot.
-    The skip-rAF-on-paused-mount branch never painted a frame, so
-    the label kept its pre-remount transform (old geom) while the
-    path rendered at new geom. Fix: call `frame()` once in the
-    paused-on-mount branch — with `frozenElapsed = 0` this snaps
-    label transform and dash offset to `arcTraveled = startArc` on
-    the new geom. Logged at
-    [session-log/2026-05-07-pulse-label-detaches-on-paused-drag.md](session-log/2026-05-07-pulse-label-detaches-on-paused-drag.md).
-    User confirmed fixed.
+  - **Wire ready/value back-channel API** (`4827ea2`).
+    Predictive readiness signals for sender gates and a symmetric
+    value-presence signal for receiver loops, so future AND-gate
+    and select-style node loops can compose multi-input topologies
+    without racing `awaitReady()` against `send()`. New surface on
+    `Wire`: `ready` / `onReadyChange` / `awaitReady` (sender side,
+    level + edge), `hasValue` / `onValueChange` / `awaitValue`
+    (receiver side, same shape). `awaitReady` is level-triggered
+    (resolves immediately if idle); `onReadyChange` is edge-triggered
+    so AND gates fire once per cycle. `awaitValue` does NOT ack —
+    receiver must call `ackWire` explicitly. Emissions are wired
+    into existing `send` and `_ack` transitions; no node-loop or
+    runtime consumer changes yet, so the new API is inert in the
+    running editor. 9 new contract tests in
+    `test/contracts/wire-primitive.test.ts`. Architectural invariant
+    pinned during design: one sender per Wire — contention happens
+    at receiver nodes with multiple inbound wires, not at the wire
+    layer, so there is no TOCTOU between `awaitReady` and `send`.
 
   Prior session on this branch:
 
+  - **Paint one frame on mid-pause remount** (`e5b20d7`).
   - **Pause-freeze on PulseInstance remount** (`a0260fb`).
-    Drag/touch mid-pause let the pulse run to completion because
-    the `[geom, speedPxPerMs]` effect re-mounted and started a
-    fresh rAF loop without consulting `isWiresRuntimePaused()`.
-    Fix: on mount, if paused, set `frozenElapsed = 0` and skip the
-    initial rAF; existing resume path handles rebase. Logged at
-    [session-log/2026-05-07-paused-pulse-resumes-on-node-touch.md](session-log/2026-05-07-paused-pulse-resumes-on-node-touch.md).
 
   Prior-session shipped work (still current on `main`):
 
@@ -58,16 +61,12 @@ State at handoff (2026-05-07, end of fourth session):
     `subscribeNodeTicks/Held/Buffered`.
   - **Pause = freeze mid-arc** (`34b8c20`): `subscribeWiresPause`
     fans one pause/resume signal; each `PulseInstance` owns its
-    rAF clock and freezes/rebases independently. Per-node streams
-    extracted to `node-streams.ts` for LOC budget.
+    rAF clock and freezes/rebases independently.
 
   Conceptual frame to carry forward: not a global clock, but
-  **concurrent clocks frozen on command**. (This framing is right
-  on its own merits — see the memory note about not over-attributing
-  the easy fix to it.)
+  **concurrent clocks frozen on command**.
 
-  Tests green at 238/238 vitest; tsc + build clean after the fix.
-  `check:loc` not re-run (PulseInstance.tsx still under budget).
+  Tests green at 246/246 vitest; tsc + build clean.
 
   Working tree: `.claude/settings.json` and `topology.view.json`
   carry incidental drift; orthogonal — leave or stash.
@@ -84,13 +83,12 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Start at [handoff-next-task.md](handoff-next-task.md). No queued
-substrate task; next is **friction-driven** from
-[session-log.md](session-log.md). The "remove legacy global part"
-work (delete `sim/runner` / `sim/event-bus` / `legacyRunnerState`)
-is gated on porting more node types — port-plan steps 4–6 in
-[../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md).
-Don't kick that off without a friction signal or an explicit ask.
+Start at [handoff-next-task.md](handoff-next-task.md). The Wire API
+is now ready to thread through `inputLoop` and a new multi-input
+node loop (likely `andGateLoop`). That's the first commit where the
+`4827ea2` API earns its keep. Still optional — the broader posture
+remains friction-driven; if no editor friction surfaces, drive the
+substrate forward.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

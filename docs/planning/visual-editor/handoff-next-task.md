@@ -1,51 +1,66 @@
 # Handoff — Next task (START HERE)
 
-**State:** `main` is at `392602f`. `task/node-ticks` is at
-`e5b20d7` (pushed, not yet merged) carrying two pause-freeze
-remount fixes (in-flight pulse no longer resumes on drag, and
-label no longer detaches from pulse during paused drags). Either
-merge to `main` or keep building on the branch.
+**State:** `main` at `392602f`. `task/node-ticks` at `4827ea2`
+(pushed, not yet merged) carrying two pause-freeze remount fixes
+plus the Wire ready/value back-channel API.
+
+**Next session is the consumer commit.** The API in `4827ea2` is
+inert until something calls `awaitReady` / `awaitValue`. That is
+explicitly the job of the next session — do not re-design the API,
+do not commit on this branch in the meantime.
 
 ## What's done
 
-- All four node visuals on the wires runtime: flash, glow ring,
-  held tint, buffered halo.
-- Pause = mid-arc freeze. `subscribeWiresPause` broadcasts a single
-  pause/resume signal; each `PulseInstance` owns its own rAF clock
-  and freezes/rebases independently. **Conceptual frame:** not a
-  global clock, but concurrent clocks frozen on command. Carry
-  this framing forward — it generalises as more node types port.
-- Pause-freeze survives effect remount. `PulseInstance` consults
-  `isWiresRuntimePaused()` on mount so a node drag mid-pause does
-  not let the pulse run to completion (`a0260fb`), and paints one
-  frame so the label stays attached to the pulse on the new geom
-  (`e5b20d7`).
+- Visuals 1–4 on the wires runtime (flash, glow, held, buffered).
+- Pause = mid-arc freeze; concurrent clocks frozen on command.
+- Pause-freeze survives PulseInstance remount (`a0260fb`,
+  `e5b20d7`).
+- Wire gained predictive back-channels (`4827ea2`):
+    - sender side: `ready`, `onReadyChange(fn)`, `awaitReady()`
+    - receiver side: `hasValue`, `onValueChange(fn)`, `awaitValue()`
+  Level-triggered awaits resolve immediately if the condition holds;
+  change listeners are edge-triggered. `awaitValue` does NOT ack;
+  receiver must call `ackWire` explicitly. Architectural invariant
+  pinned: one sender per wire — contention is modeled at receiver
+  nodes with N inbound wires, not at the wire layer. 9 new contract
+  tests; 246/246 green; tsc + build clean.
+
+## What the next session should do
+
+Thread the new API through a real consumer. Two pieces, ideally
+landed as separate commits:
+
+1. **`inputLoop` uses `awaitReady`.** Replace the implicit ack-wait
+   inside `await out.send(v)` with an explicit predictive gate:
+   `await out.awaitReady(); await out.send(v);`. Today's behavior
+   is unchanged (single-sender topology), but this is the shape
+   future gated loops will compose with. Verify all existing tests
+   stay green; no editor-visible change.
+
+2. **First multi-input node loop.** Pilot port — most natural
+   target is `ChainInhibitorNode` or a thin `andGateLoop(inbound[])`
+   used internally by it. Loop body shape:
+   ```ts
+   while (!stopped) {
+     const vs = await Promise.all(inbound.map(w => w.awaitValue()));
+     // …compute…
+     await out.awaitReady();
+     await out.send(result);
+     for (const w of inbound) ackWire(w);
+   }
+   ```
+   This extends `match.ts` beyond the trivial Input→ReadGate
+   predicate and is the first commit where the new API earns its
+   keep. Coordinate with port-plan steps 4–6 in
+   [../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md).
 
 ## What's NOT done (and why it's parked)
 
 - Legacy globals (`sim/runner`, `sim/event-bus`, `legacyRunnerState`,
-  `pauseRunner`, `isPlaying`) are still imported by AnimatedEdge,
+  `pauseRunner`, `isPlaying`) still imported by AnimatedEdge,
   PulseInstance, TimelinePanel, Bookmarks, RunnerProbe,
-  fold-halo-probe, `_handle-load`, `_on-node-drag`. They no longer
-  control in0/readGate behavior on the matched path (wires runtime
-  drives those), but they're load-bearing for the legacy/no-match
-  path and for the pulse-rAF/transport plumbing.
-- Removing them is gated on **port-plan steps 4–6** in
-  [../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md):
-  pilot port one inhibitor, then bulk port, then delete probes.
-  Don't start without a friction signal or an explicit ask.
-
-## Next: friction-driven
-
-Per post-v0 posture, no queued task. Drive the editor; narrate
-observations; log to [session-log.md](session-log.md). When a
-friction pattern surfaces, that becomes the next task.
-
-If a substrate-level next-step IS called for, the most natural one
-is the pilot port (port-plan step 4): port `ChainInhibitorNode`
-onto the wires substrate. That would extend the matched-topology
-predicate in `match.ts` and exercise the substrate beyond the
-trivial Input→ReadGate.
+  fold-halo-probe, `_handle-load`, `_on-node-drag`. Removing them
+  is gated on the multi-input node port above.
 
 ## Working tree note
 
