@@ -22,20 +22,22 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-07, end of second session):
-  Active branch: `task/node-ticks`. `main` is at `392602f`
-  (post-pause-freeze merge from the prior session). No code
-  changes this session — reflection-only.
+State at handoff (2026-05-07, end of third session):
+  Active branch: `task/node-ticks` at `a0260fb` (pushed). `main`
+  still at `392602f` — this session's fix has not been merged.
 
   This session added:
 
-  - Memory `project_local_clocks_beat_global_runner.md` (and
-    `MEMORY.md` index entry). Captures that the easy pause-freeze
-    fix had **multiple causes** — locality, recency, small surface,
-    simple problem shape, written-down contracts — and warns
-    against using ease/pain of a single fix as standalone evidence
-    for substrate decisions. Read it before drawing conclusions
-    from "this transport fix was easy/hard."
+  - **Pause-freeze on PulseInstance remount** (`a0260fb`).
+    Friction observation: with the runtime paused, dragging or
+    touching a node would let the in-flight pulse run to
+    completion. Cause: the `[geom, speedPxPerMs]` effect re-mounted
+    on geom change and started a fresh rAF loop without consulting
+    `isWiresRuntimePaused()`. Fix: on mount, if paused, set
+    `frozenElapsed = 0` and skip the initial rAF; existing resume
+    path handles rebase. Logged at
+    [session-log/2026-05-07-paused-pulse-resumes-on-node-touch.md](session-log/2026-05-07-paused-pulse-resumes-on-node-touch.md).
+    User confirmed fixed.
 
   Prior-session shipped work (still current on `main`):
 
@@ -52,9 +54,8 @@ State at handoff (2026-05-07, end of second session):
   on its own merits — see the memory note about not over-attributing
   the easy fix to it.)
 
-  Tests last green at 238/238 vitest; tsc + build + `check:loc`
-  clean as of prior session. Not re-run this session (no code
-  changed).
+  Tests green at 238/238 vitest; tsc + build clean after the fix.
+  `check:loc` not re-run (PulseInstance.tsx still under budget).
 
   Working tree: `.claude/settings.json` and `topology.view.json`
   carry incidental drift; orthogonal — leave or stash.

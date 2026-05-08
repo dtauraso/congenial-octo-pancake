@@ -1,9 +1,9 @@
 # Handoff — Next task (START HERE)
 
-**State:** `main` is at `392602f`. Both this session's task-branch
-merges (visuals 1–4, pause-freeze) have landed. `task/node-ticks`
-still exists locally; it's safe to reuse or to cut a fresh
-`task/<short-kebab>` for the next thing.
+**State:** `main` is at `392602f`. `task/node-ticks` is at
+`a0260fb` (pushed, not yet merged) carrying the pause-freeze
+remount fix. Either merge it to `main` or keep building on the
+branch.
 
 ## What's done
 
@@ -14,6 +14,9 @@ still exists locally; it's safe to reuse or to cut a fresh
   and freezes/rebases independently. **Conceptual frame:** not a
   global clock, but concurrent clocks frozen on command. Carry
   this framing forward — it generalises as more node types port.
+- Pause-freeze survives effect remount. `PulseInstance` consults
+  `isWiresRuntimePaused()` on mount so a node drag mid-pause does
+  not let the pulse run to completion (`a0260fb`).
 
 ## What's NOT done (and why it's parked)
 
