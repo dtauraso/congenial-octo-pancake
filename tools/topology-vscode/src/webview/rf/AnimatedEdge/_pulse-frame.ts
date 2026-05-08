@@ -15,7 +15,9 @@ export type FrameCtx = {
   startArc: number;
   remainingArc: number;
   remainingMs: number;
-  swapStart: number;
+  // swapStart is read every frame so pause/resume can rebase it
+  // without rebuilding the frame closure.
+  getSwapStart: () => number;
   arcTraveledRef: { current: number };
   onComplete: () => void;
   probeId?: number;
@@ -32,12 +34,13 @@ export function makeFrame(ctx: FrameCtx): () => boolean {
   return () => {
     if (done) return false;
     const simNow = performance.now();
-    const elapsed = simNow - ctx.swapStart;
+    const swapStart = ctx.getSwapStart();
+    const elapsed = simNow - swapStart;
     const localT = Math.min(1, elapsed / ctx.remainingMs);
     const arcTraveled = ctx.startArc + localT * ctx.remainingArc;
     ctx.arcTraveledRef.current = arcTraveled;
     if (ctx.probeId !== undefined) {
-      pulseProbeFrame(ctx.probeId, localT, elapsed, ctx.swapStart, simNow);
+      pulseProbeFrame(ctx.probeId, localT, elapsed, swapStart, simNow);
     }
 
     const overall = arcTraveled / ctx.svgArc;

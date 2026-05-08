@@ -8,54 +8,34 @@ import { readNodeInit } from "../sim/seeds";
 import { buildWires, type WireMap } from "./build-wires";
 import { ackWire } from "./wire";
 import { inputLoop, readGateLoop, type NodeLoop } from "./node-loop";
+import {
+  publishHeld, publishTick,
+  markBuffered, clearBuffered, clearAllBuffered,
+} from "./node-streams";
 import { slog } from "./log";
+
+export {
+  subscribeNodeTicks, subscribeNodeHeld, subscribeNodeBuffered,
+} from "./node-streams";
 
 let _loops: NodeLoop[] = [];
 let _wires: WireMap | null = null;
 let _running = false;
 let _paused = false;
 let _resumeWaiters: Array<() => void> = [];
+const _pauseListeners = new Set<(paused: boolean) => void>();
+
+// Pause is a single signal; each subscriber (per-pulse rAF clocks,
+// node loops) owns its own freeze. The runtime fans the signal out;
+// it does not maintain a shared sim clock.
+export function subscribeWiresPause(
+  fn: (paused: boolean) => void,
+): () => void {
+  _pauseListeners.add(fn);
+  return () => _pauseListeners.delete(fn);
+}
 let _version = 0;
 const _listeners = new Set<() => void>();
-const _tickListeners = new Set<(nodeId: string, ts: number) => void>();
-const _heldListeners = new Set<(nodeId: string, value: StateValue) => void>();
-const _bufferedListeners = new Set<(nodeId: string, ports: string[]) => void>();
-const _bufferedPorts = new Map<string, Set<string>>();
-
-export function subscribeNodeTicks(
-  fn: (nodeId: string, ts: number) => void,
-): () => void {
-  _tickListeners.add(fn);
-  return () => _tickListeners.delete(fn);
-}
-
-function publishTick(nodeId: string): void {
-  const ts = performance.now();
-  for (const fn of _tickListeners) fn(nodeId, ts);
-}
-
-export function subscribeNodeHeld(
-  fn: (nodeId: string, value: StateValue) => void,
-): () => void {
-  _heldListeners.add(fn);
-  return () => _heldListeners.delete(fn);
-}
-
-function publishHeld(nodeId: string, value: StateValue): void {
-  for (const fn of _heldListeners) fn(nodeId, value);
-}
-
-export function subscribeNodeBuffered(
-  fn: (nodeId: string, ports: string[]) => void,
-): () => void {
-  _bufferedListeners.add(fn);
-  return () => _bufferedListeners.delete(fn);
-}
-
-function publishBuffered(nodeId: string): void {
-  const ports = Array.from(_bufferedPorts.get(nodeId) ?? []);
-  for (const fn of _bufferedListeners) fn(nodeId, ports);
-}
 
 export function isWiresRuntimeRunning(): boolean {
   return _running;
@@ -71,6 +51,7 @@ export function isWiresRuntimePaused(): boolean {
 export function pauseWiresRuntime(): void {
   if (!_running || _paused) return;
   _paused = true;
+  for (const fn of _pauseListeners) fn(true);
   bumpVersion();
 }
 
@@ -80,6 +61,7 @@ export function resumeWiresRuntime(): void {
   const waiters = _resumeWaiters;
   _resumeWaiters = [];
   for (const w of waiters) w();
+  for (const fn of _pauseListeners) fn(false);
   bumpVersion();
 }
 
@@ -132,19 +114,8 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
   }
   wire.onArrive((v) => publishHeld(readGate.id, v as StateValue));
   const inPort = edge.targetHandle ?? "in";
-  wire.onArrive(() => {
-    let s = _bufferedPorts.get(readGate.id);
-    if (!s) { s = new Set(); _bufferedPorts.set(readGate.id, s); }
-    s.add(inPort);
-    publishBuffered(readGate.id);
-  });
-  wire.onAck(() => {
-    const s = _bufferedPorts.get(readGate.id);
-    if (s) {
-      s.delete(inPort);
-      publishBuffered(readGate.id);
-    }
-  });
+  wire.onArrive(() => markBuffered(readGate.id, inPort));
+  wire.onAck(() => clearBuffered(readGate.id, inPort));
   const queue = readNodeInit(input.data);
   _running = true;
   _loops = [
@@ -183,7 +154,7 @@ export async function stopWiresRuntime(): Promise<void> {
   const stops = loops.map((l) => l.stop());
   if (wires) for (const w of wires.values()) if (w.state === "inFlight") ackWire(w);
   await Promise.all(stops);
-  _bufferedPorts.clear();
+  clearAllBuffered();
   slog("wires-runtime: stopped", {});
   bumpVersion();
 }
