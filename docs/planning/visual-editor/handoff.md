@@ -22,28 +22,39 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-07, end of session):
-  Active branch: `task/node-ticks` — merged to `main` twice this
-  session. `main` is at `392602f` (post-pause-freeze merge). The
-  task branch is one commit behind no-op (already merged); reuse it
-  or cut a fresh `task/<...>` for the next thing.
+State at handoff (2026-05-07, end of second session):
+  Active branch: `task/node-ticks`. `main` is at `392602f`
+  (post-pause-freeze merge from the prior session). No code
+  changes this session — reflection-only.
 
-  This session shipped:
+  This session added:
+
+  - Memory `project_local_clocks_beat_global_runner.md` (and
+    `MEMORY.md` index entry). Captures that the easy pause-freeze
+    fix had **multiple causes** — locality, recency, small surface,
+    simple problem shape, written-down contracts — and warns
+    against using ease/pain of a single fix as standalone evidence
+    for substrate decisions. Read it before drawing conclusions
+    from "this transport fix was easy/hard."
+
+  Prior-session shipped work (still current on `main`):
 
   - **Visuals 1–4 on wires runtime** (`6554e07`…`8f13034`): flash,
-    glow ring, held tint, buffered halo all driven by
-    `subscribeNodeTicks/Held/Buffered` on the wires runtime.
+    glow ring, held tint, buffered halo via
+    `subscribeNodeTicks/Held/Buffered`.
   - **Pause = freeze mid-arc** (`34b8c20`): `subscribeWiresPause`
-    fans a single pause/resume signal; each `PulseInstance` owns
-    its rAF clock and freezes/rebases independently. Per-node
-    streams extracted to `node-streams.ts` for LOC budget.
+    fans one pause/resume signal; each `PulseInstance` owns its
+    rAF clock and freezes/rebases independently. Per-node streams
+    extracted to `node-streams.ts` for LOC budget.
 
-  User-confirmed visually: pause stops the animation, resume
-  continues from the frozen position. Conceptual model affirmed:
-  not a global clock, but **concurrent clocks frozen on command**.
-  This framing should guide future substrate work.
+  Conceptual frame to carry forward: not a global clock, but
+  **concurrent clocks frozen on command**. (This framing is right
+  on its own merits — see the memory note about not over-attributing
+  the easy fix to it.)
 
-  Tests: 238/238 vitest green. tsc + build + `check:loc` clean.
+  Tests last green at 238/238 vitest; tsc + build + `check:loc`
+  clean as of prior session. Not re-run this session (no code
+  changed).
 
   Working tree: `.claude/settings.json` and `topology.view.json`
   carry incidental drift; orthogonal — leave or stash.

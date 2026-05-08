@@ -22,3 +22,4 @@
 - [feedback_file_size_budget.md](feedback_file_size_budget.md) — Refactor any source file ≥ 200 LOC; target ≤ 100 LOC. Run `npm run check:loc` from `tools/topology-vscode/`.
 - [project_substrate_visual_vocabulary.md](project_substrate_visual_vocabulary.md) — Sim-substrate visual vocabulary is chan→wire + per-node running indicator (with reloop); goroutine and select are not separate visual primitives
 - [feedback_substrate_vs_coordinator_bias.md](feedback_substrate_vs_coordinator_bias.md) — Before fixing substrate code, name the contract violated, not the symptom. Knob-tuning (interval, cap, timeout) is the wrong shape — find the missing local signal.
+- [project_local_clocks_beat_global_runner.md](project_local_clocks_beat_global_runner.md) — Per-instance clock locality helped the pause-freeze fix, but recency/surface/problem-shape/written contracts also did. Don't use ease-of-fix as a single-factor substrate signal.
