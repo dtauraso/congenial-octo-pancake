@@ -29,6 +29,8 @@ export function inputLoop(
     while (!stopped) {
       if (opts.awaitGate) await opts.awaitGate();
       if (stopped) break;
+      await out.awaitReady();
+      if (stopped) break;
       await out.send(queue[i % queue.length]);
       opts.onTick?.();
       i += 1;
