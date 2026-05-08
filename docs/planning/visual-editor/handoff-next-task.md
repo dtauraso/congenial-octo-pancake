@@ -1,9 +1,10 @@
 # Handoff — Next task (START HERE)
 
 **State:** `main` is at `392602f`. `task/node-ticks` is at
-`a0260fb` (pushed, not yet merged) carrying the pause-freeze
-remount fix. Either merge it to `main` or keep building on the
-branch.
+`e5b20d7` (pushed, not yet merged) carrying two pause-freeze
+remount fixes (in-flight pulse no longer resumes on drag, and
+label no longer detaches from pulse during paused drags). Either
+merge to `main` or keep building on the branch.
 
 ## What's done
 
@@ -16,7 +17,9 @@ branch.
   this framing forward — it generalises as more node types port.
 - Pause-freeze survives effect remount. `PulseInstance` consults
   `isWiresRuntimePaused()` on mount so a node drag mid-pause does
-  not let the pulse run to completion (`a0260fb`).
+  not let the pulse run to completion (`a0260fb`), and paints one
+  frame so the label stays attached to the pulse on the new geom
+  (`e5b20d7`).
 
 ## What's NOT done (and why it's parked)
 

@@ -22,22 +22,34 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-07, end of third session):
-  Active branch: `task/node-ticks` at `a0260fb` (pushed). `main`
-  still at `392602f` — this session's fix has not been merged.
+State at handoff (2026-05-07, end of fourth session):
+  Active branch: `task/node-ticks` at `e5b20d7` (pushed). `main`
+  still at `392602f` — two pause-freeze fixes accumulated on this
+  branch are not yet merged.
 
   This session added:
 
-  - **Pause-freeze on PulseInstance remount** (`a0260fb`).
-    Friction observation: with the runtime paused, dragging or
-    touching a node would let the in-flight pulse run to
-    completion. Cause: the `[geom, speedPxPerMs]` effect re-mounted
-    on geom change and started a fresh rAF loop without consulting
-    `isWiresRuntimePaused()`. Fix: on mount, if paused, set
-    `frozenElapsed = 0` and skip the initial rAF; existing resume
-    path handles rebase. Logged at
-    [session-log/2026-05-07-paused-pulse-resumes-on-node-touch.md](session-log/2026-05-07-paused-pulse-resumes-on-node-touch.md).
+  - **Paint one frame on mid-pause remount** (`e5b20d7`).
+    Follow-on friction from the prior fix: with the runtime paused,
+    dragging a node detached the pulse label from the pulse dot.
+    The skip-rAF-on-paused-mount branch never painted a frame, so
+    the label kept its pre-remount transform (old geom) while the
+    path rendered at new geom. Fix: call `frame()` once in the
+    paused-on-mount branch — with `frozenElapsed = 0` this snaps
+    label transform and dash offset to `arcTraveled = startArc` on
+    the new geom. Logged at
+    [session-log/2026-05-07-pulse-label-detaches-on-paused-drag.md](session-log/2026-05-07-pulse-label-detaches-on-paused-drag.md).
     User confirmed fixed.
+
+  Prior session on this branch:
+
+  - **Pause-freeze on PulseInstance remount** (`a0260fb`).
+    Drag/touch mid-pause let the pulse run to completion because
+    the `[geom, speedPxPerMs]` effect re-mounted and started a
+    fresh rAF loop without consulting `isWiresRuntimePaused()`.
+    Fix: on mount, if paused, set `frozenElapsed = 0` and skip the
+    initial rAF; existing resume path handles rebase. Logged at
+    [session-log/2026-05-07-paused-pulse-resumes-on-node-touch.md](session-log/2026-05-07-paused-pulse-resumes-on-node-touch.md).
 
   Prior-session shipped work (still current on `main`):
 
