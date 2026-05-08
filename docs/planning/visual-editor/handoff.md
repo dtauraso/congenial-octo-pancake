@@ -63,9 +63,7 @@ State at handoff (2026-05-08, end of fifth session):
     fans one pause/resume signal; each `PulseInstance` owns its
     rAF clock and freezes/rebases independently.
 
-  Conceptual frame to carry forward: not a global clock, but
-  **concurrent clocks frozen on command**.
-
+  Conceptual frame: **concurrent clocks frozen on command**.
   Tests green at 246/246 vitest; tsc + build clean.
 
   Working tree: `.claude/settings.json` and `topology.view.json`
