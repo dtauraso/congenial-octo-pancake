@@ -10,7 +10,7 @@
 // observable in tests but instantaneous in real time.
 
 import type { StateValue } from "../schema";
-import { ackWire, type Wire } from "./wire";
+import { ackWire, type Wire, type WireValue } from "./wire";
 
 export type NodeLoop = { stop(): Promise<void> };
 
@@ -39,6 +39,52 @@ export function inputLoop(
   return {
     async stop() {
       stopped = true;
+      await done.catch(() => undefined);
+    },
+  };
+}
+
+// First multi-input node loop. Awaits one value per inbound wire,
+// reduces, gates the outbound on awaitReady, sends, and then acks each
+// inbound. The reduce closure is the node-specific compute; the loop
+// shape itself is the same for any AND-style join.
+//
+// The inbound[] order is preserved into reduce(values), so the caller
+// can map indices to ports. awaitValue does NOT ack — that's why the
+// explicit ackWire pass at the end is required.
+export function andGateLoop(
+  inbound: readonly Wire[],
+  out: Wire,
+  reduce: (values: readonly WireValue[]) => WireValue,
+  opts: { onTick?: () => void } = {},
+): NodeLoop {
+  let stopped = false;
+  let wakeCurrent: (() => void) | null = null;
+  const racedWithStop = <T>(p: Promise<T>): Promise<T | "stop"> => {
+    return new Promise<T | "stop">((resolve) => {
+      wakeCurrent = () => resolve("stop");
+      p.then((v) => resolve(v), (err) => resolve(err));
+    });
+  };
+  const done = (async () => {
+    while (!stopped) {
+      const r = await racedWithStop(Promise.all(inbound.map((w) => w.awaitValue())));
+      wakeCurrent = null;
+      if (stopped || r === "stop") break;
+      const result = reduce(r as readonly WireValue[]);
+      const r2 = await racedWithStop(out.awaitReady());
+      wakeCurrent = null;
+      if (stopped || r2 === "stop") break;
+      await out.send(result);
+      for (const w of inbound) ackWire(w);
+      opts.onTick?.();
+    }
+  })();
+  return {
+    async stop() {
+      stopped = true;
+      wakeCurrent?.();
+      wakeCurrent = null;
       await done.catch(() => undefined);
     },
   };

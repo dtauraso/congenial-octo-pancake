@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 import { ackWire, createWire } from "../../src/substrate/wire";
-import { inputLoop, readGateLoop } from "../../src/substrate/node-loop";
+import { inputLoop, readGateLoop, andGateLoop } from "../../src/substrate/node-loop";
 import { startWiresRuntime, stopWiresRuntime, getWiresMap } from "../../src/substrate/runtime-wires";
 import type { Spec } from "../../src/schema";
 
@@ -71,6 +71,67 @@ describe("node-loop", () => {
     expect(w.state).toBe("idle");
     await inp.stop();
     await rg.stop();
+  });
+});
+
+describe("andGateLoop", () => {
+  it("joins two inputs, reduces, sends, acks both inbound", async () => {
+    const a = createWire("a");
+    const b = createWire("b");
+    const out = createWire("o");
+    const seen: unknown[] = [];
+    const reachedTwo = new Promise<void>((resolve) => {
+      out.onArrive((v) => {
+        if (seen.length < 2) {
+          seen.push(v);
+          if (seen.length === 2) resolve();
+        }
+      });
+    });
+
+    const rg = readGateLoop(out, { autoAck: true });
+    const gate = andGateLoop(
+      [a, b],
+      out,
+      (vs) => (vs[0] as number) + (vs[1] as number),
+    );
+    const inA = inputLoop(a, [1, 10]);
+    const inB = inputLoop(b, [2, 20]);
+
+    await reachedTwo;
+    expect(seen).toEqual([3, 30]);
+
+    const stops = [inA.stop(), inB.stop(), gate.stop(), rg.stop()];
+    if (a.state === "inFlight") ackWire(a);
+    if (b.state === "inFlight") ackWire(b);
+    if (out.state === "inFlight") ackWire(out);
+    await Promise.all(stops);
+  });
+
+  it("waits for the slow input before firing", async () => {
+    const a = createWire("a");
+    const b = createWire("b");
+    const out = createWire("o");
+    let arrived = 0;
+    let firstArrived: () => void = () => undefined;
+    const arrivedOnce = new Promise<void>((r) => { firstArrived = r; });
+    out.onArrive(() => { arrived += 1; firstArrived(); });
+    const rg = readGateLoop(out, { autoAck: true });
+    const gate = andGateLoop([a, b], out, (vs) => vs);
+
+    const inA = inputLoop(a, [1]);
+    await tick(); await tick();
+    expect(arrived).toBe(0); // a alone is not enough
+
+    const inB = inputLoop(b, [2]);
+    await arrivedOnce;
+    expect(arrived).toBeGreaterThanOrEqual(1);
+
+    const stops = [inA.stop(), inB.stop(), gate.stop(), rg.stop()];
+    if (a.state === "inFlight") ackWire(a);
+    if (b.state === "inFlight") ackWire(b);
+    if (out.state === "inFlight") ackWire(out);
+    await Promise.all(stops);
   });
 });
 
