@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { EdgeRoute } from "../../../schema";
 import { extendPulse } from "../../../sim/runner";
+import { subscribeWiresPause } from "../../../substrate/runtime-wires";
 import { noteAnimStart, noteAnimEnd, noteAnimRerun } from "../timeline-probe";
 import { type PathGeom } from "./_geom";
 import { PULSE_DASH_PX } from "./_constants";
@@ -43,7 +44,9 @@ export function PulseInstance({
 
     const isFirstRun = firstRunRef.current;
     const prevArc = arcTraveledRef.current;
-    const swapStart = isFirstRun ? simStart : performance.now();
+    // swapStart is mutable: pause snapshots elapsed and resume rebases
+    // swapStart so the per-pulse clock continues from the frozen point.
+    let swapStart = isFirstRun ? simStart : performance.now();
     firstRunRef.current = false;
     const startArc = Math.min(arcTraveledRef.current, svgArc);
     const remainingArc = svgArc - startArc;
@@ -67,21 +70,41 @@ export function PulseInstance({
     let rafId = 0;
     const frame = makeFrame({
       edgeId, geom, route, path, label: labelRef.current,
-      svgArc, startArc, remainingArc, remainingMs, swapStart,
+      svgArc, startArc, remainingArc, remainingMs,
+      getSwapStart: () => swapStart,
       arcTraveledRef,
       onComplete: () => { probeCompletedRef.current = true; doneRef.current(); },
       probeId: probeIdRef.current,
     });
     const loop = () => { if (frame()) rafId = requestAnimationFrame(loop); else rafId = 0; };
-    // rAF always runs from mount to arc completion. Pause stops new
-    // emissions at the substrate; in-flight pulses finish their arc
-    // and ack normally — there is no global clock to freeze.
     rafId = requestAnimationFrame(loop);
 
+    // Per-pulse freeze: each in-flight pulse owns its own clock and
+    // independently halts when the runtime broadcasts pause. On pause
+    // we snapshot the elapsed-ms; on resume we rebase swapStart so
+    // the same elapsed value is reproduced and the rAF picks up where
+    // it left off.
+    let frozenElapsed: number | null = null;
+    const unsubPause = subscribeWiresPause((paused) => {
+      if (paused) {
+        if (frozenElapsed !== null) return;
+        frozenElapsed = performance.now() - swapStart;
+        if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+      } else {
+        if (frozenElapsed === null) return;
+        swapStart = performance.now() - frozenElapsed;
+        frozenElapsed = null;
+        if (!rafId) rafId = requestAnimationFrame(loop);
+      }
+    });
+
     return () => {
+      unsubPause();
       if (rafId) cancelAnimationFrame(rafId);
-      const elapsed = performance.now() - swapStart;
-      const localT = Math.min(1, elapsed / remainingMs);
+      const elapsedNow = frozenElapsed !== null
+        ? frozenElapsed
+        : performance.now() - swapStart;
+      const localT = Math.min(1, elapsedNow / remainingMs);
       arcTraveledRef.current = startArc + localT * remainingArc;
       noteAnimEnd(edgeId, fromNodeId, toNodeId, localT >= 1, arcTraveledRef.current);
     };
