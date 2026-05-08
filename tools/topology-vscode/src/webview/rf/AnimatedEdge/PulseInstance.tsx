@@ -88,6 +88,11 @@ export function PulseInstance({
     let frozenElapsed: number | null = null;
     if (isWiresRuntimePaused()) {
       frozenElapsed = 0;
+      // Paint one frame so label and dash snap to the new geom at the
+      // current arcTraveled. Without this, a node drag mid-pause leaves
+      // the label at its pre-remount coords while the path renders at
+      // new geom, separating label from pulse.
+      frame();
     } else {
       rafId = requestAnimationFrame(loop);
     }
