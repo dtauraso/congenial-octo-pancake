@@ -22,25 +22,32 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, end of thirteenth session):
+State at handoff (2026-05-09, mid fourteenth session):
   Active branch: `task/node-ticks` (merged to `main` at `2957316` via
   `--no-ff`; branch retained for further work). Latest commit on the
-  branch: `e9e3fef`.
+  branch: `9006ec7`.
 
-  This session **fixed the `andGateLoop` bug** uncovered last session.
-  andGateLoop now mirrors joinLoop: after `out.send`, it `awaitReady`s
-  each inbound instead of self-acking. Pulses no longer stack on
-  inbound wires; i1→readGate.ack paces correctly through the
-  manual-ack edge.
+  Shape D plan filed at
+  [handoff-shape-d-plan.md](handoff-shape-d-plan.md): close the cycle
+  by adding `i0.out → i1.in`, then matcher, setup, dispatch, cycle
+  seed, contract test (six increments).
 
-  Shape C dropped the per-loop trigger gate; i1's send loop now paces
-  naturally via the manual-ack button, same as in0. The `TriggerGate`
-  module + `awaitOpen` plumbing on `inputLoop` remain in tree as a
-  potential debug pacer, but no shape registers a trigger slot. The
-  panel button component is still wired and harmless when triggerSlots
-  is empty.
+  **Item 1 of the plan is committed (`9006ec7`).**
+  [topology.json](../../../topology.json) now has the i0→i1 chain
+  edge (4 nodes / 4 edges). With no Shape D matcher yet,
+  `matchSubstrate` rejects this spec and the topology falls through to
+  the legacy runner. Expected — resume at item 2 (matcher).
 
-  258/258 vitest; tsc + build clean.
+  Prior in-session work (already committed at `e9e3fef`): fixed the
+  `andGateLoop` pacing bug. andGateLoop now mirrors joinLoop —
+  `awaitReady`s each inbound after `out.send` instead of self-acking.
+  Pulses stop stacking on i1→readGate.ack. Shape C dropped the
+  per-loop trigger gate; i1's send loop paces via the manual-ack
+  button, same as in0. `TriggerGate` module + `awaitOpen` plumbing on
+  `inputLoop` remain in tree as a potential debug pacer.
+
+  258/258 vitest; tsc + build clean as of `e9e3fef`. Next step is
+  item 2 (matcher).
 
   Prior-session highlights (consult `git log` for full history):
   - `a884cba` per-loop trigger gate workaround (now superseded by the
@@ -69,13 +76,12 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Start at [handoff-next-task.md](handoff-next-task.md). With andGateLoop
-fixed, the open paths are: **(a) pick i0's outbound** (cycle close to
-i1, branch to a second ReadGate, or feed a Distribute/EdgeNode —
-recommended: cycle close to i1); **(b) write the Shape C contract
-test** still owed; or **(c) decide whether to delete the now-unused
-`TriggerGate` module / `awaitOpen` plumbing or keep them as a debug
-pacer**. Before touching the manual-ack code, read
+Path chosen: **cycle close i0→i1** (Shape D). Plan at
+[handoff-shape-d-plan.md](handoff-shape-d-plan.md). Item 1 (spec edge)
+is committed (`9006ec7`). Resume at item 2 (matcher). Other open paths
+([handoff-next-task.md](handoff-next-task.md)) — Shape C contract
+test, deleting unused `TriggerGate` — remain available but parked
+behind Shape D. Before touching the manual-ack code, read
 [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
 ALWAYS — at end of session, overwrite this file (and the sibling

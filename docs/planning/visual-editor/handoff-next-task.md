@@ -1,9 +1,12 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks` is on Shape C (Input + i1 + ReadGate + i0,
-4 nodes / 3 edges). Shape C wiring stands. Latest commit (`e9e3fef`)
-fixes the `andGateLoop` pacing bug uncovered last session and drops
-the i1 trigger-gate workaround.
+**State:** `task/node-ticks` is mid-transition from Shape C to
+Shape D. The Shape D spec edge (`i0.out → i1.in`) is committed
+(`9006ec7`); [handoff-shape-d-plan.md](handoff-shape-d-plan.md) item 1
+done, items 2–6 pending. Until the matcher lands, the topology falls
+through to the legacy runner (expected). Prior commit (`e9e3fef`)
+fixed the `andGateLoop` pacing bug and dropped the i1 trigger-gate
+workaround.
 
 ## What was fixed
 
@@ -48,7 +51,8 @@ User's choice — none of these block one another:
 
 1. **Pick i0's outbound.** Cycle close to i1 (recommended — completes
    the loop), branch to a second ReadGate, or feed a Distribute /
-   EdgeNode.
+   EdgeNode. Plan for the cycle-close path:
+   [handoff-shape-d-plan.md](handoff-shape-d-plan.md).
 2. **Write the Shape C contract test.** Still owed from prior session.
    Should assert no pulse stacking on i1→readGate.ack across at least
    two cycles.
