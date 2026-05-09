@@ -90,6 +90,49 @@ export function andGateLoop(
   };
 }
 
+// Ack-only join: same shape as andGateLoop but the joined node has no
+// outbound (e.g. a ReadGate that consumes chainIn + ack, with no
+// downstream wire). Awaits one value per inbound, fires onFire(values),
+// then acks each inbound — that ack is what unblocks the upstream
+// senders so the cycle can repeat.
+export function joinLoop(
+  inbound: readonly Wire[],
+  opts: { onFire?: (values: readonly WireValue[]) => void } = {},
+): NodeLoop {
+  let stopped = false;
+  let wakeCurrent: (() => void) | null = null;
+  const racedWithStop = <T>(p: Promise<T>): Promise<T | "stop"> => {
+    return new Promise<T | "stop">((resolve) => {
+      wakeCurrent = () => resolve("stop");
+      p.then((v) => resolve(v), (err) => resolve(err));
+    });
+  };
+  const done = (async () => {
+    while (!stopped) {
+      const r = await racedWithStop(Promise.all(inbound.map((w) => w.awaitValue())));
+      wakeCurrent = null;
+      if (stopped || r === "stop") break;
+      opts.onFire?.(r as readonly WireValue[]);
+      // Wait for all inbound wires to be acked externally (by the visual
+      // layer, or by tests driving acks manually). Without this, joinLoop
+      // would refire instantly on the same pending values; with internal
+      // ack it would race ahead of visualization. Pacing-by-visual is
+      // load-bearing.
+      const r2 = await racedWithStop(Promise.all(inbound.map((w) => w.awaitReady())));
+      wakeCurrent = null;
+      if (stopped || r2 === "stop") break;
+    }
+  })();
+  return {
+    async stop() {
+      stopped = true;
+      wakeCurrent?.();
+      wakeCurrent = null;
+      await done.catch(() => undefined);
+    },
+  };
+}
+
 // ReadGate: with autoAck (default), acks via microtask on arrive — fast
 // path used by tests. With autoAck=false, the visual layer (commit 3)
 // drives ack on arc completion so the wire cycle is paced by the
