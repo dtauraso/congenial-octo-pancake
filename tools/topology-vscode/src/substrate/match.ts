@@ -43,6 +43,50 @@ function matchInputReadGateInhibitor(spec: Spec): boolean {
   return true;
 }
 
+// Shape C: Shape B plus a second ChainInhibitor (i0) on
+// readGate.out -> i0.in. ReadGate now emits downstream, so its loop
+// shifts from joinLoop (ack-only) to andGateLoop (join + send). i0 is a
+// sink for now — outbound deferred.
+function matchInputReadGateInhibitorWithI0(spec: Spec): boolean {
+  if (spec.nodes.length !== 4) return false;
+  if (spec.edges.length !== 3) return false;
+  const input = spec.nodes.find((n) => n.type === "Input");
+  const readGate = spec.nodes.find((n) => n.type === "ReadGate");
+  const inhibitors = spec.nodes.filter((n) => n.type === "ChainInhibitor");
+  if (!input || !readGate || inhibitors.length !== 2) return false;
+  const chainEdge = spec.edges.find(
+    (e) => e.source === input.id && e.target === readGate.id
+      && e.kind === "chain" && e.targetHandle === "chainIn",
+  );
+  if (!chainEdge) return false;
+  const ackEdge = spec.edges.find(
+    (e) => e.target === readGate.id && e.kind === "chain"
+      && e.targetHandle === "ack"
+      && inhibitors.some((i) => i.id === e.source),
+  );
+  if (!ackEdge) return false;
+  const outEdge = spec.edges.find(
+    (e) => e.source === readGate.id && e.kind === "chain"
+      && e.sourceHandle === "out" && e.targetHandle === "in"
+      && inhibitors.some((i) => i.id === e.target && i.id !== ackEdge.source),
+  );
+  if (!outEdge) return false;
+  return true;
+}
+
 export function matchSubstrate(spec: Spec): boolean {
-  return matchInputReadGate(spec) || matchInputReadGateInhibitor(spec);
+  return matchInputReadGate(spec)
+    || matchInputReadGateInhibitor(spec)
+    || matchInputReadGateInhibitorWithI0(spec);
+}
+
+export function matchSubstrateShape(spec: Spec):
+  | "input->readGate"
+  | "input+inhibitor->readGate"
+  | "input+inhibitor->readGate->i0"
+  | null {
+  if (matchInputReadGate(spec)) return "input->readGate";
+  if (matchInputReadGateInhibitor(spec)) return "input+inhibitor->readGate";
+  if (matchInputReadGateInhibitorWithI0(spec)) return "input+inhibitor->readGate->i0";
+  return null;
 }

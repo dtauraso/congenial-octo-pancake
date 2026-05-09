@@ -14,8 +14,8 @@ describe("handle-load repro on real topology.json", () => {
     const text = readFileSync(resolve(__dirname, "../../../../topology.json"), "utf8");
     const raw = JSON.parse(text);
     const spec = parseSpec(raw);
-    expect(spec.nodes.length).toBe(3);
-    expect(spec.edges.length).toBe(2);
+    expect(spec.nodes.length).toBe(4);
+    expect(spec.edges.length).toBe(3);
 
     const matched = matchSubstrate(spec);
     expect(matched).toBe(true);
@@ -29,11 +29,11 @@ describe("handle-load repro on real topology.json", () => {
     expect(runtimeError).toBeNull();
 
     const wires = getWiresMap();
-    expect(wires?.size).toBe(2);
+    expect(wires?.size).toBe(3);
 
     const flow = specToFlow(spec, [], {});
-    expect(flow.nodes.length).toBe(3);
-    expect(flow.edges.length).toBe(2);
+    expect(flow.nodes.length).toBe(4);
+    expect(flow.edges.length).toBe(3);
 
     await stopWiresRuntime();
   });

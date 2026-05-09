@@ -11,8 +11,10 @@ import type { NodeLoop } from "./node-loop";
 import { clearAllBuffered } from "./node-streams";
 import {
   setupInputReadGate, setupInputReadGateInhibitor,
+  setupInputReadGateInhibitorWithI0,
   type ManualAckEdge,
 } from "./runtime-wires-shapes";
+import { matchSubstrateShape } from "./match";
 import { slog } from "./log";
 
 export {
@@ -97,18 +99,20 @@ function bumpVersion(): void {
 
 export async function startWiresRuntime(spec: Spec): Promise<void> {
   await stopWiresRuntime();
-  const hasInhibitor = spec.nodes.some((n) => n.type === "ChainInhibitor");
+  const shape = matchSubstrateShape(spec);
   _wires = buildWires(spec);
-  const setup = hasInhibitor
-    ? setupInputReadGateInhibitor(spec, _wires, awaitResumeGate)
-    : setupInputReadGate(spec, _wires, awaitResumeGate);
+  const setup = shape === "input+inhibitor->readGate->i0"
+    ? setupInputReadGateInhibitorWithI0(spec, _wires, awaitResumeGate)
+    : shape === "input+inhibitor->readGate"
+      ? setupInputReadGateInhibitor(spec, _wires, awaitResumeGate)
+      : setupInputReadGate(spec, _wires, awaitResumeGate);
   _running = true;
   _loops = setup.loops;
   _manualAckEdges = setup.manualAckEdges ?? [];
   _manualAckSet.clear();
   for (const e of _manualAckEdges) _manualAckSet.add(e.id);
   slog("wires-runtime: started", {
-    shape: hasInhibitor ? "input+inhibitor->readGate" : "input->readGate",
+    shape: shape ?? "input->readGate",
     edges: [...(_wires?.keys() ?? [])],
   });
   bumpVersion();

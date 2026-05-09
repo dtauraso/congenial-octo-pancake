@@ -22,11 +22,28 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-08, end of tenth session):
+State at handoff (2026-05-09, end of eleventh session):
   Active branch: `task/node-ticks` (merged to `main` at `2957316`
   via `--no-ff`; branch retained for further work).
 
-  This session **backfilled contract tests for back-channel-era
+  This session **added Shape C** (4 nodes / 3 edges):
+  Input + i1 + ReadGate + i0, with `readGate.out → i0.in`. ReadGate
+  switched from `joinLoop` to `andGateLoop` so it actually emits the
+  chainIn value forward; i0 is a sink consuming via
+  `readGateLoop(autoAck:false)` so the visual layer paces its ack.
+  Manual-ack still covers chainIn + ack on readGate; the new wire
+  auto-paces with visuals. User confirmed conditional timing for all
+  4 nodes is correct in the running editor.
+
+  - `match.ts`: new `matchInputReadGateInhibitorWithI0` and
+    `matchSubstrateShape()` tag dispatch.
+  - `runtime-wires-shapes.ts`: `setupInputReadGateInhibitorWithI0`.
+  - `runtime-wires.ts`: dispatcher uses `matchSubstrateShape`.
+  - `topology.json`: fixture extended to 4/3.
+  - `handle-load-repro.test.ts`: counts bumped to 4/3.
+  - 258/258 vitest; tsc + build clean.
+
+  Prior session **backfilled contract tests for back-channel-era
   fixes** (commit `2f48ea9`):
 
   - `test/contracts/input-loop-await-ready.test.ts` — pins
@@ -97,10 +114,10 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Start at [handoff-next-task.md](handoff-next-task.md). Manual-ack
-now covers both readGate slots (in0→readGate and i1→readGate, plus
-"both"). The next move is still **giving ChainInhibitor a real
-inbound** so it stops being a clock-style placeholder. Friction-driven
+Start at [handoff-next-task.md](handoff-next-task.md). Shape C is in
+and the four-node timing is correct. Next move: **decide i0's
+outbound** (cycle close to i1, branch to a second ReadGate, or feed a
+Distribute/EdgeNode), then add a Shape C contract test. Friction-driven
 posture stands. Before touching the manual-ack code, read
 [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 

@@ -17,6 +17,10 @@
     {
       "id": "i1",
       "type": "ChainInhibitor"
+    },
+    {
+      "id": "i0",
+      "type": "ChainInhibitor"
     }
   ],
   "edges": [
@@ -40,6 +44,18 @@
       "targetHandle": "ack",
       "kind": "chain",
       "label": "i1ToReadGate",
+      "data": {
+        "slots": 1
+      }
+    },
+    {
+      "id": "readGate.out->i0.in",
+      "source": "readGate1",
+      "sourceHandle": "out",
+      "target": "i0",
+      "targetHandle": "in",
+      "kind": "chain",
+      "label": "readGateToI0",
       "data": {
         "slots": 1
       }
