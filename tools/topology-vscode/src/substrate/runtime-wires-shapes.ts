@@ -13,7 +13,7 @@ import {
   publishHeld, publishTick,
   markBuffered, clearBuffered,
 } from "./node-streams";
-import { makeTriggerGate, type TriggerGate } from "./trigger-gate";
+import type { TriggerGate } from "./trigger-gate";
 
 export interface ManualAckEdge { id: string; label: string }
 export interface TriggerSlot { id: string; label: string; gate: TriggerGate }
@@ -133,7 +133,6 @@ export function setupInputReadGateInhibitorWithI0(
 
   const inputQueue = readNodeInit(input.data);
   const i1Queue: StateValue[] = [1 as unknown as StateValue];
-  const i1Trigger = makeTriggerGate(false);
   return {
     loops: [
       readGateLoop(outWire, { autoAck: false, onTick: () => publishTick(i0.id) }),
@@ -144,16 +143,11 @@ export function setupInputReadGateInhibitorWithI0(
         { onTick: () => publishTick(readGate.id) },
       ),
       inputLoop(inWire, inputQueue, { awaitGate, onTick: () => publishTick(input.id) }),
-      inputLoop(ackWireE, i1Queue, {
-        awaitGate,
-        awaitOpen: () => i1Trigger.awaitOpen(),
-        onTick: () => publishTick(i1.id),
-      }),
+      inputLoop(ackWireE, i1Queue, { awaitGate, onTick: () => publishTick(i1.id) }),
     ],
     manualAckEdges: [
       { id: chainEdge.id, label: "in0→readGate" },
       { id: ackEdge.id, label: "i1→readGate" },
     ],
-    triggerSlots: [{ id: ackEdge.id, label: "i1 send", gate: i1Trigger }],
   };
 }

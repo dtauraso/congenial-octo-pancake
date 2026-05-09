@@ -27,6 +27,14 @@ describe("andGateLoop", () => {
       out,
       (vs) => (vs[0] as number) + (vs[1] as number),
     );
+    // andGateLoop now waits for external ack on inbound before the next
+    // cycle (mirrors joinLoop). Drive both acks on each out arrival.
+    out.onArrive(() => {
+      queueMicrotask(() => {
+        if (a.state === "inFlight") ackWire(a);
+        if (b.state === "inFlight") ackWire(b);
+      });
+    });
     const inA = inputLoop(a, [1, 10]);
     const inB = inputLoop(b, [2, 20]);
 

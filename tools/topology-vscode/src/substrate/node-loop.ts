@@ -51,13 +51,15 @@ export function inputLoop(
 }
 
 // First multi-input node loop. Awaits one value per inbound wire,
-// reduces, gates the outbound on awaitReady, sends, and then acks each
-// inbound. The reduce closure is the node-specific compute; the loop
-// shape itself is the same for any AND-style join.
+// reduces, gates the outbound on awaitReady, sends, then waits for
+// each inbound to be acked externally before the next cycle. The
+// reduce closure is the node-specific compute; the loop shape itself
+// is the same for any AND-style join.
 //
 // The inbound[] order is preserved into reduce(values), so the caller
-// can map indices to ports. awaitValue does NOT ack — that's why the
-// explicit ackWire pass at the end is required.
+// can map indices to ports. Pacing-by-external-ack is load-bearing —
+// internal ack here would race ahead of the visual layer (or any
+// manual-ack edge) and stack pulses on inbound wires.
 export function andGateLoop(
   inbound: readonly Wire[],
   out: Wire,
@@ -82,8 +84,10 @@ export function andGateLoop(
       wakeCurrent = null;
       if (stopped || r2 === "stop") break;
       await out.send(result);
-      for (const w of inbound) ackWire(w);
       opts.onTick?.();
+      const r3 = await racedWithStop(Promise.all(inbound.map((w) => w.awaitReady())));
+      wakeCurrent = null;
+      if (stopped || r3 === "stop") break;
     }
   })();
   return {
