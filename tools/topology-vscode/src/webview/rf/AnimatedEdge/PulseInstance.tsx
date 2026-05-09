@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { EdgeRoute } from "../../../schema";
 import { extendPulse } from "../../../sim/runner";
-import { subscribeWiresPause } from "../../../substrate/runtime-wires";
+import { isWiresRuntimePaused, subscribeWiresPause } from "../../../substrate/runtime-wires";
 import { noteAnimStart, noteAnimEnd, noteAnimRerun } from "../timeline-probe";
 import { type PathGeom } from "./_geom";
 import { PULSE_DASH_PX } from "./_constants";
@@ -77,14 +77,25 @@ export function PulseInstance({
       probeId: probeIdRef.current,
     });
     const loop = () => { if (frame()) rafId = requestAnimationFrame(loop); else rafId = 0; };
-    rafId = requestAnimationFrame(loop);
 
     // Per-pulse freeze: each in-flight pulse owns its own clock and
     // independently halts when the runtime broadcasts pause. On pause
     // we snapshot the elapsed-ms; on resume we rebase swapStart so
     // the same elapsed value is reproduced and the rAF picks up where
-    // it left off.
+    // it left off. If we mount while already paused (e.g. node drag
+    // re-mounts the effect mid-pause), start frozen instead of letting
+    // a fresh rAF loop run the pulse to completion.
     let frozenElapsed: number | null = null;
+    if (isWiresRuntimePaused()) {
+      frozenElapsed = 0;
+      // Paint one frame so label and dash snap to the new geom at the
+      // current arcTraveled. Without this, a node drag mid-pause leaves
+      // the label at its pre-remount coords while the path renders at
+      // new geom, separating label from pulse.
+      frame();
+    } else {
+      rafId = requestAnimationFrame(loop);
+    }
     const unsubPause = subscribeWiresPause((paused) => {
       if (paused) {
         if (frozenElapsed !== null) return;

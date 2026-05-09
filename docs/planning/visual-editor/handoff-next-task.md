@@ -1,63 +1,74 @@
 # Handoff — Next task (START HERE)
 
-**Branch:** `task/node-ticks` (active, not merged). Eight commits on
-top of `main` (`8daf317`). All four node visuals restored on the
-wires runtime:
+**State:** `task/node-ticks` carries manual-ack on **both** readGate
+slots. Two per-edge buttons (`⏏ in0→readGate`, `⏏ i1→readGate`) and a
+combined `⏏ both` button portal next to RunButton. Other wires keep
+visual pacing.
 
-- `6554e07` — `subscribeNodeTicks(fn)` + flash/glow plumbing.
-- `33fe174` — visual #1 (flash).
-- `54cd832` — visual #2 (glow ring).
-- `0b3efa9` — `subscribeNodeHeld(fn)` on wires runtime.
-- `879e3d7` — visual #3 (held tint).
-- `b4a1bee` — `subscribeNodeBuffered(fn)` on wires runtime.
-- `8f13034` — visual #4 (buffered halo).
+Driven by the user's plain-terms model: **bidirectional comms between
+A and B; if B says it has room A sends a pulse, otherwise A holds.**
+Each button is B's room-signal for one edge.
 
-User-confirmed visually through 4/4: flash, glow, held tint,
-buffered halo all fire on Input + ReadGate per pulse; rapid
-retrigger clean; pause behaves per design.
+**Read [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md)
+before changing anything in this area.** It documents the full chain,
+the load-bearing assumption ("visual layer is the only auto-acker"),
+and the cosmetic title-lie traps for future shapes.
 
-## Next: merge to main
+## What's done
 
-Per the prior `handoff-next-task.md` plan: "Merge to `main` once all
-four visuals are restored." That breakpoint is here.
+- Visuals 1–4 on the wires runtime (flash, glow, held, buffered).
+- Pause = mid-arc freeze; concurrent clocks frozen on command.
+- Wire ready/value back-channel API (sender + receiver).
+- `inputLoop`, `andGateLoop`, `joinLoop` substrate primitives.
+- `matchSubstrate` shapes A (Input→ReadGate) and B (Input +
+  ChainInhibitor → ReadGate) wired through `runtime-wires-shapes.ts`.
+- **Manual-ack, multi-edge** (this session):
+  `ShapeSetup.manualAckEdges: { id, label }[]`; runtime exposes
+  `getManualAckEdges` / `isManualAckEdge` / `clearManualAckSlot`;
+  `usePulseLanesWire` skip uses `isManualAckEdge`; `ClearSlotButton`
+  renders one button per edge + "both" when ≥2.
+- 251/251 vitest; tsc + build clean.
 
-Pre-merge state:
-- 238/238 vitest green.
-- `npm run build` clean (extension + webview).
-- `npm run check:loc` clean (no files ≥ 200 LOC).
-- AnimatedNode at 144 LOC.
+## What the next session should do
 
-Merge requires **user sign-off** per the workflow rule in CLAUDE.md
-("Sign-off IS still required for: merging a task branch into
-`main`…"). Do not merge without explicit approval in-session.
+The original next-port direction still stands: **give ChainInhibitor a
+real inbound** so it stops cycling `[1]` as a clock placeholder. Two
+routes:
 
-Suggested merge command once approved:
+1. **Input2 → ChainInhibitor → ReadGate.ack** — ChainInhibitor uses
+   a one-input node loop (inputLoop shape but reading `awaitValue`
+   from inbound).
+2. **Promote i1 to a join** — two inbound on ChainInhibitor,
+   exercises `andGateLoop` end-to-end.
 
-```
-git checkout main && git merge --no-ff task/node-ticks
-git push origin main
-```
+Either route: widen `matchSubstrate` to a third shape, add a setup fn
+in `runtime-wires-shapes.ts`, write a contract test mirroring the
+existing inhibitor test (manual ack pacing).
 
-After merge, `task/node-ticks` can stay as a reference branch (do
-not delete — matches the convention used for prior task branches).
+The i1→readGate.ack manual-ack is now wired (this session). The
+inhibitor's `inputLoop` parks at `awaitReady` after one send and waits
+for its button. When ChainInhibitor gains a real inbound and switches
+to `andGateLoop`, manual-ack still applies (keyed on edge id, not loop
+type), but the "i1 has a queue of 1s" mental model stops being literal.
 
-## After the merge
+## What's NOT done (and why it's parked)
 
-No queued substrate or visual work. Next task is **friction-driven**
-from [session-log.md](session-log.md): user drives the editor,
-narrates observations, assistant logs and acts. Do not invent a new
-visual or substrate task absent friction.
-
-Open question that surfaced during this branch (parked, not
-blocking): should `subscribeNodeHeld` debounce same-value arrives,
-or keep firing-on-every-arrive? Current choice is fire-on-every,
-React equality suppresses redundant tween. Revisit if a friction
-log entry calls it out.
+- Legacy globals (`sim/runner`, `sim/event-bus`, `legacyRunnerState`,
+  `pauseRunner`, `isPlaying`) still imported by AnimatedEdge,
+  PulseInstance, TimelinePanel, Bookmarks, RunnerProbe,
+  fold-halo-probe, `_handle-load`, `_on-node-drag`. Removing them
+  follows the next port — same gating logic as before.
+- `node-loop.test.ts` is 228 LOC, pre-existing offender from
+  `1a918b1`. Split as a follow-up commit.
+- Per-edge slot-pacing thread (drop drain barrier, fire-per-arrival)
+  remains parked — see [handoff-slot-plan.md](handoff-slot-plan.md).
 
 ## Working tree note
 
-`.claude/settings.json` and `topology.view.json` carry orthogonal
-uncommitted drift. Leave or stash — not part of this merge.
+`.claude/settings.json` carries the `Bash(kill *)` permission added
+in a prior session. `topology.json` carries the 3-node fixture used
+as the real-world e2e for shape B. `topology.view.json` carries
+camera drift; orthogonal — leave or stash.
 
 ## ALWAYS clause
 

@@ -21,7 +21,10 @@
       "Bash(git add -A && git commit *)",
       "Bash(git add -A && git commit -m *)",
       "Bash(git add * && git commit *)",
-      "Bash(git add * && git commit -m *)"
+      "Bash(git add * && git commit -m *)",
+      "Bash(cd * && git add * && git commit *)",
+      "Bash(cd * && git add * && git commit -m *)",
+      "Bash(kill *)"
     ]
   },
   "hooks": {

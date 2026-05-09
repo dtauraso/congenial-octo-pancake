@@ -22,40 +22,53 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-07, end of session):
-  Active branch: `task/node-ticks` (cut from `main` at `8daf317`).
-  All four node visuals restored on the wires runtime — ready to
-  merge to `main` pending user sign-off. Eight commits on top of
-  `main`:
+State at handoff (2026-05-09, end of ninth session):
+  Active branch: `task/node-ticks`. `main` still at `392602f`.
 
-  - `6554e07` — `subscribeNodeTicks` on wires runtime. `node-loop.ts`
-    fires `onTick` after each Input send and after each ReadGate
-    arrive. Contract test: tick count >= ack-cycle count.
-  - `33fe174` — visual #1 (flash) restored on AnimatedNode, driven
-    by `subscribeNodeTicks`.
-  - `54cd832` — visual #2 (glow ring) restored, sharing the tick
-    subscription.
-  - `6f17f83` — interim handoff update (held tint next).
-  - `0b3efa9` — `subscribeNodeHeld` on wires runtime. Producer in
-    `readGateLoop` arrive path; emits `(nodeId, StateValue)` on
-    every arrive (tween-on-change handled by React equality).
-  - `879e3d7` — visual #3 (held tint) restored on AnimatedNode.
-  - `b4a1bee` — `subscribeNodeBuffered` on wires runtime. Tracks
-    wire `state === "full"` per receiver node.
-  - `8f13034` — visual #4 (buffered halo) restored. **All four
-    visuals now driven by wires runtime.**
+  This session **generalized manual-ack to multiple edges** and
+  added the i1→readGate.ack button + a "clear both" button:
 
-  Visual validation by user: through commit `8f13034` (4/4) — flash,
-  glow, held tint, buffered halo all confirmed firing on Input +
-  ReadGate per pulse; rapid retrigger clean; pause stops new pulses.
-  Console errors: not verified.
+  - `ShapeSetup.manualAckEdges: { id, label }[]` (was singular
+    `manualAckEdgeId`). Inhibitor shape registers both chainIn and
+    ack. Single-input shape registers in0→readGate.
+  - `runtime-wires.ts` exposes `getManualAckEdges()`,
+    `isManualAckEdge(id)`, `clearManualAckSlot(edgeId)`. Stop/start
+    clear+rebuild a list + Set in lockstep.
+  - `usePulseLanesWire` auto-ack skip uses `isManualAckEdge(w.id)`.
+  - `ClearSlotButton` renders one `OneClearButton` per registered
+    edge plus a `ClearAllButton` when ≥2 (clicks every id in one
+    tick → both upstream loops resume simultaneously).
+  - **Mechanism doc:** [docs/manual-ack-mechanism.md](../../manual-ack-mechanism.md)
+    — full chain, safe-cases, fragile-cases, load-bearing
+    assumption ("visual layer is the only auto-acker"). Read it
+    before touching any of the four files.
+  - 251/251 vitest; tsc + build clean.
 
-  Tests: 238/238 vitest green (contract tests added for ticks, held,
-  buffered). Build + tsc green. `check:loc` clean.
+  Prior-session work (still current on this branch):
 
-  Working tree: `.claude/settings.json` has uncommitted allowlist
-  additions; `topology.view.json` has incidental pan/zoom drift.
-  Both orthogonal to this branch — leave or stash.
+  - `joinLoop` primitive (ack-only multi-input join, paced by the
+    visual layer's `onDone → ackWire`).
+  - `matchSubstrate` shape B: Input + ChainInhibitor → ReadGate.
+  - `runtime-wires` dispatch + `runtime-wires-shapes.ts` helper;
+    ChainInhibitor with no inbound cycles `[1]` as a placeholder.
+  - Per-edge slot-pacing thread parked
+    (see [handoff-slot-plan.md](handoff-slot-plan.md)).
+  - Memory: [feedback_substrate_visual_pacer.md](../../../memory/feedback_substrate_visual_pacer.md).
+
+  On `main` (untouched this branch):
+
+  - **Visuals 1–4 on wires runtime** (`6554e07`…`8f13034`): flash,
+    glow ring, held tint, buffered halo via
+    `subscribeNodeTicks/Held/Buffered`.
+  - **Pause = freeze mid-arc** (`34b8c20`): `subscribeWiresPause`
+    fans one pause/resume signal; each `PulseInstance` owns its
+    rAF clock and freezes/rebases independently.
+
+  Conceptual frame: **concurrent clocks frozen on command**.
+  Tests green at 246/246 vitest; tsc + build clean.
+
+  Working tree: `.claude/settings.json` and `topology.view.json`
+  carry incidental drift; orthogonal — leave or stash.
 
   Prior branches preserved as reference:
   `task/runtime-substrate-rebuild`, `task/wires`,
@@ -64,17 +77,17 @@ State at handoff (2026-05-07, end of session):
 ## Dev-loop
 
 Edit → `npm run build` → topology tab refreshes in place. No Reload
-Window, no tab cycling. The watcher logs `[topology] bundleWatcher
-fired` / `hot-reload: re-rendering webview.html` to Output → Log
-(Extension Host).
+Window, no tab cycling. Watcher logs `[topology] bundleWatcher
+fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Start at [handoff-next-task.md](handoff-next-task.md). Immediate
-next step is **merge `task/node-ticks` → `main`** (requires user
-sign-off per workflow). After merge, next work is friction-driven
-from [session-log.md](session-log.md) — no queued visual or
-substrate task.
+Start at [handoff-next-task.md](handoff-next-task.md). Manual-ack
+now covers both readGate slots (in0→readGate and i1→readGate, plus
+"both"). The next move is still **giving ChainInhibitor a real
+inbound** so it stops being a clock-style placeholder. Friction-driven
+posture stands. Before touching the manual-ack code, read
+[../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
