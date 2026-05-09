@@ -49,10 +49,12 @@ driven by a synthetic unit queue; i0 stops being a sink.
    initial token (one-shot) but route subsequent sends from the
    cycle. Verify on first run.
 
-6. **Contract test** — Shape D contract test (still owed from
-   Shape C) should assert no pulse stacking on i1→readGate.ack
-   *and* on the new i0→i1 edge across at least two cycles. Keep
-   ≤100 LOC.
+6. **Contract test** — split into two commits:
+   - **6a (done, `efb4fa9`)** — bump `handle-load-repro.test.ts`
+     3→4 edges so the suite is green before adding new logic.
+   - **6b (next)** — new Shape D contract test asserting no pulse
+     stacking on i1→readGate.ack *and* on the new i0→i1 edge
+     across at least two cycles. Keep ≤100 LOC.
 
 ## Read first
 

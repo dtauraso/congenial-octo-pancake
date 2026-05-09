@@ -22,18 +22,20 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, late fourteenth session):
+State at handoff (2026-05-09, fifteenth session):
   Active branch: `task/node-ticks` (merged to `main` at `2957316` via
   `--no-ff`; branch retained for further work). Latest commit on the
-  branch: `8fb4c12`.
+  branch: `efb4fa9`.
 
   Shape D plan filed at
   [handoff-shape-d-plan.md](handoff-shape-d-plan.md): close the cycle
   by adding `i0.out → i1.in`, then matcher, setup, dispatch, cycle
-  seed, contract test (six increments).
+  seed, contract test (six increments). Item 6 split into two
+  commits: (6a) bump `handle-load-repro.test.ts` 3→4 edges to green
+  the suite; (6b) new Shape D contract test. 6a is done; 6b is next.
 
-  **Items 1–5 of the plan are committed (`9006ec7`, `d38cf4e`,
-  `aebef03`, `dcf14b7`, `8fb4c12`).** [topology.json](../../../topology.json)
+  **Items 1–5 + 6a are committed (`9006ec7`, `d38cf4e`, `aebef03`,
+  `dcf14b7`, `8fb4c12`, `efb4fa9`).** [topology.json](../../../topology.json)
   has the i0→i1 chain edge; `matchSubstrate` accepts the 4-node/4-edge
   spec as shape `"input+inhibitor->readGate->i0->i1"`;
   `setupInputReadGateInhibitorCycle` lives in
@@ -45,12 +47,10 @@ State at handoff (2026-05-09, late fourteenth session):
   shape-d file does a one-shot `ackWireE.send(1)` at startup so
   readGate's andGateLoop unblocks on first iteration; subsequent acks
   come from i1's andGateLoop once value has propagated
-  readGate → i0 → i1. Resume at item 6 (contract test).
+  readGate → i0 → i1. Resume at item 6b (new Shape D contract test).
 
-  Pre-existing test failure: `handle-load-repro.test.ts` asserts
-  `spec.edges.length === 3`; live topology.json has 4 since item 1.
-  Update or land alongside item 6 contract test. 257/258 otherwise
-  pass; tsc + build clean as of `dcf14b7`.
+  Suite is green as of `efb4fa9` (258/258); the `handle-load-repro`
+  3→4 edge bump landed in 6a. tsc + build clean.
 
   Earlier-branch context (see `git log` for details): `e9e3fef` fixed
   the `andGateLoop` pacing bug (now mirrors joinLoop — awaitReady on
@@ -75,15 +75,13 @@ fired` to Output → Log (Extension Host).
 ## Next move
 
 Path chosen: **cycle close i0→i1** (Shape D). Plan at
-[handoff-shape-d-plan.md](handoff-shape-d-plan.md). Items 1–5 (spec
-edge, matcher, setup, dispatch, cycle seed) are committed (`9006ec7`,
-`d38cf4e`, `aebef03`, `dcf14b7`, `8fb4c12`). Resume at item 6:
-contract test that loads the 4-edge topology end-to-end, asserts no
-pulse stacking on i1→readGate.ack and on the new i0→i1 edge across at
-least two cycles, and updates the pre-existing
-`handle-load-repro.test.ts` 3-vs-4 edge assertion (still failing as
-of `8fb4c12`; 257/258 otherwise pass; tsc + build clean). Keep ≤100
-LOC. Other open paths
+[handoff-shape-d-plan.md](handoff-shape-d-plan.md). Items 1–5 + 6a
+are committed (`9006ec7`, `d38cf4e`, `aebef03`, `dcf14b7`, `8fb4c12`,
+`efb4fa9`). Resume at **item 6b**: new Shape D contract test that
+loads the 4-edge topology end-to-end and asserts no pulse stacking on
+i1→readGate.ack and on the new i0→i1 edge across at least two cycles.
+Suite is green (258/258 as of `efb4fa9`); tsc + build clean. Keep
+≤100 LOC. Other open paths
 ([handoff-next-task.md](handoff-next-task.md)) — Shape C contract
 test, deleting unused `TriggerGate` — remain available but parked
 behind Shape D. Before touching the manual-ack code, read
