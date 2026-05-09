@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ackWire, type Wire } from "../../../substrate/wire";
-import { getManualAckEdgeId } from "../../../substrate/runtime-wires";
+import { isManualAckEdge } from "../../../substrate/runtime-wires";
 import { slog } from "../../../substrate/log";
 import { type Pulse, formatRidingValue } from "./_constants";
 
@@ -47,10 +47,10 @@ export function usePulseLanesWire(id: string, wire: Wire) {
   const advanceLane0 = useCallback((key: number) => {
     setPulses0((cur) => cur.filter((p) => p.key !== key));
     const w = wireRef.current;
-    // The in0→readGate wire is paced by the editor's "clear slot" button,
-    // not by arc completion. Skip auto-ack so the slot stays full until
-    // the user signals room is available.
-    if (w.id === getManualAckEdgeId()) return;
+    // Manual-ack wires are paced by editor "clear slot" buttons, not by
+    // arc completion. Skip auto-ack so the slot stays full until the
+    // user signals room is available.
+    if (isManualAckEdge(w.id)) return;
     if (w.state === "inFlight") ackWire(w);
   }, []);
 

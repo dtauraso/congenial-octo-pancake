@@ -9,7 +9,10 @@ import { buildWires, type WireMap } from "./build-wires";
 import { ackWire } from "./wire";
 import type { NodeLoop } from "./node-loop";
 import { clearAllBuffered } from "./node-streams";
-import { setupInputReadGate, setupInputReadGateInhibitor } from "./runtime-wires-shapes";
+import {
+  setupInputReadGate, setupInputReadGateInhibitor,
+  type ManualAckEdge,
+} from "./runtime-wires-shapes";
 import { slog } from "./log";
 
 export {
@@ -19,10 +22,11 @@ export {
 let _loops: NodeLoop[] = [];
 let _wires: WireMap | null = null;
 let _running = false;
-// Edge id whose receiver-side slot is cleared by an editor button instead
-// of by the visual layer's arc-completion auto-ack. Scoped to the
-// in0→readGate (chainIn) wire; other wires keep visual pacing.
-let _manualAckEdgeId: string | null = null;
+// Edges whose receiver-side slot is cleared by an editor button instead
+// of by the visual layer's arc-completion auto-ack. One button per
+// entry; other wires keep visual pacing.
+let _manualAckEdges: ManualAckEdge[] = [];
+const _manualAckSet = new Set<string>();
 let _paused = false;
 let _resumeWaiters: Array<() => void> = [];
 const _pauseListeners = new Set<(paused: boolean) => void>();
@@ -68,13 +72,14 @@ function awaitResumeGate(): Promise<void> {
 export function getWiresMap(): WireMap | null { return _wires; }
 export function getWiresVersion(): number { return _version; }
 
-export function getManualAckEdgeId(): string | null { return _manualAckEdgeId; }
+export function getManualAckEdges(): ManualAckEdge[] { return _manualAckEdges; }
+export function isManualAckEdge(edgeId: string): boolean { return _manualAckSet.has(edgeId); }
 
-// Clear the receiver-side slot on the manual-ack wire (in0→readGate).
-// Returns true if a slot was cleared. No-op when wire is idle or unset.
-export function clearManualAckSlot(): boolean {
-  if (!_manualAckEdgeId || !_wires) return false;
-  const w = _wires.get(_manualAckEdgeId);
+// Clear the receiver-side slot on a manual-ack wire. Returns true if a
+// slot was cleared. No-op when wire is idle or not registered.
+export function clearManualAckSlot(edgeId: string): boolean {
+  if (!_manualAckSet.has(edgeId) || !_wires) return false;
+  const w = _wires.get(edgeId);
   if (!w || w.state !== "inFlight") return false;
   ackWire(w);
   return true;
@@ -99,7 +104,9 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
     : setupInputReadGate(spec, _wires, awaitResumeGate);
   _running = true;
   _loops = setup.loops;
-  _manualAckEdgeId = setup.manualAckEdgeId ?? null;
+  _manualAckEdges = setup.manualAckEdges ?? [];
+  _manualAckSet.clear();
+  for (const e of _manualAckEdges) _manualAckSet.add(e.id);
   slog("wires-runtime: started", {
     shape: hasInhibitor ? "input+inhibitor->readGate" : "input->readGate",
     edges: [...(_wires?.keys() ?? [])],
@@ -121,7 +128,8 @@ export async function stopWiresRuntime(): Promise<void> {
   const wires = _wires;
   _loops = [];
   _wires = null;
-  _manualAckEdgeId = null;
+  _manualAckEdges = [];
+  _manualAckSet.clear();
   // Kick off loop stops first (sets each loop's stopped=true
   // synchronously), THEN ack any in-flight wires so pending sends
   // resolve and the loops see stopped=true on the next iteration.
