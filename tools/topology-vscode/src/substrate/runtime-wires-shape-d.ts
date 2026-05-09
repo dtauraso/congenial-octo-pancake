@@ -3,12 +3,18 @@
 // andGateLoop. i1 stops being driven by a synthetic unit queue — it
 // passthroughs i0.out to readGate.ack via andGateLoop. The two
 // manual-ack edges (in0->readGate, i1->readGate) are unchanged.
-// Cycle seeding is deferred to plan item 5.
+//
+// Cycle seed: a one-shot send onto ackWireE at startup gives readGate
+// the first ack-side token so its andGateLoop can take its first ready
+// slot. Without this, readGate, i0, i1 each park on awaitValue and the
+// cycle never starts. Subsequent acks come from i1's andGateLoop once
+// the value has propagated readGate -> i0 -> i1.
 
 import type { Spec, StateValue } from "../schema";
 import { readNodeInit } from "../sim/seeds";
 import type { WireMap } from "./build-wires";
-import { inputLoop, andGateLoop } from "./node-loop";
+import { inputLoop, andGateLoop, type NodeLoop } from "./node-loop";
+import type { Wire, WireValue } from "./wire";
 import {
   publishHeld, publishTick,
   markBuffered, clearBuffered,
@@ -78,11 +84,28 @@ export function setupInputReadGateInhibitorCycle(
         ([v]) => v,
         { onTick: () => publishTick(i1.id) },
       ),
+      seedLoop(ackWireE, 1 as unknown as StateValue),
       inputLoop(inWire, inputQueue, { awaitGate, onTick: () => publishTick(input.id) }),
     ],
     manualAckEdges: [
       { id: chainEdge.id, label: "in0->readGate" },
       { id: ackEdge.id, label: "i1->readGate" },
     ],
+  };
+}
+
+function seedLoop(out: Wire, value: WireValue): NodeLoop {
+  let stopped = false;
+  const done = (async () => {
+    if (stopped) return;
+    await out.awaitReady();
+    if (stopped) return;
+    await out.send(value);
+  })();
+  return {
+    async stop() {
+      stopped = true;
+      await done.catch(() => undefined);
+    },
   };
 }
