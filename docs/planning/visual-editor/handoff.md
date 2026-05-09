@@ -22,89 +22,48 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, end of eleventh session):
-  Active branch: `task/node-ticks` (merged to `main` at `2957316`
-  via `--no-ff`; branch retained for further work).
+State at handoff (2026-05-09, end of twelfth session):
+  Active branch: `task/node-ticks` (merged to `main` at `2957316` via
+  `--no-ff`; branch retained for further work). Latest commit on the
+  branch: `a884cba`.
 
-  This session **added Shape C** (4 nodes / 3 edges):
-  Input + i1 + ReadGate + i0, with `readGate.out → i0.in`. ReadGate
-  switched from `joinLoop` to `andGateLoop` so it actually emits the
-  chainIn value forward; i0 is a sink consuming via
-  `readGateLoop(autoAck:false)` so the visual layer paces its ack.
-  Manual-ack still covers chainIn + ack on readGate; the new wire
-  auto-paces with visuals. User confirmed conditional timing for all
-  4 nodes is correct in the running editor.
+  This session **uncovered a real bug in `andGateLoop`** and shipped a
+  workaround. The bug: andGateLoop acks its inbound wires internally
+  ([node-loop.ts:79](../../../tools/topology-vscode/src/substrate/node-loop.ts#L79)),
+  which defeats the manual-ack / visual-pacing model on Shape C. As a
+  result, multiple pulses can stack on i1→readGate.ack at once
+  (user observed). joinLoop got this right — andGateLoop did not when
+  Shape C swapped to it for the emit capability.
 
-  - `match.ts`: new `matchInputReadGateInhibitorWithI0` and
-    `matchSubstrateShape()` tag dispatch.
-  - `runtime-wires-shapes.ts`: `setupInputReadGateInhibitorWithI0`.
-  - `runtime-wires.ts`: dispatcher uses `matchSubstrateShape`.
-  - `topology.json`: fixture extended to 4/3.
-  - `handle-load-repro.test.ts`: counts bumped to 4/3.
-  - 258/258 vitest; tsc + build clean.
+  The workaround (commit `a884cba`) adds a **per-loop trigger gate**:
+  `inputLoop` gains optional `awaitOpen`; a new `TriggerGate`
+  ([trigger-gate.ts](../../../tools/topology-vscode/src/substrate/trigger-gate.ts))
+  parks i1's loop until the user clicks ▶ on a new panel button
+  ([TriggerSlotButton.tsx](../../../tools/topology-vscode/src/webview/panels/TriggerSlotButton.tsx)).
+  Default closed; click toggles open/closed. Only i1 is gated; in0
+  still has the same internal-ack issue on chainIn (per user
+  direction).
 
-  Prior session **backfilled contract tests for back-channel-era
-  fixes** (commit `2f48ea9`):
+  Underlying andGateLoop bug is **not** fixed — see
+  [handoff-next-task.md](handoff-next-task.md). 258/258 vitest; tsc +
+  build clean.
 
-  - `test/contracts/input-loop-await-ready.test.ts` — pins
-    inputLoop's send-gating on `out.awaitReady` (commit d01973e),
-    the `awaitGate` hook used by pause/resume, and clean stop while
-    parked at awaitReady.
-  - `test/contracts/runtime-wires-manual-ack.test.ts` — pins
-    shape A/B `manualAckEdges` registration and that
-    `clearManualAckSlot` advances the joinLoop cycle when auto-ack
-    is suppressed (commits f2bffc6 + f9d929e).
-  - 258/258 vitest (was 251).
+  Prior-session highlights (consult `git log` for full history):
+  - `fbe61ab` Shape C wired (4 nodes / 3 edges), readGate switched
+    from `joinLoop` to `andGateLoop` (the swap that introduced the
+    bug above).
+  - `2f48ea9` back-channel-era contract tests
+    (`input-loop-await-ready`, `runtime-wires-manual-ack`).
+  - `7d2ae39` multi-edge manual-ack + "clear both" button; mechanism
+    doc at [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
+  - Earlier on branch: `joinLoop`, Shape B, `runtime-wires` dispatch,
+    visuals 1–4, pause-as-mid-arc-freeze. Conceptual frame:
+    **concurrent clocks frozen on command**.
 
-  Prior session (`7d2ae39` and earlier on this branch)
-  **generalized manual-ack to multiple edges** and added the
-  i1→readGate.ack button + a "clear both" button:
-
-  - `ShapeSetup.manualAckEdges: { id, label }[]` (was singular
-    `manualAckEdgeId`). Inhibitor shape registers both chainIn and
-    ack. Single-input shape registers in0→readGate.
-  - `runtime-wires.ts` exposes `getManualAckEdges()`,
-    `isManualAckEdge(id)`, `clearManualAckSlot(edgeId)`. Stop/start
-    clear+rebuild a list + Set in lockstep.
-  - `usePulseLanesWire` auto-ack skip uses `isManualAckEdge(w.id)`.
-  - `ClearSlotButton` renders one `OneClearButton` per registered
-    edge plus a `ClearAllButton` when ≥2 (clicks every id in one
-    tick → both upstream loops resume simultaneously).
-  - **Mechanism doc:** [docs/manual-ack-mechanism.md](../../manual-ack-mechanism.md)
-    — full chain, safe-cases, fragile-cases, load-bearing
-    assumption ("visual layer is the only auto-acker"). Read it
-    before touching any of the four files.
-  - 251/251 vitest at the time; tsc + build clean.
-
-  Prior-session work (still current on this branch):
-
-  - `joinLoop` primitive (ack-only multi-input join, paced by the
-    visual layer's `onDone → ackWire`).
-  - `matchSubstrate` shape B: Input + ChainInhibitor → ReadGate.
-  - `runtime-wires` dispatch + `runtime-wires-shapes.ts` helper;
-    ChainInhibitor with no inbound cycles `[1]` as a placeholder.
-  - Per-edge slot-pacing thread parked
-    (see [handoff-slot-plan.md](handoff-slot-plan.md)).
-  - Memory: [feedback_substrate_visual_pacer.md](../../../memory/feedback_substrate_visual_pacer.md).
-
-  On `main` (untouched this branch):
-
-  - **Visuals 1–4 on wires runtime** (`6554e07`…`8f13034`): flash,
-    glow ring, held tint, buffered halo via
-    `subscribeNodeTicks/Held/Buffered`.
-  - **Pause = freeze mid-arc** (`34b8c20`): `subscribeWiresPause`
-    fans one pause/resume signal; each `PulseInstance` owns its
-    rAF clock and freezes/rebases independently.
-
-  Conceptual frame: **concurrent clocks frozen on command**.
-  Tests green at 246/246 vitest; tsc + build clean.
-
-  Working tree: `.claude/settings.json` and `topology.view.json`
-  carry incidental drift; orthogonal — leave or stash.
-
-  Prior branches preserved as reference:
-  `task/runtime-substrate-rebuild`, `task/wires`,
-  `task/node-visuals-strip`. Do not delete.
+  Working tree: `.claude/settings.json` and `topology.view.json` carry
+  incidental drift; orthogonal — leave or stash. Prior branches
+  preserved as reference: `task/runtime-substrate-rebuild`,
+  `task/wires`, `task/node-visuals-strip`. Do not delete.
 
 ## Dev-loop
 
@@ -114,11 +73,13 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Start at [handoff-next-task.md](handoff-next-task.md). Shape C is in
-and the four-node timing is correct. Next move: **decide i0's
-outbound** (cycle close to i1, branch to a second ReadGate, or feed a
-Distribute/EdgeNode), then add a Shape C contract test. Friction-driven
-posture stands. Before touching the manual-ack code, read
+Start at [handoff-next-task.md](handoff-next-task.md). Two paths:
+**(1) fix `andGateLoop` properly** (mirror joinLoop's post-fire
+`awaitReady` step, then drop or repurpose the i1 trigger gate); or
+**(2) pick i0's outbound** (cycle close to i1, branch to a second
+ReadGate, or feed a Distribute/EdgeNode). Doing (1) first keeps later
+shapes from inheriting the pacing bug. A Shape C contract test is
+also still owed. Before touching the manual-ack code, read
 [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
 ALWAYS — at end of session, overwrite this file (and the sibling

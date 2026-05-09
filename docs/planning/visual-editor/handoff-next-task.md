@@ -1,79 +1,87 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks` now matches **Shape C**: Input + i1 +
-ReadGate + i0 with edges `in0→readGate.chainIn`, `i1→readGate.ack`,
-and `readGate.out→i0.in` (4 nodes / 3 edges). ReadGate switched from
-`joinLoop` (ack-only) to `andGateLoop` — it now actually emits the
-chainIn value downstream to i0. i0 is a **sink** for now: it consumes
-via `readGateLoop(autoAck:false)` so the visual layer paces its ack.
-Manual-ack still covers chainIn + ack on readGate; the new
-`readGate→i0` wire auto-paces with visuals.
+**State:** `task/node-ticks` is on Shape C (Input + i1 + ReadGate + i0,
+4 nodes / 3 edges). Shape C wiring stands. Latest commit (`a884cba`)
+adds a **per-loop trigger gate** that hand-paces i1's send loop via a
+panel button — workaround for a real bug uncovered this session.
 
-User confirmed conditional timing for all 4 nodes is correct in the
-running editor.
+## The bug (still open)
 
-**Read [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md)
-before changing anything in the manual-ack area.** Load-bearing
-assumption: visual layer is the only auto-acker.
+`andGateLoop` acks its inbound wires internally
+([node-loop.ts:79](../../../tools/topology-vscode/src/substrate/node-loop.ts#L79)):
 
-## What's done
+```ts
+for (const w of inbound) ackWire(w);
+```
 
-- Visuals 1–4 on the wires runtime (flash, glow, held, buffered).
-- Pause = mid-arc freeze; concurrent clocks frozen on command.
-- Wire ready/value back-channel API.
-- `inputLoop`, `andGateLoop`, `joinLoop`, `readGateLoop` primitives.
-- `matchSubstrate` shapes A, B, **C** wired through
-  `runtime-wires-shapes.ts` via `matchSubstrateShape()` dispatch.
-- Multi-edge manual-ack with per-edge buttons + "both".
-- Back-channel-era contract tests (`2f48ea9`).
-- 258/258 vitest; tsc + build clean.
+That ack unblocks upstream `inputLoop`s' `await out.send(...)` *before*
+the visual arc completes, so pulses stack on the wire even though
+both inbound edges (chainIn, ack) are registered as `manualAckEdges`.
+Manual-ack registration only suppresses the **visual layer's**
+auto-ack — it does not stop the loop from acking itself.
+
+Shape B's `joinLoop` got this right
+([node-loop.ts:121](../../../tools/topology-vscode/src/substrate/node-loop.ts#L121)):
+it awaits external ack via `awaitReady` after firing. Shape C swapped
+to `andGateLoop` for the emit capability and lost that property.
+
+User reported the symptom on i1→readGate.ack: more than one pulse on
+the wire at once.
+
+## The workaround in this commit
+
+Per-loop open/closed gate, default closed; click toggles.
+
+- New `TriggerGate` in
+  [trigger-gate.ts](../../../tools/topology-vscode/src/substrate/trigger-gate.ts)
+  — `isOpen / toggle / awaitOpen / wake / subscribe`.
+- `inputLoop` gains optional `awaitOpen` (parks before send when
+  closed).
+- Shape C registers **one** trigger slot for i1's loop in
+  [runtime-wires-shapes.ts](../../../tools/topology-vscode/src/substrate/runtime-wires-shapes.ts).
+- Runtime exposes `getTriggerSlots()` and `wake()`s all gates on stop
+  so parked loops observe `stopped=true`.
+- New panel button in
+  [TriggerSlotButton.tsx](../../../tools/topology-vscode/src/webview/panels/TriggerSlotButton.tsx)
+  shows ▶ when closed, ■ when open.
+
+**Scope:** only i1 has a trigger gate. in0 still has the same
+internal-ack issue on chainIn but is parked per user direction.
 
 ## What the next session should do
 
-Pick i0's role. The user deferred this when wiring Shape C, but with
-the sink working it's time to decide:
+Two paths, user's choice:
 
-1. **Cycle close: i0 → i1.in (or back to readGate.ack)** — first real
-   feedback loop in the substrate. Pacing implications: i1's
-   placeholder `[1]` queue would be replaced by an inbound on i1, so
-   i1 switches from `inputLoop` to either `inputLoop`-with-real-source
-   or `andGateLoop`. This is the original "give ChainInhibitor a real
-   inbound" item carried over from prior handoffs.
-2. **i0 → second ReadGate** — branch the chain forward instead of
-   looping back. Easier to reason about than a cycle; less interesting
-   for the constant-time goals.
-3. **i0 emits to a Distribute / EdgeNode** — earliest taste of the
-   contrast/edge primitives.
+1. **Fix andGateLoop properly.** Mirror joinLoop's post-fire
+   `awaitReady` step on each inbound, then drop the i1 trigger gate
+   (or keep it as a debug pacer). This is the principled fix.
+2. **Pick i0's outbound** (the original next move from the prior
+   handoff): cycle close to i1, branch to a second ReadGate, or feed a
+   Distribute/EdgeNode. Recommended: cycle close to i1.
 
-Recommended: **route 1**, since closing the cycle is what the
-self-sustaining mode in CLAUDE.md eventually requires, and the
-machinery (joinLoop / andGateLoop / manual-ack) is now mature enough
-to absorb pacing surprises.
+Doing (1) before (2) keeps subsequent shapes from inheriting the
+pacing bug. A Shape C contract test is also still owed.
 
-Either way: widen `matchSubstrate` to a fourth shape, add a setup fn,
-and write a contract test mirroring `runtime-wires-manual-ack.test.ts`.
-
-A Shape C contract test is also still owed — a small follow-up that
-asserts the readGate→i0 wire ticks once per chainIn+ack pair and that
-manual-ack edges remain just chainIn+ack.
+**Read [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md)
+before changing anything in the manual-ack area.** Load-bearing
+assumption: visual layer is the only auto-acker. The andGateLoop bug
+violates this; the trigger gate sidesteps it.
 
 ## What's NOT done (and why it's parked)
 
-- Legacy globals (`sim/runner`, `sim/event-bus`, `legacyRunnerState`,
-  `pauseRunner`, `isPlaying`) still imported by AnimatedEdge,
-  PulseInstance, TimelinePanel, Bookmarks, RunnerProbe,
-  fold-halo-probe, `_handle-load`, `_on-node-drag`. Removing them
-  follows the next port — same gating logic as before.
-- `node-loop.test.ts` is 228 LOC, pre-existing offender from
-  `1a918b1`. Split as a follow-up commit.
+- andGateLoop internal-ack fix (see above).
+- in0's symmetric trigger gate (user said i1 only).
+- Shape C contract test.
+- Legacy globals (`sim/runner`, `legacyRunnerState`, `pauseRunner`,
+  `isPlaying`) still imported by AnimatedEdge, PulseInstance, etc.
 - Per-edge slot-pacing thread (drop drain barrier, fire-per-arrival)
   remains parked — see [handoff-slot-plan.md](handoff-slot-plan.md).
 
 ## Working tree note
 
-`.claude/settings.json` carries the `Bash(kill *)` permission added
-in a prior session. `topology.view.json` carries camera drift;
-orthogonal — leave or stash.
+`.claude/settings.json` carries the `Bash(kill *)` permission added in
+a prior session. `topology.view.json` carries camera drift; orthogonal
+— leave or stash.
 
 ## ALWAYS clause
 
