@@ -22,29 +22,30 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, mid fourteenth session):
+State at handoff (2026-05-09, late fourteenth session):
   Active branch: `task/node-ticks` (merged to `main` at `2957316` via
   `--no-ff`; branch retained for further work). Latest commit on the
-  branch: `dcf14b7`.
+  branch: `8fb4c12`.
 
   Shape D plan filed at
   [handoff-shape-d-plan.md](handoff-shape-d-plan.md): close the cycle
   by adding `i0.out → i1.in`, then matcher, setup, dispatch, cycle
   seed, contract test (six increments).
 
-  **Items 1–4 of the plan are committed (`9006ec7`, `d38cf4e`,
-  `aebef03`, `dcf14b7`).** [topology.json](../../../topology.json) has
-  the i0→i1 chain edge; `matchSubstrate` accepts the 4-node/4-edge
+  **Items 1–5 of the plan are committed (`9006ec7`, `d38cf4e`,
+  `aebef03`, `dcf14b7`, `8fb4c12`).** [topology.json](../../../topology.json)
+  has the i0→i1 chain edge; `matchSubstrate` accepts the 4-node/4-edge
   spec as shape `"input+inhibitor->readGate->i0->i1"`;
   `setupInputReadGateInhibitorCycle` lives in
   [runtime-wires-shape-d.ts](../../../tools/topology-vscode/src/substrate/runtime-wires-shape-d.ts)
   (kept separate so `runtime-wires-shapes.ts` stays under the 200-LOC
   budget); `startWiresRuntime` in
   [runtime-wires.ts](../../../tools/topology-vscode/src/substrate/runtime-wires.ts)
-  routes the new shape to that setup. Cycle is wired but not seeded —
-  with no initial token on `cycleWire`/`ackWireE`, the andGateLoops
-  for i0/i1 stall on first `awaitReady`. Resume at item 5 (seed the
-  cycle).
+  routes the new shape to that setup. A local `seedLoop` in the same
+  shape-d file does a one-shot `ackWireE.send(1)` at startup so
+  readGate's andGateLoop unblocks on first iteration; subsequent acks
+  come from i1's andGateLoop once value has propagated
+  readGate → i0 → i1. Resume at item 6 (contract test).
 
   Pre-existing test failure: `handle-load-repro.test.ts` asserts
   `spec.edges.length === 3`; live topology.json has 4 since item 1.
@@ -74,14 +75,15 @@ fired` to Output → Log (Extension Host).
 ## Next move
 
 Path chosen: **cycle close i0→i1** (Shape D). Plan at
-[handoff-shape-d-plan.md](handoff-shape-d-plan.md). Items 1–4 (spec
-edge, matcher, setup, dispatch) are committed (`9006ec7`, `d38cf4e`,
-`aebef03`, `dcf14b7`). Resume at item 5 (cycle seed — feed an initial
-token into `cycleWire` or `ackWireE` so the i0/i1 loops can take
-their first ready slot; without this the cycle is wired but stalled).
-Item 6 follows: contract test that loads the 4-edge topology end-to-
-end, also fixes the pre-existing `handle-load-repro.test.ts`
-3-vs-4 edge assertion. Other open paths
+[handoff-shape-d-plan.md](handoff-shape-d-plan.md). Items 1–5 (spec
+edge, matcher, setup, dispatch, cycle seed) are committed (`9006ec7`,
+`d38cf4e`, `aebef03`, `dcf14b7`, `8fb4c12`). Resume at item 6:
+contract test that loads the 4-edge topology end-to-end, asserts no
+pulse stacking on i1→readGate.ack and on the new i0→i1 edge across at
+least two cycles, and updates the pre-existing
+`handle-load-repro.test.ts` 3-vs-4 edge assertion (still failing as
+of `8fb4c12`; 257/258 otherwise pass; tsc + build clean). Keep ≤100
+LOC. Other open paths
 ([handoff-next-task.md](handoff-next-task.md)) — Shape C contract
 test, deleting unused `TriggerGate` — remain available but parked
 behind Shape D. Before touching the manual-ack code, read
