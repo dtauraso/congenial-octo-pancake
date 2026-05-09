@@ -22,36 +22,32 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, end of twelfth session):
+State at handoff (2026-05-09, end of thirteenth session):
   Active branch: `task/node-ticks` (merged to `main` at `2957316` via
   `--no-ff`; branch retained for further work). Latest commit on the
-  branch: `a884cba`.
+  branch: `e9e3fef`.
 
-  This session **uncovered a real bug in `andGateLoop`** and shipped a
-  workaround. The bug: andGateLoop acks its inbound wires internally
-  ([node-loop.ts:79](../../../tools/topology-vscode/src/substrate/node-loop.ts#L79)),
-  which defeats the manual-ack / visual-pacing model on Shape C. As a
-  result, multiple pulses can stack on i1→readGate.ack at once
-  (user observed). joinLoop got this right — andGateLoop did not when
-  Shape C swapped to it for the emit capability.
+  This session **fixed the `andGateLoop` bug** uncovered last session.
+  andGateLoop now mirrors joinLoop: after `out.send`, it `awaitReady`s
+  each inbound instead of self-acking. Pulses no longer stack on
+  inbound wires; i1→readGate.ack paces correctly through the
+  manual-ack edge.
 
-  The workaround (commit `a884cba`) adds a **per-loop trigger gate**:
-  `inputLoop` gains optional `awaitOpen`; a new `TriggerGate`
-  ([trigger-gate.ts](../../../tools/topology-vscode/src/substrate/trigger-gate.ts))
-  parks i1's loop until the user clicks ▶ on a new panel button
-  ([TriggerSlotButton.tsx](../../../tools/topology-vscode/src/webview/panels/TriggerSlotButton.tsx)).
-  Default closed; click toggles open/closed. Only i1 is gated; in0
-  still has the same internal-ack issue on chainIn (per user
-  direction).
+  Shape C dropped the per-loop trigger gate; i1's send loop now paces
+  naturally via the manual-ack button, same as in0. The `TriggerGate`
+  module + `awaitOpen` plumbing on `inputLoop` remain in tree as a
+  potential debug pacer, but no shape registers a trigger slot. The
+  panel button component is still wired and harmless when triggerSlots
+  is empty.
 
-  Underlying andGateLoop bug is **not** fixed — see
-  [handoff-next-task.md](handoff-next-task.md). 258/258 vitest; tsc +
-  build clean.
+  258/258 vitest; tsc + build clean.
 
   Prior-session highlights (consult `git log` for full history):
+  - `a884cba` per-loop trigger gate workaround (now superseded by the
+    proper fix in `e9e3fef`).
   - `fbe61ab` Shape C wired (4 nodes / 3 edges), readGate switched
     from `joinLoop` to `andGateLoop` (the swap that introduced the
-    bug above).
+    bug fixed this session).
   - `2f48ea9` back-channel-era contract tests
     (`input-loop-await-ready`, `runtime-wires-manual-ack`).
   - `7d2ae39` multi-edge manual-ack + "clear both" button; mechanism
@@ -73,13 +69,13 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Start at [handoff-next-task.md](handoff-next-task.md). Two paths:
-**(1) fix `andGateLoop` properly** (mirror joinLoop's post-fire
-`awaitReady` step, then drop or repurpose the i1 trigger gate); or
-**(2) pick i0's outbound** (cycle close to i1, branch to a second
-ReadGate, or feed a Distribute/EdgeNode). Doing (1) first keeps later
-shapes from inheriting the pacing bug. A Shape C contract test is
-also still owed. Before touching the manual-ack code, read
+Start at [handoff-next-task.md](handoff-next-task.md). With andGateLoop
+fixed, the open paths are: **(a) pick i0's outbound** (cycle close to
+i1, branch to a second ReadGate, or feed a Distribute/EdgeNode —
+recommended: cycle close to i1); **(b) write the Shape C contract
+test** still owed; or **(c) decide whether to delete the now-unused
+`TriggerGate` module / `awaitOpen` plumbing or keep them as a debug
+pacer**. Before touching the manual-ack code, read
 [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
 ALWAYS — at end of session, overwrite this file (and the sibling
