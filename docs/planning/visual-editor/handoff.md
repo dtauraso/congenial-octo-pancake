@@ -22,12 +22,27 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, end of ninth session):
-  Active branch: `task/node-ticks` (merged to `main` at `07bbb7c`
-  via `--no-ff`; branch retained for further work).
+State at handoff (2026-05-08, end of tenth session):
+  Active branch: `task/node-ticks` (last merge to `main` at `07bbb7c`
+  was the manual-ack multi-edge work; this session adds tests only,
+  not yet merged).
 
-  This session **generalized manual-ack to multiple edges** and
-  added the i1→readGate.ack button + a "clear both" button:
+  This session **backfilled contract tests for back-channel-era
+  fixes** (commit `2f48ea9`):
+
+  - `test/contracts/input-loop-await-ready.test.ts` — pins
+    inputLoop's send-gating on `out.awaitReady` (commit d01973e),
+    the `awaitGate` hook used by pause/resume, and clean stop while
+    parked at awaitReady.
+  - `test/contracts/runtime-wires-manual-ack.test.ts` — pins
+    shape A/B `manualAckEdges` registration and that
+    `clearManualAckSlot` advances the joinLoop cycle when auto-ack
+    is suppressed (commits f2bffc6 + f9d929e).
+  - 258/258 vitest (was 251).
+
+  Prior session (`7d2ae39` and earlier on this branch)
+  **generalized manual-ack to multiple edges** and added the
+  i1→readGate.ack button + a "clear both" button:
 
   - `ShapeSetup.manualAckEdges: { id, label }[]` (was singular
     `manualAckEdgeId`). Inhibitor shape registers both chainIn and
@@ -43,7 +58,7 @@ State at handoff (2026-05-09, end of ninth session):
     — full chain, safe-cases, fragile-cases, load-bearing
     assumption ("visual layer is the only auto-acker"). Read it
     before touching any of the four files.
-  - 251/251 vitest; tsc + build clean.
+  - 251/251 vitest at the time; tsc + build clean.
 
   Prior-session work (still current on this branch):
 
