@@ -13,8 +13,10 @@ import {
   publishHeld, publishTick,
   markBuffered, clearBuffered,
 } from "./node-streams";
+import { makeTriggerGate, type TriggerGate } from "./trigger-gate";
 
 export interface ManualAckEdge { id: string; label: string }
+export interface TriggerSlot { id: string; label: string; gate: TriggerGate }
 export interface ShapeSetup {
   loops: NodeLoop[];
   // Each entry: the wires runtime suppresses the visual layer's
@@ -22,6 +24,10 @@ export interface ShapeSetup {
   // drives the ack instead. "B says room → A sends" model, applied
   // per-link.
   manualAckEdges?: ManualAckEdge[];
+  // Per-loop toggle gates. While closed, the loop parks before sending;
+  // a panel button toggles open/closed. Used to pace a misbehaving
+  // upstream by hand without fixing the underlying ack model.
+  triggerSlots?: TriggerSlot[];
 }
 
 export function setupInputReadGate(
@@ -127,6 +133,7 @@ export function setupInputReadGateInhibitorWithI0(
 
   const inputQueue = readNodeInit(input.data);
   const i1Queue: StateValue[] = [1 as unknown as StateValue];
+  const i1Trigger = makeTriggerGate(false);
   return {
     loops: [
       readGateLoop(outWire, { autoAck: false, onTick: () => publishTick(i0.id) }),
@@ -137,11 +144,16 @@ export function setupInputReadGateInhibitorWithI0(
         { onTick: () => publishTick(readGate.id) },
       ),
       inputLoop(inWire, inputQueue, { awaitGate, onTick: () => publishTick(input.id) }),
-      inputLoop(ackWireE, i1Queue, { awaitGate, onTick: () => publishTick(i1.id) }),
+      inputLoop(ackWireE, i1Queue, {
+        awaitGate,
+        awaitOpen: () => i1Trigger.awaitOpen(),
+        onTick: () => publishTick(i1.id),
+      }),
     ],
     manualAckEdges: [
       { id: chainEdge.id, label: "in0→readGate" },
       { id: ackEdge.id, label: "i1→readGate" },
     ],
+    triggerSlots: [{ id: ackEdge.id, label: "i1 send", gate: i1Trigger }],
   };
 }

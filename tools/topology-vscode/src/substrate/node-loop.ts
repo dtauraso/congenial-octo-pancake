@@ -20,7 +20,11 @@ export type NodeLoop = { stop(): Promise<void> };
 export function inputLoop(
   out: Wire,
   queue: readonly StateValue[],
-  opts: { awaitGate?: () => Promise<void>; onTick?: () => void } = {},
+  opts: {
+    awaitGate?: () => Promise<void>;
+    awaitOpen?: () => Promise<void>;
+    onTick?: () => void;
+  } = {},
 ): NodeLoop {
   let stopped = false;
   const done = (async () => {
@@ -28,6 +32,8 @@ export function inputLoop(
     let i = 0;
     while (!stopped) {
       if (opts.awaitGate) await opts.awaitGate();
+      if (stopped) break;
+      if (opts.awaitOpen) await opts.awaitOpen();
       if (stopped) break;
       await out.awaitReady();
       if (stopped) break;

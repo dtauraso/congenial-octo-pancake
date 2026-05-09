@@ -12,7 +12,7 @@ import { clearAllBuffered } from "./node-streams";
 import {
   setupInputReadGate, setupInputReadGateInhibitor,
   setupInputReadGateInhibitorWithI0,
-  type ManualAckEdge,
+  type ManualAckEdge, type TriggerSlot,
 } from "./runtime-wires-shapes";
 import { matchSubstrateShape } from "./match";
 import { slog } from "./log";
@@ -29,6 +29,7 @@ let _running = false;
 // entry; other wires keep visual pacing.
 let _manualAckEdges: ManualAckEdge[] = [];
 const _manualAckSet = new Set<string>();
+let _triggerSlots: TriggerSlot[] = [];
 let _paused = false;
 let _resumeWaiters: Array<() => void> = [];
 const _pauseListeners = new Set<(paused: boolean) => void>();
@@ -76,6 +77,7 @@ export function getWiresVersion(): number { return _version; }
 
 export function getManualAckEdges(): ManualAckEdge[] { return _manualAckEdges; }
 export function isManualAckEdge(edgeId: string): boolean { return _manualAckSet.has(edgeId); }
+export function getTriggerSlots(): TriggerSlot[] { return _triggerSlots; }
 
 // Clear the receiver-side slot on a manual-ack wire. Returns true if a
 // slot was cleared. No-op when wire is idle or not registered.
@@ -111,6 +113,7 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
   _manualAckEdges = setup.manualAckEdges ?? [];
   _manualAckSet.clear();
   for (const e of _manualAckEdges) _manualAckSet.add(e.id);
+  _triggerSlots = setup.triggerSlots ?? [];
   slog("wires-runtime: started", {
     shape: shape ?? "input->readGate",
     edges: [...(_wires?.keys() ?? [])],
@@ -130,10 +133,14 @@ export async function stopWiresRuntime(): Promise<void> {
   for (const w of waiters) w();
   const loops = _loops;
   const wires = _wires;
+  const triggers = _triggerSlots;
   _loops = [];
   _wires = null;
   _manualAckEdges = [];
   _manualAckSet.clear();
+  _triggerSlots = [];
+  // Wake any loops parked at awaitOpen so they observe stopped=true.
+  for (const t of triggers) t.gate.wake();
   // Kick off loop stops first (sets each loop's stopped=true
   // synchronously), THEN ack any in-flight wires so pending sends
   // resolve and the loops see stopped=true on the next iteration.

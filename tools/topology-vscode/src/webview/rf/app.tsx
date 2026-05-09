@@ -6,6 +6,7 @@ import {
 import { specToFlow } from "./adapter";
 import { RunButton } from "../panels/RunButton";
 import { ClearSlotButton } from "../panels/ClearSlotButton";
+import { TriggerSlotButton } from "../panels/TriggerSlotButton";
 import { RunnerProbe } from "../panels/RunnerProbe";
 import { SaveLifecycle } from "../SaveLifecycle";
 import { TimelinePanel } from "../panels/TimelinePanel";
@@ -143,6 +144,7 @@ export default function App() {
       <Inner />
       <RunButton />
       <ClearSlotButton />
+      <TriggerSlotButton />
       <RunnerProbe />
       <ViewsPanel />
       <TimelinePanel />
