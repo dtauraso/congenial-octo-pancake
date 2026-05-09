@@ -23,7 +23,8 @@ Read them in this order on a fresh session:
 ---
 
 State at handoff (2026-05-09, end of ninth session):
-  Active branch: `task/node-ticks`. `main` still at `392602f`.
+  Active branch: `task/node-ticks` (merged to `main` at `07bbb7c`
+  via `--no-ff`; branch retained for further work).
 
   This session **generalized manual-ack to multiple edges** and
   added the i1→readGate.ack button + a "clear both" button:
