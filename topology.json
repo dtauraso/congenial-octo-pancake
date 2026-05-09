@@ -59,6 +59,18 @@
       "data": {
         "slots": 1
       }
+    },
+    {
+      "id": "i0.out->i1.in",
+      "source": "i0",
+      "sourceHandle": "out",
+      "target": "i1",
+      "targetHandle": "in",
+      "kind": "chain",
+      "label": "i0ToI1",
+      "data": {
+        "slots": 1
+      }
     }
   ],
   "timing": {
