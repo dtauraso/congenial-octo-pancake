@@ -25,48 +25,41 @@ Read them in this order on a fresh session:
 State at handoff (2026-05-09, mid fourteenth session):
   Active branch: `task/node-ticks` (merged to `main` at `2957316` via
   `--no-ff`; branch retained for further work). Latest commit on the
-  branch: `d38cf4e`.
+  branch: `aebef03`.
 
   Shape D plan filed at
   [handoff-shape-d-plan.md](handoff-shape-d-plan.md): close the cycle
   by adding `i0.out → i1.in`, then matcher, setup, dispatch, cycle
   seed, contract test (six increments).
 
-  **Items 1 and 2 of the plan are committed (`9006ec7`, `d38cf4e`).**
-  [topology.json](../../../topology.json) has the i0→i1 chain edge
-  and `matchSubstrate` now accepts the 4-node/4-edge spec as shape
-  `"input+inhibitor->readGate->i0->i1"`. Setup + dispatch (items 3–4)
-  are NOT wired yet, so `startWiresRuntime` currently falls through
-  to the Shape A setup branch (`setupInputReadGate`) — animation will
-  not run cleanly until item 4. Resume at item 3 (setup
-  `setupInputReadGateInhibitorCycle`).
+  **Items 1–3 of the plan are committed (`9006ec7`, `d38cf4e`,
+  `aebef03`).** [topology.json](../../../topology.json) has the i0→i1
+  chain edge; `matchSubstrate` accepts the 4-node/4-edge spec as
+  shape `"input+inhibitor->readGate->i0->i1"`;
+  `setupInputReadGateInhibitorCycle` lives in new sibling file
+  [runtime-wires-shape-d.ts](../../../tools/topology-vscode/src/substrate/runtime-wires-shape-d.ts)
+  (kept separate so `runtime-wires-shapes.ts` stays under the 200-LOC
+  budget). Dispatch (item 4) is NOT wired yet, so `startWiresRuntime`
+  still falls through to the Shape A setup branch
+  (`setupInputReadGate`) — animation will not run cleanly until item
+  4. Resume at item 4 (route shape
+  `"input+inhibitor->readGate->i0->i1"` to
+  `setupInputReadGateInhibitorCycle` in
+  [runtime-wires.ts](../../../tools/topology-vscode/src/substrate/runtime-wires.ts)).
 
   Pre-existing test failure: `handle-load-repro.test.ts` asserts
   `spec.edges.length === 3`; live topology.json has 4 since item 1.
   Update or land alongside item 6 contract test. 257/258 otherwise
   pass; tsc + build clean as of `d38cf4e`.
 
-  Prior in-session work (already committed at `e9e3fef`): fixed the
-  `andGateLoop` pacing bug. andGateLoop now mirrors joinLoop —
-  `awaitReady`s each inbound after `out.send` instead of self-acking.
-  Pulses stop stacking on i1→readGate.ack. Shape C dropped the
-  per-loop trigger gate; i1's send loop paces via the manual-ack
-  button, same as in0. `TriggerGate` module + `awaitOpen` plumbing on
-  `inputLoop` remain in tree as a potential debug pacer.
-
-  Prior-session highlights (consult `git log` for full history):
-  - `a884cba` per-loop trigger gate workaround (now superseded by the
-    proper fix in `e9e3fef`).
-  - `fbe61ab` Shape C wired (4 nodes / 3 edges), readGate switched
-    from `joinLoop` to `andGateLoop` (the swap that introduced the
-    bug fixed this session).
-  - `2f48ea9` back-channel-era contract tests
-    (`input-loop-await-ready`, `runtime-wires-manual-ack`).
-  - `7d2ae39` multi-edge manual-ack + "clear both" button; mechanism
-    doc at [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
-  - Earlier on branch: `joinLoop`, Shape B, `runtime-wires` dispatch,
-    visuals 1–4, pause-as-mid-arc-freeze. Conceptual frame:
-    **concurrent clocks frozen on command**.
+  Earlier-branch context (see `git log` for details): `e9e3fef` fixed
+  the `andGateLoop` pacing bug (now mirrors joinLoop — awaitReady on
+  each inbound after `out.send` instead of self-acking; no pulse
+  stacking on i1→readGate.ack). `TriggerGate` + `awaitOpen` plumbing
+  on `inputLoop` remain in tree as a potential debug pacer. Shape C
+  paces i1 via the manual-ack button, same as in0. Mechanism doc:
+  [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
+  Conceptual frame: **concurrent clocks frozen on command**.
 
   Working tree: `.claude/settings.json` and `topology.view.json` carry
   incidental drift; orthogonal — leave or stash. Prior branches
@@ -82,10 +75,13 @@ fired` to Output → Log (Extension Host).
 ## Next move
 
 Path chosen: **cycle close i0→i1** (Shape D). Plan at
-[handoff-shape-d-plan.md](handoff-shape-d-plan.md). Items 1–2 (spec
-edge, matcher) are committed (`9006ec7`, `d38cf4e`). Resume at item 3
-(`setupInputReadGateInhibitorCycle` in
-[runtime-wires-shapes.ts](../../../tools/topology-vscode/src/substrate/runtime-wires-shapes.ts)).
+[handoff-shape-d-plan.md](handoff-shape-d-plan.md). Items 1–3 (spec
+edge, matcher, setup) are committed (`9006ec7`, `d38cf4e`,
+`aebef03`). Resume at item 4 (dispatch the new shape in
+[runtime-wires.ts](../../../tools/topology-vscode/src/substrate/runtime-wires.ts)
+— import `setupInputReadGateInhibitorCycle` from
+[runtime-wires-shape-d.ts](../../../tools/topology-vscode/src/substrate/runtime-wires-shape-d.ts)
+and add a branch for shape `"input+inhibitor->readGate->i0->i1"`).
 Other open paths
 ([handoff-next-task.md](handoff-next-task.md)) — Shape C contract
 test, deleting unused `TriggerGate` — remain available but parked
