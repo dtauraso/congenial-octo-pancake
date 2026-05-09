@@ -34,18 +34,25 @@ both edges; pacing is one pulse-pair per cycle.
 
 ## What the next session should do
 
-The natural next port is **giving ChainInhibitor a real inbound** so it
-stops being a clock-style placeholder. Two routes:
+**Per-edge slot pacing already works** — verified this session by
+[join-loop-slot-pacing.test.ts](../../../tools/topology-vscode/test/contracts/join-loop-slot-pacing.test.ts).
+Each `Wire` is a per-edge slot with its own ready/ack; a fast
+source refills its edge while a slow source is held. No
+`slotJoinLoop` was needed. See [handoff-slot-plan.md](handoff-slot-plan.md)
+for the full reasoning and the design options (drop drain barrier,
+fire-per-arrival) that remain available but unmotivated.
 
-1. **Input2 → ChainInhibitor → ReadGate.ack** — chain feeding `i1`.
-   ChainInhibitor needs a one-input node loop (basically `inputLoop`
-   shape but reading `awaitValue` from inbound rather than a fixed
-   queue). Smallest natural extension.
-2. **Promote i1 to a join** — give it two inbound, exercise
-   `andGateLoop` end-to-end (which the codebase already has tests for
-   but no real-runtime consumer). Closer to topology semantics.
+Original next-port direction still stands: **give ChainInhibitor a
+real inbound** so it stops cycling `[1]` as a clock placeholder.
+Two routes:
 
-Either way: widen `matchSubstrate` (third shape), add a setup function
+1. **Input2 → ChainInhibitor → ReadGate.ack** — ChainInhibitor uses
+   a one-input node loop (inputLoop shape but reading `awaitValue`
+   from inbound).
+2. **Promote i1 to a join** — two inbound on ChainInhibitor,
+   exercises `andGateLoop` end-to-end.
+
+Either way: widen `matchSubstrate` to a third shape, add a setup fn
 in `runtime-wires-shapes.ts`, write a contract test mirroring the
 existing inhibitor test (manual ack pacing).
 
