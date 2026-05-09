@@ -60,19 +60,16 @@ State at handoff (2026-05-09, sixteenth session):
 
   Suite is green as of `62b9f6f` (259/259). tsc + build clean.
 
-  Earlier-branch context (see `git log` for details): `e9e3fef` fixed
-  the `andGateLoop` pacing bug (now mirrors joinLoop — awaitReady on
-  each inbound after `out.send` instead of self-acking; no pulse
-  stacking on i1→readGate.ack). `TriggerGate` + `awaitOpen` plumbing
-  on `inputLoop` remain in tree as a potential debug pacer. Shape C
-  paces i1 via the manual-ack button, same as in0. Mechanism doc:
-  [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
+  Earlier-branch context: `e9e3fef` fixed `andGateLoop` pacing
+  (mirrors joinLoop, no self-ack). `TriggerGate` + `awaitOpen` remain
+  as a potential debug pacer. Shape C paces i1 via manual-ack,
+  same as in0. Mechanism: [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
   Conceptual frame: **concurrent clocks frozen on command**.
 
   Working tree: `.claude/settings.json` and `topology.view.json` carry
-  incidental drift; orthogonal — leave or stash. Prior branches
-  preserved as reference: `task/runtime-substrate-rebuild`,
-  `task/wires`, `task/node-visuals-strip`. Do not delete.
+  incidental drift — leave or stash. Reference branches retained:
+  `task/runtime-substrate-rebuild`, `task/wires`,
+  `task/node-visuals-strip`. Do not delete.
 
 ## Dev-loop
 
@@ -86,15 +83,13 @@ Path chosen: **cycle close i0→i1** (Shape D) — items 1–6 done
 (`9006ec7`, `d38cf4e`, `aebef03`, `dcf14b7`, `8fb4c12`, `efb4fa9`,
 `62b9f6f`). Suite green (259/259); tsc + build clean.
 
-Next move: **close the cycle-2 gap** surfaced by 6b. Shape D as
-wired only sustains one round-trip; readGate parks at step A
-awaitValue with ackWireE empty after cycle 1. Options to evaluate:
-(a) extend `seedLoop` to re-arm on each readGate fire instead of
-one-shot, (b) re-introduce a small unit-queue inputLoop on i1 (as
-Shape C had) so ackWireE stays primed, (c) rethink the topology so
-the cycle is genuinely self-pumping. Once a fix lands, tighten
-`shape-d-cycle.test.ts` from ≥1 cycle to ≥2 cycles per the
-original plan. Other open paths
+**Cycle-2 gap diagnosis** (seventeenth session, attempted fix reverted
+to keep tree at `62b9f6f`): the topology IS balanced; the blocker is
+substrate microtask ordering. Full diagnosis and next-move options in
+[handoff-cycle2-diagnosis.md](handoff-cycle2-diagnosis.md). Read that
+before touching shape-d.ts or node-loop.ts.
+
+Other open paths
 ([handoff-next-task.md](handoff-next-task.md)) — Shape C contract
 test, deleting unused `TriggerGate` — remain available. Before
 touching the manual-ack code, read
