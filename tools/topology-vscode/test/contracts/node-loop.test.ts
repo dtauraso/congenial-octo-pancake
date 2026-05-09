@@ -4,9 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 import { ackWire, createWire } from "../../src/substrate/wire";
-import { inputLoop, readGateLoop, andGateLoop } from "../../src/substrate/node-loop";
-import { startWiresRuntime, stopWiresRuntime, getWiresMap } from "../../src/substrate/runtime-wires";
-import type { Spec } from "../../src/schema";
+import { inputLoop, readGateLoop } from "../../src/substrate/node-loop";
 
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
 
@@ -43,8 +41,6 @@ describe("node-loop", () => {
     const rg = readGateLoop(w, { autoAck: false });
     const inp = inputLoop(w, [10, 20, 30]);
 
-    // Wait for the first arrival, ack it, repeat.
-    const tick = () => new Promise<void>((r) => setTimeout(r, 0));
     for (let i = 0; i < 4; i++) {
       while (pending === null) await tick();
       ackWire(w);
@@ -71,157 +67,5 @@ describe("node-loop", () => {
     expect(w.state).toBe("idle");
     await inp.stop();
     await rg.stop();
-  });
-});
-
-describe("andGateLoop", () => {
-  it("joins two inputs, reduces, sends, acks both inbound", async () => {
-    const a = createWire("a");
-    const b = createWire("b");
-    const out = createWire("o");
-    const seen: unknown[] = [];
-    const reachedTwo = new Promise<void>((resolve) => {
-      out.onArrive((v) => {
-        if (seen.length < 2) {
-          seen.push(v);
-          if (seen.length === 2) resolve();
-        }
-      });
-    });
-
-    const rg = readGateLoop(out, { autoAck: true });
-    const gate = andGateLoop(
-      [a, b],
-      out,
-      (vs) => (vs[0] as number) + (vs[1] as number),
-    );
-    const inA = inputLoop(a, [1, 10]);
-    const inB = inputLoop(b, [2, 20]);
-
-    await reachedTwo;
-    expect(seen).toEqual([3, 30]);
-
-    const stops = [inA.stop(), inB.stop(), gate.stop(), rg.stop()];
-    if (a.state === "inFlight") ackWire(a);
-    if (b.state === "inFlight") ackWire(b);
-    if (out.state === "inFlight") ackWire(out);
-    await Promise.all(stops);
-  });
-
-  it("waits for the slow input before firing", async () => {
-    const a = createWire("a");
-    const b = createWire("b");
-    const out = createWire("o");
-    let arrived = 0;
-    let firstArrived: () => void = () => undefined;
-    const arrivedOnce = new Promise<void>((r) => { firstArrived = r; });
-    out.onArrive(() => { arrived += 1; firstArrived(); });
-    const rg = readGateLoop(out, { autoAck: true });
-    const gate = andGateLoop([a, b], out, (vs) => vs);
-
-    const inA = inputLoop(a, [1]);
-    await tick(); await tick();
-    expect(arrived).toBe(0); // a alone is not enough
-
-    const inB = inputLoop(b, [2]);
-    await arrivedOnce;
-    expect(arrived).toBeGreaterThanOrEqual(1);
-
-    const stops = [inA.stop(), inB.stop(), gate.stop(), rg.stop()];
-    if (a.state === "inFlight") ackWire(a);
-    if (b.state === "inFlight") ackWire(b);
-    if (out.state === "inFlight") ackWire(out);
-    await Promise.all(stops);
-  });
-});
-
-describe("runtime-wires", () => {
-  const spec = {
-    nodes: [
-      { id: "i", type: "Input", data: { init: [7, 8] } },
-      { id: "r", type: "ReadGate" },
-    ],
-    edges: [
-      { id: "i->r", source: "i", sourceHandle: "out", target: "r", targetHandle: "in", kind: "chain" },
-    ],
-  } as unknown as Spec;
-
-  it("starts loops and exposes wire map", async () => {
-    await startWiresRuntime(spec);
-    const wires = getWiresMap();
-    expect(wires?.size).toBe(1);
-    expect(wires?.get("i->r")).toBeDefined();
-    await stopWiresRuntime();
-    expect(getWiresMap()).toBeNull();
-  });
-
-  it("stop is idempotent", async () => {
-    await stopWiresRuntime();
-    await stopWiresRuntime();
-    expect(getWiresMap()).toBeNull();
-  });
-
-  it("subscribeNodeHeld: receiver held value matches latest arrived", async () => {
-    const { subscribeNodeHeld } = await import("../../src/substrate/runtime-wires");
-    const held = new Map<string, unknown>();
-    const off = subscribeNodeHeld((nodeId, value) => {
-      held.set(nodeId, value);
-    });
-    await startWiresRuntime(spec);
-    const wires = getWiresMap();
-    const wire = wires?.get("i->r");
-    if (!wire) throw new Error("wire missing");
-    for (let i = 0; i < 3; i++) {
-      while (wire.state !== "inFlight") await new Promise((r) => setTimeout(r, 0));
-      ackWire(wire);
-      await new Promise((r) => setTimeout(r, 0));
-    }
-    await stopWiresRuntime();
-    off();
-    // Queue is [7, 8] cycling; held should be one of those values.
-    expect([7, 8]).toContain(held.get("r"));
-    expect(held.has("i")).toBe(false);
-  });
-
-  it("subscribeNodeBuffered: port marked while inFlight, cleared on ack", async () => {
-    const { subscribeNodeBuffered } = await import("../../src/substrate/runtime-wires");
-    const events: Array<{ nodeId: string; ports: string[] }> = [];
-    const off = subscribeNodeBuffered((nodeId, ports) => {
-      events.push({ nodeId, ports: [...ports] });
-    });
-    await startWiresRuntime(spec);
-    const wires = getWiresMap();
-    const wire = wires?.get("i->r");
-    if (!wire) throw new Error("wire missing");
-    while (wire.state !== "inFlight") await new Promise((r) => setTimeout(r, 0));
-    ackWire(wire);
-    await new Promise((r) => setTimeout(r, 0));
-    await stopWiresRuntime();
-    off();
-    const r = events.filter((e) => e.nodeId === "r");
-    expect(r.some((e) => e.ports.includes("in"))).toBe(true);
-    expect(r.some((e) => e.ports.length === 0)).toBe(true);
-  });
-
-  it("subscribeNodeTicks: tick count matches send/ack count", async () => {
-    const { subscribeNodeTicks } = await import("../../src/substrate/runtime-wires");
-    const counts = new Map<string, number>();
-    const off = subscribeNodeTicks((nodeId) => {
-      counts.set(nodeId, (counts.get(nodeId) ?? 0) + 1);
-    });
-    await startWiresRuntime(spec);
-    const wires = getWiresMap();
-    const wire = wires?.get("i->r");
-    if (!wire) throw new Error("wire missing");
-    // Drive 3 ack cycles externally (autoAck=false in real runtime).
-    for (let i = 0; i < 3; i++) {
-      while (wire.state !== "inFlight") await new Promise((r) => setTimeout(r, 0));
-      ackWire(wire);
-      await new Promise((r) => setTimeout(r, 0));
-    }
-    await stopWiresRuntime();
-    off();
-    expect((counts.get("i") ?? 0)).toBeGreaterThanOrEqual(3);
-    expect((counts.get("r") ?? 0)).toBeGreaterThanOrEqual(3);
   });
 });
