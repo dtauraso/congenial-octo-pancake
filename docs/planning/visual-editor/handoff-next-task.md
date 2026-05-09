@@ -3,7 +3,9 @@
 **State:** `task/node-ticks` carries manual-ack on **both** readGate
 slots. Two per-edge buttons (`⏏ in0→readGate`, `⏏ i1→readGate`) and a
 combined `⏏ both` button portal next to RunButton. Other wires keep
-visual pacing.
+visual pacing. Contract tests for the back-channel-era fixes
+(inputLoop awaitReady gating + manual-ack runtime API) landed in
+`2f48ea9`; suite is 258/258.
 
 Driven by the user's plain-terms model: **bidirectional comms between
 A and B; if B says it has room A sends a pulse, otherwise A holds.**
@@ -22,12 +24,16 @@ and the cosmetic title-lie traps for future shapes.
 - `inputLoop`, `andGateLoop`, `joinLoop` substrate primitives.
 - `matchSubstrate` shapes A (Input→ReadGate) and B (Input +
   ChainInhibitor → ReadGate) wired through `runtime-wires-shapes.ts`.
-- **Manual-ack, multi-edge** (this session):
+- **Manual-ack, multi-edge**:
   `ShapeSetup.manualAckEdges: { id, label }[]`; runtime exposes
   `getManualAckEdges` / `isManualAckEdge` / `clearManualAckSlot`;
   `usePulseLanesWire` skip uses `isManualAckEdge`; `ClearSlotButton`
   renders one button per edge + "both" when ≥2.
-- 251/251 vitest; tsc + build clean.
+- **Back-channel-era contract tests** (this session, `2f48ea9`):
+  `input-loop-await-ready.test.ts` (inputLoop send-gating + awaitGate)
+  and `runtime-wires-manual-ack.test.ts` (manualAck registration +
+  clearManualAckSlot integration through startWiresRuntime).
+- 258/258 vitest; tsc + build clean.
 
 ## What the next session should do
 
