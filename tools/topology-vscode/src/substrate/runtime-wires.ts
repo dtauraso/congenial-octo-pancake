@@ -14,6 +14,7 @@ import {
   setupInputReadGateInhibitorWithI0,
   type ManualAckEdge, type TriggerSlot,
 } from "./runtime-wires-shapes";
+import { setupInputReadGateInhibitorCycle } from "./runtime-wires-shape-d";
 import { matchSubstrateShape } from "./match";
 import { slog } from "./log";
 
@@ -103,11 +104,13 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
   await stopWiresRuntime();
   const shape = matchSubstrateShape(spec);
   _wires = buildWires(spec);
-  const setup = shape === "input+inhibitor->readGate->i0"
-    ? setupInputReadGateInhibitorWithI0(spec, _wires, awaitResumeGate)
-    : shape === "input+inhibitor->readGate"
-      ? setupInputReadGateInhibitor(spec, _wires, awaitResumeGate)
-      : setupInputReadGate(spec, _wires, awaitResumeGate);
+  const setup = shape === "input+inhibitor->readGate->i0->i1"
+    ? setupInputReadGateInhibitorCycle(spec, _wires, awaitResumeGate)
+    : shape === "input+inhibitor->readGate->i0"
+      ? setupInputReadGateInhibitorWithI0(spec, _wires, awaitResumeGate)
+      : shape === "input+inhibitor->readGate"
+        ? setupInputReadGateInhibitor(spec, _wires, awaitResumeGate)
+        : setupInputReadGate(spec, _wires, awaitResumeGate);
   _running = true;
   _loops = setup.loops;
   _manualAckEdges = setup.manualAckEdges ?? [];
