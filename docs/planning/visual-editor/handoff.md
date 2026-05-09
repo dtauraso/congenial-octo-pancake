@@ -22,23 +22,26 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-08, end of eighth session):
+State at handoff (2026-05-09, end of ninth session):
   Active branch: `task/node-ticks`. `main` still at `392602f`.
 
-  This session landed **manual-ack visualization on the
-  in0→readGate link**, driven by the user's plain-terms model
-  (bidirectional A↔B: B signals room, A sends a pulse, otherwise
-  A holds):
+  This session **generalized manual-ack to multiple edges** and
+  added the i1→readGate.ack button + a "clear both" button:
 
-  - `setupInputReadGate{,Inhibitor}` now return a
-    `manualAckEdgeId`. `runtime-wires.ts` stores it and exposes
-    `getManualAckEdgeId` / `clearManualAckSlot`.
-  - `usePulseLanesWire` skips its arc-completion auto-ack on that
-    one wire id; other wires keep visual pacing.
-  - `ClearSlotButton` (new panel) portals next to RunButton,
-    subscribes to `onArrive` / `onAck` so it enables exactly when
-    the slot is occupied. Click → `ackWire` → input loop's
-    `awaitReady` resolves → next pulse.
+  - `ShapeSetup.manualAckEdges: { id, label }[]` (was singular
+    `manualAckEdgeId`). Inhibitor shape registers both chainIn and
+    ack. Single-input shape registers in0→readGate.
+  - `runtime-wires.ts` exposes `getManualAckEdges()`,
+    `isManualAckEdge(id)`, `clearManualAckSlot(edgeId)`. Stop/start
+    clear+rebuild a list + Set in lockstep.
+  - `usePulseLanesWire` auto-ack skip uses `isManualAckEdge(w.id)`.
+  - `ClearSlotButton` renders one `OneClearButton` per registered
+    edge plus a `ClearAllButton` when ≥2 (clicks every id in one
+    tick → both upstream loops resume simultaneously).
+  - **Mechanism doc:** [docs/manual-ack-mechanism.md](../../manual-ack-mechanism.md)
+    — full chain, safe-cases, fragile-cases, load-bearing
+    assumption ("visual layer is the only auto-acker"). Read it
+    before touching any of the four files.
   - 251/251 vitest; tsc + build clean.
 
   Prior-session work (still current on this branch):
@@ -79,10 +82,12 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Start at [handoff-next-task.md](handoff-next-task.md). Manual-ack on
-in0→readGate is landed; the next move is still **giving
-ChainInhibitor a real inbound** so it stops being a clock-style
-placeholder. Friction-driven posture stands.
+Start at [handoff-next-task.md](handoff-next-task.md). Manual-ack
+now covers both readGate slots (in0→readGate and i1→readGate, plus
+"both"). The next move is still **giving ChainInhibitor a real
+inbound** so it stops being a clock-style placeholder. Friction-driven
+posture stands. Before touching the manual-ack code, read
+[../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

@@ -1,15 +1,18 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks` carries the first manual-ack
-visualization. The in0→readGate (chainIn) wire is no longer paced by
-the visual layer's arc-completion auto-ack; a "⏏ clear slot" button in
-the editor toolbar calls `ackWire` on it instead. Other wires (e.g.
-i1→readGate.ack) keep their existing visual pacing — the change is
-scoped to the one link.
+**State:** `task/node-ticks` carries manual-ack on **both** readGate
+slots. Two per-edge buttons (`⏏ in0→readGate`, `⏏ i1→readGate`) and a
+combined `⏏ both` button portal next to RunButton. Other wires keep
+visual pacing.
 
-This was driven by a model the user wrote out in plain terms:
-**bidirectional comms between A and B; if B says it has room A sends a
-pulse, otherwise A holds.** The button is B's room-signal.
+Driven by the user's plain-terms model: **bidirectional comms between
+A and B; if B says it has room A sends a pulse, otherwise A holds.**
+Each button is B's room-signal for one edge.
+
+**Read [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md)
+before changing anything in this area.** It documents the full chain,
+the load-bearing assumption ("visual layer is the only auto-acker"),
+and the cosmetic title-lie traps for future shapes.
 
 ## What's done
 
@@ -19,11 +22,11 @@ pulse, otherwise A holds.** The button is B's room-signal.
 - `inputLoop`, `andGateLoop`, `joinLoop` substrate primitives.
 - `matchSubstrate` shapes A (Input→ReadGate) and B (Input +
   ChainInhibitor → ReadGate) wired through `runtime-wires-shapes.ts`.
-- **Manual-ack** (this session): `setupInputReadGate{,Inhibitor}`
-  return `manualAckEdgeId`; `runtime-wires.ts` exposes
-  `getManualAckEdgeId` + `clearManualAckSlot`; `usePulseLanesWire`
-  skips the auto-ack for that one wire id; `ClearSlotButton`
-  subscribes to `onArrive` / `onAck` and portals next to RunButton.
+- **Manual-ack, multi-edge** (this session):
+  `ShapeSetup.manualAckEdges: { id, label }[]`; runtime exposes
+  `getManualAckEdges` / `isManualAckEdge` / `clearManualAckSlot`;
+  `usePulseLanesWire` skip uses `isManualAckEdge`; `ClearSlotButton`
+  renders one button per edge + "both" when ≥2.
 - 251/251 vitest; tsc + build clean.
 
 ## What the next session should do
@@ -42,9 +45,11 @@ Either route: widen `matchSubstrate` to a third shape, add a setup fn
 in `runtime-wires-shapes.ts`, write a contract test mirroring the
 existing inhibitor test (manual ack pacing).
 
-A natural follow-up to the manual-ack work is to extend the same
-button-driven model to the i1→readGate.ack edge once that edge gains
-a real upstream — i.e. once the ChainInhibitor inbound port lands.
+The i1→readGate.ack manual-ack is now wired (this session). The
+inhibitor's `inputLoop` parks at `awaitReady` after one send and waits
+for its button. When ChainInhibitor gains a real inbound and switches
+to `andGateLoop`, manual-ack still applies (keyed on edge id, not loop
+type), but the "i1 has a queue of 1s" mental model stops being literal.
 
 ## What's NOT done (and why it's parked)
 
