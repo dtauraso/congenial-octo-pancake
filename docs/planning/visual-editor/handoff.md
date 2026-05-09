@@ -23,9 +23,8 @@ Read them in this order on a fresh session:
 ---
 
 State at handoff (2026-05-08, end of tenth session):
-  Active branch: `task/node-ticks` (last merge to `main` at `07bbb7c`
-  was the manual-ack multi-edge work; this session adds tests only,
-  not yet merged).
+  Active branch: `task/node-ticks` (merged to `main` at `2957316`
+  via `--no-ff`; branch retained for further work).
 
   This session **backfilled contract tests for back-channel-era
   fixes** (commit `2f48ea9`):
