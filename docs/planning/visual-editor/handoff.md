@@ -22,20 +22,19 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, fifteenth session):
+State at handoff (2026-05-09, sixteenth session):
   Active branch: `task/node-ticks` (merged to `main` at `2957316` via
   `--no-ff`; branch retained for further work). Latest commit on the
-  branch: `efb4fa9`.
+  branch: `62b9f6f`.
 
   Shape D plan filed at
   [handoff-shape-d-plan.md](handoff-shape-d-plan.md): close the cycle
   by adding `i0.out → i1.in`, then matcher, setup, dispatch, cycle
-  seed, contract test (six increments). Item 6 split into two
-  commits: (6a) bump `handle-load-repro.test.ts` 3→4 edges to green
-  the suite; (6b) new Shape D contract test. 6a is done; 6b is next.
+  seed, contract test (six increments). All six committed; item 6b
+  pinned a finding (see below).
 
-  **Items 1–5 + 6a are committed (`9006ec7`, `d38cf4e`, `aebef03`,
-  `dcf14b7`, `8fb4c12`, `efb4fa9`).** [topology.json](../../../topology.json)
+  **Items 1–6 are committed (`9006ec7`, `d38cf4e`, `aebef03`,
+  `dcf14b7`, `8fb4c12`, `efb4fa9`, `62b9f6f`).** [topology.json](../../../topology.json)
   has the i0→i1 chain edge; `matchSubstrate` accepts the 4-node/4-edge
   spec as shape `"input+inhibitor->readGate->i0->i1"`;
   `setupInputReadGateInhibitorCycle` lives in
@@ -47,10 +46,19 @@ State at handoff (2026-05-09, fifteenth session):
   shape-d file does a one-shot `ackWireE.send(1)` at startup so
   readGate's andGateLoop unblocks on first iteration; subsequent acks
   come from i1's andGateLoop once value has propagated
-  readGate → i0 → i1. Resume at item 6b (new Shape D contract test).
+  readGate → i0 → i1. Item 6b landed at `62b9f6f`:
+  [shape-d-cycle.test.ts](../../../tools/topology-vscode/test/contracts/shape-d-cycle.test.ts)
+  loads the 4-edge topology end-to-end and asserts the no-stacking
+  invariant (depth ≤ 1, arrives == acks) on `i1->readGate.ack` and
+  on the new `i0->i1` edge. **Finding from 6b:** Shape D sustains
+  exactly ONE full propagation. After the first round-trip,
+  cycleWire/outWire empty out and ackWireE has no perpetual driver,
+  so readGate parks at step A awaitValue forever. The seed is
+  one-shot, and the cycle as wired needs another driver to keep
+  refilling ackWireE. Test pins ≥1 cycle rather than the ≥2 the
+  plan optimistically called for.
 
-  Suite is green as of `efb4fa9` (258/258); the `handle-load-repro`
-  3→4 edge bump landed in 6a. tsc + build clean.
+  Suite is green as of `62b9f6f` (259/259). tsc + build clean.
 
   Earlier-branch context (see `git log` for details): `e9e3fef` fixed
   the `andGateLoop` pacing bug (now mirrors joinLoop — awaitReady on
@@ -74,17 +82,22 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Path chosen: **cycle close i0→i1** (Shape D). Plan at
-[handoff-shape-d-plan.md](handoff-shape-d-plan.md). Items 1–5 + 6a
-are committed (`9006ec7`, `d38cf4e`, `aebef03`, `dcf14b7`, `8fb4c12`,
-`efb4fa9`). Resume at **item 6b**: new Shape D contract test that
-loads the 4-edge topology end-to-end and asserts no pulse stacking on
-i1→readGate.ack and on the new i0→i1 edge across at least two cycles.
-Suite is green (258/258 as of `efb4fa9`); tsc + build clean. Keep
-≤100 LOC. Other open paths
+Path chosen: **cycle close i0→i1** (Shape D) — items 1–6 done
+(`9006ec7`, `d38cf4e`, `aebef03`, `dcf14b7`, `8fb4c12`, `efb4fa9`,
+`62b9f6f`). Suite green (259/259); tsc + build clean.
+
+Next move: **close the cycle-2 gap** surfaced by 6b. Shape D as
+wired only sustains one round-trip; readGate parks at step A
+awaitValue with ackWireE empty after cycle 1. Options to evaluate:
+(a) extend `seedLoop` to re-arm on each readGate fire instead of
+one-shot, (b) re-introduce a small unit-queue inputLoop on i1 (as
+Shape C had) so ackWireE stays primed, (c) rethink the topology so
+the cycle is genuinely self-pumping. Once a fix lands, tighten
+`shape-d-cycle.test.ts` from ≥1 cycle to ≥2 cycles per the
+original plan. Other open paths
 ([handoff-next-task.md](handoff-next-task.md)) — Shape C contract
-test, deleting unused `TriggerGate` — remain available but parked
-behind Shape D. Before touching the manual-ack code, read
+test, deleting unused `TriggerGate` — remain available. Before
+touching the manual-ack code, read
 [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
 ALWAYS — at end of session, overwrite this file (and the sibling
