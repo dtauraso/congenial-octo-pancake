@@ -22,29 +22,37 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-08, end of seventh session):
+State at handoff (2026-05-08, end of eighth session):
   Active branch: `task/node-ticks`. `main` still at `392602f`.
 
-  This session landed the **first multi-input ChainInhibitor port**:
+  This session landed **manual-ack visualization on the
+  in0→readGate link**, driven by the user's plain-terms model
+  (bidirectional A↔B: B signals room, A sends a pulse, otherwise
+  A holds):
 
-  - **`joinLoop` primitive** — ack-only multi-input join, no
-    outbound. `await Promise.all(awaitValue)` → `onFire` → `await
-    Promise.all(awaitReady)` → loop. The second `awaitReady` is
-    load-bearing: it lets the visual layer (PulseInstance.onDone →
-    ackWire) pace the cycle. Earlier shapes (synchronous self-ack;
-    rAF-yield self-ack) caused canvas-blank and train-of-pulses
-    regressions respectively.
-  - **`matchSubstrate` widened** to a second shape: Input +
-    ChainInhibitor → ReadGate (chainIn + ack edges).
-  - **runtime-wires dispatch** + new `runtime-wires-shapes.ts`
-    helper. ChainInhibitor with no inbound cycles `[1]` as a clock
-    placeholder.
-  - Memory: [feedback_substrate_visual_pacer.md](../../../memory/feedback_substrate_visual_pacer.md)
-    captures the diagnostic: empty canvas + setTimeouts not firing
-    = microtask hot loop in substrate; the visual layer must pace.
-  - 250/250 vitest; tsc + build clean.
+  - `setupInputReadGate{,Inhibitor}` now return a
+    `manualAckEdgeId`. `runtime-wires.ts` stores it and exposes
+    `getManualAckEdgeId` / `clearManualAckSlot`.
+  - `usePulseLanesWire` skips its arc-completion auto-ack on that
+    one wire id; other wires keep visual pacing.
+  - `ClearSlotButton` (new panel) portals next to RunButton,
+    subscribes to `onArrive` / `onAck` so it enables exactly when
+    the slot is occupied. Click → `ackWire` → input loop's
+    `awaitReady` resolves → next pulse.
+  - 251/251 vitest; tsc + build clean.
 
-  Prior-session shipped work (still current on `main`):
+  Prior-session work (still current on this branch):
+
+  - `joinLoop` primitive (ack-only multi-input join, paced by the
+    visual layer's `onDone → ackWire`).
+  - `matchSubstrate` shape B: Input + ChainInhibitor → ReadGate.
+  - `runtime-wires` dispatch + `runtime-wires-shapes.ts` helper;
+    ChainInhibitor with no inbound cycles `[1]` as a placeholder.
+  - Per-edge slot-pacing thread parked
+    (see [handoff-slot-plan.md](handoff-slot-plan.md)).
+  - Memory: [feedback_substrate_visual_pacer.md](../../../memory/feedback_substrate_visual_pacer.md).
+
+  On `main` (untouched this branch):
 
   - **Visuals 1–4 on wires runtime** (`6554e07`…`8f13034`): flash,
     glow ring, held tint, buffered halo via
@@ -71,14 +79,10 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Start at [handoff-next-task.md](handoff-next-task.md). Substrate
-primitives are in place; the next move is the first real **node
-port** that uses `andGateLoop` end-to-end (most natural target:
-`ChainInhibitorNode` in the substrate runtime, which requires
-widening `matchSubstrate` and `runtime-wires` past the trivial
-Input→ReadGate shape). Still optional — the broader posture remains
-friction-driven; if no editor friction surfaces, drive the substrate
-forward.
+Start at [handoff-next-task.md](handoff-next-task.md). Manual-ack on
+in0→readGate is landed; the next move is still **giving
+ChainInhibitor a real inbound** so it stops being a clock-style
+placeholder. Friction-driven posture stands.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
