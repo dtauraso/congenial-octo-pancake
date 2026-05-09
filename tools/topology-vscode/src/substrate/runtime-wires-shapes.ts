@@ -14,6 +14,11 @@ import {
 
 export interface ShapeSetup {
   loops: NodeLoop[];
+  // When set, the wires runtime suppresses the visual layer's
+  // arc-completion auto-ack on this edge; the editor button drives the
+  // ack instead. Used for the in0→readGate (chainIn) link so it follows
+  // the "B says room → A sends" model with manual room-signalling.
+  manualAckEdgeId?: string;
 }
 
 export function setupInputReadGate(
@@ -35,6 +40,7 @@ export function setupInputReadGate(
       readGateLoop(wire, { autoAck: false, onTick: () => publishTick(readGate.id) }),
       inputLoop(wire, queue, { awaitGate, onTick: () => publishTick(input.id) }),
     ],
+    manualAckEdgeId: edge.id,
   };
 }
 
@@ -72,5 +78,6 @@ export function setupInputReadGateInhibitor(
       inputLoop(inWire, inputQueue, { awaitGate, onTick: () => publishTick(input.id) }),
       inputLoop(ackWireE, inhibitorQueue, { awaitGate, onTick: () => publishTick(inhibitor.id) }),
     ],
+    manualAckEdgeId: chainEdge.id,
   };
 }
