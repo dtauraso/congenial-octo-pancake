@@ -22,36 +22,27 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-08, end of sixth session):
-  Active branch: `task/node-ticks` at `1a918b1` (pushed). `main`
-  still at `392602f` — five commits on this branch and not yet
-  merged.
+State at handoff (2026-05-08, end of seventh session):
+  Active branch: `task/node-ticks`. `main` still at `392602f`.
 
-  This session added:
+  This session landed the **first multi-input ChainInhibitor port**:
 
-  - **inputLoop gates on awaitReady before send** (`d01973e`).
-    Replaced the implicit ack-wait inside `out.send(v)` with an
-    explicit `await out.awaitReady(); await out.send(v)`. Behavior
-    unchanged in the single-sender Input→ReadGate topology; this is
-    the shape future gated/multi-input loops compose with.
-
-  - **andGateLoop primitive for multi-input joins** (`1a918b1`).
-    First real consumer of the wire back-channels from `4827ea2`.
-    Loop body: `Promise.all(inbound.map(w => w.awaitValue()))` →
-    `reduce(values)` → `await out.awaitReady()` → `await out.send`
-    → `ackWire` each inbound. Stop uses a per-iteration "wake"
-    race rather than racing against a long-lived stop signal, so
-    the loop body never accumulates Promise reaction records on a
-    never-resolving promise (V8's Promise.race-leak pitfall —
-    discovered the hard way: an earlier attempt OOM'd vitest).
-    Two contract tests in `test/contracts/node-loop.test.ts`
-    (basic join + slow-input). 248/248 green; tsc + build clean.
-
-  Prior session on this branch:
-
-  - **Wire ready/value back-channel API** (`4827ea2`).
-  - **Paint one frame on mid-pause remount** (`e5b20d7`).
-  - **Pause-freeze on PulseInstance remount** (`a0260fb`).
+  - **`joinLoop` primitive** — ack-only multi-input join, no
+    outbound. `await Promise.all(awaitValue)` → `onFire` → `await
+    Promise.all(awaitReady)` → loop. The second `awaitReady` is
+    load-bearing: it lets the visual layer (PulseInstance.onDone →
+    ackWire) pace the cycle. Earlier shapes (synchronous self-ack;
+    rAF-yield self-ack) caused canvas-blank and train-of-pulses
+    regressions respectively.
+  - **`matchSubstrate` widened** to a second shape: Input +
+    ChainInhibitor → ReadGate (chainIn + ack edges).
+  - **runtime-wires dispatch** + new `runtime-wires-shapes.ts`
+    helper. ChainInhibitor with no inbound cycles `[1]` as a clock
+    placeholder.
+  - Memory: [feedback_substrate_visual_pacer.md](../../../memory/feedback_substrate_visual_pacer.md)
+    captures the diagnostic: empty canvas + setTimeouts not firing
+    = microtask hot loop in substrate; the visual layer must pace.
+  - 250/250 vitest; tsc + build clean.
 
   Prior-session shipped work (still current on `main`):
 

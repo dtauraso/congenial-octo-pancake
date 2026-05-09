@@ -1,47 +1,53 @@
 # Handoff — Next task (START HERE)
 
-**State:** `main` at `392602f`. `task/node-ticks` at `1a918b1`
-(pushed, not yet merged) carrying two pause-freeze remount fixes,
-the Wire ready/value back-channel API, and now the first two
-consumer commits: `inputLoop` gates on `awaitReady`, and a generic
-`andGateLoop` primitive lives in `src/substrate/node-loop.ts`.
+**State:** `task/node-ticks` carries the first multi-input node port:
+Input + ChainInhibitor → ReadGate. `joinLoop` (no outbound, ack-paced
+by the visual layer) is the new substrate primitive. Pulses fire on
+both edges; pacing is one pulse-pair per cycle.
 
 ## What's done
 
 - Visuals 1–4 on the wires runtime (flash, glow, held, buffered).
 - Pause = mid-arc freeze; concurrent clocks frozen on command.
-- Pause-freeze survives PulseInstance remount (`a0260fb`,
-  `e5b20d7`).
-- Wire gained predictive back-channels (`4827ea2`):
-    - sender side: `ready`, `onReadyChange(fn)`, `awaitReady()`
-    - receiver side: `hasValue`, `onValueChange(fn)`, `awaitValue()`
-- `inputLoop` now does `awaitReady` then `send` (`d01973e`).
-- `andGateLoop(inbound[], out, reduce)` primitive (`1a918b1`):
-  Promise.all(awaitValue) → reduce → awaitReady → send → ackWire
-  each inbound. Stop uses a per-iteration wake race (don't
-  resurrect the long-lived-stop-signal pattern — V8 leaks reaction
-  records). 248/248 green; tsc + build clean.
+- Pause-freeze survives PulseInstance remount.
+- Wire ready/value back-channel API (sender + receiver).
+- `inputLoop` gates on `awaitReady` before send.
+- `andGateLoop` primitive for multi-input joins with outbound.
+- **`joinLoop` primitive** (this session): same shape, but no outbound
+  and no internal ack — awaits all inbound idle after onFire so the
+  visual `PulseInstance.onDone → ackWire` paces the cycle. Without
+  this discipline, the loop runs as a microtask hot loop and starves
+  rAF/setTimeout (canvas blank, train-of-pulses regression). See
+  [memory/feedback_substrate_visual_pacer.md](../../../memory/feedback_substrate_visual_pacer.md).
+- **`matchSubstrate` widened** to admit 3-node / 2-edge shape:
+  Input → ReadGate.chainIn AND ChainInhibitor → ReadGate.ack.
+- **runtime-wires dispatch** + new `runtime-wires-shapes.ts` helper
+  (LOC budget). ChainInhibitor with no inbound cycles `[1]` as a
+  clock-style emitter — placeholder until i1 gains a real input port.
+- **Tests:** `runtime-wires-inhibitor.test.ts` drives manual acks;
+  `handle-load-repro.test.ts` exercises the full handleLoad pipeline
+  on the actual repo `topology.json`. 250/250 green; tsc + build clean.
+- **Webview error handlers** (`window.error`,
+  `window.unhandledrejection`, `console.error` hijack) kept in
+  `src/webview/main.tsx` as cheap insurance — substrate logs land in
+  `.probe/substrate-log.jsonl` without DevTools.
 
 ## What the next session should do
 
-Land the **first multi-input node port** that actually wires
-`andGateLoop` into `runtime-wires.ts`. Steps:
+The natural next port is **giving ChainInhibitor a real inbound** so it
+stops being a clock-style placeholder. Two routes:
 
-1. Pick a target node — `ChainInhibitorNode` is the most natural
-   (the topology's whole point). A two-input AND would also work
-   as a proof of concept. Either way it's a real port, not a
-   primitive.
-2. Widen `matchSubstrate` (`src/substrate/match.ts`) to admit the
-   chosen topology. Keep it strict — silent broadening masks bugs.
-3. Wire it in `startWiresRuntime`: build inbound + outbound wires
-   per node, instantiate `andGateLoop` with the node's reduce
-   semantics, publish ticks/held/buffered the same way the
-   Input→ReadGate path does.
-4. Add an end-to-end test that drives the topology and observes
-   the wire cycle.
+1. **Input2 → ChainInhibitor → ReadGate.ack** — chain feeding `i1`.
+   ChainInhibitor needs a one-input node loop (basically `inputLoop`
+   shape but reading `awaitValue` from inbound rather than a fixed
+   queue). Smallest natural extension.
+2. **Promote i1 to a join** — give it two inbound, exercise
+   `andGateLoop` end-to-end (which the codebase already has tests for
+   but no real-runtime consumer). Closer to topology semantics.
 
-Coordinate with port-plan steps 4–6 in
-[../sim-substrate/rebuild-plan.md](../sim-substrate/rebuild-plan.md).
+Either way: widen `matchSubstrate` (third shape), add a setup function
+in `runtime-wires-shapes.ts`, write a contract test mirroring the
+existing inhibitor test (manual ack pacing).
 
 ## What's NOT done (and why it's parked)
 
@@ -49,12 +55,15 @@ Coordinate with port-plan steps 4–6 in
   `pauseRunner`, `isPlaying`) still imported by AnimatedEdge,
   PulseInstance, TimelinePanel, Bookmarks, RunnerProbe,
   fold-halo-probe, `_handle-load`, `_on-node-drag`. Removing them
-  is gated on the multi-input node port above.
+  follows the next port — same gating logic as before.
+- `node-loop.test.ts` is 228 LOC, pre-existing offender from
+  `1a918b1`. Split as a follow-up commit.
 
 ## Working tree note
 
-`.claude/settings.json` and `topology.view.json` carry orthogonal
-uncommitted drift. Leave or stash.
+`.claude/settings.json` carries the `Bash(kill *)` permission added
+this session. `topology.json` and `topology.view.json` carry the
+3-node fixture used as the real-world e2e for shape B.
 
 ## ALWAYS clause
 
