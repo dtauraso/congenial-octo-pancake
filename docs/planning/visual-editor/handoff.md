@@ -22,23 +22,25 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, eighteenth session):
-  Active branch: `task/node-ticks`. Latest commit: `fb56c30`
-  (option (c) — cycle drives chainIn, in0 becomes seed). Suite green
-  (259/259), tsc + build clean.
+State at handoff (2026-05-09, nineteenth session):
+  Active branch: `task/node-ticks`. Latest commit: `2776cc0`
+  (uniform-node step 1 — `nodeLoop` primitive + contract tests).
+  Suite green (265/265, +6 new), tsc + build clean.
 
-  Shape D self-pumps via i1 fan-out to both `readGate.chainIn` and
-  `readGate.ack`. in0 is a one-shot `seedLoop`. All four cycle edges
-  are consume-on-read; the fan-out node yields `setTimeout(0)` once
-  per round-trip to keep the cycle from starving macrotasks.
+  Step 1 added `src/substrate/node-loop-uniform.ts` (89 LOC) with
+  `Descriptor` (`send` | `idle` | `stop`), `NodeSpec`, and
+  `nodeLoop(node)`. Loop shape: awaitGate → awaitValue all inbound →
+  self-ack each (consume-on-read, uniform) → decide(values) → fan-out
+  to outbound in parallel (each does awaitReady then send) → onTick.
+  No call sites yet. Tests in `test/contracts/node-loop-uniform.test.ts`
+  cover input-style, AND-join, fan-out, cycle self-pump,
+  seed-then-stop, and pause.
 
-  Earlier-branch context: `6548f9b` (self-pumping infra: substrate
-  primitive `andGateLoopWithCycleInputs`, ticks counter, StepButton
-  removed). `5193bc6` closed the cycle-2 gap. `e9e3fef` fixed the
-  `andGateLoop` pacing bug. `TriggerGate` plumbing is still unused
-  but in tree. Conceptual frame: **concurrent clocks frozen on
-  command**. Manual-ack mechanism doc:
-  [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
+  Carried context from step 0: Shape D self-pumps via `fb56c30`'s i1
+  fan-out + one-shot `seedLoop` + per-round `setTimeout(0)` yield in
+  `andGateLoopFanOut`. Old loop variants still in tree; retired in
+  step 7. Conceptual frame: **concurrent clocks frozen on command**.
+  Manual-ack doc: [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
   Working tree: `.claude/settings.json` and `topology.view.json` carry
   incidental drift — leave or stash. Reference branches retained:
@@ -53,34 +55,27 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Option (c) chosen and implemented (`fb56c30`). i1 fan-out closes the
-cycle by driving both `readGate.chainIn` and `readGate.ack`. in0 is a
-one-shot seed. Rationale (b)-was-rejected: gating inputLoop on the
-cycle would couple in0 to the cycle and destroy readGate's AND
-"two independent arrivals" semantics.
+**Active task: uniform-node refactor, step 2 of 8.** Plan in
+[handoff-uniform-node-plan.md](handoff-uniform-node-plan.md) — read
+that next. Step 1 done at `2776cc0`.
 
-New substrate primitive `andGateLoopFanOut` in
-[node-loop-cycle.ts](../../../tools/topology-vscode/src/substrate/node-loop-cycle.ts)
-takes (inbound, cycleMask, outbound[], reduce). It yields ONE
-`setTimeout(0)` per round-trip — without that yield the fully
-self-pumping cycle pumps in microtasks only and starves macrotasks
-(test ticks, animation frames; OOMs in tests). The fan-out node is
-the natural pacing point because it closes the cycle.
+**Step 2 to do: visual auto-acker opt-out.** Add a flag (per-shape
+in `ShapeSetup` or per-wire) the visual layer reads to skip its
+arc-completion ack. Today the visual layer skips manual-ack edges;
+extend the same opt-out to "self-acks-everything" shapes (which is
+what step 3+ wiring will produce). No behavior change yet — Shapes
+A–D still run on the old loop variants; this just unblocks step 3
+to wire one shape onto `nodeLoop` without the visual layer
+double-acking. Branch is green at `2776cc0`; step 2 must not change
+that.
 
-Contract test
-[shape-d-cycle.test.ts](../../../tools/topology-vscode/test/contracts/shape-d-cycle.test.ts)
-relaxed: no external autoAcks (loops self-ack), depth==0 at quiescence
-is no longer reachable (cycle always holds an in-flight token), so we
-assert `depth ≤ 1` and `|arrives - acks| ≤ 1` plus ≥3 round-trips.
-Diagnosis history in
-[handoff-cycle2-diagnosis.md](handoff-cycle2-diagnosis.md).
+Steps 3–8 (port Shape A → B → C → D, then delete old variants and
+manual-ack plumbing, then re-render handoff) are in the plan doc.
+One step per session; do not bundle.
 
-Other open paths
-([handoff-next-task.md](handoff-next-task.md)) — Shape C contract
-test, deleting unused `TriggerGate`, running editor to confirm visual
-layer behaves with the fan-out — remain available. Before touching
-the manual-ack code, read
-[../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
+Before touching anything, also read
+[../../manual-ack-mechanism.md](../../manual-ack-mechanism.md) — it
+describes the load-bearing assumption being undone in step 7.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
