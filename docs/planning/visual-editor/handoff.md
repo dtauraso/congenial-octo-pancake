@@ -22,17 +22,25 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, twenty-seventh session):
-  Active branch: `task/node-ticks`. User observed that `in0→readGate`
-  was pulsing constantly with no backpressure. Diagnosed as
-  pair-substrate's intentional reliance on visual-layer
-  arc-completion auto-ack to fire `wForward.onAck` → release next
-  permit. Fix: `setupInputReadGatePair` now declares
-  `manualAckEdges: [{ id: edge.id, label: "in0→readGate" }]`, so
-  the visual layer no longer auto-acks on arc completion; the
-  user's "⏏ in0→readGate" button is the only ack source. Slot fills
-  on first pulse, stays full until clicked, click → permit → next
-  pulse. Visual cadence still not user-verified this session.
+State at handoff (2026-05-09, twenty-eighth session):
+  Active branch: `task/node-ticks`. **Shape A pair substrate is now
+  user-verified end-to-end under manual ack.** First pulse lands and
+  stays; each ⏏ click produces exactly one new pulse; no clicks → no
+  pulses.
+
+  Bug fixed this session: in
+  [ClearSlotButton.tsx](../../../tools/topology-vscode/src/webview/panels/ClearSlotButton.tsx),
+  `OneClearButton` tracked occupancy via two independent boolean
+  setters — `onArrive → setOccupied(true)` and `onAck →
+  setOccupied(false)`. When ⏏ was clicked, `ackWire(wForward)` fired
+  onAck listeners in registration order: clearBuffered, then the
+  permit-release handler (which synchronously cascades into
+  `wForward.send(v)` → arrive listeners → button's
+  `setOccupied(true)`), then the button's `setOccupied(false)`. The
+  late onAck setter overrode the nested arrive setter, leaving the
+  button disabled even though the wire was inFlight with a fresh
+  value — so cycle 2 was unreachable. Fix: read `wire.state` on every
+  event instead. Listener order no longer matters.
 
   Carried context: Shape D self-pumps via `fb56c30`'s i1 fan-out +
   one-shot `seedLoop` + per-round `setTimeout(0)` yield in
@@ -40,10 +48,8 @@ State at handoff (2026-05-09, twenty-seventh session):
   on command**. Manual-ack doc:
   [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
-  Working tree: `.claude/settings.json`, `topology.view.json`, and
-  pre-existing edits to `runtime-wires-shapes.ts` +
-  `test/contracts/runtime-wires-manual-ack.test.ts` carry incidental
-  drift — leave or stash. Reference branches retained:
+  Working tree: clean except `topology.view.json` (incidental drift,
+  leave or stash). Reference branches retained:
   `task/runtime-substrate-rebuild`, `task/wires`,
   `task/node-visuals-strip`. Do not delete.
 
@@ -55,21 +61,19 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Verify slot/button backpressure in the editor.** See
-[handoff-next-task.md](handoff-next-task.md) for the full procedure.
+Pair substrate is verified on Shape A; previously on-hold work is
+unblocked. Pick one of:
 
-  1. `cd tools/topology-vscode && npm run build`, F5 / Run Extension.
-     Open the Shape A spec at repo root.
-  2. Expected: one pulse on `in0→rg` lands and stays. The
-     "⏏ in0→readGate" button becomes enabled.
-  3. Click → exactly one new pulse. Repeat. No clicks → no pulses.
-  4. If pulses stack without clicks, the visual layer is ignoring
-     `_manualAckSet`. If clicks don't produce a pulse, the
-     `wForward.onAck` → `wPermit.send` → in0 chain in
-     `runtime-wires-pair.ts` is broken.
-
-Shape D port and uniform-node work remain on hold until the manual
-ack model is user-verified.
+  - **Tighten the manual-ack contract test.** Assert that
+    `getManualAckEdges()` for Shape A pair contains
+    `{ id: "in0->rg", label: "in0→readGate" }`. The current test
+    expects `[]` (pre-this-session design). See
+    [handoff-next-task.md](handoff-next-task.md).
+  - **Shape D port** under the same manual-ack model
+    ([handoff-shape-d-plan.md](handoff-shape-d-plan.md)).
+  - **Uniform-node work** ([handoff-uniform-node-plan.md](handoff-uniform-node-plan.md)).
+  - **Timeout removal** in `andGateLoopFanOut`
+    ([handoff-timeout-removal.md](handoff-timeout-removal.md)).
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

@@ -1,29 +1,25 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`. Pair substrate now uses **manual ack**
-on `wForward`. Slot-and-button backpressure is the design: in0
-sends one pulse, readGate's slot stays full, user clicks
-"⏏ in0→readGate" to clear it, in0 sends the next pulse. Build green.
-**Visual cadence still not verified by user this session.**
+**State:** `task/node-ticks`. Pair substrate uses **manual ack** on
+`wForward` and is **user-verified end-to-end on Shape A** as of
+2026-05-09. First pulse lands and stays; each ⏏ click yields exactly
+one new pulse; no clicks → no pulses. Build green.
 
 ## What changed this session
 
-`substrate/runtime-wires-pair.ts` →
-`setupInputReadGatePair` now returns
-`manualAckEdges: [{ id: edge.id, label: "in0→readGate" }]`.
-
-Why: previously `wForward` was acked by the visual layer on pulse-arc
-completion, which fired `wForward.onAck` → `wPermit.send("go")` →
-in0 sent again. That's a free-running loop paced only by arc
-duration — pulses look constant. With `manualAckEdges`, the visual
-layer suppresses arc-completion auto-ack on this edge; the user's
-button press is now the only thing that calls `ackWire(wForward)`,
-which triggers the same `onAck` → permit → next-send chain.
-
-The button infrastructure already existed:
 [ClearSlotButton.tsx](../../../tools/topology-vscode/src/webview/panels/ClearSlotButton.tsx)
-renders one button per `manualAckEdges` entry, disabled until the
-wire is `inFlight`, calling `clearManualAckSlot(edgeId)` on click.
+`OneClearButton` now derives `occupied` from `wire.state` on every
+arrive/ack event, instead of toggling two independent setters.
+
+Why: when ⏏ was clicked, `ackWire(wForward)` fired onAck listeners
+in registration order. The permit-release handler synchronously
+cascaded into `wForward.send(v)` (next pulse), which fires onArrive
+listeners including the button's `setOccupied(true)`. Then control
+returned to the outer onAck loop and ran the button's
+`setOccupied(false)` — which was registered after the substrate's
+own onAck handlers. Final React state was `false`, button disabled,
+cycle 2 unreachable. Reading `wire.state` on each event makes
+listener order irrelevant.
 
 ## Routing (unchanged)
 
@@ -32,49 +28,44 @@ USE_PAIR_SUBSTRATE_SHAPE_A = true   // wins for shape "input->readGate"
 USE_STEP_SUBSTRATE_SHAPE_A = false  // dormant
 ```
 
-Shapes B, C, D untouched. Their existing `manualAckEdges` declarations
-remain.
+Shapes B, C, D untouched.
 
-## Verify in the editor
+## Pick the next move
 
-1. `cd tools/topology-vscode && npm run build`, then F5 / Run
-   Extension. Open the Shape A spec at repo root (single Input →
-   ReadGate, edge `in0.out->readGate.chainIn`).
-2. Expected: one pulse traverses `in0→rg`, lands at readGate, slot
-   stays occupied. Button "⏏ in0→readGate" becomes enabled.
-3. Click the button → wire acks → permit fires → in0 sends the next
-   pulse. One round-trip per click.
-4. If a single click does NOT produce exactly one new pulse, or
-   pulses still stack without clicks, the bug is in the wire/permit
-   chain in `runtime-wires-pair.ts` or in the visual layer's
-   `_manualAckSet` enforcement.
+Three things are now unblocked. Suggested order:
+
+### 1. Tighten the manual-ack contract test (small, do first)
+
+`test/contracts/runtime-wires-manual-ack.test.ts` currently asserts
+that for Shape A under the pair substrate
+`getManualAckEdges()` is `[]`. That was true under the prior design
+(visual layer auto-acked). Now the pair shape registers
+`{ id: "in0->rg", label: "in0→readGate" }`. Update the assertion;
+add a click-roundtrip test if straightforward (call
+`clearManualAckSlot` and assert the wire refills with the next
+queue value).
+
+### 2. Shape D port
+
+See [handoff-shape-d-plan.md](handoff-shape-d-plan.md). The
+manual-ack pacing model is now the established pattern; port D's
+internal loop to use it where applicable.
+
+### 3. Uniform-node work / timeout removal
+
+[handoff-uniform-node-plan.md](handoff-uniform-node-plan.md) and
+[handoff-timeout-removal.md](handoff-timeout-removal.md). Both were
+gated on the pair model being trusted; that gate is lifted.
 
 ## Open question (unchanged)
 
 Should `wPermit` carry the value back (so readGate logic can depend
-on what it received) or just an opaque "go" token? Defer until a
-single pulse round-trips cleanly under manual ack.
-
-## Contract status
-
-`test/contracts/runtime-wires-manual-ack.test.ts` pins
-`isSelfAckEdge("in0->rg") === false` for the pair shape. The new
-behavior also implies the edge SHOULD appear in `getManualAckEdges()`.
-Consider tightening the contract test to assert that, in a follow-up
-commit if the visual cadence checks out.
-
-## On hold until visual verification
-
-- Shape D port and uniform-node work
-  ([handoff-shape-d-plan.md](handoff-shape-d-plan.md),
-  [handoff-timeout-removal.md](handoff-timeout-removal.md),
-  [handoff-uniform-node-plan.md](handoff-uniform-node-plan.md)).
-- Shape C contract test.
+on what it received) or remain an opaque "go" token? Defer until a
+shape that needs the value motivates it.
 
 ## Working tree at handoff
 
-After commit: clean except `topology.view.json` (incidental drift,
-leave or stash).
+Clean except `topology.view.json` (incidental drift, leave or stash).
 
 ## ALWAYS clause
 
