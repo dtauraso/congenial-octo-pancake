@@ -20,7 +20,7 @@ export function usePulseLanesTicked(id: string, enabled: boolean) {
     const off = subscribeEdgeArrive((edgeId: string, value: StateValue) => {
       if (edgeId !== id) return;
       const key = ++keyRef.current;
-      setPulses0((cur) => [...cur, {
+      setPulses0(() => [{
         key, pulseId: nextId(),
         value: formatRidingValue(value),
         simStart: performance.now(),

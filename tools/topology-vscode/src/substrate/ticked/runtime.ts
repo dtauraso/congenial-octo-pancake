@@ -36,7 +36,11 @@ export function step(rt: Runtime): number {
         return v;
       },
       send: (eid, v) => {
-        rt.inbox.get(eid)!.push(v);
+        const slot = rt.inbox.get(eid)!;
+        if (slot.length > 0) {
+          throw new Error(`ticked: send on non-empty wire ${eid} (cap=1; existing=${JSON.stringify(slot[0])}, attempted=${JSON.stringify(v)})`);
+        }
+        slot.push(v);
         publishEdgeArrive(eid, v);
         active = true;
       },
