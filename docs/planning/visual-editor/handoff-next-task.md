@@ -1,68 +1,80 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`, commit `f4c8d01`. No new commits this
-session. Substrate-owned ticking from prior session is intact;
-wire pulses still render via wall-clock-timed `usePulseLanesTicked`.
-Build green. Branch is **not** ready to merge.
+**State:** `task/node-ticks`, commit `f4c8d01` + this session's
+guardrail commit. Substrate-owned ticking from prior session is
+intact; wire-as-entity refactor not started. Branch is **not** ready
+to merge.
 
-## Framing reversal — read this carefully
+## Read MODEL.md first
 
-Prior handoffs recommended "defer ReadGate consumption to next tick"
-as the next move. **Reject that.** It is a cheap fix that preserves
-the wrong model. This session's design conversation made the spec
-explicit and the model gap unavoidable.
+[MODEL.md](../../../MODEL.md) at repo root pins the substrate model
+in David's words and lists banned vocabulary. Read it before any
+substrate or wire work. If your reasoning uses banned vocabulary
+(duration, ms, schedule, deadline, speed, wall-clock, "tick takes
+X"), you are in the wrong frame — stop and re-derive.
 
-David's visual contract (stated repeatedly, including this session):
-  - Pulse travels along the wire.
-  - Length, shape, and edits to wire geometry are cosmetic.
-  - Traversal of any single pulse is one tick, regardless of length.
-  - Pulse must be visible in the viewer (not just code state).
-  - Changes to one thing must not break in-flight pulses.
+Run `node tools/topology-vscode/scripts/check-substrate-vocab.mjs`
+to catch drift mechanically. 10 baseline hits exist in legacy files;
+the refactor retires them.
 
-These constraints imply wire-as-entity directly:
-  - "Pulse travels the wire" → wire holds the pulse, not a node.
-  - "Geometry doesn't affect timing" → traversal duration is
-    independent of path → fixed unit (one tick).
-  - "Edits don't break in-flight state" → wire's state survives
-    geometry changes → wire owns its own state.
+## The model (do not paraphrase loosely)
 
-The same shape of bug has surfaced across 5–7 substrate rewrites
-because each rewrite fixed runner/node semantics and left wires as
-plumbing. The next session must stop rewriting substrates and
-rewrite the wire instead.
+- Substrate owns the tick. A tick is an ordinal count, not a slice of
+  wall-clock time.
+- One tick = every node runs one round; any pulse a node emits travels
+  its wire to the destination within that round.
+- Wire is a first-class entity. State: `empty | carrying(v)`. Not a
+  queue. Not a buffer. One value or none.
+- Geometry is cosmetic. Path length / snake-routing / edits affect
+  only what is rendered. They do not affect wire state, tick count,
+  or substrate correctness.
+- Substrate halts and resumes pulses. That is all. No durations
+  tracked anywhere. The substrate does not schedule, time, or wait on
+  pulses.
+- Renderer animates. It owns pixels and motion. It never signals back
+  to the substrate.
+- Tick close is event-driven: substrate observes wires returning to
+  `empty`. It does not schedule the close.
 
-## Next move — wire-as-entity
+## Why this re-framing matters
 
-1. **Contract test first.** Write a failing red test that pins the
-   spec: wire state is `empty | carrying(v)`; send transitions
-   empty→carrying; recv transitions carrying→empty; each transition
-   is one tick; geometry changes do not affect wire state. This
-   artifact is what enforces the spec across future sessions.
-2. **Introduce `WireRunner`** (or equivalent — the name is open).
-   Wire is a tickable entity registered with the substrate. Its
-   inbox is the sender's outbox; its outbox is the receiver's inbox.
-   Or: collapse inbox/outbox into wire state directly. Pick whichever
-   keeps the substrate simpler.
-3. **Renderer reads wire state.** AnimatedEdge subscribes to the
-   wire's state and draws a dot while `carrying`. Motion between
-   ticks is a CSS transition keyed on tick number — purely cosmetic.
-   Click ⏭ before the transition completes → snap to next state.
-4. **Strip wire-as-plumbing artifacts** from the ticked path:
-   `effectiveSpeedPxPerMs`, `simStart`, `signalRendererComplete`,
-   per-edge slot ledger, `publishEdgeArrive` pubsub, the
-   wall-clock-timed `Pulse` object spawned by
-   `_use-pulse-lanes-ticked.ts`.
+Prior sessions kept reaching for timing vocabulary (durations,
+ms-per-pixel, scheduled tick boundaries, renderer-signals-complete).
+Each was the industry-default answer for the medium and the wrong
+answer for the substance (CLAUDE.md "Medium vs. substance"). This
+session pinned the model and added guardrails:
+
+- `MODEL.md` at repo root.
+- `tools/topology-vscode/scripts/check-substrate-vocab.mjs` lint.
+- CLAUDE.md top-of-file pointer + "no multi-step plans with options
+  for substrate/wire work" rule.
+
+Future sessions: do not propose plans-with-options for substrate or
+wire work. State the next single concrete step and wait for sign-off.
+
+## Next move — wire-as-entity (refinement still open)
+
+David has not yet signed off on a concrete step sequence. Open
+refinement points before any code:
+
+1. Is the legacy non-ticked runtime (`runtime-wires.ts` await/Promise
+   path) dead/removable, or must it keep working?
+2. Halt/resume semantics for pulses: where does halt state live —
+   substrate flag, wire flag, or both?
+3. Multiple sends to the same wire in one round: error, or
+   last-write-wins? `carrying(v)` holds one value.
+
+Once refined, the smallest honest first step is a **red contract
+test** that pins: wire state is `empty | carrying(v)`; geometry
+changes do not affect wire state; substrate contains zero timing
+vocabulary (lint test).
 
 ## Refuse cheap alternatives
 
-If the implementation feels like "smallest diff that makes the
-visible symptom pass," stop. That framing is the failure mode that
-produced the prior 5–7 rewrites. The memory entry
-`feedback_derive_model_from_visual_spec.md` exists specifically to
-catch this. Read it before patching.
-
-If the honest implementation is large, say so plainly to David and
-get sign-off before proceeding. Do not substitute a near-miss.
+`feedback_derive_model_from_visual_spec.md` (in user memory) and
+MODEL.md exist specifically to catch the failure mode where a
+"smallest diff" preserves the wrong model. Read both. If the honest
+implementation is large, say so plainly to David and get sign-off.
 
 ## Pre-existing red tests (carry over)
 
@@ -71,8 +83,8 @@ get sign-off before proceeding. Do not substitute a near-miss.
 
 ## Working tree at handoff
 
-Unstaged (editor state, not committed): `topology.json`
-(`"runtime": "ticked"`), `topology.view.json` (camera drift).
+Unstaged (editor state): `topology.json` (`"runtime": "ticked"`),
+`topology.view.json` (camera drift).
 
 ## ALWAYS clause
 

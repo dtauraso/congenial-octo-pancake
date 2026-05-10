@@ -1,5 +1,17 @@
 # CLAUDE.md
 
+## Substrate model — read first
+
+Before changing anything in `tools/topology-vscode/src/substrate/`, the
+wire primitive, or anything that schedules/orders work, read
+[MODEL.md](MODEL.md). It pins the substrate model and the banned
+vocabulary that signals drift. If your reasoning uses banned
+vocabulary, you are in the wrong frame — stop and re-derive from the
+model. Do not propose multi-step plans with options for substrate/wire
+work; state the next single concrete step and wait. Run
+`node tools/topology-vscode/scripts/check-substrate-vocab.mjs` to
+catch drift mechanically.
+
 ## What this project is
 
 A concurrent dataflow system implemented in Go. The topology IS the logic — behavior emerges from wiring, not procedural code. Goroutines and channels replace conventional control flow.

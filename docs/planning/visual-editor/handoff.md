@@ -24,28 +24,33 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, thirty-fifth session):
-  Active branch: `task/node-ticks`. Commit `f4c8d01`. **No new
-  commits this session** — the work was a design conversation that
-  reversed the previous session's framing. Branch state unchanged
-  from prior handoff.
+State at handoff (2026-05-09, thirty-sixth session):
+  Active branch: `task/node-ticks`. Commit `f4c8d01` + this
+  session's guardrail commit. No code refactor yet; this session
+  added drift guardrails after the AI repeatedly imported timing
+  vocabulary into the substrate model despite explicit corrections.
 
-  **Key shift this session:** David named the recurring pattern
-  explicitly. The same problem (wire is not a first-class entity)
-  has been routed around through 5–7 substrate rewrites
-  (legacy sim → wires → ack-driven → andGateLoop → step-function →
-  pair → ticked → substrate-owned ticking). Each rewrote runner/node
-  semantics and left wires as plumbing. Each "cheap fix" preserved
-  the wrong model and compounded brittleness. The visual contract
-  David has stated repeatedly — "pulse travels the wire, geometry
-  cosmetic, traversal is one tick, edits don't break in-flight
-  state" — implies wire-as-runner directly. The previously-recommended
-  "defer ReadGate to next tick" was a near-miss that hides the model
-  gap inside a receiver's inbox; reject it.
+  **Key shift this session:** David refined the model further and
+  named the AI's drift pattern. Substrate is event-ordering only —
+  no durations, no schedules, no wall-clock anywhere. Substrate
+  halts/resumes pulses; renderer owns motion and never signals back.
+  Tick = ordinal count, not a slice of time. Tick close is observed
+  (wires return to `empty`), not scheduled.
 
-  Memory entry added:
-  `~/.claude/projects/-Users-David-Documents-github-wirefold/memory/feedback_derive_model_from_visual_spec.md`.
-  Future sessions will load it. Read it.
+  **Guardrails added (this session's commit):**
+  - [MODEL.md](../../../MODEL.md) at repo root: substrate model in
+    David's words + banned-vocabulary list.
+  - [tools/topology-vscode/scripts/check-substrate-vocab.mjs](../../../tools/topology-vscode/scripts/check-substrate-vocab.mjs):
+    greps substrate/ for drift words. 10 baseline hits in legacy
+    files; refactor retires them.
+  - CLAUDE.md top-of-file pointer + rule: "no multi-step plans with
+    options for substrate/wire work; state next single step and
+    wait."
+
+  Memory entries:
+  `feedback_derive_model_from_visual_spec.md` (cheap-fix detector,
+  prior session). A vocabulary-drift sibling is a candidate add-on
+  but not yet written.
 
   Pre-existing red tests, still red, still not blocking:
   `shape-d-cycle.test.ts` (ackEdge race), `handle-load-repro.test.ts`.
@@ -68,21 +73,16 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Make wire a first-class entity** (see
-[handoff-next-task.md](handoff-next-task.md)). Wire owns state
-`empty | carrying(v)`. Send transitions empty → carrying; recv
-transitions carrying → empty. Each transition costs one tick.
-Geometry (length, snake-routing, edits to path) is cosmetic and has
-zero substrate consequence. The renderer reads wire state and draws
-a dot while `carrying`; any motion between ticks is CSS transition
-only. Strip `effectiveSpeedPxPerMs`, `simStart`,
-`signalRendererComplete`, slot ledgers, `publishEdgeArrive` from the
-ticked path — they are all artifacts of wire-as-plumbing.
+**Read [MODEL.md](../../../MODEL.md) first.** Then see
+[handoff-next-task.md](handoff-next-task.md) for the refined wire
+model. Open refinements before code: legacy non-ticked path
+disposition, halt/resume location (substrate flag vs wire flag),
+multi-send-per-round policy.
 
-Add a contract test before any implementation: wire state is
-`empty | carrying(v)`, geometry changes do not affect wire state,
-traversal is exactly one tick. Failing red enforces the spec across
-sessions so it cannot be laundered into a cheap-fix framing again.
+Smallest honest first step: a red contract test pinning wire state
+`empty | carrying(v)`, geometry-independence, and zero timing
+vocabulary in substrate (lint-style assertion). No code refactor
+until David signs off on the step sequence.
 
 Dormant options (do not pursue ahead of wire-as-entity):
   - Triage pre-existing red tests.
