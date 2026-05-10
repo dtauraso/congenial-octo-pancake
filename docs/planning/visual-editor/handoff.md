@@ -22,19 +22,29 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, nineteenth session):
-  Active branch: `task/node-ticks`. Latest commit: `2776cc0`
-  (uniform-node step 1 — `nodeLoop` primitive + contract tests).
-  Suite green (265/265, +6 new), tsc + build clean.
+State at handoff (2026-05-09, twentieth session):
+  Active branch: `task/node-ticks`. Latest commit: `f680b02`
+  (uniform-node step 2 — `selfAcksAll` shape-level opt-out).
+  Suite green (265/265), tsc + build clean.
 
-  Step 1 added `src/substrate/node-loop-uniform.ts` (89 LOC) with
-  `Descriptor` (`send` | `idle` | `stop`), `NodeSpec`, and
+  Step 2 added `ShapeSetup.selfAcksAll?: boolean` and plumbed it
+  through `runtime-wires.ts`: when a shape sets it, `isSelfAckEdge`
+  returns true for every wire in the shape, so the visual layer's
+  `usePulseLanesWire.advanceLane0` skips its arc-completion ack
+  uniformly. Logically equivalent to enumerating every edge id in
+  `selfAckEdges`, but lets step 3+ port a shape onto `nodeLoop` with
+  one flag instead of an id list. No call site sets it yet — behavior
+  unchanged. The per-edge `selfAckEdges` path remains for shapes (like
+  Shape D today) that only self-ack a subset.
+
+  Step 1 (carried): `src/substrate/node-loop-uniform.ts` (89 LOC)
+  exports `Descriptor` (`send` | `idle` | `stop`), `NodeSpec`, and
   `nodeLoop(node)`. Loop shape: awaitGate → awaitValue all inbound →
   self-ack each (consume-on-read, uniform) → decide(values) → fan-out
   to outbound in parallel (each does awaitReady then send) → onTick.
-  No call sites yet. Tests in `test/contracts/node-loop-uniform.test.ts`
-  cover input-style, AND-join, fan-out, cycle self-pump,
-  seed-then-stop, and pause.
+  Tests in `test/contracts/node-loop-uniform.test.ts` cover
+  input-style, AND-join, fan-out, cycle self-pump, seed-then-stop,
+  and pause.
 
   Carried context from step 0: Shape D self-pumps via `fb56c30`'s i1
   fan-out + one-shot `seedLoop` + per-round `setTimeout(0)` yield in
@@ -55,21 +65,23 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Active task: uniform-node refactor, step 2 of 8.** Plan in
+**Active task: uniform-node refactor, step 3 of 8.** Plan in
 [handoff-uniform-node-plan.md](handoff-uniform-node-plan.md) — read
-that next. Step 1 done at `2776cc0`.
+that next. Step 2 done at `f680b02`.
 
-**Step 2 to do: visual auto-acker opt-out.** Add a flag (per-shape
-in `ShapeSetup` or per-wire) the visual layer reads to skip its
-arc-completion ack. Today the visual layer skips manual-ack edges;
-extend the same opt-out to "self-acks-everything" shapes (which is
-what step 3+ wiring will produce). No behavior change yet — Shapes
-A–D still run on the old loop variants; this just unblocks step 3
-to wire one shape onto `nodeLoop` without the visual layer
-double-acking. Branch is green at `2776cc0`; step 2 must not change
-that.
+**Step 3 to do: port Shape A (`setupInputReadGate`) to `nodeLoop`.**
+Replace its current `inputLoop` + `readGateLoop` pair with two
+`nodeLoop`-driven `NodeSpec`s: an Input node (no inbound; `decide`
+closes over a queue, returns `send` until empty then `stop`) and a
+ReadGate node (one inbound, no outbound; `decide` returns `idle`,
+publishes held/tick via `onTick`). Set `selfAcksAll: true` on the
+returned `ShapeSetup` and drop `manualAckEdges` for that wire — the
+node-loop self-acks on read, and step 2's flag tells the visual
+layer to skip its arc-completion ack. Keep tick/held/buffered
+publication identical so existing tests pass. Branch is green at
+`f680b02`; step 3 must keep 265/265.
 
-Steps 3–8 (port Shape A → B → C → D, then delete old variants and
+Steps 4–8 (port Shape B → C → D, then delete old variants and
 manual-ack plumbing, then re-render handoff) are in the plan doc.
 One step per session; do not bundle.
 
