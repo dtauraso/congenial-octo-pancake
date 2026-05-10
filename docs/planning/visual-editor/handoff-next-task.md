@@ -1,71 +1,74 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`. Three new commits landed this session:
+**State:** `task/remove-legacy-runtimes` (opened from `task/node-ticks`
+HEAD). Step 2 of the deletion sweep landed; steps 3–8 remain.
 
-- `99dc8c5` — `run-frames` seeds Input nodes from `data.init` and
-  spawns `runWire` for every wire. Before this, system 3 (forever-loop
-  substrate) was wired to the painter via `runFrames`+`composeShim`
-  but inert: source nodes were skipped and no wire-loop ran, so no ack
-  ever fired and the pipeline jammed after one load.
-- `03fcdf3` — `PauseController` created in `runFrames`, threaded into
-  `runWire`, `runNode`, and the source loop's `pauseAware` awaits.
-  `pause()`/`resume()` exposed on `RunFramesHandle` and
-  `FrameRendererCtl`. Webview→host `frame-pause` / `frame-resume`
-  messages routed through `handle-message.ts`.
-- `43d66a6` — session-log entry for the mid-pulse replace observation.
+## Commit landed this session
+
+- `7148137` — `TransportControls.tsx` rewritten against
+  `FrameRendererCtl` only. Paused state is host-owned, the toggle
+  posts `frame-pause`/`frame-resume`, the step button posts
+  `frame-step`. `step()` added on `RunFramesHandle` /
+  `FrameRendererCtl`: arms a one-shot in `adapter.onPaced` so the
+  next paced frame re-pauses; resume only happens if currently
+  paused. `frame-step` webview→host message added and routed in
+  `handle-message.ts`. Tick-ms slider dropped (survivor adapter has
+  no analogue). `disabled={ticked}` bug retires with the rewrite.
 
 Build/tsc/vocab/LOC clean; 310 pass, two pre-existing reds.
 
-## Two findings this session reframe the work
+## Why this branch exists
 
-**Finding 1.** System 3 was built (steps 1–5 on this branch) but
-orphaned — the painter happened to wire to it (via `runFrames`), but
-the substrate wasn't seeding source nodes or running wire-loops in
-production, only in tests. The two commits above close that gap.
+`TransportControls` knew about four substrate vocabularies and my
+prior session added a fifth via `frame-pause`/`frame-resume`. The
+painter has `!frameMode &&` guards so a legacy renderer can coexist
+that shouldn't exist anymore. Each new system has been *added* on top
+of the prior, never replacing it — the same pattern-matching
+corruption flagged in `feedback_derive_model_from_visual_spec.md`.
+The fix is the deletion sweep, not another patch.
 
-**Finding 2.** The Step-mid-pulse "replace" friction the user reported
-isn't a substrate bug. The Step button drives the **ticked sidecar**
-(system 2.5), not system 3. The ticked sidecar publishes
-`publishEdgeArrive` on send and nothing on consume, so the painter's
-"carrying" visual is replaced on the next arrive. The pacing contract
-between painter and substrate was never specified; the painter is a
-stateless mirror of the latest event.
+## Remaining steps
 
-## Known UI bug introduced by this session's wiring
+3. **Drop `!frameMode &&` guards.** [AnimatedEdge.tsx](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx),
+   [AnimatedNode.tsx](../../../tools/topology-vscode/src/webview/rf/AnimatedNode/AnimatedNode.tsx),
+   and the four `AnimatedEdge/_*` helpers. Collapse to the
+   frame-mode branch; delete the legacy branch.
+4. **Detach webview/panel callers from legacy modules.** 13 files
+   import `sim/runner`, `substrate/runtime*`, or `substrate/ticked`.
+   Per file: port to subscribe to the frame-renderer event stream if
+   it drives shape-A behavior the user actually uses; otherwise
+   delete. Likely deletes: `RunnerProbe.tsx`, `fold-halo-probe.ts`,
+   `_stuck-runner-snapshot.ts`, `timeline-probe/*`, `Bookmarks.tsx`,
+   `trace-load.ts`. Likely ports: `TriggerSlotButton`,
+   `ClearSlotButton`, `_handle-load.ts`, `_on-node-drag.ts`,
+   `PulseInstance.tsx`, `_use-pulse-lanes*.ts`, `TimelinePanel.tsx`.
+5. **Delete the systems.** After step 4, no live importers remain.
+   Delete `src/sim/runner*`, `src/sim/simulator*`,
+   `src/substrate/runtime.ts`, `src/substrate/runtime/`,
+   `src/substrate/runtime-wires*.ts`, `src/substrate/ticked/`. Audit
+   the rest of `src/sim/` for unused leftovers (keep what
+   `host-shim/run-frames.ts` reaches — currently `seeds.ts`).
+6. **Delete pinned tests.** Anything under `**/runner.*test*`,
+   `**/runtime-wires*.test.ts`, `**/ticked*.test.ts`, plus
+   `shape-d-cycle.test.ts` and `handle-load-repro.test.ts` (the two
+   pre-existing reds — they test wires-runtime).
+7. **Gates.** Vocab → `npm run check:loc` → `tsc` → `npm run build`
+   → tests (expect green; pre-existing reds gone). Proof-out: load
+   topology, hit play/pause/step, verify pulses animate, pause halts
+   at line level, step advances one event.
+8. **Refresh handoff and merge.**
 
-`TransportControls.tsx` has `disabled={ticked}` on the play/pause
-button. With `spec.runtime: "ticked"` (current default), the button is
-greyed out — so the `frame-pause`/`frame-resume` hookup the toggle now
-sends never fires. **Do not patch in place.** See next move.
+## Survivor surface (do not delete)
 
-## Next move — `task/remove-legacy-runtimes`
-
-The right move is the deletion sweep, not another patch.
-`TransportControls` already knows about four substrate vocabularies
-(`isPlaying`, `isSubstrateRunning`, `isWiresRuntimeRunning`,
-`isTickedActive`); my hookup made it five. The painter has
-`!frameMode &&` guards so it can coexist with a legacy renderer that
-shouldn't exist anymore. Each new system has been *added* on top of
-the prior, never replacing it — the same pattern-matching corruption
-flagged in `feedback_derive_model_from_visual_spec.md`.
-
-Scope of the new branch (start from current HEAD of `task/node-ticks`):
-
-1. Delete `sim/runner` (system 1), `substrate/runtime` (legacy
-   substrate, system 2), `substrate/runtime-wires*` (wires-runtime,
-   system 2), and `substrate/ticked/` (the sidecar, system 2.5).
-2. Rewrite `TransportControls.tsx` against `FrameRendererCtl` only:
-   `pause`/`resume`/`paused`. Step button's meaning in a forever-loop
-   world is open — likely "unpause for one event, then re-pause" via
-   a new `stepOnce()` on `PauseController`.
-3. Delete `!frameMode &&` guards in `AnimatedEdge` /
-   `AnimatedNode` — there is no other mode left.
-4. Delete tests pinning system 1/2/2.5 behavior. The two pre-existing
-   reds (`shape-d-cycle`, `handle-load-repro`) test wires-runtime and
-   go with it.
-5. Port any non-shape-A behavior the user actually drives that
-   wires-runtime currently hosts. If unused, delete with the system.
-6. Run vocab gate, tsc, build, full proof-out with play/pause active.
+Substrate that `host-shim/run-frames.ts` transitively reaches:
+`wire-entity.ts`, `wire-loop.ts`, `wire-events.ts`, `wire.ts`,
+`node-streams.ts`, `node-loop*.ts`, `pause-controller.ts`,
+`pause-aware.ts`, `match.ts`, `log.ts`, `trigger-gate.ts`,
+`build-wires.ts`, `build-wire-entities.ts`, `step/`. Plus
+`host-shim/`, `extension/frame-renderer.ts`,
+`extension/handle-message.ts`, the renderer adapter, and the
+recorder. Anything not transitively imported from `run-frames.ts`
+is in scope to delete.
 
 ## Read first
 
@@ -78,10 +81,11 @@ Scope of the new branch (start from current HEAD of `task/node-ticks`):
 ## Refuse cheap alternatives
 
 Per `feedback_derive_model_from_visual_spec.md` + MODEL.md, refuse:
-patching `disabled={ticked}` instead of rewriting the controls;
 keeping legacy as "museum" when it doesn't run; preserving the ticked
-sidecar because Step is wired to it; adding a sixth substrate branch
-to `TransportControls`. The deletion sweep is the load-bearing move.
+sidecar because Step was wired to it (Step now lives on the survivor
+via `frame-step` + `stepArmed`); leaving `!frameMode &&` guards in
+place "for safety"; adding any new branch to `TransportControls`.
+The deletion sweep is the load-bearing move.
 
 ## ALWAYS clause
 

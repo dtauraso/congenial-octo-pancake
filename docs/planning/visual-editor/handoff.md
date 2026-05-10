@@ -9,8 +9,8 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — **start here**
-     for the deletion sweep. Names systems 1, 2, 2.5 explicitly and
-     the cheap alternatives to refuse.
+     for the deletion sweep, mid-flight on `task/remove-legacy-runtimes`.
+     Step 2 landed; steps 3–8 remain.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — system 3 model: forever-loops, line-level pause, events.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
@@ -18,32 +18,33 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, fifty-first session):
-  Active branch: `task/node-ticks`. This session landed three
-  commits: `99dc8c5` (`run-frames` seeds Input from `data.init`,
-  spawns `runWire` for every wire — system 3 was wired to the
-  painter but inert in production: no source seeding, no wire
-  loops, so the pipeline jammed after one load); `03fcdf3`
-  (`PauseController` threaded through `runWire`/`runNode`/source
-  loop; exposed up through `RunFramesHandle` and
-  `FrameRendererCtl`; `frame-pause`/`frame-resume` webview→host
-  messages routed); `43d66a6` (session-log entry).
+State at handoff (2026-05-10, fifty-second session):
+  Active branch: `task/remove-legacy-runtimes`, opened from
+  `task/node-ticks` HEAD. One commit landed: `7148137`
+  (TransportControls rewritten against `FrameRendererCtl` only —
+  paused state host-owned, toggle posts `frame-pause`/`frame-resume`,
+  step posts `frame-step`; `step()` on `RunFramesHandle` /
+  `FrameRendererCtl` arms a one-shot in the `adapter.onPaced` wrapper:
+  resume + re-pause on the next paced frame; `frame-step` message
+  added end-to-end; tick-ms slider dropped — the survivor adapter has
+  no analogue; `disabled={ticked}` bug retired with the rewrite).
   Build/tsc/vocab/LOC clean; 310 pass, same two pre-existing reds.
 
-  **Architectural shift this session:** the user named that there
-  have been three from-scratch substrate attempts (system 1 sim
-  runner, system 2 legacy substrate + wires-runtime, system 3
-  forever-loop substrate) plus a ticked sidecar (system 2.5). The
-  current state corrupts system 3 by layering it on top of all
-  prior systems instead of replacing them. `TransportControls`
-  branches on four substrate vocabularies; painter has
-  `!frameMode &&` guards to coexist with a legacy renderer that
-  shouldn't exist anymore.
-
-  **Known UI bug:** `TransportControls.tsx` has `disabled={ticked}`
-  on the play/pause button, so the new `frame-pause`/`frame-resume`
-  toggle hookup never fires under `runtime: "ticked"`. Do **not**
-  patch in place; the deletion sweep is the right move.
+  **Steps remaining on this branch (see handoff-next-task.md):**
+  3. Delete `!frameMode &&` guards in `AnimatedEdge` /
+     `AnimatedNode` and the four `AnimatedEdge/_*` helpers.
+  4. Detach the 13 webview/panel files that import `sim/runner`,
+     `substrate/runtime*`, or `substrate/ticked`. Per file:
+     port-or-delete (refuse "keep as museum").
+  5. Delete `src/sim/runner*`, `src/sim/simulator*`,
+     `src/substrate/runtime.ts`, `src/substrate/runtime/`,
+     `src/substrate/runtime-wires*.ts`, `src/substrate/ticked/`.
+  6. Delete tests pinning systems 1/2/2.5; the two pre-existing reds
+     (`shape-d-cycle`, `handle-load-repro`) retire with wires-runtime.
+  7. Vocab → tsc → build → tests → proof-out (load topology, hit
+     play/pause/step, verify pulses animate, pause halts at line
+     level, step advances one event).
+  8. Refresh handoff and merge.
 
   **Model:** `handoff-substrate-iteration.md`. Forever-loops per
   node and per wire; backpressure coordination; line-level pause;
@@ -56,8 +57,8 @@ State at handoff (2026-05-10, fifty-first session):
 
   Pre-existing reds: `shape-d-cycle.test.ts`,
   `handle-load-repro.test.ts` — both test wires-runtime and retire
-  with the deletion sweep. Working tree: `topology.{json,view.json}`
-  — editor state. Reference branches retained — do not delete.
+  with the deletion sweep. Working tree: `topology.view.json` —
+  editor state. Reference branches retained — do not delete.
 
 ## Dev-loop
 
@@ -67,18 +68,10 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Open `task/remove-legacy-runtimes` from current `task/node-ticks`
-HEAD. Delete `sim/runner` (system 1), `substrate/runtime` + every
-`substrate/runtime-wires*` (system 2), and `substrate/ticked/`
-(system 2.5 sidecar). Rewrite `TransportControls.tsx` against
-`FrameRendererCtl` only — `pause`/`resume`/`paused` plus a Step
-that means "unpause for one event then re-pause" (likely a new
-`stepOnce()` on `PauseController`). Delete `!frameMode &&` guards
-in `AnimatedEdge` / `AnimatedNode`. Delete tests pinning
-system 1/2/2.5 behavior; the two pre-existing reds retire with
-wires-runtime. Port any non-shape-A behavior the user actually
-drives that wires-runtime currently hosts; delete what's unused.
-Vocab/tsc/build/proof-out gates as usual. See
+Continue on `task/remove-legacy-runtimes` at step 3: drop
+`!frameMode &&` guards in `AnimatedEdge` / `AnimatedNode` and the
+`AnimatedEdge/_*` helpers; collapse to the frame-mode branch and
+delete the legacy branch. See
 [handoff-next-task.md](handoff-next-task.md) for the full scope and
 the cheap-alternative refusal list.
 
