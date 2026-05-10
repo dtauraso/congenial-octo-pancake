@@ -1,21 +1,14 @@
 # Handoff — Next task (START HERE)
 
 **State:** `task/node-ticks`. Steps 1 & 2 of the substrate iteration
-plan are landed:
-- Step 1 — wire forever-loop (`wire-entity.ts`, `wire-events.ts`,
-  `pause-aware.ts`, `wire-loop.ts`).
-- Step 2 — shared pause controller at
-  [src/substrate/pause-controller.ts](../../../tools/topology-vscode/src/substrate/pause-controller.ts)
-  with contract tests
-  ([test/contracts/pause-controller.test.ts](../../../tools/topology-vscode/test/contracts/pause-controller.test.ts))
-  covering back-to-back pause/resume, multiple subscribers, immediate
-  resolve when already in target state, and pause/resume idempotency.
-  `wire-loop.test.ts` now imports the shared controller.
-
-18 contract tests green across wire-loop + pause-controller; substrate
-vocab lint clean; LOC budget clean. No production caller wired up
-yet — substrate modules remain leaf modules. Branch is **not** ready
-to merge.
+plan landed: wire forever-loop (`wire-entity.ts`, `wire-events.ts`,
+`pause-aware.ts`, `wire-loop.ts`) and shared
+[pause-controller.ts](../../../tools/topology-vscode/src/substrate/pause-controller.ts)
+with contract tests at
+[pause-controller.test.ts](../../../tools/topology-vscode/test/contracts/pause-controller.test.ts).
+`wire-loop.test.ts` now imports the shared controller. 18 contract
+tests green; vocab lint clean; LOC budget clean. No production caller
+yet — substrate modules are leaf. Branch not ready to merge.
 
 ## Read first
 

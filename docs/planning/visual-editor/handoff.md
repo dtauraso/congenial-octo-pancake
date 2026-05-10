@@ -44,24 +44,15 @@ State at handoff (2026-05-10, forty-third session):
   second event subscriber. Substrate is **timing-free** per
   MODEL.md.
 
-  Drift caught this session: a "step-duration in substrate loops"
-  framing was almost locked in. MODEL.md forbids durations in
-  substrate; renderer owns pacing. Reverted before commit.
-
   Runtime.ts port is **unblocked**. Implementation order is in
   `handoff-substrate-iteration.md`. Branch name `task/node-ticks` is
-  now misleading (the global tick is gone) — rename on next branch.
+  now misleading (global tick gone) — rename on next branch.
 
   **Held:** halt/resume on substrate; legacy is a working museum
   (`LEGACY_SKIP`); send-on-non-empty throws.
 
-  Memory entries:
-  `feedback_derive_model_from_visual_spec.md` (cheap-fix detector,
-  prior session). A vocabulary-drift sibling is a candidate add-on
-  but not yet written.
-
-  Pre-existing red tests, still red, still not blocking:
-  `shape-d-cycle.test.ts` (ackEdge race), `handle-load-repro.test.ts`.
+  Pre-existing red tests, still red, not blocking:
+  `shape-d-cycle.test.ts`, `handle-load-repro.test.ts`.
 
   Carried context: Shape D self-pumps via `fb56c30`'s i1 fan-out +
   one-shot `seedLoop` + per-round `setTimeout(0)`. Manual-ack:
