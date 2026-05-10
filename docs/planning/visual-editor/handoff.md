@@ -83,6 +83,9 @@ Dormant options:
   - Triage pre-existing red tests (`shape-d-cycle`, `handle-load-repro`).
   - Shape D port under manual-ack.
   - Uniform-node, timeout-removal.
+  - Tick-batching audit (renderer): see
+    [handoff-tick-batching-audit.md](handoff-tick-batching-audit.md).
+    Trigger: tick renders as cascade instead of parallel pulse.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
