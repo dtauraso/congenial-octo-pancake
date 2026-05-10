@@ -54,5 +54,6 @@
         }
     },
     "editor.minimap.enabled": false,
-    "codium.codeCompletion.enable": true
+    "codium.codeCompletion.enable": true,
+    "topology.frameRendererEnabled": true
 }
