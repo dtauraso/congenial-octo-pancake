@@ -57,13 +57,19 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Pair substrate verified on Shape A; contract test now pinned. Pick:
+Pair substrate verified on Shape A; contract test now pinned. New
+primary direction selected this session: **ticked substrate** — give
+the substrate a clock, make time first-class. Plan committed at
+[handoff-ticked-substrate-plan.md](handoff-ticked-substrate-plan.md).
+Start at phase 1 (spike on Shape A behind a spec flag, no existing
+substrate touched). Other dormant options:
 
   - **Triage the two pre-existing red tests** (shape-d-cycle,
-    handle-load-repro). Likely cheapest cleanup before new work.
-  - **Shape D port** under the same manual-ack model
-    ([handoff-shape-d-plan.md](handoff-shape-d-plan.md)) — overlaps
-    with the shape-d-cycle failure above.
+    handle-load-repro). May resolve as a side effect of ticked
+    substrate phase 5.
+  - **Shape D port** under manual-ack
+    ([handoff-shape-d-plan.md](handoff-shape-d-plan.md)) — superseded
+    by ticked substrate phase 5.
   - **Uniform-node work** ([handoff-uniform-node-plan.md](handoff-uniform-node-plan.md)).
   - **Timeout removal** in `andGateLoopFanOut`
     ([handoff-timeout-removal.md](handoff-timeout-removal.md)).

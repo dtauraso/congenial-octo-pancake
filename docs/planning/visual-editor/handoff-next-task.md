@@ -40,6 +40,15 @@ Shapes B, C, D untouched.
 
 ## Pick the next move
 
+### 0. Ticked substrate (NEW — primary direction)
+
+See [handoff-ticked-substrate-plan.md](handoff-ticked-substrate-plan.md).
+Substrate-owned tick: each pass through `nodes[]` = 1 tick, pulse
+traversal lives inside `node.run()`. Goal is making time first-class
+and observable ("concurrent clocks frozen on command"). Phase 1 is a
+spike on Shape A behind a `runtime: "ticked"` spec flag, no existing
+substrate touched.
+
 ### 1. Triage red tests (smallest, do first)
 
 Both failures listed above. shape-d-cycle is interesting because it
