@@ -30,6 +30,11 @@ export interface ShapeSetup {
   // already did. Without this, the next-cycle's value gets dropped
   // by the late arc-completion ack racing the consumer's re-entry.
   selfAckEdges?: string[];
+  // Whole-shape opt-out: every edge in this shape is self-acked by its
+  // node-loop. Used by shapes built on nodeLoop (uniform self-acker), so
+  // they don't have to enumerate edge ids. Logically equivalent to
+  // listing every wire in selfAckEdges.
+  selfAcksAll?: boolean;
   // Per-loop toggle gates. While closed, the loop parks before sending;
   // a panel button toggles open/closed. Used to pace a misbehaving
   // upstream by hand without fixing the underlying ack model.

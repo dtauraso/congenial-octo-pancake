@@ -32,6 +32,7 @@ let _running = false;
 let _manualAckEdges: ManualAckEdge[] = [];
 const _manualAckSet = new Set<string>();
 const _selfAckSet = new Set<string>();
+let _selfAcksAll = false;
 let _triggerSlots: TriggerSlot[] = [];
 let _paused = false;
 let _resumeWaiters: Array<() => void> = [];
@@ -80,7 +81,9 @@ export function getWiresVersion(): number { return _version; }
 
 export function getManualAckEdges(): ManualAckEdge[] { return _manualAckEdges; }
 export function isManualAckEdge(edgeId: string): boolean { return _manualAckSet.has(edgeId); }
-export function isSelfAckEdge(edgeId: string): boolean { return _selfAckSet.has(edgeId); }
+export function isSelfAckEdge(edgeId: string): boolean {
+  return _selfAcksAll || _selfAckSet.has(edgeId);
+}
 export function getTriggerSlots(): TriggerSlot[] { return _triggerSlots; }
 
 // Clear the receiver-side slot on a manual-ack wire. Returns true if a
@@ -122,6 +125,7 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
   for (const e of _manualAckEdges) _manualAckSet.add(e.id);
   _selfAckSet.clear();
   for (const id of setup.selfAckEdges ?? []) _selfAckSet.add(id);
+  _selfAcksAll = setup.selfAcksAll ?? false;
   _triggerSlots = setup.triggerSlots ?? [];
   slog("wires-runtime: started", {
     shape: shape ?? "input->readGate",
@@ -148,6 +152,7 @@ export async function stopWiresRuntime(): Promise<void> {
   _manualAckEdges = [];
   _manualAckSet.clear();
   _selfAckSet.clear();
+  _selfAcksAll = false;
   _triggerSlots = [];
   // Wake any loops parked at awaitOpen so they observe stopped=true.
   for (const t of triggers) t.gate.wake();
