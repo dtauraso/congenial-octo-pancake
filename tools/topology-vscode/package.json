@@ -22,7 +22,17 @@
         ],
         "priority": "default"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Topology Editor",
+      "properties": {
+        "topology.frameRendererEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Step 7 (experimental): drive the topology editor from the wire-entity substrate and post PacedFrame messages to the webview. Painter is still pending; flag is a no-op for now beyond emitting frame messages. Default off keeps the legacy ticked renderer."
+        }
+      }
+    }
   },
   "scripts": {
     "build": "node esbuild.mjs",
