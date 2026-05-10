@@ -36,13 +36,15 @@ const shapeB = {
 } as unknown as Spec;
 
 describe("runtime-wires manual-ack registration", () => {
-  it("shape A pair substrate: wForward is acked by visual layer", async () => {
+  it("shape A pair substrate: wForward is registered as manual-ack", async () => {
     await startWiresRuntime(shapeA);
-    expect(getManualAckEdges()).toEqual([]);
-    expect(isManualAckEdge("in0->rg")).toBe(false);
-    // Pair substrate: the on-screen pulse arc is the only timer. The
-    // visual layer's arc-completion auto-ack on wForward gates the
-    // permit return; the substrate must NOT self-ack it.
+    expect(getManualAckEdges()).toEqual([
+      { id: "in0->rg", label: "in0→readGate" },
+    ]);
+    expect(isManualAckEdge("in0->rg")).toBe(true);
+    // Pair substrate: the on-screen ⏏ click is the only ack. The
+    // substrate must NOT self-ack wForward; the visual layer drives
+    // the permit return via clearManualAckSlot.
     expect(isSelfAckEdge("in0->rg")).toBe(false);
     await stopWiresRuntime();
     expect(isSelfAckEdge("in0->rg")).toBe(false);
@@ -57,12 +59,31 @@ describe("runtime-wires manual-ack registration", () => {
 });
 
 describe("clearManualAckSlot", () => {
-  it("returns false for unregistered edges (shape A self-acks, nothing manual)", async () => {
+  it("returns false for unregistered edges", async () => {
     await startWiresRuntime(shapeA);
     expect(clearManualAckSlot("not-a-real-edge")).toBe(false);
-    // Shape A's only edge is self-acked by the node-loop, so it is not
-    // registered as manual-ack and clearManualAckSlot is a no-op for it.
-    expect(clearManualAckSlot("in0->rg")).toBe(false);
+    await stopWiresRuntime();
+  });
+
+  it("shape A pair: clearing wForward releases the permit and refills with next value", async () => {
+    await startWiresRuntime(shapeA);
+    const wires = getWiresMap()!;
+    const wForward = wires.get("in0->rg")!;
+
+    // Seed pulse: in0 sends queue[0]=1 immediately on start.
+    while (wForward.state !== "inFlight") await tick();
+    expect(wForward.pending).toBe(1);
+
+    // ⏏ click: clearManualAckSlot acks wForward; permit-release
+    // handler fires synchronously; in0 sends queue[1]=2.
+    expect(clearManualAckSlot("in0->rg")).toBe(true);
+    while (wForward.state !== "inFlight") await tick();
+    expect(wForward.pending).toBe(2);
+
+    // No further pulses without another click.
+    await tick(); await tick();
+    expect(wForward.pending).toBe(2);
+
     await stopWiresRuntime();
   });
 
