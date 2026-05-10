@@ -24,21 +24,19 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, forty-seventh session):
-  Active branch: `task/node-ticks`. Steps 1–5 of the substrate
-  iteration plan landed; Option-2 integration has begun with
-  step 6: `src/host-shim/host-shim.ts` — leaf composition module
-  that combines wires + uniform node loops + step-4 adapter +
-  step-5 recorder via two independent subscriptions and derives
-  `PacedFrame` snapshots. Frame schema (decided this session):
-  per-wire `empty | carrying(value)` and per-node
-  `parked-input | running | parked-output | parked-ack`. Carried
-  values are sampled at event-emit time so the snapshot survives
-  later wire transitions. Contract test at
-  `test/contracts/host-shim.test.ts` (4 tests) pins frame
-  derivation, two-subscription independence, and end-to-end seq
-  ordering. Vocab + LOC clean; suite shows only the two
-  pre-existing reds. Six leaf modules now — no production callers.
+State at handoff (2026-05-10, forty-eighth session):
+  Active branch: `task/node-ticks`. Steps 1–6 landed. Step 7
+  began this session as a sliced commit: **7a — `frame`
+  host→webview message + serializer**. `src/messages.ts` now
+  carries `FrameMsg` (Maps flattened to pair arrays;
+  JSON-shaped); `src/host-shim/serialize-frame.ts` bridges
+  `PacedFrame<V>` → `FrameMsg`. Contract test at
+  `test/contracts/serialize-frame.test.ts` (3 tests) pins the
+  pair-array shape, parser round-trip, and empty-frame edge.
+  Decision locked: legacy ticked path coexists via flag-gated
+  A/B (not hard cutover). Vocab + LOC clean. Suite: 303 pass,
+  the same two pre-existing reds. Seven leaf modules; still no
+  production callers.
 
   **Friction this session:** legacy ticked path lets Step put >1
   pulse on a wire. Wiring the editor through steps 1–4 makes this
@@ -75,14 +73,16 @@ fired` to Output → Log (Extension Host).
 
 Read [MODEL.md](../../../MODEL.md) and
 [handoff-substrate-iteration.md](handoff-substrate-iteration.md).
-Steps 1–5 done; step 6 (host-shim leaf composition) landed. Next
-move: step 7 — wire the shim into the extension host. Run the
-substrate in the host, register the adapter + recorder via
-`composeShim()`, and forward `PacedFrame` payloads to the webview
-over the existing message bus as a new `frame` host→webview
-message. Webview becomes a dumb renderer that paints frames. Adds
-`PacedFrame` to `messages.ts`; chooses a strategy for the legacy
-ticked path (coexist behind a flag, or retire). See
+Step 7a (frame message + serializer) landed. Next move: **step 7b
+— host-side runner**. Build a flag-gated module that, when the
+`topology.frameRendererEnabled` setting is on, constructs
+wire-entities + uniform-v2 node loops from the topology JSON,
+calls `composeShim()`, and posts serialized frames to the webview
+via the existing message bus. Topology→wire-entity construction
+is its own concern: `substrate/build-wires.ts` builds the legacy
+chan-wire and is not reusable; a sibling builder is needed.
+Webview painter is step 7c. Legacy ticked renderer remains the
+default until 7c proves out. See
 [handoff-next-task.md](handoff-next-task.md).
 
 Dormant: triage pre-existing reds (`shape-d-cycle`,

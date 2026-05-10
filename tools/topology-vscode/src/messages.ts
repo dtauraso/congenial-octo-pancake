@@ -15,6 +15,27 @@ export type RunStatus =
 
 export type CompareSource = "head" | "file";
 
+// Wire / node frame state mirrors host-shim's PacedFrame. Inlined here so
+// messages.ts has no dependency on the substrate layer; the serializer in
+// host-shim/serialize-frame.ts is the bridge. Maps are flattened to arrays
+// of pairs so the postMessage structured-clone boundary stays JSON-shaped.
+export type WireFrameMsgState =
+  | { readonly kind: "empty" }
+  | { readonly kind: "carrying"; readonly value: unknown };
+
+export type NodeFrameMsgState =
+  | "parked-input"
+  | "running"
+  | "parked-output"
+  | "parked-ack";
+
+export interface FrameMsg {
+  readonly type: "frame";
+  readonly seq: number;
+  readonly wires: ReadonlyArray<readonly [string, WireFrameMsgState]>;
+  readonly nodes: ReadonlyArray<readonly [string, NodeFrameMsgState]>;
+}
+
 export type WebviewToHostMsg =
   | { type: "ready" }
   | { type: "save"; text: string }
@@ -44,7 +65,8 @@ export type HostToWebviewMsg =
   | { type: "compare-load"; source: CompareSource; text: string; label: string }
   | { type: "compare-error"; source: CompareSource; message: string }
   | { type: "trace-loaded"; text: string; label: string }
-  | { type: "trace-error"; message: string };
+  | { type: "trace-error"; message: string }
+  | FrameMsg;
 
 export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new Set([
   "ready", "save", "view-save", "run", "run-cancel", "compare-head", "compare-file",
@@ -54,7 +76,7 @@ export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new 
 
 export const HOST_TO_WEBVIEW_TYPES: ReadonlySet<HostToWebviewMsg["type"]> = new Set([
   "load", "view-load", "topogen-status", "run-status", "flush", "save-error",
-  "compare-load", "compare-error", "trace-loaded", "trace-error",
+  "compare-load", "compare-error", "trace-loaded", "trace-error", "frame",
 ]);
 
 export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {

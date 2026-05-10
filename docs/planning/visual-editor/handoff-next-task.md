@@ -1,61 +1,68 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`. Steps 1–5 of the substrate iteration plan
-landed. Option-2 integration has begun: step 6 (host-shim leaf
-composition) is in. Frame schema decided —
-[host-shim.ts](../../../tools/topology-vscode/src/host-shim/host-shim.ts)
-exports `PacedFrame<V>`: per-wire `empty | carrying(value)` and
-per-node `parked-input | running | parked-output | parked-ack`. Two
-independent subscriptions feed the step-4 adapter and step-5 recorder
-via `composeShim()`. Contract tests at
-[host-shim.test.ts](../../../tools/topology-vscode/test/contracts/host-shim.test.ts).
-All six leaf modules (wire-entity / pause-controller / node-loop /
-adapter / recorder / host-shim) have no production callers yet.
-121 contract tests green; only the two pre-existing reds remain.
+**State:** `task/node-ticks`. Steps 1–6 done. Step 7a landed this
+session: `FrameMsg` host→webview message in
+[messages.ts](../../../tools/topology-vscode/src/messages.ts) and
+serializer at
+[serialize-frame.ts](../../../tools/topology-vscode/src/host-shim/serialize-frame.ts)
+(Maps → arrays of pairs, JSON-shaped). Pinned by
+[serialize-frame.test.ts](../../../tools/topology-vscode/test/contracts/serialize-frame.test.ts)
+(3 tests). Legacy coexistence decided: **flag-gated A/B**, not hard
+cutover. Seven leaf modules; still no production callers. 303
+contract tests green; same two pre-existing reds.
 
 ## Read first
 
-1. [MODEL.md](../../../MODEL.md) — substrate is timing-free; renderer
-   owns pacing. Banned vocabulary list still applies.
+1. [MODEL.md](../../../MODEL.md) — substrate timing-free; banned vocab.
 2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md) —
-   forever-loops per node and per wire, line-level pause, state-change
-   events, no durations in substrate.
+   forever-loops, line-level pause, state-change events.
 
 Run `node tools/topology-vscode/scripts/check-substrate-vocab.mjs`
-before commits. Pacing-related vocab (`setTimeout`, `schedule`) is
-banned only inside `src/substrate/`. The renderer adapter and host
-shim live outside `src/substrate/` for that reason — do NOT move them
-back, and do NOT add them to `LEGACY_SKIP`.
+before commits. `setTimeout`/`schedule` banned inside `src/substrate/`
+only; adapter + host-shim live outside for that reason — do NOT move
+back or `LEGACY_SKIP`.
 
-## Decisions locked this session
+## Decisions locked across step 7
 
-- **Event plumbing:** two independent subscriptions (adapter +
-  recorder); `composeShim()` fans out, not a merged stream.
+- **Event plumbing:** two independent subscriptions; `composeShim()`
+  fans out, not a merged stream.
 - **Frame schema:** per-wire `empty | carrying(value)`, per-node
-  four-state. `loaded-outputs` is invisible; the next event flips it.
+  four-state. `loaded-outputs` invisible; next event flips it.
+- **Frame message:** `FrameMsg` in `messages.ts`; serializer in
+  `host-shim/serialize-frame.ts`. Maps → pair arrays.
+- **Legacy coexistence:** flag-gated A/B on
+  `topology.frameRendererEnabled` (default off). Legacy ticked
+  renderer keeps serving — do NOT delete or `LEGACY_SKIP` it.
 
-## Next concrete step — step 7: wire shim into extension host
+## Next concrete step — step 7b: host-side runner
 
-Run the substrate in the extension host, register adapter + recorder
-via `composeShim()`, forward paced `PacedFrame<V>` payloads to the
-webview as a new host→webview message. Specifically: (1) add `frame`
-to `src/messages.ts` (Maps → arrays of pairs; JSON-serializable
-values); (2) host runner constructs wires + node loops from the
-topology JSON and posts paced frames; (3) webview becomes a dumb
-renderer painting wire/node states; (4) pick legacy coexistence —
-flag-gated A/B or hard `LEGACY_SKIP` cutover. Resolve (4) with David
-before writing the wiring.
+Build a flag-gated host module that, when `topology.frameRendererEnabled`
+is true, drives the substrate from a parsed topology and posts
+`FrameMsg` to the webview through the existing `panel.webview.postMessage`
+bus in
+[extension.ts](../../../tools/topology-vscode/src/extension.ts).
+Pieces:
 
-Friction the step resolves: legacy `Pulse[]` per-edge can hold >1
-pulse on a wire. Step-1 wire-entity throws on load-non-empty, so a
-shim-driven editor makes the multi-pulse case impossible by
-construction. Do NOT cap `Pulse[]` in the legacy renderer as a cheap
-fix (preserves the wrong model — see
+1. Sibling builder `substrate/build-wire-entities.ts` walking
+   `Spec.edges` → `Map<string, Wire<unknown>>` (existing
+   `build-wires.ts` is legacy chan-wire, not reusable).
+2. Host orchestrator (e.g. `host-shim/run-frames.ts`) calling
+   `composeShim()` with a `RendererAdapter` posting
+   `serializeFrame(frame)` and a `Recorder` for trace dumps.
+3. Wire into `extension.ts` behind the flag. Flag-off → legacy path
+   unchanged.
+
+Webview painter is step 7c — for 7b the consumer can be a no-op.
+
+Friction: legacy `Pulse[]` per-edge can hold >1 pulse. Step-1
+wire-entity throws on load-non-empty, so shim-driven editor makes
+multi-pulse impossible by construction. Do NOT cap `Pulse[]` in the
+legacy renderer (preserves wrong model — see
 `feedback_derive_model_from_visual_spec.md`).
 
-Open question to resolve before coding: legacy coexistence strategy
-(flag-gate vs. hard cutover). Both touch `extension.ts` and the
-webview entry differently.
+Open question for 7b: per-node behavior. Identity passthrough is the
+minimum; richer kinds (and-gate, latch, etc.) can map later or throw
+`unsupported-kind`. Decide before coding.
 
 ## Decided previously, still hold
 
@@ -70,28 +77,23 @@ webview entry differently.
 
 ## Refuse cheap alternatives
 
-`feedback_derive_model_from_visual_spec.md` and MODEL.md catch
-"smallest diff preserves wrong model." Examples to refuse: step-
-duration awaits in substrate; capping `Pulse[]` in the legacy
-renderer to mask multi-pulse-on-a-wire; merging adapter + recorder
-into a single stream "to save a subscription" (decision was two).
+Per `feedback_derive_model_from_visual_spec.md` + MODEL.md, refuse:
+step-duration awaits in substrate; capping `Pulse[]` in legacy
+renderer; merging adapter + recorder into one stream.
 
-## Pre-existing red tests / housekeeping
+## Housekeeping
 
 - Reds: `shape-d-cycle.test.ts`, `handle-load-repro.test.ts`.
-- Unstaged: `topology.json`, `topology.view.json`. Branch is ahead
-  of `origin/task/node-ticks`.
-- Branch name `task/node-ticks` misleading (global tick gone) —
-  rename on next branch, not this one.
+- Unstaged editor state: `topology.json`, `topology.view.json`.
+- Branch `task/node-ticks` is misnamed (global tick gone) — rename
+  next branch, not this one.
 
 ## ALWAYS clause
 
-At end of session, overwrite this file (and the sibling
-`handoff-*.md` files) with a freshly-rendered prompt tailored to the
-state you're leaving the branch in, and commit on the task branch.
-Do not rely on chat history; the next AI may be a fresh model with
-no transcript. The rendered handoff must itself contain this same
-ALWAYS clause so the loop is self-perpetuating across sessions. Use
+At end of session, overwrite this file (and sibling `handoff-*.md`)
+with a freshly-rendered prompt for the state you're leaving and
+commit on the task branch. Do not rely on chat history; next AI may
+be a fresh model. The rendered handoff must contain this ALWAYS
+clause so the loop self-perpetuates. Use
 [continuation-prompt-template.md](continuation-prompt-template.md)
-as the structural source of truth; update the template when an
-invariant changes. Keep each file ≤100 LOC per the budget rule.
+as structural source of truth. Keep each file ≤100 LOC.
