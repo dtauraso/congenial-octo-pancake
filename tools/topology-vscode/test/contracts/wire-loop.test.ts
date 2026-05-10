@@ -10,36 +10,8 @@
 import { describe, expect, it } from "vitest";
 import { createWire, type WireEvent } from "../../src/substrate/wire-entity";
 import { runWire } from "../../src/substrate/wire-loop";
-import { pauseAware, type PauseSignal } from "../../src/substrate/pause-aware";
-
-function pauseController(): PauseSignal & { pause(): void; resume(): void } {
-  let paused = false;
-  let resumeWaiters: Array<() => void> = [];
-  let pauseWaiters: Array<() => void> = [];
-  return {
-    get paused() { return paused; },
-    awaitResume() {
-      if (!paused) return Promise.resolve();
-      return new Promise<void>((r) => resumeWaiters.push(r));
-    },
-    awaitPause() {
-      if (paused) return Promise.resolve();
-      return new Promise<void>((r) => pauseWaiters.push(r));
-    },
-    pause() {
-      if (paused) return;
-      paused = true;
-      const w = pauseWaiters; pauseWaiters = [];
-      for (const r of w) r();
-    },
-    resume() {
-      if (!paused) return;
-      paused = false;
-      const w = resumeWaiters; resumeWaiters = [];
-      for (const r of w) r();
-    },
-  };
-}
+import { pauseAware } from "../../src/substrate/pause-aware";
+import { createPauseController } from "../../src/substrate/pause-controller";
 
 describe("wire-loop — event ordering", () => {
   it("emits loaded → taken → acked with increasing seq", async () => {
@@ -64,7 +36,7 @@ describe("wire-loop — event ordering", () => {
 
 describe("pause-aware — mid-rendezvous", () => {
   it("parks the wire-loop between loaded and taken; resume completes the round", async () => {
-    const pause = pauseController();
+    const pause = createPauseController();
     const wire = createWire<string>("w2");
     const events: string[] = [];
     wire.onEvent((e) => events.push(e.kind));
