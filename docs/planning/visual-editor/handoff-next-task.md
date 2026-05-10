@@ -1,61 +1,43 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/remove-legacy-runtimes` (opened from `task/node-ticks`
-HEAD). Steps 2–3 of the deletion sweep landed; steps 4–8 remain.
+**State:** `task/remove-legacy-runtimes`. Steps 2–4 landed; steps 5–8 remain.
 
-## Commits landed on this branch
+## Commits landed on this branch (step 4)
 
-- `7148137` — `TransportControls.tsx` rewritten against
-  `FrameRendererCtl` only. Toggle posts `frame-pause`/`frame-resume`,
-  step posts `frame-step`. `step()` on `RunFramesHandle` arms a
-  one-shot in `adapter.onPaced` (resume + re-pause on next paced
-  frame). Tick-ms slider dropped; `disabled={ticked}` bug retired.
-- `1673f3e` — `AnimatedEdge` / `AnimatedNode` collapsed to the
-  frame-mode branch. `!frameMode &&` pulse renders gone; styling
-  ternaries collapsed; `heldFill` fallback gone. Dead
-  `usePulseLanes*`, `ruleForNodeId`/`effectiveSpeedPxPerMs`,
-  `runtime-wires` version sub, and `isTickedActive` pulled from
-  `AnimatedEdge.tsx`. `AnimatedNode.tsx` still imports `subscribe` /
-  `getWorld` / `getTickMs` from `sim/runner` and `subscribeNodeHeld`
-  / `subscribeNodeBuffered` from `runtime-wires` — retire in step 4.
+- `9d7f54f` — delete unimported `_use-pulse-lanes.ts` / `_use-pulse-lanes-wire.ts`
+- `31b1a15` — delete runner/timeline/fold-halo probes; port PulseInstance;
+  strip AnimatedNode; simplify TimelinePanel; wire main.tsx to frame-pause/resume.
 
-Build/tsc/vocab/LOC clean; 310 pass, two pre-existing reds.
+**Deleted:** `RunnerProbe.tsx`, `fold-halo-probe.ts`, `_stuck-runner-snapshot.ts`,
+`_stuck-pulse-probe.ts`, `timeline-probe.ts`, `timeline-probe/` dir,
+`Bookmarks.tsx`, `trace-load.ts`, `TraceStatus.tsx`,
+`TriggerSlotButton.tsx`, `ClearSlotButton.tsx`.
 
-## Why this branch exists
+**Ported / stripped:**
+- `PulseInstance.tsx` — runner/runtime-wires deps gone; pure rAF animation.
+- `AnimatedNode.tsx` — held/buffered/offset/tween/stateText stripped; frame-only.
+- `_handle-load.ts` — matchSubstrate/runner/runtime paths removed; spec+flow only.
+- `_on-node-drag.ts` — isRunnerPlaying branch removed; position-only drags.
+- `TimelinePanel.tsx` — collapses to `<TransportControls label="—" />`.
+- `main.tsx` — `installPulseLifetimes` gone; pause/resume post frame-pause/resume.
 
-Each new system has been *added* on top of the prior, never replacing
-it (per `feedback_derive_model_from_visual_spec.md`). Steps 2–3
-retired transport + painter legacy; the rest deletes modules + tests.
+All gates pass: vocab ✓ LOC ✓ tsc ✓ build ✓ 310 tests pass, 2 pre-existing reds.
 
 ## Remaining steps
 
-4. **Detach webview/panel callers from legacy modules.** Files still
-   importing `sim/runner`, `substrate/runtime*`, or `substrate/ticked`.
-   `AnimatedEdge.tsx` is clean; `AnimatedNode.tsx` still pulls
-   `subscribe`/`getWorld`/`getTickMs` and `subscribeNodeHeld`/
-   `subscribeNodeBuffered` (held/buffered/offset/tween state is dead
-   in frame mode — retires here). Re-grep at start (was ~13 pre-step
-   3). Per file: port to the frame-renderer event stream if it drives
-   shape-A behavior; otherwise delete. Likely deletes: `RunnerProbe`,
-   `fold-halo-probe`, `_stuck-runner-snapshot`, `timeline-probe/*`,
-   `Bookmarks`, `trace-load`. Likely ports: `TriggerSlotButton`,
-   `ClearSlotButton`, `_handle-load`, `_on-node-drag`, `PulseInstance`,
-   `_use-pulse-lanes*` (now unimported — decide here), `TimelinePanel`.
-5. **Delete the systems.** After step 4, no live importers remain.
-   Delete `src/sim/runner*`, `src/sim/simulator*`,
+5. **Delete the systems.** No live webview importers remain. Delete:
+   `src/sim/runner*/`, `src/sim/simulator*/`, `src/sim/drift.ts`,
+   `src/sim/trace.ts`, `src/sim/handlers.ts`, `src/sim/event-bus.ts`,
    `src/substrate/runtime.ts`, `src/substrate/runtime/`,
-   `src/substrate/runtime-wires*.ts`, `src/substrate/ticked/`. Audit
-   `src/sim/` for unused leftovers (keep what `run-frames.ts` reaches
-   — currently `seeds.ts`).
-6. **Delete pinned tests.** Anything under `**/runner.*test*`,
-   `**/runtime-wires*.test.ts`, `**/ticked*.test.ts`, plus
-   `shape-d-cycle.test.ts` and `handle-load-repro.test.ts` (the two
-   pre-existing reds — they test wires-runtime).
-7. **Gates.** Vocab → `npm run check:loc` → `tsc` → `npm run build`
-   → tests (expect green; pre-existing reds gone). Proof-out: load
-   topology, hit play/pause/step, verify pulses animate, pause halts
-   at line level, step advances one event.
-8. **Refresh handoff and merge.**
+   `src/substrate/runtime-wires*.ts`, `src/substrate/ticked/`.
+   Audit `src/sim/` for unused leftovers (keep `seeds.ts` if
+   `run-frames.ts` reaches it; otherwise delete too).
+6. **Delete pinned tests.** `**/runner.*test*`,
+   `**/runtime-wires*.test.ts`, `**/ticked*.test.ts`,
+   `shape-d-cycle.test.ts`, `handle-load-repro.test.ts`.
+7. **Gates.** Vocab → LOC → tsc → build → tests (expect all green).
+   Proof-out: load topology, play/pause/step, verify pulses animate.
+8. **Refresh handoff and merge to main** (requires sign-off).
 
 ## Survivor surface (do not delete)
 
@@ -65,32 +47,19 @@ Substrate transitively reached by `host-shim/run-frames.ts`:
 `pause-aware.ts`, `match.ts`, `log.ts`, `trigger-gate.ts`,
 `build-wires.ts`, `build-wire-entities.ts`, `step/`. Plus
 `host-shim/`, `extension/frame-renderer.ts`, `handle-message.ts`,
-the renderer adapter, and the recorder. Anything not transitively
-imported from `run-frames.ts` is in scope to delete.
-
-## Read first
-
-1. [MODEL.md](../../../MODEL.md) — substrate timing-free; banned vocab.
-2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md) —
-   forever-loops + line-level pause + state-change events.
-3. [session-log.md](session-log.md) entry from 2026-05-10 — pacing
-   contract gap between painter and substrate.
+renderer adapter, recorder. Keep `seeds.ts` if reached.
 
 ## Refuse cheap alternatives
 
-Per `feedback_derive_model_from_visual_spec.md` + MODEL.md, refuse:
-keeping legacy as "museum" when it doesn't run; preserving the ticked
-sidecar because Step was wired to it (Step now lives on the survivor
-via `frame-step` + `stepArmed`); leaving `!frameMode &&` guards in
-place "for safety"; adding any new branch to `TransportControls`.
-The deletion sweep is the load-bearing move.
+Per MODEL.md: refuse keeping legacy as museum; refuse `!frameMode &&`
+guards; refuse preserving ticked sidecar. The deletion sweep is the
+load-bearing move.
 
 ## ALWAYS clause
 
 At end of session, overwrite this file (and sibling `handoff-*.md`)
-with a freshly-rendered prompt for the state you're leaving and
-commit on the task branch. Do not rely on chat history; next AI may
-be a fresh model. The rendered handoff must contain this ALWAYS
-clause so the loop self-perpetuates. Use
-[continuation-prompt-template.md](continuation-prompt-template.md)
-as structural source of truth. Keep each file ≤100 LOC.
+with a freshly-rendered prompt for the state you're leaving and commit
+on the task branch. Do not rely on chat history; next AI may be fresh.
+The rendered handoff must contain this ALWAYS clause so the loop
+self-perpetuates. Use `continuation-prompt-template.md` as structural
+source of truth. Keep each file ≤100 LOC.
