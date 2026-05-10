@@ -22,22 +22,23 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, twenty-fourth session):
-  Active branch: `task/node-ticks`. Per-node `prevSlotEmpty` rule
-  on the step-substrate Input did not change visible cadence —
-  pulses still stack. Diagnosis session **reframed the problem**:
-  do not patch the rule, do not patch the step substrate. Build a
-  new minimal shape (in0 + readGate only, two wires, callback state
-  machines, no ticks, no `await`) that exposes a real "occupied"
-  phase between send and consume.
+State at handoff (2026-05-09, twenty-fifth session):
+  Active branch: `task/node-ticks`. **Pair substrate landed**
+  (`98a2b0f`). New `substrate/runtime-wires-pair.ts` exports
+  `setupInputReadGatePair`: two wires (wForward cap=0, wPermit cap=1
+  internal), callback state machines on `onArrive`/`onAck`, no
+  `await` in node bodies, no driver. Routing in `runtime-wires.ts`:
+  pair > step > legacy. Step substrate disabled
+  (`USE_STEP_SUBSTRATE_SHAPE_A = false`) but kept in tree as
+  reference. Manual-ack contract updated: wForward is acked by the
+  visual layer (`selfAcksAll = false`), inverting the step
+  substrate's invariant. Build + tests green (265 passing).
 
-  Step substrate same-tick drain and the retired Promise/await
-  substrate share one failure mode: writer and reader collapse into
-  one indistinguishable instant. CLAUDE.md medium-vs-substance rule
-  names this. Plan in
-  [handoff-next-task.md](handoff-next-task.md). No code yet — next
-  session implements `setupInputReadGatePair` in a new
-  `substrate/runtime-wires-pair.ts`.
+  **Not yet observed in the editor.** Next session must launch the
+  webview against a Shape A spec and check whether pulses space
+  cleanly under the pair substrate. If yes: step substrate's
+  same-tick drain was the cause. If they still stack: bug is in
+  `_use-pulse-lanes-wire.ts`, not the substrate.
 
   Carried context: Shape D self-pumps via `fb56c30`'s i1 fan-out +
   one-shot `seedLoop` + per-round `setTimeout(0)` yield in
@@ -60,25 +61,26 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Build the in0+readGate pair shape.** See
-[handoff-next-task.md](handoff-next-task.md) for the full plan.
-Summary:
+**Observe the pair substrate in the editor.** Code is in; behavior
+isn't verified visually yet.
 
-  - Two wires: `wForward: in0→readGate` (cap 0, animated) and
-    `wPermit: readGate→in0` (cap 1, "go" token).
-  - Node loops are callback state machines on `onArrive`/`onAck`/
-    `onValueChange`. **No `await` in node bodies, no ticks, no
-    driver.** The pulse traversing the arc on screen is the only
-    timer; `usePulseLanesWire` already calls `ackWire(wForward)` on
-    arrival, which triggers readGate to send the next permit.
-  - New `substrate/runtime-wires-pair.ts` + new match case so this
-    topology routes here, not through `step/`. Step substrate stays
-    in tree as reference.
+  1. Build + launch the webview (`npm run build` then F5 / Run
+     Extension). Open a Shape A spec (single Input → ReadGate).
+  2. Watch pulse cadence on `in0→rg`. Expected: one pulse on the
+     wire at a time, spaced by arc-traversal time.
+  3. If clean: step substrate's same-tick drain was the cause.
+     Re-enable Shape D / uniform-node work
+     ([handoff-shape-d-plan.md](handoff-shape-d-plan.md),
+     [handoff-uniform-node-plan.md](handoff-uniform-node-plan.md)).
+  4. If pulses still stack: substrate is exonerated. Bug is in
+     [_use-pulse-lanes-wire.ts](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts).
+     Diagnose lanes/geometry there without the step substrate
+     confounding the picture.
 
-Diagnostic value: if pulses space cleanly under the pair shape, the
-step substrate's tick/drain ordering was the cause. If they still
-stack, bug is in
-[_use-pulse-lanes-wire.ts](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts).
+Open question logged in [handoff-next-task.md](handoff-next-task.md):
+should `wPermit` carry the value back so readGate logic depends on
+what it received, or stay an opaque "go" token? Defer until a single
+pulse round-trips cleanly.
 
 Shape D port and uniform-node work
 ([handoff-shape-d-plan.md](handoff-shape-d-plan.md),

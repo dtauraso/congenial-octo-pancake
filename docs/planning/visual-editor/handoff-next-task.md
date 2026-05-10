@@ -1,78 +1,68 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`. Shape A's per-node `prevSlotEmpty` rule
-landed on the step-substrate Input but **did not change visible
-cadence** — pulses still stack. Diagnosis session reframed the
-problem: do not patch the rule, do not patch the step substrate.
-Build a new minimal shape that bypasses both.
+**State:** `task/node-ticks`. Pair substrate landed in `98a2b0f`.
+Build + tests green. **Visual cadence not yet verified in the
+editor.** Next session opens the webview and watches.
 
-## Why a new shape
+## What landed
 
-Step substrate (same-tick drain) and retired Promise/await substrate
-share one failure: writer and reader collapse into one
-indistinguishable instant — no observable "occupied" phase. The
-`prevSlotEmpty` rule cannot gate what isn't observable. CLAUDE.md
-medium-vs-substance names this. Build the smallest substrate where
-the phase is real.
+`substrate/runtime-wires-pair.ts` →
+`setupInputReadGatePair(spec, wires)`:
 
-## The minimal shape
+- `wForward = wires.get(forwardEdge.id)` — cap 0, animated.
+- `wPermit = createWire(..., 1)` — internal back-channel, never in
+  the spec, never visible to the visual layer.
+- in0 callback machine: `wPermit.onArrive` → `ackWire(wPermit)` →
+  `wForward.send(next).catch(noop)`. No `await`.
+- readGate callback machine: `wForward.onArrive` → `publishHeld` +
+  `publishTick`. `wForward.onAck` → `wPermit.send("go").catch(noop)`.
+  The `onAck` listener fires when the visual layer calls
+  `ackWire(wForward)` on pulse-arc completion — that physical event
+  is the only timer in the system.
+- Seed: prime `wPermit.send("go")` once at setup so in0 fires its
+  first send.
+- Module-level `_activeStop` flips a `stopped` flag; called by
+  `stopWiresRuntime` to break the permit/forward cycle on teardown.
 
-Two nodes, two wires, no ticks, no `await`, no driver:
-
-- `wForward: in0 → readGate` (cap 0) — carries the value; this is
-  the wire the editor animates as a pulse.
-- `wPermit: readGate → in0` (cap 1) — carries a "go" token.
-
-Loops are **callback state machines** driven by wire events
-(`onArrive`, `onAck`, `onValueChange`). No `await` in the node
-bodies. The only "time" in the system is the pulse traversing the
-arc on screen — that physical event drives `ackWire(wForward)` via
-the existing `usePulseLanesWire` listener, which then triggers
-readGate's `onArrive`-handler to send the next permit.
-
-Sketch:
+Routing in `substrate/runtime-wires.ts`:
 
 ```
-in0 state: waitingPermit | readyToSend
-  wPermit.onArrive → consume permit, wForward.send(value)
-  (no await; send is sync, ack arrives later via callback)
-
-readGate state: waitingValue | working | readyToPermit
-  wForward.onArrive → run readGate logic synchronously,
-                      ackWire(wForward) is called by the visual
-                      layer on pulse arrival, then send wPermit("go")
+USE_PAIR_SUBSTRATE_SHAPE_A = true   // wins for shape "input->readGate"
+USE_STEP_SUBSTRATE_SHAPE_A = false  // dormant; step/ kept as reference
 ```
 
-One pulse on screen at a time. Cadence = arc traversal time. No
-flag, no counter, no FRAME_MS.
+Other shapes (B, C, D) are untouched.
 
-## Where it lands
+## Contract change
 
-- New `substrate/runtime-wires-pair.ts` exporting
-  `setupInputReadGatePair(...)`. Sibling to existing shape setups.
-- New match case so this topology routes here, **not** through
-  `step/`. Leave `step/` in place but dormant — Shape A's machinery
-  is reference, not active.
-- Animation layer: no changes. `usePulseLanesWire` already does the
-  right thing on `wForward`. `wPermit` need not animate (or render
-  later as a faint return arrow).
+`test/contracts/runtime-wires-manual-ack.test.ts`: Shape A no longer
+asserts `selfAcksAll = true`. The pair substrate inverts that —
+wForward MUST be acked by the visual layer (the arc-completion ack
+is what gates the next permit). The new test pins
+`isSelfAckEdge("in0->rg") === false`.
 
-## Diagnostic value
+## Verify in the editor
 
-If pulses space cleanly under the pair shape, the step substrate's
-tick/drain ordering was the source. If they still stack, the bug is
-in the visual layer (geometry/lanes), not the substrate — and we
-investigate
-[_use-pulse-lanes-wire.ts](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts)
-without the step substrate confounding the picture.
+1. `cd tools/topology-vscode && npm run build`, then F5 / Run
+   Extension. Open a Shape A spec (single Input → ReadGate).
+2. Watch the `in0→rg` wire. Expected: one pulse on the arc at a
+   time, cadence = arc-traversal time. No stacking.
+3. If clean → step substrate's same-tick drain was the cause; the
+   tick/drain ordering thread can be retired. Resume Shape D /
+   uniform-node work
+   ([handoff-shape-d-plan.md](handoff-shape-d-plan.md),
+   [handoff-uniform-node-plan.md](handoff-uniform-node-plan.md)).
+4. If stacking persists → substrate is exonerated. Bug is in
+   [_use-pulse-lanes-wire.ts](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts).
+   Investigate lanes/geometry there.
 
-## Open question for next session
+## Open question
 
-Should `wPermit` carry the value back (so readGate's logic can
-depend on what it received) or just an opaque "go" token? Defer
-until a single pulse round-trips cleanly.
+Should `wPermit` carry the value back (so readGate logic can depend
+on what it received) or just an opaque "go" token? Defer until a
+single pulse round-trips cleanly.
 
-## On hold until the pair shape reads as discrete arcs
+## On hold until visual verification
 
 - Shape D port and uniform-node work
   ([handoff-shape-d-plan.md](handoff-shape-d-plan.md),
@@ -83,8 +73,8 @@ until a single pulse round-trips cleanly.
 ## Working tree
 
 `.claude/settings.json`, `topology.view.json`, plus pre-existing
-edits to `runtime-wires-shapes.ts` +
-`test/contracts/runtime-wires-manual-ack.test.ts` — leave or stash.
+edits to `runtime-wires-shapes.ts` (legacy Shape A fallback now
+dormant since pair routing wins) — leave or stash.
 
 ## ALWAYS clause
 
