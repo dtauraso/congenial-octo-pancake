@@ -1,66 +1,68 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`, commit `5232b32`. Substrate now owns
-ticking end-to-end. Wire pulses render in ticked Shape A. Node color
-flashes removed. Build green. Branch is **not** ready to merge yet —
-the pulse is still wall-clock-timed (legacy artifact); user wants it
-tick-driven before merging.
+**State:** `task/node-ticks`, commit `f4c8d01`. No new commits this
+session. Substrate-owned ticking from prior session is intact;
+wire pulses still render via wall-clock-timed `usePulseLanesTicked`.
+Build green. Branch is **not** ready to merge.
 
-## Next move
+## Framing reversal — read this carefully
 
-**Make wire pulses tick-driven, not wall-clock-driven.** A pulse
-should be a *state* (edge occupancy), not an animation:
+Prior handoffs recommended "defer ReadGate consumption to next tick"
+as the next move. **Reject that.** It is a cheap fix that preserves
+the wrong model. This session's design conversation made the spec
+explicit and the model gap unavoidable.
 
-1. **Substrate change.** Today `step()` runs Input then ReadGate in
-   the same tick — Inbox is empty before the tick ends. Defer
-   consumption to the next tick so a value sits on the edge from
-   tick N (sent) to tick N+1 (consumed). Inbox becomes the single
-   source of truth for "what's on the wire right now."
-2. **Pulse rendering.** Replace `usePulseLanesTicked` (which still
-   spawns a wall-clock-timed `Pulse` from `publishEdgeArrive`) with
-   a hook that reads inbox occupancy directly. Render a static dot
-   at the edge midpoint while occupied; gone when empty.
-3. **Cosmetic transition only.** If the dot should appear to move
-   between ticks, drive it with a CSS `transition` keyed on tick
-   number. Real time only enters at the cosmetic layer, never gates
-   substrate progress. Click ⏭ before transition completes → dot
-   snaps to next state.
-4. **Strip timing-coupled code.** Drop `effectiveSpeedPxPerMs`,
-   `simStart`, `signalRendererComplete`, per-edge slot ledger from
-   the ticked path.
+David's visual contract (stated repeatedly, including this session):
+  - Pulse travels along the wire.
+  - Length, shape, and edits to wire geometry are cosmetic.
+  - Traversal of any single pulse is one tick, regardless of length.
+  - Pulse must be visible in the viewer (not just code state).
+  - Changes to one thing must not break in-flight pulses.
 
-Add a contract test: `tickedInboxLen(edgeId)` is 1 between ticks
-(after Input tick, before ReadGate tick).
+These constraints imply wire-as-entity directly:
+  - "Pulse travels the wire" → wire holds the pulse, not a node.
+  - "Geometry doesn't affect timing" → traversal duration is
+    independent of path → fixed unit (one tick).
+  - "Edits don't break in-flight state" → wire's state survives
+    geometry changes → wire owns its own state.
 
-## What landed this session (commit `5232b32`)
+The same shape of bug has surfaced across 5–7 substrate rewrites
+because each rewrite fixed runner/node semantics and left wires as
+plumbing. The next session must stop rewriting substrates and
+rewrite the wire instead.
 
-- `ticked/runtime.ts` — `step()` wraps `ctx`, observes per-runner
-  activity (any `send` or successful `recv`), publishes `publishTick`
-  + `publishEdgeArrive` itself. Runners are pure `run(ctx)`.
-- `ticked/shape-a.ts` — no telemetry imports; pure runners.
-- `node-streams.ts` — new `subscribeEdgeArrive` /
-  `publishEdgeArrive` pubsub.
-- `AnimatedEdge.tsx` — picks `usePulseLanesTicked` when
-  `isTickedActive()`.
-- `_use-pulse-lanes-ticked.ts` — new hook (still wall-clock; this
-  is what the next task replaces).
-- `AnimatedNode.tsx` — flash + glow refs/divs and tick subscriber
-  removed (user explicitly asked for no node color pulsing).
-- `test/contracts/ticked-substrate-shape-a.test.ts` — two new
-  contract tests: substrate-side per-runner tick events, and
-  per-send edge-arrive events.
+## Next move — wire-as-entity
 
-## Why this matters (failure modes of current state)
+1. **Contract test first.** Write a failing red test that pins the
+   spec: wire state is `empty | carrying(v)`; send transitions
+   empty→carrying; recv transitions carrying→empty; each transition
+   is one tick; geometry changes do not affect wire state. This
+   artifact is what enforces the spec across future sessions.
+2. **Introduce `WireRunner`** (or equivalent — the name is open).
+   Wire is a tickable entity registered with the substrate. Its
+   inbox is the sender's outbox; its outbox is the receiver's inbox.
+   Or: collapse inbox/outbox into wire state directly. Pick whichever
+   keeps the substrate simpler.
+3. **Renderer reads wire state.** AnimatedEdge subscribes to the
+   wire's state and draws a dot while `carrying`. Motion between
+   ticks is a CSS transition keyed on tick number — purely cosmetic.
+   Click ⏭ before the transition completes → snap to next state.
+4. **Strip wire-as-plumbing artifacts** from the ticked path:
+   `effectiveSpeedPxPerMs`, `simStart`, `signalRendererComplete`,
+   per-edge slot ledger, `publishEdgeArrive` pubsub, the
+   wall-clock-timed `Pulse` object spawned by
+   `_use-pulse-lanes-ticked.ts`.
 
-- **Flash/pulse desync.** ReadGate already consumed before pulse
-  finishes traveling. Same-tick drain hides the problem in Shape A;
-  it'll surface immediately in any longer chain.
-- **Click-rate vs animation-rate drift.** Nothing throttles ⏭.
-  Faster clicks pile pulses while substrate is N ticks ahead.
-- **Inbox always empty between ticks** → UI can't read substrate
-  state to know what's "in flight."
-- **Pulse is a ghost.** Carries send-time value; substrate has
-  moved on. Stop/restart leaves orphan pulses.
+## Refuse cheap alternatives
+
+If the implementation feels like "smallest diff that makes the
+visible symptom pass," stop. That framing is the failure mode that
+produced the prior 5–7 rewrites. The memory entry
+`feedback_derive_model_from_visual_spec.md` exists specifically to
+catch this. Read it before patching.
+
+If the honest implementation is large, say so plainly to David and
+get sign-off before proceeding. Do not substitute a near-miss.
 
 ## Pre-existing red tests (carry over)
 

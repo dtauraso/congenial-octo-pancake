@@ -8,13 +8,15 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-step1-notes.md](handoff-step1-notes.md) — what was
+  1. [handoff-next-task.md](handoff-next-task.md) — **start here**
+     for the next commit. Spec has been re-framed: wire-as-entity,
+     not inbox-deferral. Read carefully — this reverses the prior
+     cheap-fix framing.
+  2. [handoff-step1-notes.md](handoff-step1-notes.md) — what was
      built on the rebuild branch (decision audit, coupling hacks
      gated to step 1, automated logging, e2e).
-  2. [handoff-gate-a.md](handoff-gate-a.md) — earlier merge to main
+  3. [handoff-gate-a.md](handoff-gate-a.md) — earlier merge to main
      (Gate A).
-  3. [handoff-next-task.md](handoff-next-task.md) — **start here**
-     for the next commit.
   4. [handoff-rebuild-plan.md](handoff-rebuild-plan.md) — port plan,
      contracts R1–R5, auto-retire signal.
   5. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
@@ -22,29 +24,34 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, thirty-fourth session):
-  Active branch: `task/node-ticks`. Commit `5232b32`. Substrate now
-  owns ticking end-to-end: `step()` wraps `ctx`, observes per-runner
-  activity, and publishes `publishTick` + `publishEdgeArrive`
-  itself. Runners are pure `run(ctx)`. AnimatedEdge picks
-  `usePulseLanesTicked` when `isTickedActive()`, so wire pulses
-  render in ticked Shape A. Node color flashes removed at user
-  request. **Branch is NOT ready to merge** — the wire pulse is
-  still wall-clock-timed (legacy artifact); user wants it
-  tick-driven (state, not animation) before merging. See
-  handoff-next-task.md for the implementation plan.
+State at handoff (2026-05-09, thirty-fifth session):
+  Active branch: `task/node-ticks`. Commit `f4c8d01`. **No new
+  commits this session** — the work was a design conversation that
+  reversed the previous session's framing. Branch state unchanged
+  from prior handoff.
 
-  Pre-existing failures unrelated to this session, still red on the
-  branch (do not block next move, but worth triaging):
-    - `test/contracts/shape-d-cycle.test.ts` — ackEdge depth
-      assertion fails (ackEdge seed/listener attachment race).
-    - `test/contracts/handle-load-repro.test.ts` — real
-      `topology.json` flow.
+  **Key shift this session:** David named the recurring pattern
+  explicitly. The same problem (wire is not a first-class entity)
+  has been routed around through 5–7 substrate rewrites
+  (legacy sim → wires → ack-driven → andGateLoop → step-function →
+  pair → ticked → substrate-owned ticking). Each rewrote runner/node
+  semantics and left wires as plumbing. Each "cheap fix" preserved
+  the wrong model and compounded brittleness. The visual contract
+  David has stated repeatedly — "pulse travels the wire, geometry
+  cosmetic, traversal is one tick, edits don't break in-flight
+  state" — implies wire-as-runner directly. The previously-recommended
+  "defer ReadGate to next tick" was a near-miss that hides the model
+  gap inside a receiver's inbox; reject it.
+
+  Memory entry added:
+  `~/.claude/projects/-Users-David-Documents-github-wirefold/memory/feedback_derive_model_from_visual_spec.md`.
+  Future sessions will load it. Read it.
+
+  Pre-existing red tests, still red, still not blocking:
+  `shape-d-cycle.test.ts` (ackEdge race), `handle-load-repro.test.ts`.
 
   Carried context: Shape D self-pumps via `fb56c30`'s i1 fan-out +
-  one-shot `seedLoop` + per-round `setTimeout(0)` yield in
-  `andGateLoopFanOut`. Conceptual frame: **concurrent clocks frozen
-  on command**. Manual-ack doc:
+  one-shot `seedLoop` + per-round `setTimeout(0)`. Manual-ack:
   [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
   Working tree: `topology.json` (`"runtime": "ticked"` flag for
@@ -61,23 +68,26 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Make wire pulses tick-driven, not wall-clock-driven** (see
-[handoff-next-task.md](handoff-next-task.md)). Pulse becomes edge
-occupancy (a state) rather than a timed animation. Substrate must
-defer ReadGate consumption to next tick so inbox is observable
-between ticks. Strip `effectiveSpeedPxPerMs` / `simStart` from the
-ticked path. Then re-evaluate merge to `main`. Other dormant
-options:
+**Make wire a first-class entity** (see
+[handoff-next-task.md](handoff-next-task.md)). Wire owns state
+`empty | carrying(v)`. Send transitions empty → carrying; recv
+transitions carrying → empty. Each transition costs one tick.
+Geometry (length, snake-routing, edits to path) is cosmetic and has
+zero substrate consequence. The renderer reads wire state and draws
+a dot while `carrying`; any motion between ticks is CSS transition
+only. Strip `effectiveSpeedPxPerMs`, `simStart`,
+`signalRendererComplete`, slot ledgers, `publishEdgeArrive` from the
+ticked path — they are all artifacts of wire-as-plumbing.
 
-  - **Triage the two pre-existing red tests** (shape-d-cycle,
-    handle-load-repro). May resolve as a side effect of ticked
-    substrate phase 5.
-  - **Shape D port** under manual-ack
-    ([handoff-shape-d-plan.md](handoff-shape-d-plan.md)) — superseded
-    by ticked substrate phase 5.
-  - **Uniform-node work** ([handoff-uniform-node-plan.md](handoff-uniform-node-plan.md)).
-  - **Timeout removal** in `andGateLoopFanOut`
-    ([handoff-timeout-removal.md](handoff-timeout-removal.md)).
+Add a contract test before any implementation: wire state is
+`empty | carrying(v)`, geometry changes do not affect wire state,
+traversal is exactly one tick. Failing red enforces the spec across
+sessions so it cannot be laundered into a cheap-fix framing again.
+
+Dormant options (do not pursue ahead of wire-as-entity):
+  - Triage pre-existing red tests.
+  - Shape D port under manual-ack.
+  - Uniform-node, timeout-removal.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
