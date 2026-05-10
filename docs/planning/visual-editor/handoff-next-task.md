@@ -1,52 +1,51 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`, HEAD = `1c7e385`. Wire-entity is
-implemented at `src/substrate/wire-entity.ts` (52 LOC); all 5
-contract tests green; substrate vocab lint clean. No consumer adopts
-the new wire — it is a leaf module. Branch is **not** ready to merge.
+**State:** `task/node-ticks`. Wire-entity is implemented at
+`src/substrate/wire-entity.ts` (52 LOC); 5 contract tests green;
+substrate vocab lint clean. No consumer adopts the new wire — it is
+a leaf module. Branch is **not** ready to merge.
 
-## Read MODEL.md first
+The substrate iteration model is now **decided**. See
+[handoff-substrate-iteration.md](handoff-substrate-iteration.md).
 
-[MODEL.md](../../../MODEL.md) at repo root pins the substrate model
-in David's words and lists banned vocabulary. Read it before any
-substrate or wire work. If your reasoning uses banned vocabulary
-(duration, ms, schedule, deadline, speed, wall-clock, "tick takes
-X"), you are in the wrong frame — stop and re-derive.
+## Read first
+
+1. [MODEL.md](../../../MODEL.md) — substrate is timing-free; renderer
+   owns pacing. Banned vocabulary list still applies.
+2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md) —
+   the decided model: forever-loops per node and per wire, line-level
+   pause, state-change events, no durations in substrate.
 
 Run `node tools/topology-vscode/scripts/check-substrate-vocab.mjs`
-to catch drift mechanically. Legacy hits are gated via
-`LEGACY_SKIP`; ticked side and `wire-entity.ts` must stay clean.
+before commits.
 
-## Next move — DO NOT port runtime.ts yet
+## Next concrete step
 
-The previous handoff said "adopt wire-entity in one consumer (smallest
-ticked-side caller)." That guidance is **superseded**. Adopting
-wire-entity in [src/substrate/ticked/runtime.ts](../../../tools/topology-vscode/src/substrate/ticked/runtime.ts)
-forces a choice of round-mechanic semantics, and that choice is
-**unresolved**. Three obvious options were rejected this session.
+Extend [src/substrate/wire-entity.ts](../../../tools/topology-vscode/src/substrate/wire-entity.ts)
+with the wire's forever-loop and Promise-based wait API. Keep file
+≤100 LOC per the budget rule; split if needed.
 
-Read [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
-**before proposing any next step.** It records:
+Surface to add:
+- `awaitLoaded()`, `awaitEmpty()`, `awaitAcked()` returning Promises
+  that resolve when state flips.
+- `run(pauseController)` async loop: await source-loaded, await
+  dest-took, ack source. Repeats while running.
+- State-change event emitter (ordinal sequence numbers, not durations).
+- Every internal `await` routes through a pause-aware helper that
+  races against the shared pause signal.
 
-- Why the model assumes goroutine concurrency that JS cannot supply
-  natively.
-- The hard constraint: each node runs exactly once per tick.
-- The three rejected options (topo-order, multi-pass, two-tick
-  latency) and why they are loop-tweaks anchored on the wrong
-  invariant.
-- David's working direction (nested loop substrate→node→edges) and
-  the open shape questions inside it. **Not finalized.**
-- Fan-in clarification: wire-level fan-in is not user-authorable;
-  `carry()` throwing is code-side defense.
+Do **not** import setTimeout, Date.now, performance.now, or anything
+duration-shaped. Substrate is timing-free.
 
-State the next single concrete step on the substrate iteration model
-and wait for David's sign-off. Do not propose multi-step plans with
-options. Do not start the runtime.ts port until David finalizes the
-round mechanic.
+Contract tests to add:
+- Pause mid-load freezes state; resume completes the rendezvous.
+- Pause mid-take freezes state; resume completes.
+- Event stream emits in the expected order across one rendezvous.
 
 ## Decided previously, still hold
 
-- Halt/resume lives on the substrate, not the wire.
+- Halt/resume on the substrate, not the wire (now line-level via
+  shared pause signal).
 - Legacy runtime stays a working museum; ports retire one
   `LEGACY_SKIP` entry at a time.
 - `send()` on a non-empty wire **throws**. No queue, no overwrite.
@@ -54,11 +53,14 @@ round mechanic.
 ## Refuse cheap alternatives
 
 `feedback_derive_model_from_visual_spec.md` (in user memory) and
-MODEL.md exist specifically to catch the failure mode where a
-"smallest diff" preserves the wrong model. The three rejected loop-
-tweaks above are exactly that pattern — they preserved the for-loop
-and broke the model. If the honest implementation is large, say so
-plainly to David and get sign-off.
+MODEL.md exist to catch the failure mode where a "smallest diff"
+preserves the wrong model. Recent drift example caught this session:
+proposing per-loop step-duration awaits to make substrate "pace
+itself at human-read speed." That violates MODEL.md (no durations in
+substrate). Renderer owns pacing; substrate is flat-out.
+
+If a request seems to require banned vocabulary, name the gap to
+David before writing code.
 
 ## Pre-existing red tests (carry over)
 
@@ -68,6 +70,11 @@ plainly to David and get sign-off.
 ## Working tree
 
 Unstaged editor state: `topology.json`, `topology.view.json`.
+
+## Branch name
+
+`task/node-ticks` is now misleading — the work removed the global
+tick. Rename on next branch, not this one.
 
 ## ALWAYS clause
 

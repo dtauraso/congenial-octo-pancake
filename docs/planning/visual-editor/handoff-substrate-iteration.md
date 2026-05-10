@@ -1,85 +1,83 @@
 ---
-# Substrate iteration model — open
+# Substrate iteration model — closed
 
-**Status:** open. The runtime.ts port (inbox-array → wire-entity) is
-**blocked** on this. Do not port until David finalizes the round
-mechanic.
+**Status:** decided. Runtime.ts port is unblocked. The model below
+holds substrate timing-free per [MODEL.md](../../../MODEL.md);
+pacing lives entirely in the renderer.
 
-## What this session established
+## The decision
 
-The substrate model in [MODEL.md](../../../MODEL.md) was specified
-against goroutines + channels. "One tick = every node runs one round;
-any pulse a node emits travels its wire to the destination within
-that round" is a **synchronization** claim under goroutines, not an
-ordering claim. The channel send/recv is the round boundary for that
-pair of nodes; there is no iterator and no "who runs first."
+**Forever-loop substrate.** Every node and every wire is its own
+`while(running)` async loop. Coordination is backpressure at each
+loop's `await` points. There is no outer step() iterator, no node
+enumeration, no scheduler picking order.
 
-Single-threaded JS has no primitive that maps cleanly to "N
-independent things, each blocked until their inputs arrive, all
-advancing together when the round ticks." Any JS substrate must pick
-a sequentialization, and every obvious sequentialization breaks
-something the model promises.
+- **Node loop (uniform, same body for every node):** await all input
+  wires `carrying`, run, await all output wires `empty`, load output
+  wires, await output wires acked.
+- **Wire loop:** await source loaded me, await destination took me,
+  ack source.
+- **Network does the work, not the node.** AND, inhibition, latch,
+  XOR are wiring patterns, not node subtypes. Node bodies are uniform.
 
-## Locked this session
+## What this dissolves
 
-- **Each node runs exactly once per tick.** Hard constraint. Rules
-  out multi-pass round mechanics.
-- **Wire-level fan-in (two writers, one wire) is not user-authorable.**
-  The visual editor enforces 1:1 wires by construction. `carry()`
-  throwing on non-empty defends against code-side bugs (edgeId
-  collision, same-node double-emit, port hazards), not topologies a
-  user could draw. The "merge node for fan-in" framing applies to
-  node-internal logic that wants to emit twice per round, not to user
-  topology design.
+- Order-dependent chain traversal — no iterator, no enumeration.
+- Cycle-break rule — backpressure paces cycles natively (Shape D
+  self-pump is the trivial case).
+- Diamond fan-in / slot collision — each input port is its own wire.
+- Stack-depth-equals-path-length — flat loops, no recursion.
+- Once-per-tick enforcement — emergent from each loop awaiting ack
+  before its next iteration.
+- Two-tick latency smuggling — no tick as a substrate construct.
 
-## Rejected this session
+## Pause: line-level
 
-Three loop-tweak options were proposed and rejected. They preserved
-the wrong invariant (`step()` as a for-loop over nodes) instead of
-deriving from the model:
+Every wait is `Promise.race([stateChange, pauseSignal])`. On pause,
+each loop parks at its current `await`; closure-captured local state
+is preserved. On resume, parked promises unpark and loops continue
+from the same line. Mid-rendezvous states (wire loaded, dest hasn't
+taken) are valid frozen states.
 
-1. **Topological order.** Sort nodes so sources precede destinations.
-   Fails on cycles (Shape D self-pump).
-2. **Multi-pass round.** Run nodes repeatedly until quiescent.
-   Violates once-per-tick.
-3. **Two-tick edge latency.** Source carries in tick N, destination
-   observes in N+1. Contradicts "pulse traverses within one round."
+Discipline: no bare `await` in loop bodies — every wait routes
+through a pause-aware helper.
 
-All three came from anchoring on `runtime.ts`'s for-loop. They are
-not a real exploration of the design space — they are the only
-variations that preserve the loop, which is the wrong thing to
-preserve.
+## No durations in substrate
 
-## David's working direction (not finalized)
+Per MODEL.md: substrate halts and resumes pulses, that is all. No
+step-duration awaits, no setTimeout, no scheduled pacing. Substrate
+runs flat-out.
 
-Nested loop: substrate → node → edges. A node is not "done" for the
-round until its outgoing edges have finished delivering their pulse.
-Mirrors goroutine `send-blocks-until-received` as structural
-containment rather than parallelism. Substrate computes the whole
-tick under the hood; renderer sees an atomic per-tick result.
+The renderer owns pacing. It subscribes to substrate state-change
+events and plays them back at human-read speed, preserving order and
+causal structure. Faithful = preserves what happened, not preserves
+wall-clock. The renderer is the clock; the substrate is timing-free.
 
-Open shape questions inside this direction (do not pre-answer):
+## State-change events
 
-- Is "edge finished with the pulse" = value delivered to destination's
-  input slot, or = destination has consumed it?
-- Does `run()` precede the edge-walk, or interleave with it?
-- For cycles: does the substrate-driven delivery fill the
-  cycle-target's slot in the same round, or the next?
+Substrate emits events on every transition (wire loaded, wire took,
+node entered run, node parked, etc.) with ordinal sequence numbers
+(not durations). Multiple subscribers attach independently:
 
-## Visual atomicity
+- Renderer (live view at human-read speed).
+- Recorder (appends events for replay/scrub/bug repro).
+- Anything else (metrics, audits) without substrate awareness.
 
-Substrate's intra-tick sequentialization is invisible **iff the
-renderer animates per-tick batches, not per-arrival.** Today the
-renderer subscribes per-arrival but the runtime is fast enough that
-arrivals share an animation frame. Latent leak. See
-[handoff-tick-batching-audit.md](handoff-tick-batching-audit.md).
+## What this does NOT fix
 
-## What the next session should do
+- Bad wiring still produces bad results — by design. Editor + audit
+  registry catch it before run.
+- Pre-existing red tests (`shape-d-cycle`, `handle-load-repro`).
 
-State the next single concrete step on the substrate iteration model
-and **wait for David's sign-off**. Do not propose multi-step plans
-with options. Do not start porting runtime.ts. The wire-entity leaf
-module is fine where it is.
+## Implementation order
+
+1. Extend `src/substrate/wire-entity.ts` with the wire's forever-loop,
+   Promise-based waits (`awaitLoaded`, `awaitEmpty`, `awaitAcked`),
+   pause-aware helper, state-change event emitter.
+2. Pause controller as shared module.
+3. Uniform node loop module (also emits events).
+4. Renderer adapter subscribes to events; plays back at human speed.
+5. Recorder subscribes (independent commit, whenever).
 
 ## ALWAYS clause
 

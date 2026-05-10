@@ -24,25 +24,27 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, fortieth session):
-  Active branch: `task/node-ticks`. HEAD = `1c7e385`.
-  `src/substrate/wire-entity.ts` landed (52 LOC); all 5 contract
-  tests green; substrate vocab lint clean. No callers wired up.
-  Runtime.ts port is **blocked** on the substrate iteration model.
+State at handoff (2026-05-10, forty-first session):
+  Active branch: `task/node-ticks`. `src/substrate/wire-entity.ts`
+  landed (52 LOC); 5 contract tests green; substrate vocab lint
+  clean. No callers wired up.
 
-  **Locked this session** (detail in `handoff-substrate-iteration.md`):
-  1. Each node runs **once per tick**. Rules out multi-pass.
-  2. Topo-order, multi-pass, two-tick latency all rejected as
-     loop-tweaks anchored on the wrong invariant.
-  3. Wire-level fan-in is not user-authorable; `carry()`-throws is
-     code-side defense.
-  4. Renderer must batch per-tick to keep substrate sequentialization
-     invisible. Latent today. See `handoff-tick-batching-audit.md`.
+  **Substrate iteration model: decided.** See
+  `handoff-substrate-iteration.md`. Forever-loops per node and per
+  wire; coordination by backpressure at await points; line-level
+  pause via shared signal; substrate emits state-change events with
+  ordinal sequence numbers (no durations); renderer owns all pacing
+  and plays back faithfully at human-read speed; recorder is a
+  second event subscriber. Substrate is **timing-free** per
+  MODEL.md.
 
-  **Working direction (not finalized):** nested loop
-  substrate→node→edges; node not done until its outgoing edges
-  finish delivering. Open shape questions in
-  `handoff-substrate-iteration.md` — do not pre-answer.
+  Drift caught this session: a "step-duration in substrate loops"
+  framing was almost locked in. MODEL.md forbids durations in
+  substrate; renderer owns pacing. Reverted before commit.
+
+  Runtime.ts port is **unblocked**. Implementation order is in
+  `handoff-substrate-iteration.md`. Branch name `task/node-ticks` is
+  now misleading (the global tick is gone) — rename on next branch.
 
   **Held:** halt/resume on substrate; legacy is a working museum
   (`LEGACY_SKIP`); send-on-non-empty throws.
@@ -73,21 +75,19 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Read [MODEL.md](../../../MODEL.md) and
-[handoff-substrate-iteration.md](handoff-substrate-iteration.md)
-first.** The runtime.ts port is blocked on the substrate iteration
-model. Do not propose multi-step plans with options — state the
-next single concrete step on the iteration model and wait for
-David's sign-off. Wire-entity stays as a green leaf module until
-the round mechanic is settled.
+Read [MODEL.md](../../../MODEL.md) and
+[handoff-substrate-iteration.md](handoff-substrate-iteration.md),
+then start the implementation order in the latter. First commit:
+extend `wire-entity.ts` with the wire's forever-loop, Promise-based
+waits (`awaitLoaded`, `awaitEmpty`, `awaitAcked`), pause-aware
+helper, state-change event emitter. No setTimeout, no durations.
+Contract tests for pause mid-rendezvous and event ordering.
 
 Dormant options:
   - Triage pre-existing red tests (`shape-d-cycle`, `handle-load-repro`).
-  - Shape D port under manual-ack.
-  - Uniform-node, timeout-removal.
-  - Tick-batching audit (renderer): see
-    [handoff-tick-batching-audit.md](handoff-tick-batching-audit.md).
-    Trigger: tick renders as cascade instead of parallel pulse.
+  - Shape D port under the new substrate.
+  - Tick-batching audit is **superseded** by the no-tick model;
+    `handoff-tick-batching-audit.md` is historical.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
