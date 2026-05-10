@@ -1,83 +1,67 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks` is mid-transition from Shape C to
-Shape D. The Shape D spec edge (`i0.out → i1.in`) is committed
-(`9006ec7`); [handoff-shape-d-plan.md](handoff-shape-d-plan.md) item 1
-done, items 2–6 pending. Until the matcher lands, the topology falls
-through to the legacy runner (expected). Prior commit (`e9e3fef`)
-fixed the `andGateLoop` pacing bug and dropped the i1 trigger-gate
-workaround.
+**State:** `task/node-ticks`. Shape D cycle is closed AND self-pumping
+under option (c) (commit `fb56c30`): the cycle drives `readGate.chainIn`
+and `readGate.ack` from i1's fan-out, in0 is a one-shot seed. Suite
+green (259/259), tsc + build clean.
 
-## What was fixed
+## What option (c) changed
 
-`andGateLoop` previously acked its inbound wires internally
-(`for (const w of inbound) ackWire(w)`), which let upstream `inputLoop`s
-resolve their `await out.send(...)` *before* the visual layer / manual
-ack completed. Pulses stacked on inbound wires (observed on
-i1→readGate.ack last session).
+**Wiring** ([runtime-wires-shape-d.ts](../../../tools/topology-vscode/src/substrate/runtime-wires-shape-d.ts)):
 
-The fix mirrors `joinLoop`: after `out.send`, andGateLoop now awaits
-`Promise.all(inbound.map((w) => w.awaitReady()))` before the next
-cycle. External ack pacing is now load-bearing for both join shapes.
+- in0 → `seedLoop(inWire, queue[0])`. Single send at startup; in0 no
+  longer drives the cycle rate.
+- readGate inputs both cycle-mode (`cycleMask: [true, true]`). Both
+  feedback edges are consume-on-read.
+- i0 uses `andGateLoopWithCycleInputs([outWire], [true], …)`. Forward
+  edge is consume-on-read.
+- i1 uses new `andGateLoopFanOut([cycleWire], [true], [ackWireE, inWire], …)`.
+  Closes the cycle by broadcasting to both feedback edges.
+- `selfAckEdges` lists all four cycle edges.
 
-See
-[node-loop.ts:75-88](../../../tools/topology-vscode/src/substrate/node-loop.ts#L75-L88).
+**Substrate** ([node-loop-cycle.ts](../../../tools/topology-vscode/src/substrate/node-loop-cycle.ts)):
 
-## What changed in Shape C
+- New `andGateLoopFanOut(inbound, cycleMask, outbound, reduce, opts)`.
+- Fan-out yields **one `setTimeout(0)` per round-trip** at the top of
+  each iteration. Load-bearing: with every edge consume-on-read, the
+  cycle would otherwise pump entirely in microtasks and starve
+  macrotasks (timers, animation frames, test ticks).
 
-- i1 no longer has a trigger gate. `setupInputReadGateInhibitorWithI0`
-  in [runtime-wires-shapes.ts](../../../tools/topology-vscode/src/substrate/runtime-wires-shapes.ts)
-  passes only `awaitGate` to i1's `inputLoop`; no `awaitOpen`, no
-  `triggerSlots` entry.
-- i1's send loop now paces through the manual-ack edge (i1→readGate),
-  same as in0→readGate.
-- Both manual-ack edges still appear as buttons. There is no longer a
-  ▶/■ trigger button.
+## Why option (c), not (a) or (b)
 
-## Still in tree but unused
+(b) — gating inputLoop on a downstream signal — was rejected: it
+couples in0 to the cycle and destroys the AND's "two independent
+arrivals" semantics at readGate.
 
-- `TriggerGate` module
-  ([trigger-gate.ts](../../../tools/topology-vscode/src/substrate/trigger-gate.ts)).
-- `inputLoop`'s optional `awaitOpen` parameter.
-- `TriggerSlotButton.tsx` and `triggerSlots` plumbing in
-  `ShapeSetup`.
+(c) preserves the AND: in0 still independently delivers chainIn (just
+once, as a seed); the cycle independently delivers ack via the
+fan-out. readGate observes two distinct sources.
 
-No shape registers a trigger slot, so the panel section is empty.
-Decision needed: delete or keep as a debug pacer.
+## What the next session might do
 
-## What the next session should do
+- **Run the editor and watch the self-pump** to confirm the visual
+  layer behaves with the fan-out node. The tick counter and the
+  per-edge selfAckEdges (visual auto-ack suppression) may need tweaks
+  if pulses look off.
+- **Shape C contract test** — still owed.
+- **Delete unused `TriggerGate`** module if not needed.
+- **Beyond Shape D:** the hierarchical chain (more inhibitors,
+  partition nodes, AND-gate tree). The fan-out + cycle-input toolkit
+  is now the substrate vocabulary for any closed cycle.
 
-User's choice — none of these block one another:
+## Read before touching the cycle
 
-1. **Pick i0's outbound.** Cycle close to i1 (recommended — completes
-   the loop), branch to a second ReadGate, or feed a Distribute /
-   EdgeNode. Plan for the cycle-close path:
-   [handoff-shape-d-plan.md](handoff-shape-d-plan.md).
-2. **Write the Shape C contract test.** Still owed from prior session.
-   Should assert no pulse stacking on i1→readGate.ack across at least
-   two cycles.
-3. **Delete unused trigger-gate code** if the debug-pacer use case
-   isn't compelling — keeps the substrate lean.
-
-**Read [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md)
-before changing anything in the manual-ack area.** Load-bearing
-assumption: external acker (visual layer or manual-ack button) is the
-only acker. `joinLoop` and `andGateLoop` both rely on this now.
-
-## What's NOT done (and why it's parked)
-
-- in0's symmetric trigger gate — moot now that andGateLoop is fixed.
-- Shape C contract test (see option 2 above).
-- Legacy globals (`sim/runner`, `legacyRunnerState`, `pauseRunner`,
-  `isPlaying`) still imported by AnimatedEdge, PulseInstance, etc.
-- Per-edge slot-pacing thread (drop drain barrier, fire-per-arrival)
-  remains parked — see [handoff-slot-plan.md](handoff-slot-plan.md).
+- [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md) —
+  external-acker assumption (still load-bearing for non-cycle edges).
+- [handoff-cycle2-diagnosis.md](handoff-cycle2-diagnosis.md) — why
+  feedback edges must be consume-on-read.
+- The `setTimeout(0)` yield in `andGateLoopFanOut` — removing it
+  reintroduces microtask starvation (OOM in tests).
 
 ## Working tree note
 
-`.claude/settings.json` carries the `Bash(kill *)` permission added in
-a prior session. `topology.view.json` carries camera drift; orthogonal
-— leave or stash.
+`.claude/settings.json` and `topology.view.json` may carry incidental
+drift — leave or stash.
 
 ## ALWAYS clause
 
