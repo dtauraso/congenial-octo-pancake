@@ -1,15 +1,16 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`. Steps 1–6 done. Step 7a landed this
-session: `FrameMsg` host→webview message in
-[messages.ts](../../../tools/topology-vscode/src/messages.ts) and
-serializer at
-[serialize-frame.ts](../../../tools/topology-vscode/src/host-shim/serialize-frame.ts)
-(Maps → arrays of pairs, JSON-shaped). Pinned by
-[serialize-frame.test.ts](../../../tools/topology-vscode/test/contracts/serialize-frame.test.ts)
-(3 tests). Legacy coexistence decided: **flag-gated A/B**, not hard
-cutover. Seven leaf modules; still no production callers. 303
-contract tests green; same two pre-existing reds.
+**State:** `task/node-ticks`. Steps 1–6 + 7a + 7b done. Step 7b
+landed this session: sibling builder
+[build-wire-entities.ts](../../../tools/topology-vscode/src/substrate/build-wire-entities.ts),
+host orchestrator
+[run-frames.ts](../../../tools/topology-vscode/src/host-shim/run-frames.ts),
+and integration helper
+[frame-renderer.ts](../../../tools/topology-vscode/src/extension/frame-renderer.ts)
+gated on `topology.frameRendererEnabled` (default off). Per-node
+behavior is identity broadcast; source-only nodes skipped (no seed
+in 7b). 309 contract tests green; same two pre-existing reds.
+Webview consumer is still a no-op.
 
 ## Read first
 
@@ -19,8 +20,8 @@ contract tests green; same two pre-existing reds.
 
 Run `node tools/topology-vscode/scripts/check-substrate-vocab.mjs`
 before commits. `setTimeout`/`schedule` banned inside `src/substrate/`
-only; adapter + host-shim live outside for that reason — do NOT move
-back or `LEGACY_SKIP`.
+only; adapter + host-shim + extension helper live outside for that
+reason — do NOT move back or `LEGACY_SKIP`.
 
 ## Decisions locked across step 7
 
@@ -33,36 +34,36 @@ back or `LEGACY_SKIP`.
 - **Legacy coexistence:** flag-gated A/B on
   `topology.frameRendererEnabled` (default off). Legacy ticked
   renderer keeps serving — do NOT delete or `LEGACY_SKIP` it.
+- **7b node behavior:** identity broadcast `(vals) => outputs.map(()
+  => vals[0])`. Source-only nodes skipped without throwing. Richer
+  kinds (and-gate, latch, …) land later — likely 7d.
 
-## Next concrete step — step 7b: host-side runner
+## Next concrete step — step 7c: webview painter
 
-Build a flag-gated host module that, when `topology.frameRendererEnabled`
-is true, drives the substrate from a parsed topology and posts
-`FrameMsg` to the webview through the existing `panel.webview.postMessage`
-bus in
-[extension.ts](../../../tools/topology-vscode/src/extension.ts).
-Pieces:
+Build a webview-side consumer of `FrameMsg` that paints per-wire
+`empty | carrying(value)` and per-node four-state across the
+existing topology graph. The host already posts frames when the
+flag is on (verify via Output → Log when toggled). Open questions
+for 7c:
 
-1. Sibling builder `substrate/build-wire-entities.ts` walking
-   `Spec.edges` → `Map<string, Wire<unknown>>` (existing
-   `build-wires.ts` is legacy chan-wire, not reusable).
-2. Host orchestrator (e.g. `host-shim/run-frames.ts`) calling
-   `composeShim()` with a `RendererAdapter` posting
-   `serializeFrame(frame)` and a `Recorder` for trace dumps.
-3. Wire into `extension.ts` behind the flag. Flag-off → legacy path
-   unchanged.
+1. Does the painter overlay the legacy renderer on the same canvas,
+   or replace it while the flag is on? Recommendation: replace, so
+   we exercise the wire-entity model end-to-end and uncover
+   friction the cap-`Pulse[]` cheap fix would have hidden.
+2. How are values rendered on a wire — chip on the wire, color tint,
+   or both? Match the legacy idiom where possible.
+3. Where does the painter mount — extend the existing webview
+   pipeline in `webview/` or a dedicated subscriber that listens
+   for `type: "frame"` messages?
 
-Webview painter is step 7c — for 7b the consumer can be a no-op.
-
-Friction: legacy `Pulse[]` per-edge can hold >1 pulse. Step-1
-wire-entity throws on load-non-empty, so shim-driven editor makes
-multi-pulse impossible by construction. Do NOT cap `Pulse[]` in the
-legacy renderer (preserves wrong model — see
+Friction reminder: legacy `Pulse[]` per-edge can hold >1 pulse.
+Step-1 wire-entity throws on load-non-empty, so shim-driven editor
+makes multi-pulse impossible by construction. Do NOT cap `Pulse[]`
+in the legacy renderer (preserves wrong model — see
 `feedback_derive_model_from_visual_spec.md`).
 
-Open question for 7b: per-node behavior. Identity passthrough is the
-minimum; richer kinds (and-gate, latch, etc.) can map later or throw
-`unsupported-kind`. Decide before coding.
+After 7c proves out on a real topology, evaluate flipping the
+default. Until then `topology.frameRendererEnabled` stays off.
 
 ## Decided previously, still hold
 

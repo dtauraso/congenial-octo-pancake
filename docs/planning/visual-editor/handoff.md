@@ -24,19 +24,23 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, forty-eighth session):
-  Active branch: `task/node-ticks`. Steps 1–6 landed. Step 7
-  began this session as a sliced commit: **7a — `frame`
-  host→webview message + serializer**. `src/messages.ts` now
-  carries `FrameMsg` (Maps flattened to pair arrays;
-  JSON-shaped); `src/host-shim/serialize-frame.ts` bridges
-  `PacedFrame<V>` → `FrameMsg`. Contract test at
-  `test/contracts/serialize-frame.test.ts` (3 tests) pins the
-  pair-array shape, parser round-trip, and empty-frame edge.
-  Decision locked: legacy ticked path coexists via flag-gated
-  A/B (not hard cutover). Vocab + LOC clean. Suite: 303 pass,
-  the same two pre-existing reds. Seven leaf modules; still no
-  production callers.
+State at handoff (2026-05-10, forty-ninth session):
+  Active branch: `task/node-ticks`. Steps 1–6 + 7a landed
+  previously. **Step 7b — host-side runner** landed this
+  session. `src/substrate/build-wire-entities.ts` walks
+  `Spec.edges` → `Map<string, Wire<unknown>>` (sibling to
+  legacy `build-wires.ts`; throws on duplicate edge ids).
+  `src/host-shim/run-frames.ts` composes wires + uniform-v2
+  node loops + adapter + recorder via `composeShim`, posts
+  serialized `FrameMsg` to a caller-supplied sink. Per-node
+  behavior: identity broadcast (`(vals) => outputs.map(() =>
+  vals[0])`); source-only nodes (zero inputs) are skipped — no
+  seed mechanism in 7b. Wired into `extension.ts` behind
+  `topology.frameRendererEnabled` setting (default off) via
+  `extension/frame-renderer.ts`; flag-off path is unchanged.
+  Two new contract tests (3 + 3). Vocab + LOC clean. Suite:
+  309 pass, same two pre-existing reds. Webview consumer is
+  still a no-op — painter is 7c.
 
   **Friction this session:** legacy ticked path lets Step put >1
   pulse on a wire. Wiring the editor through steps 1–4 makes this
@@ -73,17 +77,15 @@ fired` to Output → Log (Extension Host).
 
 Read [MODEL.md](../../../MODEL.md) and
 [handoff-substrate-iteration.md](handoff-substrate-iteration.md).
-Step 7a (frame message + serializer) landed. Next move: **step 7b
-— host-side runner**. Build a flag-gated module that, when the
-`topology.frameRendererEnabled` setting is on, constructs
-wire-entities + uniform-v2 node loops from the topology JSON,
-calls `composeShim()`, and posts serialized frames to the webview
-via the existing message bus. Topology→wire-entity construction
-is its own concern: `substrate/build-wires.ts` builds the legacy
-chan-wire and is not reusable; a sibling builder is needed.
-Webview painter is step 7c. Legacy ticked renderer remains the
-default until 7c proves out. See
-[handoff-next-task.md](handoff-next-task.md).
+Step 7b (host-side runner) landed. Next move: **step 7c —
+webview painter**. Build a webview-side consumer of `FrameMsg`
+that paints per-wire `empty | carrying(value)` and per-node
+four-state across the existing topology graph. Until the
+painter exists, flag-on emits frames into a no-op consumer.
+Decide whether the painter overlays the legacy renderer or
+replaces it on the same canvas while flag is on. Legacy ticked
+renderer remains default until 7c proves out on a real
+topology. See [handoff-next-task.md](handoff-next-task.md).
 
 Dormant: triage pre-existing reds (`shape-d-cycle`,
 `handle-load-repro`); Shape D port. Tick-batching audit superseded.
