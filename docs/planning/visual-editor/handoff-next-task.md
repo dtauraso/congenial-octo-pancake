@@ -1,14 +1,17 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`. Steps 1 & 2 of the substrate iteration
+**State:** `task/node-ticks`. Steps 1, 2, 3 of the substrate iteration
 plan landed: wire forever-loop (`wire-entity.ts`, `wire-events.ts`,
-`pause-aware.ts`, `wire-loop.ts`) and shared
-[pause-controller.ts](../../../tools/topology-vscode/src/substrate/pause-controller.ts)
+`pause-aware.ts`, `wire-loop.ts`); shared
+[pause-controller.ts](../../../tools/topology-vscode/src/substrate/pause-controller.ts);
+and uniform node loop
+[node-loop-uniform-v2.ts](../../../tools/topology-vscode/src/substrate/node-loop-uniform-v2.ts)
 with contract tests at
-[pause-controller.test.ts](../../../tools/topology-vscode/test/contracts/pause-controller.test.ts).
-`wire-loop.test.ts` now imports the shared controller. 18 contract
-tests green; vocab lint clean; LOC budget clean. No production caller
-yet — substrate modules are leaf. Branch not ready to merge.
+[node-loop-uniform-v2.test.ts](../../../tools/topology-vscode/test/contracts/node-loop-uniform-v2.test.ts).
+23 contract tests green across wire-loop, pause-controller, and
+node-loop-v2; vocab lint clean; LOC budget clean (module 94 LOC). No
+production caller yet — substrate modules are leaf. Branch not ready
+to merge.
 
 ## Read first
 
@@ -21,36 +24,26 @@ yet — substrate modules are leaf. Branch not ready to merge.
 Run `node tools/topology-vscode/scripts/check-substrate-vocab.mjs`
 before commits.
 
-## Next concrete step — Step 3: uniform node loop
+## Next concrete step — Step 4: renderer adapter
 
-Add `src/substrate/node-loop-uniform-v2.ts` (name TBD; must coexist
-with the existing `node-loop-uniform.ts` until the legacy is retired)
-implementing the uniform body from `handoff-substrate-iteration.md`:
+Implementation order in `handoff-substrate-iteration.md` lists step 4
+as: renderer adapter subscribes to substrate events (wire + node) and
+plays them back at human-read speed, preserving order and causal
+structure. Substrate stays timing-free per MODEL.md — pacing lives in
+the renderer, not the substrate.
 
-  await all input wires `carrying`
-  → run node body
-  → await all output wires `empty`
-  → load output wires
-  → await output wires `acked`
+Open questions to resolve before coding:
+- Single merged event stream vs. two subscriptions (wire + node)?
+  Both currently share the `nextSeq()` ordinal so a merge is trivial.
+- Where the adapter lives (webview-side module vs. extension-host
+  shim) and how it gets the wire/node handles.
+- Minimum visible state set the renderer needs to draw (likely:
+  per-wire `empty | carrying`, per-node `parked-input | running |
+  parked-output | parked-ack`).
 
-Surface:
-- Takes a node spec (input wires, output wires, pure body fn) and a
-  `PauseSignal`.
-- Every wait routes through `pauseAware()`.
-- Emits state-change events (entered run, parked at input, parked at
-  output, loaded outputs) with ordinal seq numbers via the same
-  emitter style as `wire-events.ts`.
-- No setTimeout, Date.now, performance.now, no durations.
-
-Contract tests:
-- Single-input single-output node passes one value end-to-end through
-  a pair of wires.
-- Multi-input node parks until all inputs carrying, then runs once.
-- Multi-output node parks at output-empty until all destinations have
-  acked before next round.
-- Pause mid-run freezes; resume completes the round.
-
-Keep file ≤100 LOC per the budget rule; split into helpers if needed.
+Do not start step 4 by porting any tick/duration vocabulary into the
+substrate. If the design seems to require that, name the gap to David
+first — see "Refuse cheap alternatives" below.
 
 ## Decided previously, still hold
 

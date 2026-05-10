@@ -24,16 +24,21 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, forty-third session):
-  Active branch: `task/node-ticks`. Steps 1 & 2 of the substrate
-  iteration plan landed. Step 1: wire forever-loop
+State at handoff (2026-05-10, forty-fourth session):
+  Active branch: `task/node-ticks`. Steps 1, 2, and 3 of the
+  substrate iteration plan landed. Step 1: wire forever-loop
   (`wire-entity.ts`, `wire-events.ts`, `pause-aware.ts`,
   `wire-loop.ts`). Step 2: shared `pause-controller.ts`
-  exporting `createPauseController()` / `PauseController` (extends
-  `PauseSignal`); `wire-loop.test.ts` updated to import it.
-  18 contract tests green across wire-loop + pause-controller;
-  substrate vocab lint clean; LOC budget clean. No production
-  callers wired up — substrate modules are leaf.
+  (`createPauseController()` / `PauseController`). Step 3:
+  `node-loop-uniform-v2.ts` — uniform node body (await inputs
+  carrying → run → await outputs empty → load → await acked) with
+  every wait routed through pauseAware; emits NodeEvent with
+  shared ordinal seq. Coexists with legacy `node-loop-uniform.ts`.
+  4 new contract tests cover end-to-end, multi-input join,
+  multi-output ack backpressure, pause mid-run. 23 contract tests
+  green across wire/pause/node v2 modules; substrate vocab lint
+  clean; LOC budget clean (module 94 LOC, test 163 LOC). No
+  production callers — substrate modules still leaf.
 
   **Substrate iteration model: decided.** See
   `handoff-substrate-iteration.md`. Forever-loops per node and per
@@ -74,13 +79,12 @@ fired` to Output → Log (Extension Host).
 
 Read [MODEL.md](../../../MODEL.md) and
 [handoff-substrate-iteration.md](handoff-substrate-iteration.md).
-Steps 1 & 2 done. Next: step 3 — uniform node loop module that
-awaits all-inputs-carrying, runs the body, awaits
-all-outputs-empty, loads outputs, awaits all-outputs-acked.
-Every wait routes through `pauseAware()` with a shared
-`PauseSignal`. Emits state-change events with ordinal seq.
-See [handoff-next-task.md](handoff-next-task.md) for the surface
-and contract tests to add.
+Steps 1–3 done. Next: step 4 — renderer adapter that subscribes to
+wire+node events and plays them back at human-read speed,
+preserving order and causal structure. Renderer owns pacing;
+substrate stays timing-free. See
+[handoff-next-task.md](handoff-next-task.md) for the surface and
+contract tests to add.
 
 Dormant: triage pre-existing reds (`shape-d-cycle`,
 `handle-load-repro`); Shape D port. Tick-batching audit superseded.
