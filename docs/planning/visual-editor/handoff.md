@@ -65,22 +65,26 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Active task: remove substrate timeouts so vitest suite runs in
-≤30s.** Plan in
-[handoff-timeout-removal.md](handoff-timeout-removal.md) — read that
-next. Supersedes uniform-node step 3 until the suite is fast; the
-uniform-node plan
-([handoff-uniform-node-plan.md](handoff-uniform-node-plan.md))
-resumes after.
+**Active task: spike a step-function substrate on Shape A.** Plan in
+[handoff-step-function-spike.md](handoff-step-function-spike.md) —
+read that next. Supersedes both the timeout-removal plan
+([handoff-timeout-removal.md](handoff-timeout-removal.md), now
+obsolete pending spike outcome) and uniform-node step 3
+([handoff-uniform-node-plan.md](handoff-uniform-node-plan.md), on
+hold).
 
-Finding: substrate uses real `setTimeout` in three places (cycle
-yield, pulse duration, playback). Only the cycle yield claims to be
-load-bearing for the dataflow, and the user's claim is that none of
-them need to be — every loop already parks on a real promise. Tests
-inherited a `tick = () => setTimeout(0)` polling pattern from the
-substrate's yield; Node clamps that to ~1ms × 265 tests × dozens of
-ticks → minutes wall-clock. Step A is an audit (no code changes) to
-prove every loop's round awaits external progress.
+Why: the await-based substrate emulates Go's goroutine+channel
+concurrency in single-threaded JS. Go was originally chosen for cheap
+channels, not for true OS-thread concurrency, so the emulation buys
+nothing and costs a lot (multi-minute test suite, load-bearing
+`setTimeout(0)` yields, latch+AND ack dance, audit work to prove no
+loop self-feeds). User's framing: each node ticks on a shared beat;
+its internal state (slots, gate, what it's waiting for) decides
+whether `step()` does anything this frame. Gate-before-send → one
+writer per slot → no contention, no race resolution, no scheduler.
+Spike Shape A first, then Shape D (the hard one — self-cycle is
+*easier* in this model, not harder). If both work, migrate; if Shape
+D blocks, fall back to the timeout-removal audit.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
