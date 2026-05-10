@@ -19,18 +19,24 @@ import {
   pauseWiresRuntime,
   resumeWiresRuntime,
 } from "../../../substrate/runtime-wires";
+import { isTickedActive, tickedStep } from "../../../substrate/ticked";
 
 export function TransportControls({ label }: { label: string }) {
   // Three runtimes share this button: the wires runtime (matched
   // Input->ReadGate path), the legacy substrate runtime, and the
   // legacy sim runner. Reflect whichever is active.
+  const ticked = isTickedActive();
   const wiresActive = isWiresRuntimeRunning();
   const wiresPaused = isWiresRuntimePaused();
   const substrateActive = isSubstrateRunning();
-  const playing = wiresActive
-    ? !wiresPaused
-    : substrateActive || isPlaying();
+  // Ticked substrate is always paused-by-default (no Resume; phase 2).
+  const playing = ticked
+    ? false
+    : wiresActive
+      ? !wiresPaused
+      : substrateActive || isPlaying();
   const toggle = () => {
+    if (ticked) return;
     if (wiresActive) {
       if (wiresPaused) resumeWiresRuntime();
       else pauseWiresRuntime();
@@ -42,21 +48,26 @@ export function TransportControls({ label }: { label: string }) {
     // no-op when no substrate spec is loaded.
     if (playing) pause(); else { resumeSubstrate(); play(); }
   };
+  const onStep = () => {
+    if (ticked) { tickedStep(); return; }
+    pause(); pauseSubstrate(); pauseWiresRuntime(); stepOnce();
+  };
   return (
     <>
       <button
         type="button"
         className="timeline-play"
-        title={playing ? "pause" : "play"}
+        title={ticked ? "ticked: step-only" : (playing ? "pause" : "play")}
         onClick={toggle}
+        disabled={ticked}
       >
         {playing ? "⏸" : "▶"}
       </button>
       <button
         type="button"
         className="timeline-step"
-        title="step one event"
-        onClick={() => { pause(); pauseSubstrate(); pauseWiresRuntime(); stepOnce(); }}
+        title={ticked ? "step one tick" : "step one event"}
+        onClick={onStep}
       >
         ⏭
       </button>

@@ -28,7 +28,7 @@ const shapeA: Spec = {
 
 describe("ticked substrate (Phase 1, Shape A)", () => {
   it("5 inputs → 5 ticks, inbound empty between ticks", () => {
-    startTickedShapeA(shapeA, 0);
+    startTickedShapeA(shapeA);
     const edgeId = tickedEdgeId();
     expect(edgeId).toBe("in0->rg");
 
