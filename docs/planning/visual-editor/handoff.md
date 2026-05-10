@@ -27,20 +27,17 @@ Read them in this order on a fresh session:
 State at handoff (2026-05-10, forty-ninth session):
   Active branch: `task/node-ticks`. Steps 1–6 + 7a landed
   previously. **Step 7b — host-side runner** landed this
-  session. `src/substrate/build-wire-entities.ts` walks
-  `Spec.edges` → `Map<string, Wire<unknown>>` (sibling to
-  legacy `build-wires.ts`; throws on duplicate edge ids).
-  `src/host-shim/run-frames.ts` composes wires + uniform-v2
-  node loops + adapter + recorder via `composeShim`, posts
-  serialized `FrameMsg` to a caller-supplied sink. Per-node
-  behavior: identity broadcast (`(vals) => outputs.map(() =>
-  vals[0])`); source-only nodes (zero inputs) are skipped — no
-  seed mechanism in 7b. Wired into `extension.ts` behind
-  `topology.frameRendererEnabled` setting (default off) via
-  `extension/frame-renderer.ts`; flag-off path is unchanged.
-  Two new contract tests (3 + 3). Vocab + LOC clean. Suite:
-  309 pass, same two pre-existing reds. Webview consumer is
-  still a no-op — painter is 7c.
+  session. New: `substrate/build-wire-entities.ts` (sibling
+  to legacy `build-wires.ts`; throws on dup edge ids) and
+  `host-shim/run-frames.ts` (composes wires + uniform-v2
+  loops + adapter + recorder; posts serialized `FrameMsg`).
+  Per-node behavior: identity broadcast; source-only nodes
+  skipped (no seed in 7b). Wired into `extension.ts` via
+  `extension/frame-renderer.ts`, gated on
+  `topology.frameRendererEnabled` (default off); flag-off
+  path unchanged. +6 contract tests. Vocab + LOC clean.
+  Suite: 309 pass, same two pre-existing reds. Webview
+  consumer is still a no-op — painter is 7c.
 
   **Friction this session:** legacy ticked path lets Step put >1
   pulse on a wire. Wiring the editor through steps 1–4 makes this
