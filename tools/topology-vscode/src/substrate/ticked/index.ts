@@ -4,17 +4,22 @@
 import type { Spec, StateValue } from "../../schema";
 import { setupShapeATicked } from "./shape-a";
 import {
-  inboxLen, inboxSnapshot, step, subscribe, type Runtime,
+  inboxLen, inboxSnapshot, step, type Runtime,
 } from "./runtime";
 
 let _rt: Runtime | null = null;
 let _edgeId: string = "";
+const _subs = new Set<() => void>();
+
+function _notify() { for (const fn of _subs) fn(); }
 
 export function startTickedShapeA(spec: Spec): void {
   stopTicked();
   const setup = setupShapeATicked(spec);
   _rt = setup.runtime;
+  _rt.listeners.add(_notify);
   _edgeId = setup.edgeId;
+  _notify();
 }
 
 export function stopTicked(): void {
@@ -22,6 +27,7 @@ export function stopTicked(): void {
   _rt.listeners.clear();
   _rt = null;
   _edgeId = "";
+  _notify();
 }
 
 export function isTickedActive(): boolean {
@@ -45,6 +51,6 @@ export function tickedEdgeId(): string {
   return _edgeId;
 }
 export function subscribeTicked(fn: () => void): () => void {
-  if (!_rt) return () => {};
-  return subscribe(_rt, fn);
+  _subs.add(fn);
+  return () => { _subs.delete(fn); };
 }

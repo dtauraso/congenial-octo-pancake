@@ -13,6 +13,9 @@ import {
   subscribeWires, subscribeTotalTicks, getTotalTicks,
   isWiresRuntimeRunning,
 } from "../../substrate/runtime-wires";
+import {
+  isTickedActive, tickedTickCount, subscribeTicked,
+} from "../../substrate/ticked";
 import { useTrace, useViewerState } from "../state";
 import { Bookmarks } from "./TimelinePanel/Bookmarks";
 import { TraceStatus } from "./TimelinePanel/TraceStatus";
@@ -43,18 +46,26 @@ export function TimelinePanel() {
     return () => { unsub?.(); };
   }, []);
 
+  useEffect(() => {
+    const unsub = subscribeTicked(() => force((n) => n + 1));
+    return () => { unsub?.(); };
+  }, []);
+
   const w = getWorld();
   const replaying = isReplaying();
   const loadedTrace = trace.loaded;
   const wiresRunning = isWiresRuntimeRunning();
+  const ticked = isTickedActive();
 
   const label = replaying && loadedTrace
     ? `replay · ${loadedTrace.length} events`
-    : wiresRunning
-      ? `ticks ${getTotalTicks()}`
-      : w
-        ? `tick ${w.tick} · cycle ${w.cycle} · queued ${w.queue.length}`
-        : "—";
+    : ticked
+      ? `tick ${tickedTickCount()}`
+      : wiresRunning
+        ? `ticks ${getTotalTicks()}`
+        : w
+          ? `tick ${w.tick} · cycle ${w.cycle} · queued ${w.queue.length}`
+          : "—";
 
   return (
     <div className="timeline-panel" data-undo-scope="viewer">
