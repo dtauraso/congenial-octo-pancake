@@ -24,26 +24,28 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, forty-ninth session):
-  Active branch: `task/node-ticks`. Steps 1–6 + 7a landed
-  previously. **Step 7b — host-side runner** landed this
-  session. New: `substrate/build-wire-entities.ts` (sibling
-  to legacy `build-wires.ts`; throws on dup edge ids) and
-  `host-shim/run-frames.ts` (composes wires + uniform-v2
-  loops + adapter + recorder; posts serialized `FrameMsg`).
-  Per-node behavior: identity broadcast; source-only nodes
-  skipped (no seed in 7b). Wired into `extension.ts` via
-  `extension/frame-renderer.ts`, gated on
-  `topology.frameRendererEnabled` (default off); flag-off
-  path unchanged. +6 contract tests. Vocab + LOC clean.
-  Suite: 309 pass, same two pre-existing reds. Webview
-  consumer is still a no-op — painter is 7c.
+State at handoff (2026-05-10, fiftieth session):
+  Active branch: `task/node-ticks`. Steps 1–6 + 7a + 7b landed
+  previously. **Step 7c — webview painter** landed this
+  session (commit `168645e`). New:
+  `webview/frame-store.ts` (useSyncExternalStore bridge;
+  `active` flips true on first FrameMsg). `main.tsx` routes
+  `frame` msgs into the store. `AnimatedEdge.tsx` and
+  `AnimatedNode/AnimatedNode.tsx` subscribe; while
+  frame-mode is active they paint per-wire empty/carrying
+  (tinted stroke + value chip mid-edge) and per-node
+  four-state (fill+border) on the SAME canvas — legacy
+  pulse rendering is suppressed by `!frameMode &&` guards.
+  Flag-off path is byte-identical. Build/tsc/vocab/LOC
+  clean; 309 pass, same two pre-existing reds.
 
-  **Friction this session:** legacy ticked path lets Step put >1
-  pulse on a wire. Wiring the editor through steps 1–4 makes this
-  impossible by construction (wire-entity throws on load-non-empty)
-  — motivating example for option-2 integration. Do NOT cap
-  `Pulse[]` in the legacy renderer as a cheap fix.
+  **Decision locked this session:** painter REPLACES the
+  legacy renderer on the same canvas while
+  `topology.frameRendererEnabled` is on. Not an overlay.
+
+  **Not yet proof-out:** painter has not been driven through
+  VS Code on a real topology. Code is complete; visual
+  verification is the next move before flipping the default.
 
   **Model:** see `handoff-substrate-iteration.md`. Forever-loops per
   node and per wire; backpressure coordination; line-level pause;
@@ -54,15 +56,11 @@ State at handoff (2026-05-10, forty-ninth session):
   (`LEGACY_SKIP`); send-on-non-empty throws; renderer adapter stays
   outside `src/substrate/`.
 
-  Pre-existing reds (not blocking): `shape-d-cycle.test.ts`,
-  `handle-load-repro.test.ts`. Shape D self-pumps via `fb56c30`'s
-  i1 fan-out + one-shot `seedLoop`. Manual-ack:
+  Pre-existing reds: `shape-d-cycle.test.ts`,
+  `handle-load-repro.test.ts`. Manual-ack:
   [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
-
-  Working tree: `topology.json`, `topology.view.json` — editor
-  state, not committed. Reference branches retained:
-  `task/runtime-substrate-rebuild`, `task/wires`,
-  `task/node-visuals-strip`. Do not delete.
+  Working tree: `topology.{json,view.json}` — editor state.
+  Reference branches retained — do not delete.
 
 ## Dev-loop
 
@@ -74,15 +72,17 @@ fired` to Output → Log (Extension Host).
 
 Read [MODEL.md](../../../MODEL.md) and
 [handoff-substrate-iteration.md](handoff-substrate-iteration.md).
-Step 7b (host-side runner) landed. Next move: **step 7c —
-webview painter**. Build a webview-side consumer of `FrameMsg`
-that paints per-wire `empty | carrying(value)` and per-node
-four-state across the existing topology graph. Until the
-painter exists, flag-on emits frames into a no-op consumer.
-Decide whether the painter overlays the legacy renderer or
-replaces it on the same canvas while flag is on. Legacy ticked
-renderer remains default until 7c proves out on a real
-topology. See [handoff-next-task.md](handoff-next-task.md).
+Step 7c (webview painter) landed. Next move: **proof-out**.
+Open the topology tab on a real spec, flip
+`topology.frameRendererEnabled` on, verify per-wire
+empty→dim / carrying→tinted+chip transitions and per-node
+four-state fill+border updates; confirm no legacy pulses bleed
+through. If proof-out passes, evaluate flipping the flag
+default. If friction surfaces (chip / `EdgeLabels` overlap,
+four-state legibility, identity-broadcast too thin for visual
+coverage), log to session-log.md and either fix forward or tee
+up 7d (richer node kinds). See
+[handoff-next-task.md](handoff-next-task.md).
 
 Dormant: triage pre-existing reds (`shape-d-cycle`,
 `handle-load-repro`); Shape D port. Tick-batching audit superseded.
