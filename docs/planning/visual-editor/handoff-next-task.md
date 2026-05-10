@@ -49,11 +49,8 @@ It pins three claims and is intentionally red:
 - geometry edits do not mutate state
 - `check-substrate-vocab.mjs` exits clean (currently 10 baseline hits)
 
-Implementation (`src/substrate/wire-entity.ts`) is **blocked on one
-open refinement**:
-
-1. Multiple sends to the same wire in one round: error, or
-   last-write-wins? `carrying(v)` holds one value.
+Implementation (`src/substrate/wire-entity.ts`) is **unblocked.** All
+three refinements are decided (below).
 
 **Decided:** halt/resume lives on the **substrate**, not the wire.
 MODEL.md frames halt as a substrate capability; `carrying(v)` is the
@@ -65,9 +62,12 @@ shape is ported to `substrate/ticked/` (currently only Shape A).
 `check-substrate-vocab.mjs` gained `LEGACY_SKIP`; ticked side and
 `wire-entity.ts` must stay clean. Port retires one skip entry.
 
+**Decided:** `send()` on a non-empty wire **throws**. The wire has no
+queue and no overwrite policy; two sends in one round is a topology
+bug, not a runtime condition. Fan-in must be an explicit merge node.
+
 Visuals (renderer) are also open per David — fine, substrate
-contract is independent. Do not start implementation until David
-signs off on (1). Do not relax the test to pass.
+contract is independent. Do not relax the test to pass.
 
 ## Refuse cheap alternatives
 
