@@ -1,18 +1,19 @@
 // Shape D contract: with the cycle closed (i0.out -> i1.in), neither
 // i1->readGate.ack nor i0->i1 may ever observe a second onArrive
-// before its prior onAck. "No pulse stacking" is the invariant; we
-// drive the manual-ack edges with the same cadence the editor's
-// ClearSlot buttons would, and stand in for the visual layer's
-// arc-completion auto-ack on the two non-manual edges.
+// before its prior onAck. "No pulse stacking" is the invariant. We
+// drive the one external-feed edge (in0->readGate.chainIn) with the
+// editor's ClearSlot cadence, and stand in for the visual layer's
+// arc-completion auto-ack on the two non-feedback cycle edges
+// (readGate->i0, i0->i1). The feedback edge i1->readGate.ack is
+// consumed atomically inside readGate's andGateLoopWithCycleInputs,
+// so no external ack listener is needed for it.
 //
-// Finding (2026-05-09): Shape D as currently wired sustains exactly
-// one full propagation (readGate -> i0 -> i1 -> ackWireE). Past that,
-// cycleWire/outWire empty out and ackWireE has no perpetual driver,
-// so readGate parks at step A awaitValue. The seed is one-shot. This
-// test pins the no-stacking invariant for the propagation that does
-// happen and asserts at least one full round-trip on each edge; a
-// second cycle would require additional seeding work outside this
-// commit's scope.
+// History: an earlier finding (2026-05-09) said Shape D sustained
+// only one cycle because ackWireE had no perpetual driver. Real cause
+// was that readGate's step-D awaitReady on its feedback inbound was
+// being satisfied by external auto-ack draining i1's cycle-2 token
+// before readGate's next step-A awaitValue could read it. Switching
+// readGate to consume-on-read on the feedback edge fixed it.
 
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -61,20 +62,21 @@ describe("Shape D cycle: no pulse stacking on cycle/ack edges", () => {
     cycleEdge.onArrive(() => { cycDepth += 1; if (cycDepth > cycMax) cycMax = cycDepth; cycArrives += 1; });
     cycleEdge.onAck(() => { cycDepth -= 1; cycAcks += 1; });
 
-    // Drive the manual-ack edges as the editor's ClearSlot buttons
-    // would. Bounded poll: stop once the round-trip on both edges has
-    // completed and been acked, or after a generous safety budget.
+    // Drive the external-feed manual-ack edge as the editor's
+    // ClearSlot button would. Bounded poll: keep pacing until at
+    // least three full round-trips have completed and quiesced, or
+    // until the safety budget runs out. Three proves self-pumping
+    // without making the test brittle to micro-timing.
     let safety = 0;
-    while (safety < 50 && (ackArrives < 1 || cycArrives < 1 || ackDepth !== 0 || cycDepth !== 0)) {
+    while (safety < 200 && (ackArrives < 3 || cycArrives < 3 || ackDepth !== 0 || cycDepth !== 0)) {
       if (inEdge.state === "inFlight") clearManualAckSlot("in0.out->readGate.chainIn");
-      if (ackEdge.state === "inFlight") clearManualAckSlot("i1.out->readGate.ack");
       await tick();
       safety += 1;
     }
 
-    expect(rgTicks).toBeGreaterThanOrEqual(1);
-    expect(ackArrives).toBeGreaterThanOrEqual(1);
-    expect(cycArrives).toBeGreaterThanOrEqual(1);
+    expect(rgTicks).toBeGreaterThanOrEqual(3);
+    expect(ackArrives).toBeGreaterThanOrEqual(3);
+    expect(cycArrives).toBeGreaterThanOrEqual(3);
     expect(ackMax).toBeLessThanOrEqual(1);
     expect(cycMax).toBeLessThanOrEqual(1);
     expect(ackDepth).toBe(0);

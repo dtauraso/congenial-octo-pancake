@@ -14,6 +14,7 @@ import type { Spec, StateValue } from "../schema";
 import { readNodeInit } from "../sim/seeds";
 import type { WireMap } from "./build-wires";
 import { inputLoop, andGateLoop, type NodeLoop } from "./node-loop";
+import { andGateLoopWithCycleInputs } from "./node-loop-cycle";
 import type { Wire, WireValue } from "./wire";
 import {
   publishHeld, publishTick,
@@ -66,8 +67,9 @@ export function setupInputReadGateInhibitorCycle(
   const inputQueue = readNodeInit(input.data);
   return {
     loops: [
-      andGateLoop(
+      andGateLoopWithCycleInputs(
         [inWire, ackWireE],
+        [false, true],
         outWire,
         ([chainInVal]) => chainInVal,
         { onTick: () => publishTick(readGate.id) },
@@ -89,7 +91,6 @@ export function setupInputReadGateInhibitorCycle(
     ],
     manualAckEdges: [
       { id: chainEdge.id, label: "in0->readGate" },
-      { id: ackEdge.id, label: "i1->readGate" },
     ],
   };
 }
