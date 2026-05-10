@@ -1,78 +1,81 @@
-# Handoff — Step-function substrate spike (diagnosis)
+# Handoff — Step-function substrate spike (chosen direction)
 
-**State:** `task/node-ticks`, latest commit `2b64352`. Step substrate
-exists at `src/substrate/step/`, gated by
+**State:** `task/node-ticks`, latest code commit `2b64352`. Step
+substrate exists at `src/substrate/step/`, gated by
 `USE_STEP_SUBSTRATE_SHAPE_A = true` in `runtime-wires.ts`. Build + tsc
 clean. Spike was tested in the editor on Shape A.
-
-## What was built (already committed)
-
-- `step/node.ts` — `StepNode` interface (id + step()), slot helpers.
-- `step/driver.ts` — `setInterval(tick, FRAME_MS)` driver with
-  start/stop/step.
-- `step/shape-a-setup.ts` — wires Input/ReadGate as StepNodes,
-  reuses `createWire`+`buildWires`+node-streams listeners so the
-  renderer needs no change.
-- `step/runtime.ts` — start/stop/pause/resume around the driver.
-- `runtime-wires.ts` — delegates to step path when shape ===
-  `"input->readGate"` and the flag is on.
-- `runtime-wires-stop.ts` — extracted to keep main file under LOC
-  budget.
 
 ## Spike result
 
 User-observed in editor: **animation runs as a "long train" of
-overlapping/continuous pulses** instead of discrete arcs the way the
-await substrate paced them. Step substrate fires Shape A but pulse
-spacing is wrong.
+overlapping/continuous pulses** instead of discrete arcs.
 
-## Likely causes (rank by cheapness to test)
+## Diagnosis (concluded this session — no code changes)
 
-1. **`FRAME_MS = 100` too aggressive.** Visual arc duration may be
-   longer; Input.step() fires every 100ms whenever wire is idle.
-   First test: bump FRAME_MS to 500–1000 and observe.
-2. **No tick-level backpressure.** Even with slower FRAME_MS, every
-   tick where wire is idle triggers another send. Await path got
-   backpressure for free because `await wire.send(v)` blocked the
-   input loop until ack. Step model loses this — only the wire's
-   idle/in-flight check gates writes.
-3. **One-pulse-per-tick semantics not enforced.** May need
-   `Input.step()` to refuse to fire twice within N ticks regardless
-   of wire state, or move slot-clearing onto a tick boundary
-   (consume-at-end-of-tick rather than via async ack).
+The "long train" is **not** a bug in the step substrate. It exposes a
+property that was hidden under the await substrate: pacing was never
+encoded in nodes. Under await, `await wire.send(v)` blocked the Input
+loop until ack — that blocking *was* the pacing, inherited from the
+substrate, not declared by the node. Swap the substrate, and Input has
+no local rule about how often to fire, so it fires every round.
 
-## Diagnosis options
+Implication: each node must carry its own rule over its own slots +
+its own remembered state. **No reference to ticks, time, or clocks
+inside the node.** Tick-denominated rules (e.g. `cooldownTicks`)
+re-introduce substrate coupling and are rejected.
 
-- **A. Tune FRAME_MS** — quick. Edit
-  [src/substrate/step/runtime.ts](../../tools/topology-vscode/src/substrate/step/runtime.ts)
-  `FRAME_MS` constant, rebuild, observe. If clean discrete pulses
-  appear at some value, document and pick a default.
-- **B. Lift backpressure into the slot.** Make Input.step() require
-  the slot to have been *empty for one full tick* before writing
-  again — i.e., write only on the tick after ack. Adds a small
-  state machine to Input; decouples cadence from arc duration.
-- **C. Decouple visual cadence from logical cadence.** The step
-  substrate is logically tick-driven, but the visual layer runs on
-  rAF. The "long train" may be a visualization issue, not a logic
-  one. Add a console log per tick + per ack and confirm logical
-  ordering before assuming visual is broken.
+## Chosen rule for `in0` (Input)
 
-Start with C — it's diagnostic, not corrective, and tells you
-whether the spike's logic is right and only the visual coupling is
-wrong, or whether the substrate itself needs a backpressure
-mechanism.
+Minimal, local, clock-free:
 
-## Decision after diagnosis
+  - Node remembers `prevSlotEmpty` from the end of last `step()`.
+  - This `step()`: if `prevSlotEmpty && slot.empty`, emit. Else no-op.
+  - Update `prevSlotEmpty` for next invocation.
 
-- Fixable cleanly → port Shape D next session (
-  [handoff-shape-d-plan.md](handoff-shape-d-plan.md) for current
-  Shape D wiring).
-- Requires re-introducing per-node ack state → step model isn't
-  meaningfully simpler than await; flip flag to false and reopen
-  [handoff-timeout-removal.md](handoff-timeout-removal.md) Step A.
-- Visual-only issue → investigate
-  [src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts](../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts)
-  arc/ack interaction.
+No counter, no tick number, no `cooldownTicks` field. If a richer
+cadence is wanted later, express it as a state machine over
+slot-events (e.g. "two consecutive empty observations"), not over
+ticks. The substrate's job is "you get to run now"; the node's job is
+"given what I see and what I remember, here's what I do."
+
+## Substrate, as committed
+
+`src/substrate/step/driver.ts`: `setInterval(tick, FRAME_MS)`,
+`tick()` iterates `nodes[]` in array order, calls `step()` on each
+once. No queue, no readiness check, no priority. Array order is part
+of the topology's behavior (writer-before-reader → same-tick
+delivery; reverse → one-tick delay).
+
+`setInterval` was spike-grade. Alternatives (`requestAnimationFrame`,
+`setTimeout`-chained) are irrelevant until the logic-level rule above
+lands. Don't tune FRAME_MS to fix the long train — fix the rule.
+
+## Medium vs. substance (CLAUDE.md updated)
+
+The "ask what industry converged on" rule now applies **only to the
+medium** (libraries, bundlers, runtimes, editors). It is **explicitly
+excluded** from substance decisions (execution model, node semantics,
+substrate, what a wire is). The await/Promise substrate was the
+cautionary example: industry-correct for the medium, wrong for the
+substance.
+
+## Next move
+
+Implement the per-node rule on Input for Shape A. Single-file change
+to whatever Input step-node lives in under `src/substrate/step/`.
+Add `prevSlotEmpty` state, gate emit on it, update at end of step().
+Rebuild, observe in editor — expect discrete arcs at FRAME_MS cadence
+(one pulse per two ticks minimum). If clean, port the same pattern to
+the next node along the chain. If still trained, the rule is wrong,
+not the FRAME_MS.
+
+## Decision after the rule lands
+
+- Discrete arcs → port Shape D next session
+  ([handoff-shape-d-plan.md](handoff-shape-d-plan.md)).
+- Still trained → re-examine; do not reach for FRAME_MS or counters.
+- Visual-only artifact → investigate
+  [src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts](../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts).
 
 ## ALWAYS clause
 

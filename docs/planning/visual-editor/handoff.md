@@ -22,27 +22,21 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, twenty-first session):
-  Active branch: `task/node-ticks`. Latest commit: `2b64352` (spike:
-  route Shape A through step substrate). Build + tsc clean. Step
-  substrate landed in two commits:
+State at handoff (2026-05-09, twenty-second session):
+  Active branch: `task/node-ticks`. Latest code commit: `2b64352`
+  (spike: route Shape A through step substrate). Build + tsc clean.
+  No code changes this session — conceptual diagnosis only, plus a
+  CLAUDE.md edit splitting the "ask industry" rule into medium vs.
+  substance.
 
-  - `2997c67` — scaffold: `src/substrate/step/{node,driver,shape-a}.ts`.
-    Minimal `StepNode` interface (slot-based, `step()` no-op until
-    conditions hold), `setInterval`-based `Driver`.
-  - `2b64352` — integration: `step/shape-a-setup.ts` reuses
-    `createWire`+`buildWires` and registers the same
-    publishHeld/publishTick/markBuffered/clearBuffered listeners as
-    the await path. `step/runtime.ts` holds the active driver/wires
-    and exposes start/stop/pause/resume. `runtime-wires.ts` gates on
-    `USE_STEP_SUBSTRATE_SHAPE_A = true` and delegates when shape ===
-    `"input->readGate"`. Await-runtime stop body factored into
-    `runtime-wires-stop.ts` to stay under the 200-LOC budget.
-
-  **Spike result on Shape A: animation runs as a "long train" of
-  pulses** (user-observed in editor). See
-  [handoff-step-function-spike.md](handoff-step-function-spike.md)
-  for diagnosis options.
+  **Long-train diagnosis concluded:** under await, pacing was a
+  side-effect of `await wire.send` blocking — never a node-local
+  rule. Step substrate exposes that pacing was never declared. The
+  fix is per-node state, not FRAME_MS tuning, not a tick counter.
+  Chosen rule for `in0`: `if (prevSlotEmpty && slot.empty) emit`,
+  update `prevSlotEmpty` at end of step. No clock awareness inside
+  the node. Full reasoning in
+  [handoff-step-function-spike.md](handoff-step-function-spike.md).
 
   Carried context: Shape D self-pumps via `fb56c30`'s i1 fan-out +
   one-shot `seedLoop` + per-round `setTimeout(0)` yield in
@@ -66,15 +60,18 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Active task: diagnose & resolve the "long train" pulse stacking on
-Shape A under the step substrate.** Read
-[handoff-step-function-spike.md](handoff-step-function-spike.md) —
-it lists three diagnosis options (FRAME_MS tuning, tick-level
-backpressure, decoupled visual cadence) and the decision tree after
-diagnosis. Both
+**Active task: implement the chosen per-node rule on Input for Shape
+A.** Single-file change in `src/substrate/step/`: add
+`prevSlotEmpty` state to the Input step-node, gate emit on
+`prevSlotEmpty && slot.empty`, update at end of `step()`. Rebuild,
+observe in editor — expect discrete arcs (one pulse per two ticks
+minimum). Do **not** tune FRAME_MS, do **not** add a `cooldownTicks`
+field — both re-introduce substrate coupling. See
+[handoff-step-function-spike.md](handoff-step-function-spike.md) for
+the full reasoning and decision tree after the rule lands. Both
 [handoff-timeout-removal.md](handoff-timeout-removal.md) and
 [handoff-uniform-node-plan.md](handoff-uniform-node-plan.md) remain
-on hold pending this resolution.
+on hold pending this.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
