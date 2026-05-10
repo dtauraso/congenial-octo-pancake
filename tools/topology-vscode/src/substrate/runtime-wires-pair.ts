@@ -68,8 +68,11 @@ export function setupInputReadGatePair(spec: Spec, wires: WireMap): ShapeSetup {
 
   return {
     loops: [],
-    // wForward is acked by the visual layer (default behavior).
-    // wPermit is internal, never visible to the visual layer.
+    // wForward is held until the user clicks the "clear slot" button,
+    // which calls ackWire(wForward) and triggers the permit-release
+    // handler above. wPermit is internal, never visible to the
+    // visual layer.
+    manualAckEdges: [{ id: edge.id, label: "in0→readGate" }],
   };
 }
 

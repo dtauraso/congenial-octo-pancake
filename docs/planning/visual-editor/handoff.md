@@ -22,15 +22,17 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, twenty-sixth session):
-  Active branch: `task/node-ticks`. Pair substrate landed last
-  session (`98a2b0f`). This session: trimmed `topology.json` +
-  `topology.view.json` down to a true Shape A spec (just `in08`
-  Input → `readGate1` ReadGate; previously had `i0`+`i1` chain
-  inhibitors and an `i1→readGate.ack` feedback edge that made it
-  render as 4 nodes in the editor). Pair substrate behavior still
-  not observed — user noticed the wrong shape was loaded before
-  cadence could be judged.
+State at handoff (2026-05-09, twenty-seventh session):
+  Active branch: `task/node-ticks`. User observed that `in0→readGate`
+  was pulsing constantly with no backpressure. Diagnosed as
+  pair-substrate's intentional reliance on visual-layer
+  arc-completion auto-ack to fire `wForward.onAck` → release next
+  permit. Fix: `setupInputReadGatePair` now declares
+  `manualAckEdges: [{ id: edge.id, label: "in0→readGate" }]`, so
+  the visual layer no longer auto-acks on arc completion; the
+  user's "⏏ in0→readGate" button is the only ack source. Slot fills
+  on first pulse, stays full until clicked, click → permit → next
+  pulse. Visual cadence still not user-verified this session.
 
   Carried context: Shape D self-pumps via `fb56c30`'s i1 fan-out +
   one-shot `seedLoop` + per-round `setTimeout(0)` yield in
@@ -53,32 +55,21 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Observe the pair substrate in the editor.** Code is in; behavior
-isn't verified visually yet.
+**Verify slot/button backpressure in the editor.** See
+[handoff-next-task.md](handoff-next-task.md) for the full procedure.
 
-  1. Build + launch the webview (`npm run build` then F5 / Run
-     Extension). Open a Shape A spec (single Input → ReadGate).
-  2. Watch pulse cadence on `in0→rg`. Expected: one pulse on the
-     wire at a time, spaced by arc-traversal time.
-  3. If clean: step substrate's same-tick drain was the cause.
-     Re-enable Shape D / uniform-node work
-     ([handoff-shape-d-plan.md](handoff-shape-d-plan.md),
-     [handoff-uniform-node-plan.md](handoff-uniform-node-plan.md)).
-  4. If pulses still stack: substrate is exonerated. Bug is in
-     [_use-pulse-lanes-wire.ts](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts).
-     Diagnose lanes/geometry there without the step substrate
-     confounding the picture.
+  1. `cd tools/topology-vscode && npm run build`, F5 / Run Extension.
+     Open the Shape A spec at repo root.
+  2. Expected: one pulse on `in0→rg` lands and stays. The
+     "⏏ in0→readGate" button becomes enabled.
+  3. Click → exactly one new pulse. Repeat. No clicks → no pulses.
+  4. If pulses stack without clicks, the visual layer is ignoring
+     `_manualAckSet`. If clicks don't produce a pulse, the
+     `wForward.onAck` → `wPermit.send` → in0 chain in
+     `runtime-wires-pair.ts` is broken.
 
-Open question logged in [handoff-next-task.md](handoff-next-task.md):
-should `wPermit` carry the value back so readGate logic depends on
-what it received, or stay an opaque "go" token? Defer until a single
-pulse round-trips cleanly.
-
-Shape D port and uniform-node work
-([handoff-shape-d-plan.md](handoff-shape-d-plan.md),
-[handoff-timeout-removal.md](handoff-timeout-removal.md),
-[handoff-uniform-node-plan.md](handoff-uniform-node-plan.md))
-remain on hold until the pair shape reads as discrete arcs.
+Shape D port and uniform-node work remain on hold until the manual
+ack model is user-verified.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

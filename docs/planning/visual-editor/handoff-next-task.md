@@ -1,72 +1,67 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`. Pair substrate landed in `98a2b0f`.
-Build + tests green. Spec at repo root (`topology.json` +
-`topology.view.json`) has been trimmed to a true Shape A: only
-`in08` (Input) → `readGate1` (ReadGate), one edge
-`in0.out->readGate.chainIn`. Earlier 4-node version (with `i0`,
-`i1`, and `i1→readGate.ack`) was rendering instead and obscured
-the pair-substrate observation. **Visual cadence still not
-verified.** Next session opens the webview on the trimmed spec and
-watches.
+**State:** `task/node-ticks`. Pair substrate now uses **manual ack**
+on `wForward`. Slot-and-button backpressure is the design: in0
+sends one pulse, readGate's slot stays full, user clicks
+"⏏ in0→readGate" to clear it, in0 sends the next pulse. Build green.
+**Visual cadence still not verified by user this session.**
 
-## What landed
+## What changed this session
 
 `substrate/runtime-wires-pair.ts` →
-`setupInputReadGatePair(spec, wires)`:
+`setupInputReadGatePair` now returns
+`manualAckEdges: [{ id: edge.id, label: "in0→readGate" }]`.
 
-- `wForward = wires.get(forwardEdge.id)` — cap 0, animated.
-- `wPermit = createWire(..., 1)` — internal back-channel, never in
-  the spec, never visible to the visual layer.
-- in0 callback machine: `wPermit.onArrive` → `ackWire(wPermit)` →
-  `wForward.send(next).catch(noop)`. No `await`.
-- readGate callback machine: `wForward.onArrive` → `publishHeld` +
-  `publishTick`. `wForward.onAck` → `wPermit.send("go").catch(noop)`.
-  The `onAck` listener fires when the visual layer calls
-  `ackWire(wForward)` on pulse-arc completion — that physical event
-  is the only timer in the system.
-- Seed: prime `wPermit.send("go")` once at setup so in0 fires its
-  first send.
-- Module-level `_activeStop` flips a `stopped` flag; called by
-  `stopWiresRuntime` to break the permit/forward cycle on teardown.
+Why: previously `wForward` was acked by the visual layer on pulse-arc
+completion, which fired `wForward.onAck` → `wPermit.send("go")` →
+in0 sent again. That's a free-running loop paced only by arc
+duration — pulses look constant. With `manualAckEdges`, the visual
+layer suppresses arc-completion auto-ack on this edge; the user's
+button press is now the only thing that calls `ackWire(wForward)`,
+which triggers the same `onAck` → permit → next-send chain.
 
-Routing in `substrate/runtime-wires.ts`:
+The button infrastructure already existed:
+[ClearSlotButton.tsx](../../../tools/topology-vscode/src/webview/panels/ClearSlotButton.tsx)
+renders one button per `manualAckEdges` entry, disabled until the
+wire is `inFlight`, calling `clearManualAckSlot(edgeId)` on click.
+
+## Routing (unchanged)
 
 ```
 USE_PAIR_SUBSTRATE_SHAPE_A = true   // wins for shape "input->readGate"
-USE_STEP_SUBSTRATE_SHAPE_A = false  // dormant; step/ kept as reference
+USE_STEP_SUBSTRATE_SHAPE_A = false  // dormant
 ```
 
-Other shapes (B, C, D) are untouched.
-
-## Contract change
-
-`test/contracts/runtime-wires-manual-ack.test.ts`: Shape A no longer
-asserts `selfAcksAll = true`. The pair substrate inverts that —
-wForward MUST be acked by the visual layer (the arc-completion ack
-is what gates the next permit). The new test pins
-`isSelfAckEdge("in0->rg") === false`.
+Shapes B, C, D untouched. Their existing `manualAckEdges` declarations
+remain.
 
 ## Verify in the editor
 
 1. `cd tools/topology-vscode && npm run build`, then F5 / Run
-   Extension. Open a Shape A spec (single Input → ReadGate).
-2. Watch the `in0→rg` wire. Expected: one pulse on the arc at a
-   time, cadence = arc-traversal time. No stacking.
-3. If clean → step substrate's same-tick drain was the cause; the
-   tick/drain ordering thread can be retired. Resume Shape D /
-   uniform-node work
-   ([handoff-shape-d-plan.md](handoff-shape-d-plan.md),
-   [handoff-uniform-node-plan.md](handoff-uniform-node-plan.md)).
-4. If stacking persists → substrate is exonerated. Bug is in
-   [_use-pulse-lanes-wire.ts](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts).
-   Investigate lanes/geometry there.
+   Extension. Open the Shape A spec at repo root (single Input →
+   ReadGate, edge `in0.out->readGate.chainIn`).
+2. Expected: one pulse traverses `in0→rg`, lands at readGate, slot
+   stays occupied. Button "⏏ in0→readGate" becomes enabled.
+3. Click the button → wire acks → permit fires → in0 sends the next
+   pulse. One round-trip per click.
+4. If a single click does NOT produce exactly one new pulse, or
+   pulses still stack without clicks, the bug is in the wire/permit
+   chain in `runtime-wires-pair.ts` or in the visual layer's
+   `_manualAckSet` enforcement.
 
-## Open question
+## Open question (unchanged)
 
 Should `wPermit` carry the value back (so readGate logic can depend
 on what it received) or just an opaque "go" token? Defer until a
-single pulse round-trips cleanly.
+single pulse round-trips cleanly under manual ack.
+
+## Contract status
+
+`test/contracts/runtime-wires-manual-ack.test.ts` pins
+`isSelfAckEdge("in0->rg") === false` for the pair shape. The new
+behavior also implies the edge SHOULD appear in `getManualAckEdges()`.
+Consider tightening the contract test to assert that, in a follow-up
+commit if the visual cadence checks out.
 
 ## On hold until visual verification
 
@@ -76,11 +71,10 @@ single pulse round-trips cleanly.
   [handoff-uniform-node-plan.md](handoff-uniform-node-plan.md)).
 - Shape C contract test.
 
-## Working tree
+## Working tree at handoff
 
-`.claude/settings.json`, `topology.view.json`, plus pre-existing
-edits to `runtime-wires-shapes.ts` (legacy Shape A fallback now
-dormant since pair routing wins) — leave or stash.
+After commit: clean except `topology.view.json` (incidental drift,
+leave or stash).
 
 ## ALWAYS clause
 
