@@ -24,48 +24,39 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, forty-fourth session):
-  Active branch: `task/node-ticks`. Steps 1, 2, and 3 of the
-  substrate iteration plan landed. Step 1: wire forever-loop
-  (`wire-entity.ts`, `wire-events.ts`, `pause-aware.ts`,
-  `wire-loop.ts`). Step 2: shared `pause-controller.ts`
-  (`createPauseController()` / `PauseController`). Step 3:
-  `node-loop-uniform-v2.ts` — uniform node body (await inputs
-  carrying → run → await outputs empty → load → await acked) with
-  every wait routed through pauseAware; emits NodeEvent with
-  shared ordinal seq. Coexists with legacy `node-loop-uniform.ts`.
-  4 new contract tests cover end-to-end, multi-input join,
-  multi-output ack backpressure, pause mid-run. 23 contract tests
-  green across wire/pause/node v2 modules; substrate vocab lint
-  clean; LOC budget clean (module 94 LOC, test 163 LOC). No
-  production callers — substrate modules still leaf.
+State at handoff (2026-05-10, forty-fifth session):
+  Active branch: `task/node-ticks`. Steps 1–4 of the substrate
+  iteration plan landed. Step 4:
+  `src/renderer/renderer-adapter.ts` — leaf paced-event stream over
+  `WireEvent | NodeEvent`. Lives OUTSIDE `src/substrate/` because
+  pacing belongs to the renderer per MODEL.md and the vocab lint
+  forbids `setTimeout`/`schedule` under substrate/. Clock injectable
+  for deterministic tests. 117 contract tests green; vocab + LOC
+  clean. All four substrate/renderer modules are leaf — no
+  production callers.
 
-  **Substrate iteration model: decided.** See
-  `handoff-substrate-iteration.md`. Forever-loops per node and per
-  wire; coordination by backpressure at await points; line-level
-  pause via shared signal; substrate emits state-change events with
-  ordinal sequence numbers (no durations); renderer owns all pacing
-  and plays back faithfully at human-read speed; recorder is a
-  second event subscriber. Substrate is **timing-free** per
-  MODEL.md.
+  **Friction this session:** legacy ticked path lets Step put >1
+  pulse on a wire. Wiring the editor through steps 1–4 makes this
+  impossible by construction (wire-entity throws on load-non-empty)
+  — motivating example for option-2 integration. Do NOT cap
+  `Pulse[]` in the legacy renderer as a cheap fix.
 
-  Runtime.ts port is **unblocked**. Implementation order is in
-  `handoff-substrate-iteration.md`. Branch name `task/node-ticks` is
-  now misleading (global tick gone) — rename on next branch.
+  **Model:** see `handoff-substrate-iteration.md`. Forever-loops per
+  node and per wire; backpressure coordination; line-level pause;
+  ordinal-seq state-change events; renderer owns pacing. Substrate
+  is **timing-free** per MODEL.md. Runtime.ts port unblocked.
 
   **Held:** halt/resume on substrate; legacy is a working museum
-  (`LEGACY_SKIP`); send-on-non-empty throws.
+  (`LEGACY_SKIP`); send-on-non-empty throws; renderer adapter stays
+  outside `src/substrate/`.
 
-  Pre-existing red tests, still red, not blocking:
-  `shape-d-cycle.test.ts`, `handle-load-repro.test.ts`.
-
-  Carried context: Shape D self-pumps via `fb56c30`'s i1 fan-out +
-  one-shot `seedLoop` + per-round `setTimeout(0)`. Manual-ack:
+  Pre-existing reds (not blocking): `shape-d-cycle.test.ts`,
+  `handle-load-repro.test.ts`. Shape D self-pumps via `fb56c30`'s
+  i1 fan-out + one-shot `seedLoop`. Manual-ack:
   [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
-  Working tree: `topology.json` (`"runtime": "ticked"` flag for
-  verification) and `topology.view.json` (camera drift) — editor
-  state, intentionally not committed. Reference branches retained:
+  Working tree: `topology.json`, `topology.view.json` — editor
+  state, not committed. Reference branches retained:
   `task/runtime-substrate-rebuild`, `task/wires`,
   `task/node-visuals-strip`. Do not delete.
 
@@ -79,12 +70,14 @@ fired` to Output → Log (Extension Host).
 
 Read [MODEL.md](../../../MODEL.md) and
 [handoff-substrate-iteration.md](handoff-substrate-iteration.md).
-Steps 1–3 done. Next: step 4 — renderer adapter that subscribes to
-wire+node events and plays them back at human-read speed,
-preserving order and causal structure. Renderer owns pacing;
-substrate stays timing-free. See
-[handoff-next-task.md](handoff-next-task.md) for the surface and
-contract tests to add.
+Steps 1–4 done. Two viable next moves; pick with David:
+  (a) Step 5 — recorder as a second event subscriber (independent
+      leaf module, same shape as adapter; just appends to a log).
+  (b) Option-2 integration — host-side shim that runs the substrate
+      in the extension host, pipes events through the step-4
+      adapter, forwards paced frames to the webview as a dumb
+      renderer. Bigger commit; addresses the multi-pulse friction
+      logged above. See [handoff-next-task.md](handoff-next-task.md).
 
 Dormant: triage pre-existing reds (`shape-d-cycle`,
 `handle-load-repro`); Shape D port. Tick-batching audit superseded.
