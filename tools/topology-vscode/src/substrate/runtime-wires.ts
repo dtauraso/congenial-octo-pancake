@@ -9,6 +9,7 @@ import { buildWires, type WireMap } from "./build-wires";
 import { ackWire } from "./wire";
 import type { NodeLoop } from "./node-loop";
 import { clearAllBuffered, resetTotalTicks } from "./node-streams";
+import { stopAwaitRuntime } from "./runtime-wires-stop";
 import {
   setupInputReadGate, setupInputReadGateInhibitor,
   setupInputReadGateInhibitorWithI0,
@@ -17,6 +18,13 @@ import {
 import { setupInputReadGateInhibitorCycle } from "./runtime-wires-shape-d";
 import { matchSubstrateShape } from "./match";
 import { slog } from "./log";
+import {
+  startStepShapeA, stopStepRuntime, pauseStepRuntime, resumeStepRuntime,
+  isStepRuntimeActive,
+} from "./step/runtime";
+
+// Spike flag: route Shape A through step-function substrate.
+const USE_STEP_SUBSTRATE_SHAPE_A = true;
 
 export {
   subscribeNodeTicks, subscribeNodeHeld, subscribeNodeBuffered,
@@ -57,6 +65,7 @@ export function isWiresRuntimePaused(): boolean { return _paused; }
 export function pauseWiresRuntime(): void {
   if (!_running || _paused) return;
   _paused = true;
+  if (isStepRuntimeActive()) pauseStepRuntime();
   for (const fn of _pauseListeners) fn(true);
   bumpVersion();
 }
@@ -64,6 +73,7 @@ export function pauseWiresRuntime(): void {
 export function resumeWiresRuntime(): void {
   if (!_running || !_paused) return;
   _paused = false;
+  if (isStepRuntimeActive()) resumeStepRuntime();
   const waiters = _resumeWaiters;
   _resumeWaiters = [];
   for (const w of waiters) w();
@@ -109,6 +119,23 @@ function bumpVersion(): void {
 export async function startWiresRuntime(spec: Spec): Promise<void> {
   await stopWiresRuntime();
   const shape = matchSubstrateShape(spec);
+  if (USE_STEP_SUBSTRATE_SHAPE_A && shape === "input->readGate") {
+    const stepSetup = startStepShapeA(spec);
+    _wires = stepSetup.wires;
+    _running = true;
+    _loops = [];
+    _manualAckEdges = [];
+    _manualAckSet.clear();
+    _selfAckSet.clear();
+    _selfAcksAll = true;
+    _triggerSlots = [];
+    slog("wires-runtime: started (step substrate)", {
+      shape: "input->readGate",
+      edges: [...(_wires?.keys() ?? [])],
+    });
+    bumpVersion();
+    return;
+  }
   _wires = buildWires(spec);
   const setup = shape === "input+inhibitor->readGate->i0->i1"
     ? setupInputReadGateInhibitorCycle(spec, _wires, awaitResumeGate)
@@ -135,6 +162,16 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
 }
 
 export async function stopWiresRuntime(): Promise<void> {
+  if (isStepRuntimeActive()) {
+    stopStepRuntime();
+    _running = false;
+    _wires = null;
+    _selfAcksAll = false;
+    clearAllBuffered();
+    slog("wires-runtime: stopped (step substrate)", {});
+    bumpVersion();
+    return;
+  }
   if (!_running && _loops.length === 0 && !_wires) return;
   _running = false;
   // Wake any pause waiters so the input loops unblock and observe
@@ -154,15 +191,7 @@ export async function stopWiresRuntime(): Promise<void> {
   _selfAckSet.clear();
   _selfAcksAll = false;
   _triggerSlots = [];
-  // Wake any loops parked at awaitOpen so they observe stopped=true.
-  for (const t of triggers) t.gate.wake();
-  // Kick off loop stops first (sets each loop's stopped=true
-  // synchronously), THEN ack any in-flight wires so pending sends
-  // resolve and the loops see stopped=true on the next iteration.
-  const stops = loops.map((l) => l.stop());
-  if (wires) for (const w of wires.values()) if (w.state === "inFlight") ackWire(w);
-  await Promise.all(stops);
-  clearAllBuffered();
+  await stopAwaitRuntime(loops, wires, triggers);
   slog("wires-runtime: stopped", {});
   bumpVersion();
 }
