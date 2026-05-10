@@ -19,8 +19,7 @@
 // position in the sequence under the projection
 // `(kind, node|edge, port?, value?)`.
 
-import type { Spec, StateValue } from "../schema";
-import type { FireRecord } from "./simulator";
+import type { StateValue } from "../schema";
 
 export type RecvEvent = {
   step: number;
@@ -115,35 +114,3 @@ function requireValue(r: Record<string, unknown>, k: string, line: number): void
   }
 }
 
-// Lower a sequence of FireRecords (the simulator's history) into the
-// wire-format event stream. One FireRecord becomes:
-//   recv(node,port,value)
-//   [fire(node)]            -- only if the handler emitted anything
-//   send(edge,value) × |outgoing edges per emission|
-//
-// Edge fan-out is resolved against the spec at serialize time so the
-// trace records the same edge-IDs the runner would animate.
-export function historyToTrace(history: readonly FireRecord[], spec: Spec): TraceEvent[] {
-  const out: TraceEvent[] = [];
-  let step = 0;
-  for (const rec of history) {
-    out.push({
-      step: step++,
-      kind: "recv",
-      node: rec.nodeId,
-      port: rec.inputPort,
-      value: rec.inputValue,
-    });
-    if (rec.emissions.length > 0) {
-      out.push({ step: step++, kind: "fire", node: rec.nodeId });
-      for (const em of rec.emissions) {
-        for (const edge of spec.edges) {
-          if (edge.source === rec.nodeId && edge.sourceHandle === em.port) {
-            out.push({ step: step++, kind: "send", edge: edge.id, value: em.value });
-          }
-        }
-      }
-    }
-  }
-  return out;
-}
