@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import {
   startWiresRuntime, stopWiresRuntime, getWiresMap,
-  getManualAckEdges, isManualAckEdge, clearManualAckSlot,
+  getManualAckEdges, isManualAckEdge, isSelfAckEdge, clearManualAckSlot,
   subscribeNodeTicks,
 } from "../../src/substrate/runtime-wires";
 import type { Spec } from "../../src/schema";
@@ -36,15 +36,16 @@ const shapeB = {
 } as unknown as Spec;
 
 describe("runtime-wires manual-ack registration", () => {
-  it("shape A registers in0->rg as manual-ack", async () => {
+  it("shape A pair substrate: wForward is acked by visual layer", async () => {
     await startWiresRuntime(shapeA);
-    const edges = getManualAckEdges();
-    expect(edges.map((e) => e.id)).toEqual(["in0->rg"]);
-    expect(isManualAckEdge("in0->rg")).toBe(true);
-    expect(isManualAckEdge("nope")).toBe(false);
-    await stopWiresRuntime();
     expect(getManualAckEdges()).toEqual([]);
     expect(isManualAckEdge("in0->rg")).toBe(false);
+    // Pair substrate: the on-screen pulse arc is the only timer. The
+    // visual layer's arc-completion auto-ack on wForward gates the
+    // permit return; the substrate must NOT self-ack it.
+    expect(isSelfAckEdge("in0->rg")).toBe(false);
+    await stopWiresRuntime();
+    expect(isSelfAckEdge("in0->rg")).toBe(false);
   });
 
   it("shape B registers both readGate slots as manual-ack", async () => {
@@ -56,15 +57,11 @@ describe("runtime-wires manual-ack registration", () => {
 });
 
 describe("clearManualAckSlot", () => {
-  it("returns false for unregistered edges and idle wires", async () => {
+  it("returns false for unregistered edges (shape A self-acks, nothing manual)", async () => {
     await startWiresRuntime(shapeA);
     expect(clearManualAckSlot("not-a-real-edge")).toBe(false);
-    const wires = getWiresMap()!;
-    const w = wires.get("in0->rg")!;
-    while (w.state !== "inFlight") await tick();
-    expect(clearManualAckSlot("in0->rg")).toBe(true);
-    // Now idle (until inputLoop sends again) — second clear is a no-op.
-    expect(w.state).toBe("idle");
+    // Shape A's only edge is self-acked by the node-loop, so it is not
+    // registered as manual-ack and clearManualAckSlot is a no-op for it.
     expect(clearManualAckSlot("in0->rg")).toBe(false);
     await stopWiresRuntime();
   });

@@ -16,6 +16,7 @@ import {
   type ManualAckEdge, type TriggerSlot,
 } from "./runtime-wires-shapes";
 import { setupInputReadGateInhibitorCycle } from "./runtime-wires-shape-d";
+import { setupInputReadGatePair, stopInputReadGatePair } from "./runtime-wires-pair";
 import { matchSubstrateShape } from "./match";
 import { slog } from "./log";
 import {
@@ -23,8 +24,9 @@ import {
   isStepRuntimeActive,
 } from "./step/runtime";
 
-// Spike flag: route Shape A through step-function substrate.
-const USE_STEP_SUBSTRATE_SHAPE_A = true;
+// Shape A routing. Pair > step > legacy. See handoff-next-task.md.
+const USE_PAIR_SUBSTRATE_SHAPE_A = true;
+const USE_STEP_SUBSTRATE_SHAPE_A = false;
 
 export {
   subscribeNodeTicks, subscribeNodeHeld, subscribeNodeBuffered,
@@ -34,9 +36,7 @@ export {
 let _loops: NodeLoop[] = [];
 let _wires: WireMap | null = null;
 let _running = false;
-// Edges whose receiver-side slot is cleared by an editor button instead
-// of by the visual layer's arc-completion auto-ack. One button per
-// entry; other wires keep visual pacing.
+// Edges acked by editor button instead of arc-completion auto-ack.
 let _manualAckEdges: ManualAckEdge[] = [];
 const _manualAckSet = new Set<string>();
 const _selfAckSet = new Set<string>();
@@ -46,9 +46,7 @@ let _paused = false;
 let _resumeWaiters: Array<() => void> = [];
 const _pauseListeners = new Set<(paused: boolean) => void>();
 
-// Pause is a single signal; each subscriber (per-pulse rAF clocks,
-// node loops) owns its own freeze. The runtime fans the signal out;
-// it does not maintain a shared sim clock.
+// Pause is a single signal; subscribers own their own freeze.
 export function subscribeWiresPause(fn: (paused: boolean) => void): () => void {
   _pauseListeners.add(fn);
   return () => _pauseListeners.delete(fn);
@@ -143,7 +141,9 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
       ? setupInputReadGateInhibitorWithI0(spec, _wires, awaitResumeGate)
       : shape === "input+inhibitor->readGate"
         ? setupInputReadGateInhibitor(spec, _wires, awaitResumeGate)
-        : setupInputReadGate(spec, _wires, awaitResumeGate);
+        : USE_PAIR_SUBSTRATE_SHAPE_A && shape === "input->readGate"
+          ? setupInputReadGatePair(spec, _wires)
+          : setupInputReadGate(spec, _wires, awaitResumeGate);
   _running = true;
   resetTotalTicks();
   _loops = setup.loops;
@@ -173,6 +173,7 @@ export async function stopWiresRuntime(): Promise<void> {
     return;
   }
   if (!_running && _loops.length === 0 && !_wires) return;
+  stopInputReadGatePair();
   _running = false;
   // Wake any pause waiters so the input loops unblock and observe
   // stopped=true on their next iteration. Without this, stop() would
