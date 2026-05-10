@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { KIND_COLORS, type StateValue } from "../../../schema";
 import { subscribe, getWorld, getTickMs } from "../../../sim/runner";
 import { subscribeNodeHeld, subscribeNodeBuffered } from "../../../substrate/runtime-wires";
+import { subscribeFrame, getFrameSnapshot } from "../../frame-store";
+import type { NodeFrameMsgState } from "../../../messages";
 import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT } from "./_styles";
 import { SpecPanel } from "./SpecPanel";
 import { NodeBody } from "./NodeBody";
@@ -48,10 +50,16 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
     return unsub;
   }, [id]);
 
+  const frame = useSyncExternalStore(subscribeFrame, getFrameSnapshot, getFrameSnapshot);
+  const frameMode = frame.active;
+  const frameNodeState = frame.nodes.get(id);
+
   const radius = data.shape === "pill" ? data.height / 2 : 4;
   const heldNum = typeof held === "number" ? held : Number(held);
   const heldFill = heldNum === 1 ? "#ffab40" : heldNum === -1 ? "#66bb6a" : null;
-  const fill = heldFill ?? data.fill;
+  const frameStyle = frameMode ? frameNodeStyle(frameNodeState) : null;
+  const fill = frameStyle?.fill ?? heldFill ?? data.fill;
+  const borderColor = frameStyle?.border ?? data.stroke;
 
   return (
     <div
@@ -62,7 +70,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         height: data.height,
         background: fill,
         color: "#1a1a1a",
-        border: `${selected ? 2 : 1}px solid ${data.stroke}`,
+        border: `${selected ? 2 : 1}px solid ${borderColor}`,
         borderRadius: radius,
         fontSize: 11,
         padding: "4px 8px",
@@ -106,4 +114,16 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
       <NodeBody data={data} selected={!!selected} stateText={stateText} />
     </div>
   );
+}
+
+// Step 7c: four-state palette for the frame-mode painter. Border carries
+// the lifecycle phase, fill carries activity. Kept local — purely visual.
+function frameNodeStyle(s: NodeFrameMsgState | undefined): { fill: string; border: string } | null {
+  switch (s) {
+    case "running":      return { fill: "#ffd54f", border: "#fbc02d" };
+    case "parked-output": return { fill: "#66bb6a", border: "#388e3c" };
+    case "parked-ack":   return { fill: "#42a5f5", border: "#1976d2" };
+    case "parked-input": return { fill: "#2a2a2a", border: "#555" };
+    default:             return null;
+  }
 }

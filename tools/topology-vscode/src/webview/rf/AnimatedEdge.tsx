@@ -13,6 +13,7 @@ import { usePulseLanes } from "./AnimatedEdge/_use-pulse-lanes";
 import { usePulseLanesWire } from "./AnimatedEdge/_use-pulse-lanes-wire";
 import { usePulseLanesTicked } from "./AnimatedEdge/_use-pulse-lanes-ticked";
 import { isTickedActive } from "../../substrate/ticked";
+import { subscribeFrame, getFrameSnapshot } from "../frame-store";
 
 export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   const { id, source, target, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, data } = props;
@@ -25,6 +26,9 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   // Substrate path: if a Wire exists for this edge, use the wire-driven
   // hook (no global bus). Otherwise fall back to the legacy bus hook.
   useSyncExternalStore(subscribeWires, getWiresVersion, getWiresVersion);
+  const frame = useSyncExternalStore(subscribeFrame, getFrameSnapshot, getFrameSnapshot);
+  const frameMode = frame.active;
+  const wireState = frame.wires.get(id);
   const wire = getWiresMap()?.get(id) ?? null;
   const ticked = isTickedActive();
   const legacy = usePulseLanes(id, !wire && !ticked);
@@ -35,15 +39,24 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   const kind = data?.kind ?? "any";
   const stroke = KIND_COLORS[kind] ?? "#888";
   const dash = dashForKind(kind);
+  const carrying = frameMode && wireState?.kind === "carrying";
   const baseStyle: React.CSSProperties = {
     ...style,
     ...(dash ? { strokeDasharray: dash } : {}),
+    ...(frameMode
+      ? {
+          stroke,
+          strokeWidth: carrying ? 3 : 1.5,
+          opacity: carrying ? 1 : 0.35,
+        }
+      : {}),
   };
   const markerEnd = markerEndUrl(kind, data?.arrowStyle);
   const showText = data?.label || data?.valueLabel;
-  const mid = showText
+  const mid = showText || carrying
     ? midpoint(route, sourceX, sourceY, targetX, targetY, lane)
     : null;
+  const frameValue = carrying ? String((wireState as { value: unknown }).value) : null;
   // Speed comes from the per-emitter rule so the renderer's traversal
   // and the simulator-side timer agree by construction.
   const speed = effectiveSpeedPxPerMs(ruleForNodeId(source));
@@ -51,7 +64,7 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   return (
     <>
       <BaseEdge path={geom.d} style={baseStyle} markerEnd={markerEnd} interactionWidth={28} />
-      {pulses0.map((p) => (
+      {!frameMode && pulses0.map((p) => (
         <PulseInstance
           key={`l0-${p.key}`}
           edgeId={id} fromNodeId={source} toNodeId={target}
@@ -61,7 +74,7 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
           onDone={() => advanceLane0(p.key, p.pulseId)}
         />
       ))}
-      {concurrent && pulses1.map((p) => (
+      {!frameMode && concurrent && pulses1.map((p) => (
         <PulseInstance
           key={`l1-${p.key}`}
           edgeId={id} fromNodeId={source} toNodeId={target}
@@ -72,6 +85,15 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
         />
       ))}
       <EdgeLabels mid={mid} label={data?.label} valueLabel={data?.valueLabel} kind={kind} stroke={stroke} />
+      {frameValue !== null && mid && (
+        <g transform={`translate(${mid.x}, ${mid.y})`} pointerEvents="none">
+          <rect x={-14} y={-9} width={28} height={18} rx={4} ry={4}
+            fill="#1a1a1a" stroke={stroke} strokeWidth={1} />
+          <text textAnchor="middle" dominantBaseline="central" fontSize={11} fill="#fff">
+            {frameValue}
+          </text>
+        </g>
+      )}
     </>
   );
 }

@@ -16,6 +16,7 @@ import { installPulseLifetimes } from "../sim/runner/pulse-lifetimes";
 installPulseLifetimes();
 import { flushSave, flushViewSave, setTopogenStatus } from "./save";
 import { parseHostToWebview } from "../messages";
+import { setFrame } from "./frame-store";
 import { handleTraceLoaded, handleTraceError } from "./panels/TimelinePanel";
 import { getSpec, setDimmed, setRunStatus } from "./state";
 import { pauseSubstrate, resumeSubstrate, isSubstrateRunning } from "../substrate/runtime";
@@ -108,6 +109,8 @@ window.addEventListener("message", (e) => {
     handleTraceLoaded(msg.text, msg.label);
   } else if (msg.type === "trace-error") {
     handleTraceError(msg.message);
+  } else if (msg.type === "frame") {
+    setFrame(msg);
   }
   // view-load is fully handled inside App's message effect now that the
   // panels read their state from the zustand store directly.
