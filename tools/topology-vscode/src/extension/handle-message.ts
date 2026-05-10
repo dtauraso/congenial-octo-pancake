@@ -108,6 +108,9 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
     case "frame-resume":
       ctx.frameRenderer.resume();
       return;
+    case "frame-step":
+      ctx.frameRenderer.step();
+      return;
   }
 }
 

@@ -45,6 +45,7 @@ export interface RunFramesHandle {
   stop(): void;
   pause(): void;
   resume(): void;
+  step(): void;
   readonly paused: boolean;
   readonly recorder: Recorder<PacedFrame<unknown>>;
 }
@@ -88,7 +89,14 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
     schedule: opts.schedule,
   });
   const recorder = createRecorder<PacedFrame<unknown>>();
-  adapter.onPaced((frame) => opts.post(serializeFrame(frame)));
+  let stepArmed = false;
+  adapter.onPaced((frame) => {
+    opts.post(serializeFrame(frame));
+    if (stepArmed) {
+      stepArmed = false;
+      pause.pause();
+    }
+  });
 
   const shim = composeShim<unknown>({
     wires: Array.from(wires.values()),
@@ -108,6 +116,10 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
     },
     pause: () => pause.pause(),
     resume: () => pause.resume(),
+    step: () => {
+      stepArmed = true;
+      if (pause.paused) pause.resume();
+    },
     get paused() { return pause.paused; },
     recorder,
   };

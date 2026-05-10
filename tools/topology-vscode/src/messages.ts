@@ -55,7 +55,8 @@ export type WebviewToHostMsg =
   | { type: "timeline-dump"; json: string }
   | { type: "substrate-log"; entry: string }
   | { type: "frame-pause" }
-  | { type: "frame-resume" };
+  | { type: "frame-resume" }
+  | { type: "frame-step" };
 
 export type HostToWebviewMsg =
   | { type: "load"; text: string }
@@ -73,7 +74,7 @@ export type HostToWebviewMsg =
 export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new Set([
   "ready", "save", "view-save", "run", "run-cancel", "compare-head", "compare-file",
   "trace-load", "trace-clear", "pulse-probe-dump", "stuck-pulse-dump", "stuck-pulse-followup-dump", "stuck-pulse-third-dump", "fold-halo-dump", "runner-errors-dump", "timeline-dump",
-  "substrate-log", "frame-pause", "frame-resume",
+  "substrate-log", "frame-pause", "frame-resume", "frame-step",
 ]);
 
 export const HOST_TO_WEBVIEW_TYPES: ReadonlySet<HostToWebviewMsg["type"]> = new Set([

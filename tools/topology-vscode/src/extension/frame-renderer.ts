@@ -18,6 +18,7 @@ export interface FrameRendererCtl {
   dispose(): void;
   pause(): void;
   resume(): void;
+  step(): void;
   readonly paused: boolean;
 }
 
@@ -60,6 +61,7 @@ export function attachFrameRenderer(
     },
     pause: () => handle?.pause(),
     resume: () => handle?.resume(),
+    step: () => handle?.step(),
     get paused() { return handle?.paused ?? false; },
   };
 }
