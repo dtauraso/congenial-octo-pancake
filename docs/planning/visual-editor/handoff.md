@@ -24,28 +24,23 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, thirty-seventh session):
-  Active branch: `task/node-ticks`. HEAD = `d4fb0a6` (red contract
-  test for wire-as-entity). No implementation yet. Three open
-  refinements still block implementation sign-off (see
-  `handoff-next-task.md`).
+State at handoff (2026-05-10, thirty-eighth session):
+  Active branch: `task/node-ticks`. HEAD = `f1114f0`. Red contract
+  test for wire-as-entity is in place; **all three refinements are
+  now decided** and implementation is unblocked. No `wire-entity.ts`
+  code yet — next session writes it against the red test.
 
-  **Key shift this session:** David refined the model further and
-  named the AI's drift pattern. Substrate is event-ordering only —
-  no durations, no schedules, no wall-clock anywhere. Substrate
-  halts/resumes pulses; renderer owns motion and never signals back.
-  Tick = ordinal count, not a slice of time. Tick close is observed
-  (wires return to `empty`), not scheduled.
+  **Decisions locked this session** (see `handoff-next-task.md`):
+  1. Halt/resume lives on the **substrate**, not the wire.
+  2. Legacy runtime stays as a working museum;
+     `check-substrate-vocab.mjs` skips it via `LEGACY_SKIP`. Ticked
+     side and `wire-entity.ts` must stay clean. Ports retire skip
+     entries one shape at a time.
+  3. `send()` on a non-empty wire **throws** — no queue, no
+     overwrite. Fan-in must be an explicit merge node.
 
-  **Guardrails added (this session's commit):**
-  - [MODEL.md](../../../MODEL.md) at repo root: substrate model in
-    David's words + banned-vocabulary list.
-  - [tools/topology-vscode/scripts/check-substrate-vocab.mjs](../../../tools/topology-vscode/scripts/check-substrate-vocab.mjs):
-    greps substrate/ for drift words. 10 baseline hits in legacy
-    files; refactor retires them.
-  - CLAUDE.md top-of-file pointer + rule: "no multi-step plans with
-    options for substrate/wire work; state next single step and
-    wait."
+  Lint now passes clean (was 10 baseline hits, all in legacy
+  files).
 
   Memory entries:
   `feedback_derive_model_from_visual_spec.md` (cheap-fix detector,
@@ -75,16 +70,14 @@ fired` to Output → Log (Extension Host).
 
 **Read [MODEL.md](../../../MODEL.md) first.** Then see
 [handoff-next-task.md](handoff-next-task.md) for the refined wire
-model. Red contract test landed at
+model and the three decisions. Red contract test:
 `tools/topology-vscode/test/contracts/wire-entity-contract.test.ts`
 (commit `d4fb0a6`) — 5 tests, all expected red.
 
-Implementation is still blocked on three open refinements: legacy
-non-ticked path disposition, halt/resume location (substrate flag
-vs wire flag), multi-send-per-round policy. Do not start the
-`wire-entity.ts` module until David signs off on those. David noted
-the visual side is also still open; that's fine — substrate
-contract is independent of renderer choices.
+Next concrete step: implement `src/substrate/wire-entity.ts` against
+the red contract. State shape `empty | carrying(v)`, `send()` throws
+on non-empty, no queue/buffer/length/inFlight/duration/ready fields.
+Lint must stay clean on the new file.
 
 Dormant options (do not pursue ahead of wire-as-entity):
   - Triage pre-existing red tests.
