@@ -10,7 +10,7 @@ Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — **start here**
      for the deletion sweep, mid-flight on `task/remove-legacy-runtimes`.
-     Step 2 landed; steps 3–8 remain.
+     Steps 2–3 landed; steps 4–8 remain.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — system 3 model: forever-loops, line-level pause, events.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
@@ -18,21 +18,17 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, fifty-second session):
+State at handoff (2026-05-10, fifty-third session):
   Active branch: `task/remove-legacy-runtimes`, opened from
-  `task/node-ticks` HEAD. One commit landed: `7148137`
-  (TransportControls rewritten against `FrameRendererCtl` only —
-  paused state host-owned, toggle posts `frame-pause`/`frame-resume`,
-  step posts `frame-step`; `step()` on `RunFramesHandle` /
-  `FrameRendererCtl` arms a one-shot in the `adapter.onPaced` wrapper:
-  resume + re-pause on the next paced frame; `frame-step` message
-  added end-to-end; tick-ms slider dropped — the survivor adapter has
-  no analogue; `disabled={ticked}` bug retired with the rewrite).
+  `task/node-ticks` HEAD. Two commits landed: `7148137`
+  (TransportControls rewritten against `FrameRendererCtl` only) and
+  `1673f3e` (AnimatedEdge / AnimatedNode collapsed to the frame-mode
+  branch — `!frameMode &&` pulse renders dropped, `frameMode ?`
+  styling ternaries collapsed, dead legacy hook calls + `sim/runner` +
+  `runtime-wires` + `ticked` imports stripped from the painter).
   Build/tsc/vocab/LOC clean; 310 pass, same two pre-existing reds.
 
   **Steps remaining on this branch (see handoff-next-task.md):**
-  3. Delete `!frameMode &&` guards in `AnimatedEdge` /
-     `AnimatedNode` and the four `AnimatedEdge/_*` helpers.
   4. Detach the 13 webview/panel files that import `sim/runner`,
      `substrate/runtime*`, or `substrate/ticked`. Per file:
      port-or-delete (refuse "keep as museum").
@@ -68,12 +64,13 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Continue on `task/remove-legacy-runtimes` at step 3: drop
-`!frameMode &&` guards in `AnimatedEdge` / `AnimatedNode` and the
-`AnimatedEdge/_*` helpers; collapse to the frame-mode branch and
-delete the legacy branch. See
-[handoff-next-task.md](handoff-next-task.md) for the full scope and
-the cheap-alternative refusal list.
+Continue on `task/remove-legacy-runtimes` at step 4: detach the 13
+webview/panel files importing `sim/runner`, `substrate/runtime*`, or
+`substrate/ticked`. Per file, port to the frame-renderer event stream
+if it drives shape-A behavior the user actually uses; otherwise delete.
+See [handoff-next-task.md](handoff-next-task.md) for the per-file
+likely-port / likely-delete split and the cheap-alternative refusal
+list.
 
 Dormant: Shape D port (likely deleted with wires-runtime unless
 ported). Tick-batching audit superseded.

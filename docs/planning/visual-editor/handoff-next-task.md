@@ -1,53 +1,52 @@
 # Handoff — Next task (START HERE)
 
 **State:** `task/remove-legacy-runtimes` (opened from `task/node-ticks`
-HEAD). Step 2 of the deletion sweep landed; steps 3–8 remain.
+HEAD). Steps 2–3 of the deletion sweep landed; steps 4–8 remain.
 
-## Commit landed this session
+## Commits landed on this branch
 
 - `7148137` — `TransportControls.tsx` rewritten against
-  `FrameRendererCtl` only. Paused state is host-owned, the toggle
-  posts `frame-pause`/`frame-resume`, the step button posts
-  `frame-step`. `step()` added on `RunFramesHandle` /
-  `FrameRendererCtl`: arms a one-shot in `adapter.onPaced` so the
-  next paced frame re-pauses; resume only happens if currently
-  paused. `frame-step` webview→host message added and routed in
-  `handle-message.ts`. Tick-ms slider dropped (survivor adapter has
-  no analogue). `disabled={ticked}` bug retires with the rewrite.
+  `FrameRendererCtl` only. Toggle posts `frame-pause`/`frame-resume`,
+  step posts `frame-step`. `step()` on `RunFramesHandle` arms a
+  one-shot in `adapter.onPaced` (resume + re-pause on next paced
+  frame). Tick-ms slider dropped; `disabled={ticked}` bug retired.
+- `1673f3e` — `AnimatedEdge` / `AnimatedNode` collapsed to the
+  frame-mode branch. `!frameMode &&` pulse renders gone; styling
+  ternaries collapsed; `heldFill` fallback gone. Dead
+  `usePulseLanes*`, `ruleForNodeId`/`effectiveSpeedPxPerMs`,
+  `runtime-wires` version sub, and `isTickedActive` pulled from
+  `AnimatedEdge.tsx`. `AnimatedNode.tsx` still imports `subscribe` /
+  `getWorld` / `getTickMs` from `sim/runner` and `subscribeNodeHeld`
+  / `subscribeNodeBuffered` from `runtime-wires` — retire in step 4.
 
 Build/tsc/vocab/LOC clean; 310 pass, two pre-existing reds.
 
 ## Why this branch exists
 
-`TransportControls` knew about four substrate vocabularies and my
-prior session added a fifth via `frame-pause`/`frame-resume`. The
-painter has `!frameMode &&` guards so a legacy renderer can coexist
-that shouldn't exist anymore. Each new system has been *added* on top
-of the prior, never replacing it — the same pattern-matching
-corruption flagged in `feedback_derive_model_from_visual_spec.md`.
-The fix is the deletion sweep, not another patch.
+Each new system has been *added* on top of the prior, never replacing
+it (per `feedback_derive_model_from_visual_spec.md`). Steps 2–3
+retired transport + painter legacy; the rest deletes modules + tests.
 
 ## Remaining steps
 
-3. **Drop `!frameMode &&` guards.** [AnimatedEdge.tsx](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx),
-   [AnimatedNode.tsx](../../../tools/topology-vscode/src/webview/rf/AnimatedNode/AnimatedNode.tsx),
-   and the four `AnimatedEdge/_*` helpers. Collapse to the
-   frame-mode branch; delete the legacy branch.
-4. **Detach webview/panel callers from legacy modules.** 13 files
-   import `sim/runner`, `substrate/runtime*`, or `substrate/ticked`.
-   Per file: port to subscribe to the frame-renderer event stream if
-   it drives shape-A behavior the user actually uses; otherwise
-   delete. Likely deletes: `RunnerProbe.tsx`, `fold-halo-probe.ts`,
-   `_stuck-runner-snapshot.ts`, `timeline-probe/*`, `Bookmarks.tsx`,
-   `trace-load.ts`. Likely ports: `TriggerSlotButton`,
-   `ClearSlotButton`, `_handle-load.ts`, `_on-node-drag.ts`,
-   `PulseInstance.tsx`, `_use-pulse-lanes*.ts`, `TimelinePanel.tsx`.
+4. **Detach webview/panel callers from legacy modules.** Files still
+   importing `sim/runner`, `substrate/runtime*`, or `substrate/ticked`.
+   `AnimatedEdge.tsx` is clean; `AnimatedNode.tsx` still pulls
+   `subscribe`/`getWorld`/`getTickMs` and `subscribeNodeHeld`/
+   `subscribeNodeBuffered` (held/buffered/offset/tween state is dead
+   in frame mode — retires here). Re-grep at start (was ~13 pre-step
+   3). Per file: port to the frame-renderer event stream if it drives
+   shape-A behavior; otherwise delete. Likely deletes: `RunnerProbe`,
+   `fold-halo-probe`, `_stuck-runner-snapshot`, `timeline-probe/*`,
+   `Bookmarks`, `trace-load`. Likely ports: `TriggerSlotButton`,
+   `ClearSlotButton`, `_handle-load`, `_on-node-drag`, `PulseInstance`,
+   `_use-pulse-lanes*` (now unimported — decide here), `TimelinePanel`.
 5. **Delete the systems.** After step 4, no live importers remain.
    Delete `src/sim/runner*`, `src/sim/simulator*`,
    `src/substrate/runtime.ts`, `src/substrate/runtime/`,
    `src/substrate/runtime-wires*.ts`, `src/substrate/ticked/`. Audit
-   the rest of `src/sim/` for unused leftovers (keep what
-   `host-shim/run-frames.ts` reaches — currently `seeds.ts`).
+   `src/sim/` for unused leftovers (keep what `run-frames.ts` reaches
+   — currently `seeds.ts`).
 6. **Delete pinned tests.** Anything under `**/runner.*test*`,
    `**/runtime-wires*.test.ts`, `**/ticked*.test.ts`, plus
    `shape-d-cycle.test.ts` and `handle-load-repro.test.ts` (the two
@@ -60,15 +59,14 @@ The fix is the deletion sweep, not another patch.
 
 ## Survivor surface (do not delete)
 
-Substrate that `host-shim/run-frames.ts` transitively reaches:
+Substrate transitively reached by `host-shim/run-frames.ts`:
 `wire-entity.ts`, `wire-loop.ts`, `wire-events.ts`, `wire.ts`,
 `node-streams.ts`, `node-loop*.ts`, `pause-controller.ts`,
 `pause-aware.ts`, `match.ts`, `log.ts`, `trigger-gate.ts`,
 `build-wires.ts`, `build-wire-entities.ts`, `step/`. Plus
-`host-shim/`, `extension/frame-renderer.ts`,
-`extension/handle-message.ts`, the renderer adapter, and the
-recorder. Anything not transitively imported from `run-frames.ts`
-is in scope to delete.
+`host-shim/`, `extension/frame-renderer.ts`, `handle-message.ts`,
+the renderer adapter, and the recorder. Anything not transitively
+imported from `run-frames.ts` is in scope to delete.
 
 ## Read first
 
