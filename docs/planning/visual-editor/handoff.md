@@ -22,21 +22,16 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, thirty-second session):
-  Active branch: `task/node-ticks`. Phase 2 landed (commit `c881ada`)
-  but **visual verification failed**: user reports the editor's tick
-  counter still increments **by 2 per ⏭ click** in ticked mode.
-  Attempted fix (uncommitted, in working tree) routes the label
-  through `tickedTickCount()` and moves the ticked subscriber set
-  to module scope so subs survive runtime swaps — user confirms
-  this did NOT fix the symptom. See
-  [handoff-next-task.md](handoff-next-task.md) for the debug
-  starting points (instrument `tickedStep` / `step`, confirm
-  `isTickedActive()` is true at click time, check for double
-  invocation). Do NOT merge to `main` until ⏭ → +1 is verified.
-  Default callback substrate untouched. Pair substrate still
-  user-verified under manual ack (contract test pinned at commit
-  `ccd1f19`).
+State at handoff (2026-05-09, thirty-third session):
+  Active branch: `task/node-ticks`. Phase 2 landed and **visually
+  verified** (commit `6550ae2`). User confirms ⏭ → +1 in ticked
+  Shape A. The fix: module-scope subscriber set so subs survive
+  runtime swaps, and label routes through `tickedTickCount()` when
+  `isTickedActive()` (was reading `getTotalTicks()`, which Shape A
+  incremented twice per step — once for Input, once for ReadGate).
+  Branch is ready to merge to `main` pending sign-off. Default
+  callback substrate untouched. Pair substrate still user-verified
+  under manual ack (contract test pinned at commit `ccd1f19`).
 
   Pre-existing failures unrelated to this session, still red on the
   branch (do not block next move, but worth triaging):
@@ -51,11 +46,9 @@ State at handoff (2026-05-09, thirty-second session):
   on command**. Manual-ack doc:
   [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
-  Working tree: uncommitted attempted fix in
-  `tools/topology-vscode/src/substrate/ticked/index.ts` and
-  `tools/topology-vscode/src/webview/panels/TimelinePanel.tsx`,
-  plus `topology.view.json` drift. Decide to land or revert after
-  root-causing the +2 bug. Reference branches retained:
+  Working tree: `topology.json` (`"runtime": "ticked"` flag for
+  verification) and `topology.view.json` (camera drift) — editor
+  state, intentionally not committed. Reference branches retained:
   `task/runtime-substrate-rebuild`, `task/wires`,
   `task/node-visuals-strip`. Do not delete.
 
@@ -67,12 +60,10 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Root-cause the +2 bug** (see
-[handoff-next-task.md](handoff-next-task.md)) so a single ⏭ click
-advances the displayed tick counter by exactly 1. Then re-attempt
-phase 2 visual verification and merge `task/node-ticks` → `main`
-with sign-off. Phase 3 (drag-resilient pulse rendering) waits on
-that. Other dormant options:
+**Merge `task/node-ticks` → `main` with sign-off** (see
+[handoff-next-task.md](handoff-next-task.md)). Phase 2 is visually
+verified; merge unblocks Phase 3 (drag-resilient pulse rendering).
+Other dormant options:
 
   - **Triage the two pre-existing red tests** (shape-d-cycle,
     handle-load-repro). May resolve as a side effect of ticked

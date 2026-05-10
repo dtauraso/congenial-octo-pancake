@@ -1,58 +1,32 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`, phase 2 landed but **not yet visually
-verified**. User reports the editor's tick counter still increments
-**by 2 per ⏭ click** in ticked mode after the attempted fix below.
-Build green. Working tree dirty (uncommitted attempted fix — see
-"Uncommitted attempt").
+**State:** `task/node-ticks`, phase 2 landed and **visually verified**
+(commit `6550ae2`). User confirms ⏭ → +1 in ticked Shape A. Build
+green. Branch is ready to merge into `main` pending sign-off.
 
-## The bug
+## Next move
 
-In ticked Shape A, clicking ⏭ once should advance the tick label by
-exactly 1. It still advances by 2. Expected behavior per
-[handoff-ticked-substrate-plan.md](handoff-ticked-substrate-plan.md)
-phase 2 exit criterion.
+**Merge `task/node-ticks` → `main` with explicit sign-off.** This is
+a shared-state action per CLAUDE.md "Executing actions with care" —
+do not merge without the user's go-ahead in the session.
 
-## Uncommitted attempt (did not fix it)
+After merge:
+  - Phase 3 (drag-resilient pulse rendering) unblocks. See
+    [handoff-ticked-substrate-plan.md](handoff-ticked-substrate-plan.md).
+  - Triage the two pre-existing red tests (may resolve under phase 5).
 
-Working tree changes:
+## What landed in phase 2
+
+- `tools/topology-vscode/src/substrate/ticked/index.ts` — module-scope
+  subscriber set (`_subs`) so subs survive `stopTicked()` / runtime
+  swaps; `start` and `stop` both notify.
 - `tools/topology-vscode/src/webview/panels/TimelinePanel.tsx` — when
-  `isTickedActive()`, render label as `tick ${tickedTickCount()}`
-  instead of falling through to `getTotalTicks()`. Subscribed to
-  `subscribeTicked`.
-- `tools/topology-vscode/src/substrate/ticked/index.ts` — moved
-  subscriber set to module scope (`_subs`) so subscribers survive
-  `stopTicked()` / runtime swaps. `start` and `stop` notify.
+  `isTickedActive()`, label renders `tick ${tickedTickCount()}`
+  instead of falling through to `getTotalTicks()` (which counted
+  every `publishTick`, hence the +2 symptom).
 
-Hypothesis was: label was reading `getTotalTicks()` (a counter
-incremented by every `publishTick(...)` call, and Shape A fires it
-twice per step — once for `Input`, once for `ReadGate`). Routing
-through `tickedTickCount()` should have shown +1 per click. User
-says no change. Either:
-  a) the label isn't actually showing `tickedTickCount()` (check
-     `isTickedActive()` — maybe ticked mode never actually started
-     and we're still on a different runtime path), OR
-  b) `step(rt)` is being called twice per click (check React
-     StrictMode double-invoke, double event binding, or something
-     else calling `tickedStep()` from a subscriber).
-
-## How to debug next session
-
-1. Build: `cd tools/topology-vscode && npm run build`.
-2. Open editor, load a Shape A spec with `runtime: "ticked"`.
-3. Add a `console.log` in `tickedStep()` and in `step()` (runtime.ts)
-   — confirm whether one click → one or two invocations.
-4. Check `isTickedActive()` returns true at the time of click; if
-   false, ticked startup never happened and the label is reading
-   `getTotalTicks()` (the +2 source).
-5. Inspect `TransportControls.onStep`: it's the only caller of
-   `tickedStep` we know of. Grep for any other.
-
-## Decision
-
-Either land the working-tree fix (if root cause is confirmed and
-fixed) or revert it. Do **not** merge to `main` until ⏭ → +1 is
-visually verified.
+Root cause: label was reading `getTotalTicks()`, which Shape A
+incremented twice per step (once for Input, once for ReadGate).
 
 ## Pre-existing red tests (carry over)
 
@@ -61,10 +35,9 @@ visually verified.
 
 ## Working tree at handoff
 
-Modified, not committed:
-- `tools/topology-vscode/src/substrate/ticked/index.ts`
-- `tools/topology-vscode/src/webview/panels/TimelinePanel.tsx`
-- `topology.view.json` (incidental drift)
+Unstaged (editor state, intentionally not committed):
+- `topology.json` — `"runtime": "ticked"` flag for verification.
+- `topology.view.json` — camera/position drift from manual editing.
 
 ## ALWAYS clause
 
