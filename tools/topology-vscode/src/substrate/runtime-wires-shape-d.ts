@@ -13,8 +13,8 @@
 import type { Spec, StateValue } from "../schema";
 import { readNodeInit } from "../sim/seeds";
 import type { WireMap } from "./build-wires";
-import { inputLoop, andGateLoop, type NodeLoop } from "./node-loop";
-import { andGateLoopWithCycleInputs } from "./node-loop-cycle";
+import { type NodeLoop } from "./node-loop";
+import { andGateLoopWithCycleInputs, andGateLoopFanOut } from "./node-loop-cycle";
 import type { Wire, WireValue } from "./wire";
 import {
   publishHeld, publishTick,
@@ -65,42 +65,47 @@ export function setupInputReadGateInhibitorCycle(
   cycleWire.onAck(() => clearBuffered(i1.id, "in"));
 
   const inputQueue = readNodeInit(input.data);
+  void awaitGate;
+  const seedValue = (inputQueue[0] ?? (0 as unknown as StateValue)) as WireValue;
   return {
     loops: [
       andGateLoopWithCycleInputs(
         [inWire, ackWireE],
-        [false, true],
+        [true, true],
         outWire,
         ([chainInVal]) => chainInVal,
         { onTick: () => publishTick(readGate.id) },
       ),
-      andGateLoop(
+      andGateLoopWithCycleInputs(
         [outWire],
+        [true],
         cycleWire,
         ([v]) => v,
         { onTick: () => publishTick(i0.id) },
       ),
-      andGateLoop(
+      andGateLoopFanOut(
         [cycleWire],
-        ackWireE,
+        [true],
+        [ackWireE, inWire],
         ([v]) => v,
         { onTick: () => publishTick(i1.id) },
       ),
       seedLoop(ackWireE, 1 as unknown as StateValue),
-      inputLoop(inWire, inputQueue, { awaitGate, onTick: () => publishTick(input.id) }),
+      seedLoop(inWire, seedValue, () => publishTick(input.id)),
     ],
     manualAckEdges: [],
-    selfAckEdges: [ackEdge.id],
+    selfAckEdges: [ackEdge.id, chainEdge.id, outEdge.id, cycleEdge.id],
   };
 }
 
-function seedLoop(out: Wire, value: WireValue): NodeLoop {
+function seedLoop(out: Wire, value: WireValue, onSent?: () => void): NodeLoop {
   let stopped = false;
   const done = (async () => {
     if (stopped) return;
     await out.awaitReady();
     if (stopped) return;
     await out.send(value);
+    onSent?.();
   })();
   return {
     async stop() {

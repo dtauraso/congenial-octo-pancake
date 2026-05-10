@@ -1,12 +1,13 @@
-// Shape D contract: with the cycle closed (i0.out -> i1.in), neither
-// i1->readGate.ack nor i0->i1 may ever observe a second onArrive
-// before its prior onAck. "No pulse stacking" is the invariant. We
-// drive the one external-feed edge (in0->readGate.chainIn) with the
-// editor's ClearSlot cadence, and stand in for the visual layer's
-// arc-completion auto-ack on the two non-feedback cycle edges
-// (readGate->i0, i0->i1). The feedback edge i1->readGate.ack is
+// Shape D contract: with the cycle closed (i0.out -> i1.in) and i1
+// fanning out to both readGate.chainIn and readGate.ack, neither cycle
+// edge may ever observe a second onArrive before its prior onAck.
+// "No pulse stacking" is the invariant. in0 is now a one-shot seed
+// (not a per-cycle external feed); both chainIn and ack are fed by
+// i1's fan-out. The visual layer's arc-completion auto-ack stand-in
+// covers the two non-feedback cycle edges (readGate->i0, i0->i1). The
+// two feedback edges (i1->readGate.ack, in0->readGate.chainIn) are
 // consumed atomically inside readGate's andGateLoopWithCycleInputs,
-// so no external ack listener is needed for it.
+// so no external ack listener is needed for them.
 //
 // History: an earlier finding (2026-05-09) said Shape D sustained
 // only one cycle because ackWireE had no perpetual driver. Real cause
@@ -49,15 +50,14 @@ describe("Shape D cycle: no pulse stacking on cycle/ack edges", () => {
     // (setTimeout(0)) instead of queueMicrotask so the loops can't
     // starve the test's await tick(). ackEdge is self-acked by the
     // substrate (cycle feedback); we do NOT auto-ack it here.
-    const autoAck = (w: typeof inEdge) =>
-      w.onArrive(() => setTimeout(() => {
-        if (w.state === "inFlight") ackWire(w);
-      }, 0));
-    autoAck(inEdge);
-    autoAck(outEdge);
-    autoAck(cycleEdge);
+    // All cycle edges self-ack via consume-on-read inside the loops.
+    // The fan-out node provides one macrotask yield per round-trip;
+    // no per-edge external autoAck is needed (would only no-op).
 
-    let ackDepth = 0; let ackMax = 0; let ackArrives = 0; let ackAcks = 0;
+    // ackEdge is seeded at startup; the seed's onArrive fires before
+    // these listeners attach. Compensate so depth tracking lines up.
+    let ackDepth = ackEdge.state === "inFlight" ? 1 : 0;
+    let ackArrives = ackDepth; let ackAcks = 0; let ackMax = ackDepth;
     let cycDepth = 0; let cycMax = 0; let cycArrives = 0; let cycAcks = 0;
     ackEdge.onArrive(() => { ackDepth += 1; if (ackDepth > ackMax) ackMax = ackDepth; ackArrives += 1; });
     ackEdge.onAck(() => { ackDepth -= 1; ackAcks += 1; });
@@ -68,20 +68,22 @@ describe("Shape D cycle: no pulse stacking on cycle/ack edges", () => {
     // suite is satisfied (>=3 round-trips quiesced) or the safety
     // budget runs out.
     let safety = 0;
-    while (safety < 200 && (ackArrives < 3 || cycArrives < 3 || ackDepth !== 0 || cycDepth !== 0)) {
+    while (safety < 200 && (ackArrives < 3 || cycArrives < 3)) {
       await tick();
       safety += 1;
     }
 
+    // The cycle is self-pumping: ackEdge holds a token between cycles
+    // (inFlight at most macrotask boundaries) and only goes idle for
+    // microtasks while readGate cycle-acks. Depth ≤ 1 is the invariant.
+    // Each arrive is matched by an ack within ±1 (the in-flight token).
     expect(rgTicks).toBeGreaterThanOrEqual(3);
     expect(ackArrives).toBeGreaterThanOrEqual(3);
     expect(cycArrives).toBeGreaterThanOrEqual(3);
     expect(ackMax).toBeLessThanOrEqual(1);
     expect(cycMax).toBeLessThanOrEqual(1);
-    expect(ackDepth).toBe(0);
-    expect(cycDepth).toBe(0);
-    expect(ackArrives).toBe(ackAcks);
-    expect(cycArrives).toBe(cycAcks);
+    expect(Math.abs(ackArrives - ackAcks)).toBeLessThanOrEqual(1);
+    expect(Math.abs(cycArrives - cycAcks)).toBeLessThanOrEqual(1);
 
     await stopWiresRuntime();
     off();

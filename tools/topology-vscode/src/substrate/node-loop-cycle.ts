@@ -61,3 +61,63 @@ export function andGateLoopWithCycleInputs(
     },
   };
 }
+
+// Fan-out variant: one inbound (or AND-joined inbounds), broadcast the
+// reduced value to every outbound. Used when a node feeds back into
+// multiple wires of the cycle (e.g. Shape D's i1 driving both
+// readGate.chainIn and readGate.ack so in0 can degrade to a one-shot
+// seed).
+export function andGateLoopFanOut(
+  inbound: readonly Wire[],
+  cycleMask: readonly boolean[],
+  outbound: readonly Wire[],
+  reduce: (values: readonly WireValue[]) => WireValue,
+  opts: { onTick?: () => void } = {},
+): NodeLoop {
+  if (inbound.length !== cycleMask.length) {
+    throw new Error("cycleMask length must match inbound length");
+  }
+  let stopped = false;
+  let wakeCurrent: (() => void) | null = null;
+  const racedWithStop = <T>(p: Promise<T>): Promise<T | "stop"> => {
+    return new Promise<T | "stop">((resolve) => {
+      wakeCurrent = () => resolve("stop");
+      p.then((v) => resolve(v), (err) => resolve(err));
+    });
+  };
+  const nonCycle = inbound.filter((_, i) => !cycleMask[i]);
+  const done = (async () => {
+    while (!stopped) {
+      // One macrotask yield per round-trip closure. In a fully
+      // self-pumping cycle every wire transition is microtask-driven;
+      // without this yield the loop starves macrotasks (timers, test
+      // ticks, animation frames). The fan-out node is the natural
+      // pacing point because it closes the cycle.
+      await new Promise<void>((r) => setTimeout(r, 0));
+      if (stopped) break;
+      const r = await racedWithStop(Promise.all(inbound.map((w) => w.awaitValue())));
+      wakeCurrent = null;
+      if (stopped || r === "stop") break;
+      for (let i = 0; i < inbound.length; i++) {
+        if (cycleMask[i] && inbound[i].state === "inFlight") ackWire(inbound[i]);
+      }
+      const result = reduce(r as readonly WireValue[]);
+      const r2 = await racedWithStop(Promise.all(outbound.map((w) => w.awaitReady())));
+      wakeCurrent = null;
+      if (stopped || r2 === "stop") break;
+      await Promise.all(outbound.map((w) => w.send(result)));
+      opts.onTick?.();
+      const r3 = await racedWithStop(Promise.all(nonCycle.map((w) => w.awaitReady())));
+      wakeCurrent = null;
+      if (stopped || r3 === "stop") break;
+    }
+  })();
+  return {
+    async stop() {
+      stopped = true;
+      wakeCurrent?.();
+      wakeCurrent = null;
+      await done.catch(() => undefined);
+    },
+  };
+}
