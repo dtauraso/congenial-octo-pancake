@@ -65,11 +65,11 @@ fired` to Output → Log (Extension Host).
 
 Phase 1 of the ticked-substrate plan landed (spec flag, Shape A
 spike, contract test). Next move: **phase 2 — step controls**
-(Pause / Step / Resume in TimelinePanel; expose inbound contents
+(Pause / Step in TimelinePanel, no Resume; expose inbound contents
 between ticks via a subscribe API). See
 [handoff-ticked-substrate-plan.md](handoff-ticked-substrate-plan.md).
-The current phase 1 driver auto-ticks every 600 ms; phase 2 swaps
-that for explicit step/play. Other dormant options:
+The current phase 1 driver auto-ticks every 600 ms; phase 2 deletes
+that driver and ticks advance only on user click. Other dormant options:
 
   - **Triage the two pre-existing red tests** (shape-d-cycle,
     handle-load-repro). May resolve as a side effect of ticked

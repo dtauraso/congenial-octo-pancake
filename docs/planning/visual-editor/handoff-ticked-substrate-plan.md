@@ -42,9 +42,11 @@ tick++                     // pulse traversal is INSIDE run()
 1. **MVP ticked substrate, Shape A only.** New file
    `src/substrate/ticked/runtime.ts`. Spec flag `runtime: "ticked"`.
    Contract: 5 inputs → 5 ticks, inbound ports empty between ticks.
-2. **Step controls.** Pause / Step / Resume in TimelinePanel.
-   `subscribeWireState` exposes inbound contents for between-tick
-   inspection. This is the payoff phase — pause and *see* the wave.
+2. **Step controls.** Pause / Step in TimelinePanel (no Resume —
+   stepping replaces the auto-driver entirely; revisit wall-clock
+   auto-play later if needed). `subscribeWireState` exposes inbound
+   contents for between-tick inspection. This is the payoff phase —
+   pause and *see* the wave.
 3. **Drag-resilient pulse rendering.** Pulse animator parameterized
    by `t ∈ [0,1]` along path via `getPointAtLength`; recompute every
    frame from current React Flow path string. Independent of 1–2.
