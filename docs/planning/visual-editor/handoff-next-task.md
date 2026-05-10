@@ -62,14 +62,21 @@ It pins three claims and is intentionally red:
 - `check-substrate-vocab.mjs` exits clean (currently 10 baseline hits)
 
 Implementation (`src/substrate/wire-entity.ts` + retiring legacy
-substrate vocabulary) is **blocked on three open refinements**:
+substrate vocabulary) is **blocked on two open refinements**:
 
 1. Is the legacy non-ticked runtime (`runtime-wires.ts` await/Promise
    path) dead/removable, or must it keep working?
-2. Halt/resume semantics for pulses: where does halt state live —
-   substrate flag, wire flag, or both?
-3. Multiple sends to the same wire in one round: error, or
+2. Multiple sends to the same wire in one round: error, or
    last-write-wins? `carrying(v)` holds one value.
+
+**Decided (this session):** halt/resume lives on the **substrate**,
+not the wire. Rationale: MODEL.md frames halt as a substrate
+capability ("the substrate halts and resumes pulses"); `carrying(v)`
+already fully describes wire state, and adding a `halted` flag would
+be a second state axis the model does not have. Halt = substrate
+stops advancing ticks; wires keep `carrying(v)` frozen because nothing
+runs. Resume = next round runs, pulses arrive, wires return to
+`empty`.
 
 Visuals (renderer) are also open per David — fine, substrate
 contract is independent. Do not start implementation until David
