@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
 import { KIND_COLORS, type StateValue } from "../../../schema";
 import { subscribe, getWorld, getTickMs } from "../../../sim/runner";
-import { subscribeNodeTicks, subscribeNodeHeld, subscribeNodeBuffered } from "../../../substrate/runtime-wires";
-import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT, FLASH_DURATION_MS } from "./_styles";
+import { subscribeNodeHeld, subscribeNodeBuffered } from "../../../substrate/runtime-wires";
+import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT } from "./_styles";
 import { SpecPanel } from "./SpecPanel";
 import { NodeBody } from "./NodeBody";
 import type { AnimatedNodeData } from "./_types";
@@ -22,35 +22,6 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   const [tweenMs, setTweenMs] = useState<number>(getTickMs());
   const [held, setHeld] = useState<StateValue | undefined>(undefined);
   const [buffered, setBuffered] = useState<string[]>([]);
-  const flashRef = useRef<HTMLDivElement | null>(null);
-  const glowRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    return subscribeNodeTicks((nodeId) => {
-      if (nodeId !== id) return;
-      const el = flashRef.current;
-      if (el) {
-        el.getAnimations().forEach((a) => a.cancel());
-        el.animate(
-          [{ opacity: 0 }, { opacity: 0.5, offset: 0.5 }, { opacity: 0 }],
-          { duration: FLASH_DURATION_MS },
-        );
-      }
-      const gl = glowRef.current;
-      if (gl) {
-        gl.getAnimations().forEach((a) => a.cancel());
-        gl.animate(
-          [
-            { boxShadow: `0 0 0 0 ${data.stroke}00`, opacity: 0 },
-            { boxShadow: `0 0 0 4px ${data.stroke}cc`, opacity: 0.8, offset: 0.4 },
-            { boxShadow: `0 0 0 2px ${data.stroke}66`, opacity: 0.4, offset: 0.7 },
-            { boxShadow: `0 0 0 0 ${data.stroke}00`, opacity: 0 },
-          ],
-          { duration: FLASH_DURATION_MS },
-        );
-      }
-    });
-  }, [id, data.stroke]);
 
   useEffect(() => {
     return subscribeNodeHeld((nodeId, value) => {
@@ -103,29 +74,6 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
         willChange: "transform",
       }}
     >
-      <div
-        ref={glowRef}
-        style={{
-          position: "absolute",
-          inset: 0,
-          borderRadius: radius,
-          pointerEvents: "none",
-          opacity: 0,
-          zIndex: -1,
-        }}
-      />
-      <div
-        ref={flashRef}
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "white",
-          opacity: 0,
-          borderRadius: radius,
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      />
       <SpecPanel id={id} data={data} />
       {data.inputs.length === 0 ? (
         <Handle type="target" position={Position.Left} style={HANDLE_STYLE_LEFT} isConnectable={false} />

@@ -10,6 +10,7 @@ import {
 import {
   startWiresRuntime, stopWiresRuntime, isWiresRuntimeRunning,
 } from "../../src/substrate/runtime-wires";
+import { subscribeNodeTicks, subscribeEdgeArrive } from "../../src/substrate/node-streams";
 import type { Spec } from "../../src/schema";
 
 const shapeA: Spec = {
@@ -39,6 +40,26 @@ describe("ticked substrate (Phase 1, Shape A)", () => {
     }
     expect(tickedTickCount()).toBe(5);
     stopTicked();
+  });
+
+  it("substrate emits one tick event per active runner per step", () => {
+    startTickedShapeA(shapeA);
+    const seen: string[] = [];
+    const unsub = subscribeNodeTicks((id) => seen.push(id));
+    tickedStep();
+    unsub();
+    stopTicked();
+    expect(seen).toEqual(["in0", "rg"]);
+  });
+
+  it("substrate emits edge-arrive event when a runner sends", () => {
+    startTickedShapeA(shapeA);
+    const seen: Array<[string, unknown]> = [];
+    const unsub = subscribeEdgeArrive((eid, v) => seen.push([eid, v]));
+    tickedStep();
+    unsub();
+    stopTicked();
+    expect(seen).toEqual([["in0->rg", 1]]);
   });
 
   it("startWiresRuntime dispatches to ticked runtime when spec.runtime === 'ticked'", async () => {

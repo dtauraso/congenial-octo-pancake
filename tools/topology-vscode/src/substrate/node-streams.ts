@@ -38,6 +38,17 @@ export function publishTick(nodeId: string): void {
   for (const fn of _totalTickListeners) fn();
 }
 
+const _edgeArriveListeners = new Set<(edgeId: string, value: StateValue) => void>();
+export function subscribeEdgeArrive(
+  fn: (edgeId: string, value: StateValue) => void,
+): () => void {
+  _edgeArriveListeners.add(fn);
+  return () => _edgeArriveListeners.delete(fn);
+}
+export function publishEdgeArrive(edgeId: string, value: StateValue): void {
+  for (const fn of _edgeArriveListeners) fn(edgeId, value);
+}
+
 export function subscribeNodeHeld(
   fn: (nodeId: string, value: StateValue) => void,
 ): () => void {

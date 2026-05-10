@@ -11,6 +11,8 @@ import { PulseInstance } from "./AnimatedEdge/PulseInstance";
 import { EdgeLabels } from "./AnimatedEdge/_edge-labels";
 import { usePulseLanes } from "./AnimatedEdge/_use-pulse-lanes";
 import { usePulseLanesWire } from "./AnimatedEdge/_use-pulse-lanes-wire";
+import { usePulseLanesTicked } from "./AnimatedEdge/_use-pulse-lanes-ticked";
+import { isTickedActive } from "../../substrate/ticked";
 
 export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   const { id, source, target, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, data } = props;
@@ -24,9 +26,11 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   // hook (no global bus). Otherwise fall back to the legacy bus hook.
   useSyncExternalStore(subscribeWires, getWiresVersion, getWiresVersion);
   const wire = getWiresMap()?.get(id) ?? null;
-  const legacy = usePulseLanes(id, !wire);
+  const ticked = isTickedActive();
+  const legacy = usePulseLanes(id, !wire && !ticked);
   const wired = usePulseLanesWire(id, wire ?? ({ id, onArrive: () => () => {}, state: "idle", cap: 0, pending: null, send: async () => {} } as never));
-  const { pulses0, pulses1, concurrent, advanceLane0, advanceLane1 } = wire ? wired : legacy;
+  const tickedLanes = usePulseLanesTicked(id, ticked);
+  const { pulses0, pulses1, concurrent, advanceLane0, advanceLane1 } = ticked ? tickedLanes : (wire ? wired : legacy);
 
   const kind = data?.kind ?? "any";
   const stroke = KIND_COLORS[kind] ?? "#888";

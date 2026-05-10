@@ -4,6 +4,7 @@
 // See docs/planning/visual-editor/handoff-ticked-substrate-plan.md.
 
 import type { StateValue } from "../../schema";
+import { publishTick, publishEdgeArrive } from "../node-streams";
 
 export type Inbox = Map<string, StateValue[]>;
 export type Ctx = {
@@ -26,12 +27,24 @@ export function makeRuntime(nodes: NodeRunner[], edgeIds: string[]): Runtime {
 }
 
 export function step(rt: Runtime): number {
-  const ctx: Ctx = {
-    recv: (eid) => rt.inbox.get(eid)?.shift(),
-    send: (eid, v) => { rt.inbox.get(eid)!.push(v); },
-    inboxLen: (eid) => rt.inbox.get(eid)?.length ?? 0,
-  };
-  for (const n of rt.nodes) n.run(ctx);
+  for (const n of rt.nodes) {
+    let active = false;
+    const ctx: Ctx = {
+      recv: (eid) => {
+        const v = rt.inbox.get(eid)?.shift();
+        if (v !== undefined) active = true;
+        return v;
+      },
+      send: (eid, v) => {
+        rt.inbox.get(eid)!.push(v);
+        publishEdgeArrive(eid, v);
+        active = true;
+      },
+      inboxLen: (eid) => rt.inbox.get(eid)?.length ?? 0,
+    };
+    n.run(ctx);
+    if (active) publishTick(n.id);
+  }
   rt.tick += 1;
   for (const fn of rt.listeners) fn();
   return rt.tick;

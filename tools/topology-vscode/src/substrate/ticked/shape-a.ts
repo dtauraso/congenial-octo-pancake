@@ -5,7 +5,7 @@
 
 import type { Spec, StateValue } from "../../schema";
 import { readNodeInit } from "../../sim/seeds";
-import { publishHeld, publishTick } from "../node-streams";
+import { publishHeld } from "../node-streams";
 import { makeRuntime, type NodeRunner, type Runtime } from "./runtime";
 
 export type ShapeASetup = { runtime: Runtime; edgeId: string };
@@ -23,7 +23,6 @@ export function setupShapeATicked(spec: Spec): ShapeASetup {
     run: (ctx) => {
       if (queue.length === 0) return;
       const v = queue[i++ % queue.length];
-      publishTick(input.id);
       ctx.send(edge.id, v);
     },
   };
@@ -34,7 +33,6 @@ export function setupShapeATicked(spec: Spec): ShapeASetup {
         const v = ctx.recv(edge.id);
         if (v === undefined) return;
         publishHeld(readGate.id, v);
-        publishTick(readGate.id);
       }
     },
   };
