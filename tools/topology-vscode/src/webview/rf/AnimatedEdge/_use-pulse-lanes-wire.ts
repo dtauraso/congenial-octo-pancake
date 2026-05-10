@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ackWire, type Wire } from "../../../substrate/wire";
-import { isManualAckEdge } from "../../../substrate/runtime-wires";
+import { isManualAckEdge, isSelfAckEdge } from "../../../substrate/runtime-wires";
 import { slog } from "../../../substrate/log";
 import { type Pulse, formatRidingValue } from "./_constants";
 
@@ -51,6 +51,10 @@ export function usePulseLanesWire(id: string, wire: Wire) {
     // arc completion. Skip auto-ack so the slot stays full until the
     // user signals room is available.
     if (isManualAckEdge(w.id)) return;
+    // Self-ack edges (cycle feedback inbounds) are acked synchronously
+    // by the consumer's node-loop. Visual ack would race ahead of the
+    // consumer's next-cycle awaitValue and drop the token.
+    if (isSelfAckEdge(w.id)) return;
     if (w.state === "inFlight") ackWire(w);
   }, []);
 

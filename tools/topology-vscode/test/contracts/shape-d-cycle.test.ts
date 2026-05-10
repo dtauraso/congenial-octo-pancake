@@ -45,15 +45,17 @@ describe("Shape D cycle: no pulse stacking on cycle/ack edges", () => {
     const outEdge = wires.get("readGate.out->i0.in")!;
     const cycleEdge = wires.get("i0.out->i1.in")!;
 
-    // Stand-in for the visual layer's arc-completion auto-ack on the
-    // two non-manual edges. queueMicrotask so the no-stacking observer
-    // counts the pulse before the wire returns to idle.
-    outEdge.onArrive(() => queueMicrotask(() => {
-      if (outEdge.state === "inFlight") ackWire(outEdge);
-    }));
-    cycleEdge.onArrive(() => queueMicrotask(() => {
-      if (cycleEdge.state === "inFlight") ackWire(cycleEdge);
-    }));
+    // Visual-layer arc-completion stand-in. Use macrotask pacing
+    // (setTimeout(0)) instead of queueMicrotask so the loops can't
+    // starve the test's await tick(). ackEdge is self-acked by the
+    // substrate (cycle feedback); we do NOT auto-ack it here.
+    const autoAck = (w: typeof inEdge) =>
+      w.onArrive(() => setTimeout(() => {
+        if (w.state === "inFlight") ackWire(w);
+      }, 0));
+    autoAck(inEdge);
+    autoAck(outEdge);
+    autoAck(cycleEdge);
 
     let ackDepth = 0; let ackMax = 0; let ackArrives = 0; let ackAcks = 0;
     let cycDepth = 0; let cycMax = 0; let cycArrives = 0; let cycAcks = 0;
@@ -62,14 +64,11 @@ describe("Shape D cycle: no pulse stacking on cycle/ack edges", () => {
     cycleEdge.onArrive(() => { cycDepth += 1; if (cycDepth > cycMax) cycMax = cycDepth; cycArrives += 1; });
     cycleEdge.onAck(() => { cycDepth -= 1; cycAcks += 1; });
 
-    // Drive the external-feed manual-ack edge as the editor's
-    // ClearSlot button would. Bounded poll: keep pacing until at
-    // least three full round-trips have completed and quiesced, or
-    // until the safety budget runs out. Three proves self-pumping
-    // without making the test brittle to micro-timing.
+    // Self-pumping: no manual-ack edges. Just yield ticks until the
+    // suite is satisfied (>=3 round-trips quiesced) or the safety
+    // budget runs out.
     let safety = 0;
     while (safety < 200 && (ackArrives < 3 || cycArrives < 3 || ackDepth !== 0 || cycDepth !== 0)) {
-      if (inEdge.state === "inFlight") clearManualAckSlot("in0.out->readGate.chainIn");
       await tick();
       safety += 1;
     }

@@ -89,9 +89,8 @@ export function setupInputReadGateInhibitorCycle(
       seedLoop(ackWireE, 1 as unknown as StateValue),
       inputLoop(inWire, inputQueue, { awaitGate, onTick: () => publishTick(input.id) }),
     ],
-    manualAckEdges: [
-      { id: chainEdge.id, label: "in0->readGate" },
-    ],
+    manualAckEdges: [],
+    selfAckEdges: [ackEdge.id],
   };
 }
 

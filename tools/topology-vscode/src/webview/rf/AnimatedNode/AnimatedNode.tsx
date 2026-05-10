@@ -4,7 +4,6 @@ import { KIND_COLORS, type StateValue } from "../../../schema";
 import { subscribe, getWorld, getTickMs } from "../../../sim/runner";
 import { subscribeNodeTicks, subscribeNodeHeld, subscribeNodeBuffered } from "../../../substrate/runtime-wires";
 import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT, FLASH_DURATION_MS } from "./_styles";
-import { StepButton } from "./StepButton";
 import { SpecPanel } from "./SpecPanel";
 import { NodeBody } from "./NodeBody";
 import type { AnimatedNodeData } from "./_types";
@@ -127,7 +126,6 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
           zIndex: 0,
         }}
       />
-      {selected ? <StepButton id={id} stroke={data.stroke} /> : null}
       <SpecPanel id={id} data={data} />
       {data.inputs.length === 0 ? (
         <Handle type="target" position={Position.Left} style={HANDLE_STYLE_LEFT} isConnectable={false} />

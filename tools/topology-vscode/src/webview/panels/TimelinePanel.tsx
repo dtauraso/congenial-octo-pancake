@@ -9,7 +9,10 @@ import {
   isReplaying,
   subscribeState,
 } from "../../sim/runner";
-import { subscribeWires } from "../../substrate/runtime-wires";
+import {
+  subscribeWires, subscribeTotalTicks, getTotalTicks,
+  isWiresRuntimeRunning,
+} from "../../substrate/runtime-wires";
 import { useTrace, useViewerState } from "../state";
 import { Bookmarks } from "./TimelinePanel/Bookmarks";
 import { TraceStatus } from "./TimelinePanel/TraceStatus";
@@ -35,15 +38,23 @@ export function TimelinePanel() {
     return () => { unsub?.(); };
   }, []);
 
+  useEffect(() => {
+    const unsub = subscribeTotalTicks(() => force((n) => n + 1));
+    return () => { unsub?.(); };
+  }, []);
+
   const w = getWorld();
   const replaying = isReplaying();
   const loadedTrace = trace.loaded;
+  const wiresRunning = isWiresRuntimeRunning();
 
   const label = replaying && loadedTrace
     ? `replay · ${loadedTrace.length} events`
-    : w
-      ? `tick ${w.tick} · cycle ${w.cycle} · queued ${w.queue.length}`
-      : "—";
+    : wiresRunning
+      ? `ticks ${getTotalTicks()}`
+      : w
+        ? `tick ${w.tick} · cycle ${w.cycle} · queued ${w.queue.length}`
+        : "—";
 
   return (
     <div className="timeline-panel" data-undo-scope="viewer">

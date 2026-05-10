@@ -24,6 +24,12 @@ export interface ShapeSetup {
   // drives the ack instead. "B says room → A sends" model, applied
   // per-link.
   manualAckEdges?: ManualAckEdge[];
+  // Edges whose ack is owned by a node-loop's consume-on-read (e.g.
+  // andGateLoopWithCycleInputs marks a feedback inbound). The visual
+  // layer must NOT auto-ack these on arc completion — the substrate
+  // already did. Without this, the next-cycle's value gets dropped
+  // by the late arc-completion ack racing the consumer's re-entry.
+  selfAckEdges?: string[];
   // Per-loop toggle gates. While closed, the loop parks before sending;
   // a panel button toggles open/closed. Used to pace a misbehaving
   // upstream by hand without fixing the underlying ack model.

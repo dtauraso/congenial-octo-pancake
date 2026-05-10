@@ -8,7 +8,7 @@ import type { Spec } from "../schema";
 import { buildWires, type WireMap } from "./build-wires";
 import { ackWire } from "./wire";
 import type { NodeLoop } from "./node-loop";
-import { clearAllBuffered } from "./node-streams";
+import { clearAllBuffered, resetTotalTicks } from "./node-streams";
 import {
   setupInputReadGate, setupInputReadGateInhibitor,
   setupInputReadGateInhibitorWithI0,
@@ -20,6 +20,7 @@ import { slog } from "./log";
 
 export {
   subscribeNodeTicks, subscribeNodeHeld, subscribeNodeBuffered,
+  subscribeTotalTicks, getTotalTicks,
 } from "./node-streams";
 
 let _loops: NodeLoop[] = [];
@@ -30,6 +31,7 @@ let _running = false;
 // entry; other wires keep visual pacing.
 let _manualAckEdges: ManualAckEdge[] = [];
 const _manualAckSet = new Set<string>();
+const _selfAckSet = new Set<string>();
 let _triggerSlots: TriggerSlot[] = [];
 let _paused = false;
 let _resumeWaiters: Array<() => void> = [];
@@ -78,6 +80,7 @@ export function getWiresVersion(): number { return _version; }
 
 export function getManualAckEdges(): ManualAckEdge[] { return _manualAckEdges; }
 export function isManualAckEdge(edgeId: string): boolean { return _manualAckSet.has(edgeId); }
+export function isSelfAckEdge(edgeId: string): boolean { return _selfAckSet.has(edgeId); }
 export function getTriggerSlots(): TriggerSlot[] { return _triggerSlots; }
 
 // Clear the receiver-side slot on a manual-ack wire. Returns true if a
@@ -112,10 +115,13 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
         ? setupInputReadGateInhibitor(spec, _wires, awaitResumeGate)
         : setupInputReadGate(spec, _wires, awaitResumeGate);
   _running = true;
+  resetTotalTicks();
   _loops = setup.loops;
   _manualAckEdges = setup.manualAckEdges ?? [];
   _manualAckSet.clear();
   for (const e of _manualAckEdges) _manualAckSet.add(e.id);
+  _selfAckSet.clear();
+  for (const id of setup.selfAckEdges ?? []) _selfAckSet.add(id);
   _triggerSlots = setup.triggerSlots ?? [];
   slog("wires-runtime: started", {
     shape: shape ?? "input->readGate",
@@ -141,6 +147,7 @@ export async function stopWiresRuntime(): Promise<void> {
   _wires = null;
   _manualAckEdges = [];
   _manualAckSet.clear();
+  _selfAckSet.clear();
   _triggerSlots = [];
   // Wake any loops parked at awaitOpen so they observe stopped=true.
   for (const t of triggers) t.gate.wake();
