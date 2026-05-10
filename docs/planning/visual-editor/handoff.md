@@ -24,13 +24,16 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, forty-second session):
-  Active branch: `task/node-ticks`. Wire forever-loop landed:
-  `wire-entity.ts` (load/take/ack + awaitLoaded/Empty/Acked +
-  event emitter), `wire-events.ts` (ordinal seq), `pause-aware.ts`
-  (PauseSignal interface + helper that persists work across
-  pause/resume), `wire-loop.ts` (runWire). 8 contract tests green;
-  substrate vocab lint clean. No callers wired up.
+State at handoff (2026-05-10, forty-third session):
+  Active branch: `task/node-ticks`. Steps 1 & 2 of the substrate
+  iteration plan landed. Step 1: wire forever-loop
+  (`wire-entity.ts`, `wire-events.ts`, `pause-aware.ts`,
+  `wire-loop.ts`). Step 2: shared `pause-controller.ts`
+  exporting `createPauseController()` / `PauseController` (extends
+  `PauseSignal`); `wire-loop.test.ts` updated to import it.
+  18 contract tests green across wire-loop + pause-controller;
+  substrate vocab lint clean; LOC budget clean. No production
+  callers wired up — substrate modules are leaf.
 
   **Substrate iteration model: decided.** See
   `handoff-substrate-iteration.md`. Forever-loops per node and per
@@ -80,11 +83,13 @@ fired` to Output → Log (Extension Host).
 
 Read [MODEL.md](../../../MODEL.md) and
 [handoff-substrate-iteration.md](handoff-substrate-iteration.md).
-Step 1 done. Next: step 2 — promote the test-local
-`pauseController()` factory in `wire-loop.test.ts` into
-`src/substrate/pause-controller.ts` implementing `PauseSignal`,
-plus contract tests for back-to-back pause/resume and multiple
-subscribers.
+Steps 1 & 2 done. Next: step 3 — uniform node loop module that
+awaits all-inputs-carrying, runs the body, awaits
+all-outputs-empty, loads outputs, awaits all-outputs-acked.
+Every wait routes through `pauseAware()` with a shared
+`PauseSignal`. Emits state-change events with ordinal seq.
+See [handoff-next-task.md](handoff-next-task.md) for the surface
+and contract tests to add.
 
 Dormant: triage pre-existing reds (`shape-d-cycle`,
 `handle-load-repro`); Shape D port. Tick-batching audit superseded.

@@ -1,12 +1,21 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`. Wire-entity is implemented at
-`src/substrate/wire-entity.ts` (52 LOC); 5 contract tests green;
-substrate vocab lint clean. No consumer adopts the new wire — it is
-a leaf module. Branch is **not** ready to merge.
+**State:** `task/node-ticks`. Steps 1 & 2 of the substrate iteration
+plan are landed:
+- Step 1 — wire forever-loop (`wire-entity.ts`, `wire-events.ts`,
+  `pause-aware.ts`, `wire-loop.ts`).
+- Step 2 — shared pause controller at
+  [src/substrate/pause-controller.ts](../../../tools/topology-vscode/src/substrate/pause-controller.ts)
+  with contract tests
+  ([test/contracts/pause-controller.test.ts](../../../tools/topology-vscode/test/contracts/pause-controller.test.ts))
+  covering back-to-back pause/resume, multiple subscribers, immediate
+  resolve when already in target state, and pause/resume idempotency.
+  `wire-loop.test.ts` now imports the shared controller.
 
-The substrate iteration model is now **decided**. See
-[handoff-substrate-iteration.md](handoff-substrate-iteration.md).
+18 contract tests green across wire-loop + pause-controller; substrate
+vocab lint clean; LOC budget clean. No production caller wired up
+yet — substrate modules remain leaf modules. Branch is **not** ready
+to merge.
 
 ## Read first
 
@@ -19,33 +28,41 @@ The substrate iteration model is now **decided**. See
 Run `node tools/topology-vscode/scripts/check-substrate-vocab.mjs`
 before commits.
 
-## Next concrete step
+## Next concrete step — Step 3: uniform node loop
 
-Extend [src/substrate/wire-entity.ts](../../../tools/topology-vscode/src/substrate/wire-entity.ts)
-with the wire's forever-loop and Promise-based wait API. Keep file
-≤100 LOC per the budget rule; split if needed.
+Add `src/substrate/node-loop-uniform-v2.ts` (name TBD; must coexist
+with the existing `node-loop-uniform.ts` until the legacy is retired)
+implementing the uniform body from `handoff-substrate-iteration.md`:
 
-Surface to add:
-- `awaitLoaded()`, `awaitEmpty()`, `awaitAcked()` returning Promises
-  that resolve when state flips.
-- `run(pauseController)` async loop: await source-loaded, await
-  dest-took, ack source. Repeats while running.
-- State-change event emitter (ordinal sequence numbers, not durations).
-- Every internal `await` routes through a pause-aware helper that
-  races against the shared pause signal.
+  await all input wires `carrying`
+  → run node body
+  → await all output wires `empty`
+  → load output wires
+  → await output wires `acked`
 
-Do **not** import setTimeout, Date.now, performance.now, or anything
-duration-shaped. Substrate is timing-free.
+Surface:
+- Takes a node spec (input wires, output wires, pure body fn) and a
+  `PauseSignal`.
+- Every wait routes through `pauseAware()`.
+- Emits state-change events (entered run, parked at input, parked at
+  output, loaded outputs) with ordinal seq numbers via the same
+  emitter style as `wire-events.ts`.
+- No setTimeout, Date.now, performance.now, no durations.
 
-Contract tests to add:
-- Pause mid-load freezes state; resume completes the rendezvous.
-- Pause mid-take freezes state; resume completes.
-- Event stream emits in the expected order across one rendezvous.
+Contract tests:
+- Single-input single-output node passes one value end-to-end through
+  a pair of wires.
+- Multi-input node parks until all inputs carrying, then runs once.
+- Multi-output node parks at output-empty until all destinations have
+  acked before next round.
+- Pause mid-run freezes; resume completes the round.
+
+Keep file ≤100 LOC per the budget rule; split into helpers if needed.
 
 ## Decided previously, still hold
 
-- Halt/resume on the substrate, not the wire (now line-level via
-  shared pause signal).
+- Halt/resume on the substrate, not the wire (line-level via shared
+  `PauseSignal`; controller is now `createPauseController()`).
 - Legacy runtime stays a working museum; ports retire one
   `LEGACY_SKIP` entry at a time.
 - `send()` on a non-empty wire **throws**. No queue, no overwrite.
@@ -53,11 +70,10 @@ Contract tests to add:
 ## Refuse cheap alternatives
 
 `feedback_derive_model_from_visual_spec.md` (in user memory) and
-MODEL.md exist to catch the failure mode where a "smallest diff"
-preserves the wrong model. Recent drift example caught this session:
-proposing per-loop step-duration awaits to make substrate "pace
-itself at human-read speed." That violates MODEL.md (no durations in
-substrate). Renderer owns pacing; substrate is flat-out.
+MODEL.md exist to catch "smallest diff preserves wrong model." Recent
+drift example: per-loop step-duration awaits to "pace itself at
+human-read speed" — violates MODEL.md. Renderer owns pacing; substrate
+is flat-out.
 
 If a request seems to require banned vocabulary, name the gap to
 David before writing code.
@@ -69,7 +85,8 @@ David before writing code.
 
 ## Working tree
 
-Unstaged editor state: `topology.json`, `topology.view.json`.
+Unstaged editor state: `topology.json`, `topology.view.json`. Branch
+is 5 commits ahead of `origin/task/node-ticks` — push when ready.
 
 ## Branch name
 
