@@ -1,89 +1,78 @@
-# Handoff — Step-function substrate spike (next task)
+# Handoff — Step-function substrate spike (diagnosis)
 
-**State:** `task/node-ticks`, latest commit `f680b02` (uniform-node
-step 2). Suite green at 265/265 but takes minutes to run.
+**State:** `task/node-ticks`, latest commit `2b64352`. Step substrate
+exists at `src/substrate/step/`, gated by
+`USE_STEP_SUBSTRATE_SHAPE_A = true` in `runtime-wires.ts`. Build + tsc
+clean. Spike was tested in the editor on Shape A.
 
-This task **supersedes** both the timeout-removal plan
-(`handoff-timeout-removal.md`, now obsolete) and uniform-node step 3
-(`handoff-uniform-node-plan.md`, on hold). If the spike succeeds, both
-plans are deleted rather than executed.
+## What was built (already committed)
 
-## Why
+- `step/node.ts` — `StepNode` interface (id + step()), slot helpers.
+- `step/driver.ts` — `setInterval(tick, FRAME_MS)` driver with
+  start/stop/step.
+- `step/shape-a-setup.ts` — wires Input/ReadGate as StepNodes,
+  reuses `createWire`+`buildWires`+node-streams listeners so the
+  renderer needs no change.
+- `step/runtime.ts` — start/stop/pause/resume around the driver.
+- `runtime-wires.ts` — delegates to step path when shape ===
+  `"input->readGate"` and the flag is on.
+- `runtime-wires-stop.ts` — extracted to keep main file under LOC
+  budget.
 
-The current TS substrate emulates Go's goroutine+channel concurrency
-with `await` on promises. That choice was inherited from the Go side,
-where Go was picked because **channels were cheap** — not because the
-dataflow needs real OS-thread concurrency. In single-threaded JS the
-emulation produces friction:
+## Spike result
 
-- Tests poll with `setTimeout(0)`; suite takes minutes.
-- Shape D needed a `setTimeout(0)` yield (load-bearing? unclear).
-- Whether any loop self-feeds synchronously is not obvious from
-  reading the code — would need an audit.
-- Latch+AND ack dance exists to enforce ordering that a step-function
-  driver gets for free.
+User-observed in editor: **animation runs as a "long train" of
+overlapping/continuous pulses** instead of discrete arcs the way the
+await substrate paced them. Step substrate fires Shape A but pulse
+spacing is wrong.
 
-User's framing (this session): each node runs a loop looking at
-inputs and deciding whether to send an output. Play/pause halts the
-loop. **Nothing should be set up to manage concurrent processes.**
-Nodes all tick on the same beat; their internal state (slots, gate,
-what they're waiting for) decides whether `step()` does anything this
-frame. Ordering across nodes emerges from the wiring, not from a
-scheduler. Gate-before-send (in0 asks readGate) means one writer per
-slot, so no contention, no race resolution, no staging buffer.
+## Likely causes (rank by cheapness to test)
 
-## The spike (one session)
+1. **`FRAME_MS = 100` too aggressive.** Visual arc duration may be
+   longer; Input.step() fires every 100ms whenever wire is idle.
+   First test: bump FRAME_MS to 500–1000 and observe.
+2. **No tick-level backpressure.** Even with slower FRAME_MS, every
+   tick where wire is idle triggers another send. Await path got
+   backpressure for free because `await wire.send(v)` blocked the
+   input loop until ack. Step model loses this — only the wire's
+   idle/in-flight check gates writes.
+3. **One-pulse-per-tick semantics not enforced.** May need
+   `Input.step()` to refuse to fire twice within N ticks regardless
+   of wire state, or move slot-clearing onto a tick boundary
+   (consume-at-end-of-tick rather than via async ack).
 
-**Goal:** prove Shape A renders correctly when driven by a
-step-function substrate, without touching the existing await
-substrate.
+## Diagnosis options
 
-1. New folder `tools/topology-vscode/src/substrate/step/` (scratch —
-   delete on failure).
-2. Define a minimal `Node` interface: `inputs`, `outputs`, `step()`.
-   `step()` is a no-op unless internal conditions (gate ready, inputs
-   present) are met.
-3. Express Shape A's nodes as step-function `Node`s. One writer per
-   slot; writer checks the downstream gate before writing.
-4. Driver: `function tick(nodes) { for (const n of nodes) n.step() }`.
-   Play = `setInterval(tick, frameMs)`. Pause = `clearInterval`.
-5. Wire into the existing renderer (read node state after each tick,
-   animate deltas). Do **not** migrate tests yet.
-6. Run the editor. Does Shape A behave the same as on the await
-   substrate?
+- **A. Tune FRAME_MS** — quick. Edit
+  [src/substrate/step/runtime.ts](../../tools/topology-vscode/src/substrate/step/runtime.ts)
+  `FRAME_MS` constant, rebuild, observe. If clean discrete pulses
+  appear at some value, document and pick a default.
+- **B. Lift backpressure into the slot.** Make Input.step() require
+  the slot to have been *empty for one full tick* before writing
+  again — i.e., write only on the tick after ack. Adds a small
+  state machine to Input; decouples cadence from arc duration.
+- **C. Decouple visual cadence from logical cadence.** The step
+  substrate is logically tick-driven, but the visual layer runs on
+  rAF. The "long train" may be a visualization issue, not a logic
+  one. Add a console log per tick + per ack and confirm logical
+  ordering before assuming visual is broken.
 
-## Decision point at end of spike
+Start with C — it's diagnostic, not corrective, and tells you
+whether the spike's logic is right and only the visual coupling is
+wrong, or whether the substrate itself needs a backpressure
+mechanism.
 
-- **Works and feels obviously simpler →** next session does Shape D
-  (the hard one — self-cycle was the await-substrate pain point). If
-  Shape D also works, write a session-log entry proposing full
-  migration. Subsequent tasks: port B, C, then delete the await
-  substrate, then delete `handoff-timeout-removal.md` and the
-  uniform-node plan.
-- **Hits a wall →** document what blocked it in the session log, then
-  reopen `handoff-timeout-removal.md` Step A with eyes open.
+## Decision after diagnosis
 
-Don't migrate everything up front. The 265 green tests stay green on
-the existing substrate while the spike proves itself.
-
-## Why Shape D matters specifically
-
-Shape D's self-feeding cycle is what required the `setTimeout(0)`
-yield in `andGateLoopFanOut`. In a step-function model, "this tick's
-output feeds next tick's input" is structural — there's no microtask
-spin to escape. So Shape D should be *easier* in the new model than
-the old. If it isn't, that's the signal to abandon the spike.
-
-## Read before touching
-
-- [handoff-next-task.md](handoff-next-task.md) — current Shape D
-  wiring on the await substrate (reference for what behavior to
-  reproduce).
-- [handoff-cycle2-diagnosis.md](handoff-cycle2-diagnosis.md) — why
-  feedback edges are consume-on-read on the await side; the
-  step-function model handles this differently (next-tick read).
-- [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md) —
-  context on the ack mechanism the spike is replacing.
+- Fixable cleanly → port Shape D next session (
+  [handoff-shape-d-plan.md](handoff-shape-d-plan.md) for current
+  Shape D wiring).
+- Requires re-introducing per-node ack state → step model isn't
+  meaningfully simpler than await; flip flag to false and reopen
+  [handoff-timeout-removal.md](handoff-timeout-removal.md) Step A.
+- Visual-only issue → investigate
+  [src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts](../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts)
+  arc/ack interaction.
 
 ## ALWAYS clause
 

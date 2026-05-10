@@ -22,38 +22,39 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, twentieth session):
-  Active branch: `task/node-ticks`. Latest commit: `f680b02`
-  (uniform-node step 2 — `selfAcksAll` shape-level opt-out).
-  Suite green (265/265), tsc + build clean.
+State at handoff (2026-05-09, twenty-first session):
+  Active branch: `task/node-ticks`. Latest commit: `2b64352` (spike:
+  route Shape A through step substrate). Build + tsc clean. Step
+  substrate landed in two commits:
 
-  Step 2 added `ShapeSetup.selfAcksAll?: boolean` and plumbed it
-  through `runtime-wires.ts`: when a shape sets it, `isSelfAckEdge`
-  returns true for every wire in the shape, so the visual layer's
-  `usePulseLanesWire.advanceLane0` skips its arc-completion ack
-  uniformly. Logically equivalent to enumerating every edge id in
-  `selfAckEdges`, but lets step 3+ port a shape onto `nodeLoop` with
-  one flag instead of an id list. No call site sets it yet — behavior
-  unchanged. The per-edge `selfAckEdges` path remains for shapes (like
-  Shape D today) that only self-ack a subset.
+  - `2997c67` — scaffold: `src/substrate/step/{node,driver,shape-a}.ts`.
+    Minimal `StepNode` interface (slot-based, `step()` no-op until
+    conditions hold), `setInterval`-based `Driver`.
+  - `2b64352` — integration: `step/shape-a-setup.ts` reuses
+    `createWire`+`buildWires` and registers the same
+    publishHeld/publishTick/markBuffered/clearBuffered listeners as
+    the await path. `step/runtime.ts` holds the active driver/wires
+    and exposes start/stop/pause/resume. `runtime-wires.ts` gates on
+    `USE_STEP_SUBSTRATE_SHAPE_A = true` and delegates when shape ===
+    `"input->readGate"`. Await-runtime stop body factored into
+    `runtime-wires-stop.ts` to stay under the 200-LOC budget.
 
-  Step 1 (carried): `src/substrate/node-loop-uniform.ts` (89 LOC)
-  exports `Descriptor` (`send` | `idle` | `stop`), `NodeSpec`, and
-  `nodeLoop(node)`. Loop shape: awaitGate → awaitValue all inbound →
-  self-ack each (consume-on-read, uniform) → decide(values) → fan-out
-  to outbound in parallel (each does awaitReady then send) → onTick.
-  Tests in `test/contracts/node-loop-uniform.test.ts` cover
-  input-style, AND-join, fan-out, cycle self-pump, seed-then-stop,
-  and pause.
+  **Spike result on Shape A: animation runs as a "long train" of
+  pulses** (user-observed in editor). See
+  [handoff-step-function-spike.md](handoff-step-function-spike.md)
+  for diagnosis options.
 
-  Carried context from step 0: Shape D self-pumps via `fb56c30`'s i1
-  fan-out + one-shot `seedLoop` + per-round `setTimeout(0)` yield in
+  Carried context: Shape D self-pumps via `fb56c30`'s i1 fan-out +
+  one-shot `seedLoop` + per-round `setTimeout(0)` yield in
   `andGateLoopFanOut`. Old loop variants still in tree; retired in
-  step 7. Conceptual frame: **concurrent clocks frozen on command**.
-  Manual-ack doc: [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
+  uniform-node step 7 (on hold pending spike outcome). Conceptual
+  frame: **concurrent clocks frozen on command**. Manual-ack doc:
+  [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
-  Working tree: `.claude/settings.json` and `topology.view.json` carry
-  incidental drift — leave or stash. Reference branches retained:
+  Working tree: `.claude/settings.json`, `topology.view.json`, and
+  pre-existing edits to `runtime-wires-shapes.ts` +
+  `test/contracts/runtime-wires-manual-ack.test.ts` carry incidental
+  drift — leave or stash. Reference branches retained:
   `task/runtime-substrate-rebuild`, `task/wires`,
   `task/node-visuals-strip`. Do not delete.
 
@@ -65,26 +66,15 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Active task: spike a step-function substrate on Shape A.** Plan in
+**Active task: diagnose & resolve the "long train" pulse stacking on
+Shape A under the step substrate.** Read
 [handoff-step-function-spike.md](handoff-step-function-spike.md) —
-read that next. Supersedes both the timeout-removal plan
-([handoff-timeout-removal.md](handoff-timeout-removal.md), now
-obsolete pending spike outcome) and uniform-node step 3
-([handoff-uniform-node-plan.md](handoff-uniform-node-plan.md), on
-hold).
-
-Why: the await-based substrate emulates Go's goroutine+channel
-concurrency in single-threaded JS. Go was originally chosen for cheap
-channels, not for true OS-thread concurrency, so the emulation buys
-nothing and costs a lot (multi-minute test suite, load-bearing
-`setTimeout(0)` yields, latch+AND ack dance, audit work to prove no
-loop self-feeds). User's framing: each node ticks on a shared beat;
-its internal state (slots, gate, what it's waiting for) decides
-whether `step()` does anything this frame. Gate-before-send → one
-writer per slot → no contention, no race resolution, no scheduler.
-Spike Shape A first, then Shape D (the hard one — self-cycle is
-*easier* in this model, not harder). If both work, migrate; if Shape
-D blocks, fall back to the timeout-removal audit.
+it lists three diagnosis options (FRAME_MS tuning, tick-level
+backpressure, decoupled visual cadence) and the decision tree after
+diagnosis. Both
+[handoff-timeout-removal.md](handoff-timeout-removal.md) and
+[handoff-uniform-node-plan.md](handoff-uniform-node-plan.md) remain
+on hold pending this resolution.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
