@@ -24,11 +24,11 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, thirty-eighth session):
-  Active branch: `task/node-ticks`. HEAD = `f1114f0`. Red contract
-  test for wire-as-entity is in place; **all three refinements are
-  now decided** and implementation is unblocked. No `wire-entity.ts`
-  code yet — next session writes it against the red test.
+State at handoff (2026-05-10, thirty-ninth session):
+  Active branch: `task/node-ticks`. HEAD = `3a7ab45`.
+  `src/substrate/wire-entity.ts` landed (52 LOC). All 5 wire-entity
+  contract tests are green. Substrate vocab lint clean. No callers
+  wired up yet — wire-entity is a leaf module.
 
   **Decisions locked this session** (see `handoff-next-task.md`):
   1. Halt/resume lives on the **substrate**, not the wire.
@@ -69,18 +69,18 @@ fired` to Output → Log (Extension Host).
 ## Next move
 
 **Read [MODEL.md](../../../MODEL.md) first.** Then see
-[handoff-next-task.md](handoff-next-task.md) for the refined wire
-model and the three decisions. Red contract test:
-`tools/topology-vscode/test/contracts/wire-entity-contract.test.ts`
-(commit `d4fb0a6`) — 5 tests, all expected red.
+[handoff-next-task.md](handoff-next-task.md) for what to wire next.
+Wire-entity is implemented and green; the open question is which
+substrate consumer adopts it first.
 
-Next concrete step: implement `src/substrate/wire-entity.ts` against
-the red contract. State shape `empty | carrying(v)`, `send()` throws
-on non-empty, no queue/buffer/length/inFlight/duration/ready fields.
-Lint must stay clean on the new file.
+Candidate next step: pick the smallest ticked-side caller and route
+its edges through `createWire`/`carry`/`observe`. Do not paraphrase
+the wire API into the existing inbox/edge-queue shape — that would
+re-launder the model. State the chosen consumer and wait for
+sign-off before editing.
 
-Dormant options (do not pursue ahead of wire-as-entity):
-  - Triage pre-existing red tests.
+Dormant options:
+  - Triage pre-existing red tests (`shape-d-cycle`, `handle-load-repro`).
   - Shape D port under manual-ack.
   - Uniform-node, timeout-removal.
 

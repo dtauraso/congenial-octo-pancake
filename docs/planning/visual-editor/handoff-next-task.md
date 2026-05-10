@@ -1,9 +1,10 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`, HEAD = `d4fb0a6`. Red contract test
-for wire-as-entity has landed (5 tests, all red as designed).
-Substrate-owned ticking from prior session is intact; wire-entity
-implementation not started. Branch is **not** ready to merge.
+**State:** `task/node-ticks`, HEAD = `3a7ab45`. Wire-entity is
+implemented at `src/substrate/wire-entity.ts` (52 LOC); all 5
+contract tests green; substrate vocab lint clean. No consumer yet
+adopts the new wire — it is a leaf module. Branch is **not** ready
+to merge.
 
 ## Read MODEL.md first
 
@@ -40,17 +41,18 @@ Guardrails: `MODEL.md`, `check-substrate-vocab.mjs` lint, CLAUDE.md
 "no plans-with-options for substrate/wire work" rule. Future sessions:
 state next single concrete step and wait for sign-off.
 
-## Next move — wire-as-entity (refinement still open)
+## Next move — adopt wire-entity in one consumer
 
-Red contract test has landed at
-[test/contracts/wire-entity-contract.test.ts](../../../tools/topology-vscode/test/contracts/wire-entity-contract.test.ts).
-It pins three claims and is intentionally red:
-- state shape `empty | carrying(v)` (no queue/buffer/length/inFlight/ready/duration)
-- geometry edits do not mutate state
-- `check-substrate-vocab.mjs` exits clean (currently 10 baseline hits)
+Contract test at
+[test/contracts/wire-entity-contract.test.ts](../../../tools/topology-vscode/test/contracts/wire-entity-contract.test.ts)
+is green. The wire API is `createWire(id) → { state, carry(v),
+observe() }`; `carry` throws on non-empty. Three refinements (below)
+are locked.
 
-Implementation (`src/substrate/wire-entity.ts`) is **unblocked.** All
-three refinements are decided (below).
+Next step: pick the smallest ticked-side caller and route its edges
+through the new wire. Do **not** paraphrase the API into the legacy
+inbox/edge-queue shape — if a call site needs a queue, the topology
+needs a merge node. State the chosen consumer and wait for sign-off.
 
 **Decided:** halt/resume lives on the **substrate**, not the wire.
 MODEL.md frames halt as a substrate capability; `carrying(v)` is the
