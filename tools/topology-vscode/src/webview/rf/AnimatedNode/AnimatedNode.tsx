@@ -51,14 +51,11 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
   }, [id]);
 
   const frame = useSyncExternalStore(subscribeFrame, getFrameSnapshot, getFrameSnapshot);
-  const frameMode = frame.active;
   const frameNodeState = frame.nodes.get(id);
 
   const radius = data.shape === "pill" ? data.height / 2 : 4;
-  const heldNum = typeof held === "number" ? held : Number(held);
-  const heldFill = heldNum === 1 ? "#ffab40" : heldNum === -1 ? "#66bb6a" : null;
-  const frameStyle = frameMode ? frameNodeStyle(frameNodeState) : null;
-  const fill = frameStyle?.fill ?? heldFill ?? data.fill;
+  const frameStyle = frameNodeStyle(frameNodeState);
+  const fill = frameStyle?.fill ?? data.fill;
   const borderColor = frameStyle?.border ?? data.stroke;
 
   return (
