@@ -10,7 +10,7 @@ Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — **start here**
      for the deletion sweep, mid-flight on `task/remove-legacy-runtimes`.
-     Steps 2–3 landed; steps 4–8 remain.
+     Steps 2–4 landed; steps 5–8 remain.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — system 3 model: forever-loops, line-level pause, events.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
@@ -18,29 +18,34 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, fifty-third session):
-  Active branch: `task/remove-legacy-runtimes`, opened from
-  `task/node-ticks` HEAD. Two commits landed: `7148137`
-  (TransportControls rewritten against `FrameRendererCtl` only) and
-  `1673f3e` (AnimatedEdge / AnimatedNode collapsed to the frame-mode
-  branch — `!frameMode &&` pulse renders dropped, `frameMode ?`
-  styling ternaries collapsed, dead legacy hook calls + `sim/runner` +
-  `runtime-wires` + `ticked` imports stripped from the painter).
+State at handoff (2026-05-10, fifty-fourth session):
+  Active branch: `task/remove-legacy-runtimes`. Step 4 landed in three
+  commits: `9d7f54f` (unimported pulse-lanes helpers), `31b1a15`
+  (delete runner/timeline/fold-halo probes; port PulseInstance; strip
+  AnimatedNode; simplify TimelinePanel; wire main.tsx to
+  frame-pause/resume), `e511681` (handoff refresh). 19 files deleted,
+  8 ported/stripped. No webview/sim file imports `sim/runner`,
+  `substrate/runtime*`, or `substrate/ticked` anymore.
   Build/tsc/vocab/LOC clean; 310 pass, same two pre-existing reds.
 
+  **Judgment calls from step 4 — confirm before merge:**
+  - `TriggerSlotButton` / `ClearSlotButton` were **deleted, not
+    ported** (handoff listed them as "likely ports"). Agent reasoned
+    they're wires-runtime UIs with no frame-mode equivalent.
+  - `FoldNode` halo stubbed to `{ buffered: false }` pending re-wire
+    via frame-renderer events. Render path preserved.
+
   **Steps remaining on this branch (see handoff-next-task.md):**
-  4. Detach the 13 webview/panel files that import `sim/runner`,
-     `substrate/runtime*`, or `substrate/ticked`. Per file:
-     port-or-delete (refuse "keep as museum").
   5. Delete `src/sim/runner*`, `src/sim/simulator*`,
      `src/substrate/runtime.ts`, `src/substrate/runtime/`,
-     `src/substrate/runtime-wires*.ts`, `src/substrate/ticked/`.
+     `src/substrate/runtime-wires*.ts`, `src/substrate/ticked/`,
+     plus orphaned `src/sim/` leftovers.
   6. Delete tests pinning systems 1/2/2.5; the two pre-existing reds
      (`shape-d-cycle`, `handle-load-repro`) retire with wires-runtime.
   7. Vocab → tsc → build → tests → proof-out (load topology, hit
      play/pause/step, verify pulses animate, pause halts at line
      level, step advances one event).
-  8. Refresh handoff and merge.
+  8. Refresh handoff and merge (sign-off required).
 
   **Model:** `handoff-substrate-iteration.md`. Forever-loops per
   node and per wire; backpressure coordination; line-level pause;
@@ -64,13 +69,16 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Continue on `task/remove-legacy-runtimes` at step 4: detach the 13
-webview/panel files importing `sim/runner`, `substrate/runtime*`, or
-`substrate/ticked`. Per file, port to the frame-renderer event stream
-if it drives shape-A behavior the user actually uses; otherwise delete.
-See [handoff-next-task.md](handoff-next-task.md) for the per-file
-likely-port / likely-delete split and the cheap-alternative refusal
-list.
+Continue on `task/remove-legacy-runtimes` at step 5: delete the
+now-unimported substrate/sim modules — `src/sim/runner*`,
+`src/sim/simulator*`, `src/substrate/runtime.ts`,
+`src/substrate/runtime/`, `src/substrate/runtime-wires*.ts`,
+`src/substrate/ticked/`, plus any orphaned `src/sim/` leftovers (keep
+`seeds.ts` only if `host-shim/run-frames.ts` still reaches it).
+After step 5: step 6 retires the two pre-existing red tests with
+wires-runtime; step 7 runs gates + manual proof-out; step 8 merges
+to main (sign-off required). See
+[handoff-next-task.md](handoff-next-task.md).
 
 Dormant: Shape D port (likely deleted with wires-runtime unless
 ported). Tick-batching audit superseded.
