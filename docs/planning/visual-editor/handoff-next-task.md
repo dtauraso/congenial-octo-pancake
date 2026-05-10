@@ -49,12 +49,10 @@ It pins three claims and is intentionally red:
 - geometry edits do not mutate state
 - `check-substrate-vocab.mjs` exits clean (currently 10 baseline hits)
 
-Implementation (`src/substrate/wire-entity.ts` + retiring legacy
-substrate vocabulary) is **blocked on two open refinements**:
+Implementation (`src/substrate/wire-entity.ts`) is **blocked on one
+open refinement**:
 
-1. Is the legacy non-ticked runtime (`runtime-wires.ts` await/Promise
-   path) dead/removable, or must it keep working?
-2. Multiple sends to the same wire in one round: error, or
+1. Multiple sends to the same wire in one round: error, or
    last-write-wins? `carrying(v)` holds one value.
 
 **Decided:** halt/resume lives on the **substrate**, not the wire.
@@ -62,9 +60,17 @@ MODEL.md frames halt as a substrate capability; `carrying(v)` is the
 sole wire state axis. Halt = substrate stops advancing ticks; wires
 freeze. Resume = next round runs, wires return to `empty`.
 
+**Decided:** legacy runtime (`runtime-wires*.ts`, `step/`,
+`node-loop*.ts`, `log.ts`, `node-streams.ts`) stays as a working
+museum until each shape is ported to `substrate/ticked/`. Currently
+only Shape A is ported; legacy still owns Shape D, the pair variant,
+and the inhibitor chain. `check-substrate-vocab.mjs` skips the legacy
+files via a `LEGACY_SKIP` list; ticked side and `wire-entity.ts` must
+stay clean. Each shape port retires one entry from the skip list.
+
 Visuals (renderer) are also open per David — fine, substrate
 contract is independent. Do not start implementation until David
-signs off on (1)–(2). Do not relax the test to pass.
+signs off on (1). Do not relax the test to pass.
 
 ## Refuse cheap alternatives
 

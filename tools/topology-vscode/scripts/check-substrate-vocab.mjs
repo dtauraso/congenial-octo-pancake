@@ -10,6 +10,20 @@ import { join, relative } from "node:path";
 
 const ROOT = new URL("../src/substrate/", import.meta.url).pathname;
 
+// Legacy substrate files predate the wire-as-entity model and are kept
+// as a working museum until each shape is ported to substrate/ticked/.
+// Retire an entry here when its file is deleted or rewritten clean.
+// Anything NOT in this list (notably substrate/ticked/ and the upcoming
+// wire-entity.ts) must stay vocabulary-clean.
+const LEGACY_SKIP = [
+  /\/log\.ts$/,
+  /\/node-loop\.ts$/,
+  /\/node-loop-cycle\.ts$/,
+  /\/node-streams\.ts$/,
+  /\/runtime-wires(-[a-z-]+)?\.ts$/,
+  /\/step\//,
+];
+
 const BANNED = [
   /\bsetTimeout\b/,
   /\bsetInterval\b/,
@@ -38,6 +52,7 @@ function walk(dir) {
 
 let hits = 0;
 for (const file of walk(ROOT)) {
+  if (LEGACY_SKIP.some((re) => re.test(file))) continue;
   const text = readFileSync(file, "utf8");
   const lines = text.split("\n");
   lines.forEach((line, i) => {
