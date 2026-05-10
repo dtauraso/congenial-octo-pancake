@@ -24,16 +24,19 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, forty-fifth session):
-  Active branch: `task/node-ticks`. Steps 1–4 of the substrate
-  iteration plan landed. Step 4:
-  `src/renderer/renderer-adapter.ts` — leaf paced-event stream over
-  `WireEvent | NodeEvent`. Lives OUTSIDE `src/substrate/` because
-  pacing belongs to the renderer per MODEL.md and the vocab lint
-  forbids `setTimeout`/`schedule` under substrate/. Clock injectable
-  for deterministic tests. 117 contract tests green; vocab + LOC
-  clean. All four substrate/renderer modules are leaf — no
-  production callers.
+State at handoff (2026-05-10, forty-sixth session):
+  Active branch: `task/node-ticks`. Steps 1–5 of the substrate
+  iteration plan landed. Step 5:
+  `src/recorder/recorder.ts` — leaf event log over
+  `WireEvent | NodeEvent`. Independent second subscriber alongside
+  the step-4 renderer adapter; appends in arrival order, exposes
+  `snapshot()` (copy) / `length` / `clear` / `stop`. No pacing, no
+  DOM. Lives outside `src/substrate/` for the same reason the
+  adapter does. Recorder + adapter + substrate emitters compose via
+  a fan-out callback (see end-to-end test). Vocab + LOC clean; the
+  contract suite shows only the two pre-existing reds. All five
+  substrate/renderer/recorder modules are leaf — no production
+  callers.
 
   **Friction this session:** legacy ticked path lets Step put >1
   pulse on a wire. Wiring the editor through steps 1–4 makes this
@@ -70,14 +73,12 @@ fired` to Output → Log (Extension Host).
 
 Read [MODEL.md](../../../MODEL.md) and
 [handoff-substrate-iteration.md](handoff-substrate-iteration.md).
-Steps 1–4 done. Two viable next moves; pick with David:
-  (a) Step 5 — recorder as a second event subscriber (independent
-      leaf module, same shape as adapter; just appends to a log).
-  (b) Option-2 integration — host-side shim that runs the substrate
-      in the extension host, pipes events through the step-4
-      adapter, forwards paced frames to the webview as a dumb
-      renderer. Bigger commit; addresses the multi-pulse friction
-      logged above. See [handoff-next-task.md](handoff-next-task.md).
+Steps 1–5 done. Next move: Option-2 integration — host-side shim
+that runs the substrate in the extension host, pipes events through
+the step-4 adapter (and into the step-5 recorder for replay/repro),
+forwards paced frames to the webview as a dumb renderer. Bigger
+commit; addresses the multi-pulse friction logged above. See
+[handoff-next-task.md](handoff-next-task.md).
 
 Dormant: triage pre-existing reds (`shape-d-cycle`,
 `handle-load-repro`); Shape D port. Tick-batching audit superseded.
