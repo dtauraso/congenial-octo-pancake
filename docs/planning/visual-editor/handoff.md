@@ -24,10 +24,13 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, forty-first session):
-  Active branch: `task/node-ticks`. `src/substrate/wire-entity.ts`
-  landed (52 LOC); 5 contract tests green; substrate vocab lint
-  clean. No callers wired up.
+State at handoff (2026-05-10, forty-second session):
+  Active branch: `task/node-ticks`. Wire forever-loop landed:
+  `wire-entity.ts` (load/take/ack + awaitLoaded/Empty/Acked +
+  event emitter), `wire-events.ts` (ordinal seq), `pause-aware.ts`
+  (PauseSignal interface + helper that persists work across
+  pause/resume), `wire-loop.ts` (runWire). 8 contract tests green;
+  substrate vocab lint clean. No callers wired up.
 
   **Substrate iteration model: decided.** See
   `handoff-substrate-iteration.md`. Forever-loops per node and per
@@ -76,18 +79,15 @@ fired` to Output → Log (Extension Host).
 ## Next move
 
 Read [MODEL.md](../../../MODEL.md) and
-[handoff-substrate-iteration.md](handoff-substrate-iteration.md),
-then start the implementation order in the latter. First commit:
-extend `wire-entity.ts` with the wire's forever-loop, Promise-based
-waits (`awaitLoaded`, `awaitEmpty`, `awaitAcked`), pause-aware
-helper, state-change event emitter. No setTimeout, no durations.
-Contract tests for pause mid-rendezvous and event ordering.
+[handoff-substrate-iteration.md](handoff-substrate-iteration.md).
+Step 1 done. Next: step 2 — promote the test-local
+`pauseController()` factory in `wire-loop.test.ts` into
+`src/substrate/pause-controller.ts` implementing `PauseSignal`,
+plus contract tests for back-to-back pause/resume and multiple
+subscribers.
 
-Dormant options:
-  - Triage pre-existing red tests (`shape-d-cycle`, `handle-load-repro`).
-  - Shape D port under the new substrate.
-  - Tick-batching audit is **superseded** by the no-tick model;
-    `handoff-tick-batching-audit.md` is historical.
+Dormant: triage pre-existing reds (`shape-d-cycle`,
+`handle-load-repro`); Shape D port. Tick-batching audit superseded.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
