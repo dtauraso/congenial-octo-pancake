@@ -22,20 +22,23 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, thirtieth session):
-  Active branch: `task/node-ticks`. **Ticked substrate phase 1
-  landed** behind `spec.runtime: "ticked"`. New module
-  `src/substrate/ticked/` with `runtime.ts` (engine), `shape-a.ts`
-  (Shape A wiring), and `index.ts` (module-level dispatch).
-  Dispatch in `runtime-wires.ts` is now factored through
-  `runtime-wires-alts.ts` (extracted to keep the host file under
-  the 200 LOC budget). Phase 1 contract test
-  `test/contracts/ticked-substrate-shape-a.test.ts` pins:
-  5 inputs → 5 ticks, inbound port empty between ticks; and that
-  `startWiresRuntime` dispatches to the ticked module when the
-  spec flag is set. Default callback substrate untouched. Pair
-  substrate still user-verified under manual ack (contract test
-  pinned at commit `ccd1f19`).
+State at handoff (2026-05-09, thirty-first session):
+  Active branch: `task/node-ticks`. **Ticked substrate phase 2
+  landed (commit `c881ada`)**: the 600ms auto-driver is gone. The
+  ticked runtime now advances only on `tickedStep()`. The Step
+  button in `TransportControls.tsx` is wired to call `tickedStep()`
+  when `isTickedActive()`; Play/Pause is disabled in that mode (no
+  Resume — phase 2 deliberately omits wall-clock auto-play). New
+  APIs in `src/substrate/ticked/`: `subscribeTicked`,
+  `tickedInboxSnapshot`. Phase 1 contract test still green and was
+  updated to match the simplified `startTickedShapeA(spec)`
+  signature. Phase 2 UI behavior (P2 exit criterion: pause Shape A
+  mid-run, single step advances exactly one hop, inbound-port
+  readouts match) is **not yet visually verified** this session —
+  next session must drive the editor to confirm before merging to
+  main. Default callback substrate untouched. Pair substrate still
+  user-verified under manual ack (contract test pinned at commit
+  `ccd1f19`).
 
   Pre-existing failures unrelated to this session, still red on the
   branch (do not block next move, but worth triaging):
@@ -63,13 +66,17 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Phase 1 of the ticked-substrate plan landed (spec flag, Shape A
-spike, contract test). Next move: **phase 2 — step controls**
-(Pause / Step in TimelinePanel, no Resume; expose inbound contents
-between ticks via a subscribe API). See
-[handoff-ticked-substrate-plan.md](handoff-ticked-substrate-plan.md).
-The current phase 1 driver auto-ticks every 600 ms; phase 2 deletes
-that driver and ticks advance only on user click. Other dormant options:
+**Verify phase 2 in the editor**, then merge `task/node-ticks` to
+`main` per the plan ("merge to main after phase 2 so later phases
+have a stable base"). Verification: load a Shape A spec with
+`runtime: "ticked"`, observe the system is paused-by-default,
+click ⏭ and confirm the tick counter increments by one per click
+and the readGate held-value display updates one input at a time.
+If verified, merge with sign-off (per CLAUDE.md "merging a task
+branch into `main`" requires explicit sign-off). After merging,
+start **phase 3 — drag-resilient pulse rendering** on a fresh
+task branch (independent of phases 1–2). See
+[handoff-ticked-substrate-plan.md](handoff-ticked-substrate-plan.md). Other dormant options:
 
   - **Triage the two pre-existing red tests** (shape-d-cycle,
     handle-load-repro). May resolve as a side effect of ticked
