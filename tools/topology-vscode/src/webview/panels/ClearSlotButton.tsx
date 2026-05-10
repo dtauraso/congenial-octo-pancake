@@ -14,9 +14,17 @@ function OneClearButton({ edgeId, label, wire }: { edgeId: string; label: string
   const [occupied, setOccupied] = useState<boolean>(wire?.state === "inFlight");
   useEffect(() => {
     if (!wire) { setOccupied(false); return; }
-    setOccupied(wire.state === "inFlight");
-    const offArrive = wire.onArrive(() => setOccupied(true));
-    const offAck = wire.onAck(() => setOccupied(false));
+    // Read wire.state on every event rather than tracking arrive/ack as
+    // independent boolean toggles. onAck and onArrive can both fire
+    // within a single synchronous ack chain (manual-ack release ->
+    // permit -> next send), and the order in which their listeners
+    // were registered would otherwise determine the final occupied
+    // value, leaving it stale when the chain ends with the wire
+    // refilled but a late onAck setter overrides setOccupied(true).
+    const recompute = () => setOccupied(wire.state === "inFlight");
+    recompute();
+    const offArrive = wire.onArrive(recompute);
+    const offAck = wire.onAck(recompute);
     return () => { offArrive(); offAck(); };
   }, [wire]);
   return (
