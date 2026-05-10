@@ -22,14 +22,20 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, twenty-ninth session):
-  Active branch: `task/node-ticks`. Shape A pair substrate remains
-  user-verified end-to-end under manual ack. **Manual-ack contract
-  test now pinned to the verified behavior** (commit `ccd1f19`):
-  `getManualAckEdges()` for Shape A asserts
-  `[{ id: "in0->rg", label: "in0→readGate" }]`, and a new
-  click-roundtrip test asserts `clearManualAckSlot("in0->rg")`
-  releases the permit and refills wForward with queue[1].
+State at handoff (2026-05-09, thirtieth session):
+  Active branch: `task/node-ticks`. **Ticked substrate phase 1
+  landed** behind `spec.runtime: "ticked"`. New module
+  `src/substrate/ticked/` with `runtime.ts` (engine), `shape-a.ts`
+  (Shape A wiring), and `index.ts` (module-level dispatch).
+  Dispatch in `runtime-wires.ts` is now factored through
+  `runtime-wires-alts.ts` (extracted to keep the host file under
+  the 200 LOC budget). Phase 1 contract test
+  `test/contracts/ticked-substrate-shape-a.test.ts` pins:
+  5 inputs → 5 ticks, inbound port empty between ticks; and that
+  `startWiresRuntime` dispatches to the ticked module when the
+  spec flag is set. Default callback substrate untouched. Pair
+  substrate still user-verified under manual ack (contract test
+  pinned at commit `ccd1f19`).
 
   Pre-existing failures unrelated to this session, still red on the
   branch (do not block next move, but worth triaging):
@@ -57,12 +63,13 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Pair substrate verified on Shape A; contract test now pinned. New
-primary direction selected this session: **ticked substrate** — give
-the substrate a clock, make time first-class. Plan committed at
+Phase 1 of the ticked-substrate plan landed (spec flag, Shape A
+spike, contract test). Next move: **phase 2 — step controls**
+(Pause / Step / Resume in TimelinePanel; expose inbound contents
+between ticks via a subscribe API). See
 [handoff-ticked-substrate-plan.md](handoff-ticked-substrate-plan.md).
-Start at phase 1 (spike on Shape A behind a spec flag, no existing
-substrate touched). Other dormant options:
+The current phase 1 driver auto-ticks every 600 ms; phase 2 swaps
+that for explicit step/play. Other dormant options:
 
   - **Triage the two pre-existing red tests** (shape-d-cycle,
     handle-load-repro). May resolve as a side effect of ticked

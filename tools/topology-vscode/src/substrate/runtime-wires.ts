@@ -19,10 +19,8 @@ import { setupInputReadGateInhibitorCycle } from "./runtime-wires-shape-d";
 import { setupInputReadGatePair, stopInputReadGatePair } from "./runtime-wires-pair";
 import { matchSubstrateShape } from "./match";
 import { slog } from "./log";
-import {
-  startStepShapeA, stopStepRuntime, pauseStepRuntime, resumeStepRuntime,
-  isStepRuntimeActive,
-} from "./step/runtime";
+import { pauseStepRuntime, resumeStepRuntime, isStepRuntimeActive } from "./step/runtime";
+import { tryStartAltSubstrate, tryStopAltSubstrate, type AltHostState } from "./runtime-wires-alts";
 
 // Shape A routing. Pair > step > legacy. See handoff-next-task.md.
 const USE_PAIR_SUBSTRATE_SHAPE_A = true;
@@ -114,23 +112,19 @@ function bumpVersion(): void {
   for (const fn of _listeners) fn();
 }
 
+const altHost: AltHostState = {
+  setRunning: (v) => { _running = v; },
+  setWires: (w) => { _wires = w; },
+  setLoops: (l) => { _loops = l; },
+  setManualAck: (e) => { _manualAckEdges = e; _manualAckSet.clear(); for (const x of e) _manualAckSet.add(x.id); },
+  setSelfAcksAll: (v) => { _selfAcksAll = v; _selfAckSet.clear(); },
+  setTriggerSlots: (s) => { _triggerSlots = s; },
+};
+
 export async function startWiresRuntime(spec: Spec): Promise<void> {
   await stopWiresRuntime();
   const shape = matchSubstrateShape(spec);
-  if (USE_STEP_SUBSTRATE_SHAPE_A && shape === "input->readGate") {
-    const stepSetup = startStepShapeA(spec);
-    _wires = stepSetup.wires;
-    _running = true;
-    _loops = [];
-    _manualAckEdges = [];
-    _manualAckSet.clear();
-    _selfAckSet.clear();
-    _selfAcksAll = true;
-    _triggerSlots = [];
-    slog("wires-runtime: started (step substrate)", {
-      shape: "input->readGate",
-      edges: [...(_wires?.keys() ?? [])],
-    });
+  if (tryStartAltSubstrate(spec, shape, USE_STEP_SUBSTRATE_SHAPE_A, altHost)) {
     bumpVersion();
     return;
   }
@@ -162,13 +156,7 @@ export async function startWiresRuntime(spec: Spec): Promise<void> {
 }
 
 export async function stopWiresRuntime(): Promise<void> {
-  if (isStepRuntimeActive()) {
-    stopStepRuntime();
-    _running = false;
-    _wires = null;
-    _selfAcksAll = false;
-    clearAllBuffered();
-    slog("wires-runtime: stopped (step substrate)", {});
+  if (tryStopAltSubstrate(altHost)) {
     bumpVersion();
     return;
   }
