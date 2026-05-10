@@ -1,32 +1,66 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`, phase 2 landed and **visually verified**
-(commit `6550ae2`). User confirms ⏭ → +1 in ticked Shape A. Build
-green. Branch is ready to merge into `main` pending sign-off.
+**State:** `task/node-ticks`, commit `5232b32`. Substrate now owns
+ticking end-to-end. Wire pulses render in ticked Shape A. Node color
+flashes removed. Build green. Branch is **not** ready to merge yet —
+the pulse is still wall-clock-timed (legacy artifact); user wants it
+tick-driven before merging.
 
 ## Next move
 
-**Merge `task/node-ticks` → `main` with explicit sign-off.** This is
-a shared-state action per CLAUDE.md "Executing actions with care" —
-do not merge without the user's go-ahead in the session.
+**Make wire pulses tick-driven, not wall-clock-driven.** A pulse
+should be a *state* (edge occupancy), not an animation:
 
-After merge:
-  - Phase 3 (drag-resilient pulse rendering) unblocks. See
-    [handoff-ticked-substrate-plan.md](handoff-ticked-substrate-plan.md).
-  - Triage the two pre-existing red tests (may resolve under phase 5).
+1. **Substrate change.** Today `step()` runs Input then ReadGate in
+   the same tick — Inbox is empty before the tick ends. Defer
+   consumption to the next tick so a value sits on the edge from
+   tick N (sent) to tick N+1 (consumed). Inbox becomes the single
+   source of truth for "what's on the wire right now."
+2. **Pulse rendering.** Replace `usePulseLanesTicked` (which still
+   spawns a wall-clock-timed `Pulse` from `publishEdgeArrive`) with
+   a hook that reads inbox occupancy directly. Render a static dot
+   at the edge midpoint while occupied; gone when empty.
+3. **Cosmetic transition only.** If the dot should appear to move
+   between ticks, drive it with a CSS `transition` keyed on tick
+   number. Real time only enters at the cosmetic layer, never gates
+   substrate progress. Click ⏭ before transition completes → dot
+   snaps to next state.
+4. **Strip timing-coupled code.** Drop `effectiveSpeedPxPerMs`,
+   `simStart`, `signalRendererComplete`, per-edge slot ledger from
+   the ticked path.
 
-## What landed in phase 2
+Add a contract test: `tickedInboxLen(edgeId)` is 1 between ticks
+(after Input tick, before ReadGate tick).
 
-- `tools/topology-vscode/src/substrate/ticked/index.ts` — module-scope
-  subscriber set (`_subs`) so subs survive `stopTicked()` / runtime
-  swaps; `start` and `stop` both notify.
-- `tools/topology-vscode/src/webview/panels/TimelinePanel.tsx` — when
-  `isTickedActive()`, label renders `tick ${tickedTickCount()}`
-  instead of falling through to `getTotalTicks()` (which counted
-  every `publishTick`, hence the +2 symptom).
+## What landed this session (commit `5232b32`)
 
-Root cause: label was reading `getTotalTicks()`, which Shape A
-incremented twice per step (once for Input, once for ReadGate).
+- `ticked/runtime.ts` — `step()` wraps `ctx`, observes per-runner
+  activity (any `send` or successful `recv`), publishes `publishTick`
+  + `publishEdgeArrive` itself. Runners are pure `run(ctx)`.
+- `ticked/shape-a.ts` — no telemetry imports; pure runners.
+- `node-streams.ts` — new `subscribeEdgeArrive` /
+  `publishEdgeArrive` pubsub.
+- `AnimatedEdge.tsx` — picks `usePulseLanesTicked` when
+  `isTickedActive()`.
+- `_use-pulse-lanes-ticked.ts` — new hook (still wall-clock; this
+  is what the next task replaces).
+- `AnimatedNode.tsx` — flash + glow refs/divs and tick subscriber
+  removed (user explicitly asked for no node color pulsing).
+- `test/contracts/ticked-substrate-shape-a.test.ts` — two new
+  contract tests: substrate-side per-runner tick events, and
+  per-send edge-arrive events.
+
+## Why this matters (failure modes of current state)
+
+- **Flash/pulse desync.** ReadGate already consumed before pulse
+  finishes traveling. Same-tick drain hides the problem in Shape A;
+  it'll surface immediately in any longer chain.
+- **Click-rate vs animation-rate drift.** Nothing throttles ⏭.
+  Faster clicks pile pulses while substrate is N ticks ahead.
+- **Inbox always empty between ticks** → UI can't read substrate
+  state to know what's "in flight."
+- **Pulse is a ghost.** Carries send-time value; substrate has
+  moved on. Stop/restart leaves orphan pulses.
 
 ## Pre-existing red tests (carry over)
 
@@ -35,9 +69,8 @@ incremented twice per step (once for Input, once for ReadGate).
 
 ## Working tree at handoff
 
-Unstaged (editor state, intentionally not committed):
-- `topology.json` — `"runtime": "ticked"` flag for verification.
-- `topology.view.json` — camera/position drift from manual editing.
+Unstaged (editor state, not committed): `topology.json`
+(`"runtime": "ticked"`), `topology.view.json` (camera drift).
 
 ## ALWAYS clause
 

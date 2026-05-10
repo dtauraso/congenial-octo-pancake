@@ -22,16 +22,17 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, thirty-third session):
-  Active branch: `task/node-ticks`. Phase 2 landed and **visually
-  verified** (commit `6550ae2`). User confirms ⏭ → +1 in ticked
-  Shape A. The fix: module-scope subscriber set so subs survive
-  runtime swaps, and label routes through `tickedTickCount()` when
-  `isTickedActive()` (was reading `getTotalTicks()`, which Shape A
-  incremented twice per step — once for Input, once for ReadGate).
-  Branch is ready to merge to `main` pending sign-off. Default
-  callback substrate untouched. Pair substrate still user-verified
-  under manual ack (contract test pinned at commit `ccd1f19`).
+State at handoff (2026-05-09, thirty-fourth session):
+  Active branch: `task/node-ticks`. Commit `5232b32`. Substrate now
+  owns ticking end-to-end: `step()` wraps `ctx`, observes per-runner
+  activity, and publishes `publishTick` + `publishEdgeArrive`
+  itself. Runners are pure `run(ctx)`. AnimatedEdge picks
+  `usePulseLanesTicked` when `isTickedActive()`, so wire pulses
+  render in ticked Shape A. Node color flashes removed at user
+  request. **Branch is NOT ready to merge** — the wire pulse is
+  still wall-clock-timed (legacy artifact); user wants it
+  tick-driven (state, not animation) before merging. See
+  handoff-next-task.md for the implementation plan.
 
   Pre-existing failures unrelated to this session, still red on the
   branch (do not block next move, but worth triaging):
@@ -60,10 +61,13 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Merge `task/node-ticks` → `main` with sign-off** (see
-[handoff-next-task.md](handoff-next-task.md)). Phase 2 is visually
-verified; merge unblocks Phase 3 (drag-resilient pulse rendering).
-Other dormant options:
+**Make wire pulses tick-driven, not wall-clock-driven** (see
+[handoff-next-task.md](handoff-next-task.md)). Pulse becomes edge
+occupancy (a state) rather than a timed animation. Substrate must
+defer ReadGate consumption to next tick so inbox is observable
+between ticks. Strip `effectiveSpeedPxPerMs` / `simStart` from the
+ticked path. Then re-evaluate merge to `main`. Other dormant
+options:
 
   - **Triage the two pre-existing red tests** (shape-d-cycle,
     handle-load-repro). May resolve as a side effect of ticked
