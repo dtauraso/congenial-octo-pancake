@@ -1,25 +1,33 @@
 # Handoff — Next task (START HERE)
 
 **State:** `task/node-ticks`. Pair substrate uses **manual ack** on
-`wForward` and is **user-verified end-to-end on Shape A** as of
-2026-05-09. First pulse lands and stays; each ⏏ click yields exactly
-one new pulse; no clicks → no pulses. Build green.
+`wForward` and remains user-verified end-to-end on Shape A. Build
+green. Manual-ack contract test pinned to verified behavior in
+commit `ccd1f19`.
 
 ## What changed this session
 
-[ClearSlotButton.tsx](../../../tools/topology-vscode/src/webview/panels/ClearSlotButton.tsx)
-`OneClearButton` now derives `occupied` from `wire.state` on every
-arrive/ack event, instead of toggling two independent setters.
+[runtime-wires-manual-ack.test.ts](../../../tools/topology-vscode/test/contracts/runtime-wires-manual-ack.test.ts):
+- First test now asserts `getManualAckEdges()` for Shape A returns
+  `[{ id: "in0->rg", label: "in0→readGate" }]` and
+  `isManualAckEdge("in0->rg") === true` (was `[]` / `false` under
+  the prior auto-ack design).
+- New click-roundtrip test: starts shape A, waits for wForward to
+  hold queue[0]=1, calls `clearManualAckSlot("in0->rg")`, asserts
+  it returns true, waits for wForward to refill, asserts pending
+  is queue[1]=2, then asserts no further pulse without a second
+  click.
 
-Why: when ⏏ was clicked, `ackWire(wForward)` fired onAck listeners
-in registration order. The permit-release handler synchronously
-cascaded into `wForward.send(v)` (next pulse), which fires onArrive
-listeners including the button's `setOccupied(true)`. Then control
-returned to the outer onAck loop and ran the button's
-`setOccupied(false)` — which was registered after the substrate's
-own onAck handlers. Final React state was `false`, button disabled,
-cycle 2 unreachable. Reading `wire.state` on each event makes
-listener order irrelevant.
+## Pre-existing red tests (carry into next session)
+
+Two failures present before this session, unrelated to the change:
+- `test/contracts/shape-d-cycle.test.ts` — ackEdge depth tracking
+  fails (seed onArrive fires before listeners attach; existing
+  compensation insufficient).
+- `test/contracts/handle-load-repro.test.ts` — real-`topology.json`
+  parse/match/build flow.
+
+Triaging these is the cheapest cleanup before opening new work.
 
 ## Routing (unchanged)
 
@@ -32,18 +40,11 @@ Shapes B, C, D untouched.
 
 ## Pick the next move
 
-Three things are now unblocked. Suggested order:
+### 1. Triage red tests (smallest, do first)
 
-### 1. Tighten the manual-ack contract test (small, do first)
-
-`test/contracts/runtime-wires-manual-ack.test.ts` currently asserts
-that for Shape A under the pair substrate
-`getManualAckEdges()` is `[]`. That was true under the prior design
-(visual layer auto-acked). Now the pair shape registers
-`{ id: "in0->rg", label: "in0→readGate" }`. Update the assertion;
-add a click-roundtrip test if straightforward (call
-`clearManualAckSlot` and assert the wire refills with the next
-queue value).
+Both failures listed above. shape-d-cycle is interesting because it
+overlaps with the next item; handle-load-repro may be schema/spec
+drift on `topology.view.json` (working tree shows it as M).
 
 ### 2. Shape D port
 
