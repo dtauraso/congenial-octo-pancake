@@ -65,29 +65,22 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Active task: uniform-node refactor, step 3 of 8.** Plan in
-[handoff-uniform-node-plan.md](handoff-uniform-node-plan.md) — read
-that next. Step 2 done at `f680b02`.
+**Active task: remove substrate timeouts so vitest suite runs in
+≤30s.** Plan in
+[handoff-timeout-removal.md](handoff-timeout-removal.md) — read that
+next. Supersedes uniform-node step 3 until the suite is fast; the
+uniform-node plan
+([handoff-uniform-node-plan.md](handoff-uniform-node-plan.md))
+resumes after.
 
-**Step 3 to do: port Shape A (`setupInputReadGate`) to `nodeLoop`.**
-Replace its current `inputLoop` + `readGateLoop` pair with two
-`nodeLoop`-driven `NodeSpec`s: an Input node (no inbound; `decide`
-closes over a queue, returns `send` until empty then `stop`) and a
-ReadGate node (one inbound, no outbound; `decide` returns `idle`,
-publishes held/tick via `onTick`). Set `selfAcksAll: true` on the
-returned `ShapeSetup` and drop `manualAckEdges` for that wire — the
-node-loop self-acks on read, and step 2's flag tells the visual
-layer to skip its arc-completion ack. Keep tick/held/buffered
-publication identical so existing tests pass. Branch is green at
-`f680b02`; step 3 must keep 265/265.
-
-Steps 4–8 (port Shape B → C → D, then delete old variants and
-manual-ack plumbing, then re-render handoff) are in the plan doc.
-One step per session; do not bundle.
-
-Before touching anything, also read
-[../../manual-ack-mechanism.md](../../manual-ack-mechanism.md) — it
-describes the load-bearing assumption being undone in step 7.
+Finding: substrate uses real `setTimeout` in three places (cycle
+yield, pulse duration, playback). Only the cycle yield claims to be
+load-bearing for the dataflow, and the user's claim is that none of
+them need to be — every loop already parks on a real promise. Tests
+inherited a `tick = () => setTimeout(0)` polling pattern from the
+substrate's yield; Node clamps that to ~1ms × 265 tests × dozens of
+ticks → minutes wall-clock. Step A is an audit (no code changes) to
+prove every loop's round awaits external progress.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
