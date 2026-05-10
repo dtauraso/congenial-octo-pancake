@@ -24,23 +24,28 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, thirty-ninth session):
-  Active branch: `task/node-ticks`. HEAD = `3a7ab45`.
-  `src/substrate/wire-entity.ts` landed (52 LOC). All 5 wire-entity
-  contract tests are green. Substrate vocab lint clean. No callers
-  wired up yet — wire-entity is a leaf module.
+State at handoff (2026-05-10, fortieth session):
+  Active branch: `task/node-ticks`. HEAD = `1c7e385`.
+  `src/substrate/wire-entity.ts` landed (52 LOC); all 5 contract
+  tests green; substrate vocab lint clean. No callers wired up.
+  Runtime.ts port is **blocked** on the substrate iteration model.
 
-  **Decisions locked this session** (see `handoff-next-task.md`):
-  1. Halt/resume lives on the **substrate**, not the wire.
-  2. Legacy runtime stays as a working museum;
-     `check-substrate-vocab.mjs` skips it via `LEGACY_SKIP`. Ticked
-     side and `wire-entity.ts` must stay clean. Ports retire skip
-     entries one shape at a time.
-  3. `send()` on a non-empty wire **throws** — no queue, no
-     overwrite. Fan-in must be an explicit merge node.
+  **Locked this session** (detail in `handoff-substrate-iteration.md`):
+  1. Each node runs **once per tick**. Rules out multi-pass.
+  2. Topo-order, multi-pass, two-tick latency all rejected as
+     loop-tweaks anchored on the wrong invariant.
+  3. Wire-level fan-in is not user-authorable; `carry()`-throws is
+     code-side defense.
+  4. Renderer must batch per-tick to keep substrate sequentialization
+     invisible. Latent today. See `handoff-tick-batching-audit.md`.
 
-  Lint now passes clean (was 10 baseline hits, all in legacy
-  files).
+  **Working direction (not finalized):** nested loop
+  substrate→node→edges; node not done until its outgoing edges
+  finish delivering. Open shape questions in
+  `handoff-substrate-iteration.md` — do not pre-answer.
+
+  **Held:** halt/resume on substrate; legacy is a working museum
+  (`LEGACY_SKIP`); send-on-non-empty throws.
 
   Memory entries:
   `feedback_derive_model_from_visual_spec.md` (cheap-fix detector,
@@ -68,16 +73,13 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Read [MODEL.md](../../../MODEL.md) first.** Then see
-[handoff-next-task.md](handoff-next-task.md) for what to wire next.
-Wire-entity is implemented and green; the open question is which
-substrate consumer adopts it first.
-
-Candidate next step: pick the smallest ticked-side caller and route
-its edges through `createWire`/`carry`/`observe`. Do not paraphrase
-the wire API into the existing inbox/edge-queue shape — that would
-re-launder the model. State the chosen consumer and wait for
-sign-off before editing.
+**Read [MODEL.md](../../../MODEL.md) and
+[handoff-substrate-iteration.md](handoff-substrate-iteration.md)
+first.** The runtime.ts port is blocked on the substrate iteration
+model. Do not propose multi-step plans with options — state the
+next single concrete step on the iteration model and wait for
+David's sign-off. Wire-entity stays as a green leaf module until
+the round mechanic is settled.
 
 Dormant options:
   - Triage pre-existing red tests (`shape-d-cycle`, `handle-load-repro`).

@@ -1,10 +1,9 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`, HEAD = `3a7ab45`. Wire-entity is
+**State:** `task/node-ticks`, HEAD = `1c7e385`. Wire-entity is
 implemented at `src/substrate/wire-entity.ts` (52 LOC); all 5
-contract tests green; substrate vocab lint clean. No consumer yet
-adopts the new wire — it is a leaf module. Branch is **not** ready
-to merge.
+contract tests green; substrate vocab lint clean. No consumer adopts
+the new wire — it is a leaf module. Branch is **not** ready to merge.
 
 ## Read MODEL.md first
 
@@ -15,68 +14,51 @@ substrate or wire work. If your reasoning uses banned vocabulary
 X"), you are in the wrong frame — stop and re-derive.
 
 Run `node tools/topology-vscode/scripts/check-substrate-vocab.mjs`
-to catch drift mechanically. 10 baseline hits exist in legacy files;
-the refactor retires them.
+to catch drift mechanically. Legacy hits are gated via
+`LEGACY_SKIP`; ticked side and `wire-entity.ts` must stay clean.
 
-## The model (do not paraphrase loosely)
+## Next move — DO NOT port runtime.ts yet
 
-- Substrate owns the tick. A tick is an ordinal count, not a slice of
-  wall-clock time.
-- One tick = every node runs one round; any pulse a node emits travels
-  its wire to the destination within that round.
-- Wire is a first-class entity. State: `empty | carrying(v)`. Not a
-  queue. Not a buffer. One value or none.
-- Geometry is cosmetic. Path length / snake-routing / edits affect
-  only what is rendered. They do not affect wire state, tick count,
-  or substrate correctness.
-- Substrate halts and resumes pulses. That is all. No durations
-  tracked anywhere. The substrate does not schedule, time, or wait on
-  pulses.
-- Renderer animates. It owns pixels and motion. It never signals back
-  to the substrate.
-- Tick close is event-driven: substrate observes wires returning to
-  `empty`. It does not schedule the close.
+The previous handoff said "adopt wire-entity in one consumer (smallest
+ticked-side caller)." That guidance is **superseded**. Adopting
+wire-entity in [src/substrate/ticked/runtime.ts](../../../tools/topology-vscode/src/substrate/ticked/runtime.ts)
+forces a choice of round-mechanic semantics, and that choice is
+**unresolved**. Three obvious options were rejected this session.
 
-Guardrails: `MODEL.md`, `check-substrate-vocab.mjs` lint, CLAUDE.md
-"no plans-with-options for substrate/wire work" rule. Future sessions:
-state next single concrete step and wait for sign-off.
+Read [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
+**before proposing any next step.** It records:
 
-## Next move — adopt wire-entity in one consumer
+- Why the model assumes goroutine concurrency that JS cannot supply
+  natively.
+- The hard constraint: each node runs exactly once per tick.
+- The three rejected options (topo-order, multi-pass, two-tick
+  latency) and why they are loop-tweaks anchored on the wrong
+  invariant.
+- David's working direction (nested loop substrate→node→edges) and
+  the open shape questions inside it. **Not finalized.**
+- Fan-in clarification: wire-level fan-in is not user-authorable;
+  `carry()` throwing is code-side defense.
 
-Contract test at
-[test/contracts/wire-entity-contract.test.ts](../../../tools/topology-vscode/test/contracts/wire-entity-contract.test.ts)
-is green. The wire API is `createWire(id) → { state, carry(v),
-observe() }`; `carry` throws on non-empty. Three refinements (below)
-are locked.
+State the next single concrete step on the substrate iteration model
+and wait for David's sign-off. Do not propose multi-step plans with
+options. Do not start the runtime.ts port until David finalizes the
+round mechanic.
 
-Next step: pick the smallest ticked-side caller and route its edges
-through the new wire. Do **not** paraphrase the API into the legacy
-inbox/edge-queue shape — if a call site needs a queue, the topology
-needs a merge node. State the chosen consumer and wait for sign-off.
+## Decided previously, still hold
 
-**Decided:** halt/resume lives on the **substrate**, not the wire.
-MODEL.md frames halt as a substrate capability; `carrying(v)` is the
-sole wire state axis. Halt = substrate stops advancing ticks; wires
-freeze. Resume = next round runs, wires return to `empty`.
-
-**Decided:** legacy runtime stays as a working museum until each
-shape is ported to `substrate/ticked/` (currently only Shape A).
-`check-substrate-vocab.mjs` gained `LEGACY_SKIP`; ticked side and
-`wire-entity.ts` must stay clean. Port retires one skip entry.
-
-**Decided:** `send()` on a non-empty wire **throws**. The wire has no
-queue and no overwrite policy; two sends in one round is a topology
-bug, not a runtime condition. Fan-in must be an explicit merge node.
-
-Visuals (renderer) are also open per David — fine, substrate
-contract is independent. Do not relax the test to pass.
+- Halt/resume lives on the substrate, not the wire.
+- Legacy runtime stays a working museum; ports retire one
+  `LEGACY_SKIP` entry at a time.
+- `send()` on a non-empty wire **throws**. No queue, no overwrite.
 
 ## Refuse cheap alternatives
 
 `feedback_derive_model_from_visual_spec.md` (in user memory) and
 MODEL.md exist specifically to catch the failure mode where a
-"smallest diff" preserves the wrong model. Read both. If the honest
-implementation is large, say so plainly to David and get sign-off.
+"smallest diff" preserves the wrong model. The three rejected loop-
+tweaks above are exactly that pattern — they preserved the for-loop
+and broke the model. If the honest implementation is large, say so
+plainly to David and get sign-off.
 
 ## Pre-existing red tests (carry over)
 
