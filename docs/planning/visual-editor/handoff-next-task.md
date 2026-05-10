@@ -60,13 +60,10 @@ MODEL.md frames halt as a substrate capability; `carrying(v)` is the
 sole wire state axis. Halt = substrate stops advancing ticks; wires
 freeze. Resume = next round runs, wires return to `empty`.
 
-**Decided:** legacy runtime (`runtime-wires*.ts`, `step/`,
-`node-loop*.ts`, `log.ts`, `node-streams.ts`) stays as a working
-museum until each shape is ported to `substrate/ticked/`. Currently
-only Shape A is ported; legacy still owns Shape D, the pair variant,
-and the inhibitor chain. `check-substrate-vocab.mjs` skips the legacy
-files via a `LEGACY_SKIP` list; ticked side and `wire-entity.ts` must
-stay clean. Each shape port retires one entry from the skip list.
+**Decided:** legacy runtime stays as a working museum until each
+shape is ported to `substrate/ticked/` (currently only Shape A).
+`check-substrate-vocab.mjs` gained `LEGACY_SKIP`; ticked side and
+`wire-entity.ts` must stay clean. Port retires one skip entry.
 
 Visuals (renderer) are also open per David — fine, substrate
 contract is independent. Do not start implementation until David
