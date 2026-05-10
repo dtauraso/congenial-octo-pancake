@@ -24,11 +24,11 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, thirty-sixth session):
-  Active branch: `task/node-ticks`. Commit `f4c8d01` + this
-  session's guardrail commit. No code refactor yet; this session
-  added drift guardrails after the AI repeatedly imported timing
-  vocabulary into the substrate model despite explicit corrections.
+State at handoff (2026-05-09, thirty-seventh session):
+  Active branch: `task/node-ticks`. HEAD = `d4fb0a6` (red contract
+  test for wire-as-entity). No implementation yet. Three open
+  refinements still block implementation sign-off (see
+  `handoff-next-task.md`).
 
   **Key shift this session:** David refined the model further and
   named the AI's drift pattern. Substrate is event-ordering only —
@@ -75,14 +75,16 @@ fired` to Output → Log (Extension Host).
 
 **Read [MODEL.md](../../../MODEL.md) first.** Then see
 [handoff-next-task.md](handoff-next-task.md) for the refined wire
-model. Open refinements before code: legacy non-ticked path
-disposition, halt/resume location (substrate flag vs wire flag),
-multi-send-per-round policy.
+model. Red contract test landed at
+`tools/topology-vscode/test/contracts/wire-entity-contract.test.ts`
+(commit `d4fb0a6`) — 5 tests, all expected red.
 
-Smallest honest first step: a red contract test pinning wire state
-`empty | carrying(v)`, geometry-independence, and zero timing
-vocabulary in substrate (lint-style assertion). No code refactor
-until David signs off on the step sequence.
+Implementation is still blocked on three open refinements: legacy
+non-ticked path disposition, halt/resume location (substrate flag
+vs wire flag), multi-send-per-round policy. Do not start the
+`wire-entity.ts` module until David signs off on those. David noted
+the visual side is also still open; that's fine — substrate
+contract is independent of renderer choices.
 
 Dormant options (do not pursue ahead of wire-as-entity):
   - Triage pre-existing red tests.

@@ -1,9 +1,9 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`, commit `f4c8d01` + this session's
-guardrail commit. Substrate-owned ticking from prior session is
-intact; wire-as-entity refactor not started. Branch is **not** ready
-to merge.
+**State:** `task/node-ticks`, HEAD = `d4fb0a6`. Red contract test
+for wire-as-entity has landed (5 tests, all red as designed).
+Substrate-owned ticking from prior session is intact; wire-entity
+implementation not started. Branch is **not** ready to merge.
 
 ## Read MODEL.md first
 
@@ -54,8 +54,15 @@ wire work. State the next single concrete step and wait for sign-off.
 
 ## Next move — wire-as-entity (refinement still open)
 
-David has not yet signed off on a concrete step sequence. Open
-refinement points before any code:
+Red contract test has landed at
+[test/contracts/wire-entity-contract.test.ts](../../../tools/topology-vscode/test/contracts/wire-entity-contract.test.ts).
+It pins three claims and is intentionally red:
+- state shape `empty | carrying(v)` (no queue/buffer/length/inFlight/ready/duration)
+- geometry edits do not mutate state
+- `check-substrate-vocab.mjs` exits clean (currently 10 baseline hits)
+
+Implementation (`src/substrate/wire-entity.ts` + retiring legacy
+substrate vocabulary) is **blocked on three open refinements**:
 
 1. Is the legacy non-ticked runtime (`runtime-wires.ts` await/Promise
    path) dead/removable, or must it keep working?
@@ -64,10 +71,9 @@ refinement points before any code:
 3. Multiple sends to the same wire in one round: error, or
    last-write-wins? `carrying(v)` holds one value.
 
-Once refined, the smallest honest first step is a **red contract
-test** that pins: wire state is `empty | carrying(v)`; geometry
-changes do not affect wire state; substrate contains zero timing
-vocabulary (lint test).
+Visuals (renderer) are also open per David — fine, substrate
+contract is independent. Do not start implementation until David
+signs off on (1)–(3). Do not relax the test to pass.
 
 ## Refuse cheap alternatives
 
