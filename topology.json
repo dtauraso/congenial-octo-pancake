@@ -29,6 +29,7 @@
       }
     }
   ],
+  "runtime": "ticked",
   "timing": {
     "duration": "12s"
   },

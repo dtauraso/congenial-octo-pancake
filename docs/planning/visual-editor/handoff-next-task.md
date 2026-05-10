@@ -69,18 +69,14 @@ substrate vocabulary) is **blocked on two open refinements**:
 2. Multiple sends to the same wire in one round: error, or
    last-write-wins? `carrying(v)` holds one value.
 
-**Decided (this session):** halt/resume lives on the **substrate**,
-not the wire. Rationale: MODEL.md frames halt as a substrate
-capability ("the substrate halts and resumes pulses"); `carrying(v)`
-already fully describes wire state, and adding a `halted` flag would
-be a second state axis the model does not have. Halt = substrate
-stops advancing ticks; wires keep `carrying(v)` frozen because nothing
-runs. Resume = next round runs, pulses arrive, wires return to
-`empty`.
+**Decided:** halt/resume lives on the **substrate**, not the wire.
+MODEL.md frames halt as a substrate capability; `carrying(v)` is the
+sole wire state axis. Halt = substrate stops advancing ticks; wires
+freeze. Resume = next round runs, wires return to `empty`.
 
 Visuals (renderer) are also open per David — fine, substrate
 contract is independent. Do not start implementation until David
-signs off on (1)–(3). Do not relax the test to pass.
+signs off on (1)–(2). Do not relax the test to pass.
 
 ## Refuse cheap alternatives
 
