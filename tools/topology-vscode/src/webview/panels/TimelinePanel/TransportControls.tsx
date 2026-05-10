@@ -20,6 +20,9 @@ import {
   resumeWiresRuntime,
 } from "../../../substrate/runtime-wires";
 import { isTickedActive, tickedStep } from "../../../substrate/ticked";
+import { vscode } from "../../save";
+
+let _frameRendererPaused = false;
 
 export function TransportControls({ label }: { label: string }) {
   // Three runtimes share this button: the wires runtime (matched
@@ -36,6 +39,13 @@ export function TransportControls({ label }: { label: string }) {
       ? !wiresPaused
       : substrateActive || isPlaying();
   const toggle = () => {
+    if (_frameRendererPaused) {
+      vscode.postMessage({ type: "frame-resume" });
+      _frameRendererPaused = false;
+    } else {
+      vscode.postMessage({ type: "frame-pause" });
+      _frameRendererPaused = true;
+    }
     if (ticked) return;
     if (wiresActive) {
       if (wiresPaused) resumeWiresRuntime();

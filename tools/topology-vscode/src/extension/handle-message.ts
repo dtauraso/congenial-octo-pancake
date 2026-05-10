@@ -13,6 +13,7 @@ import { writeProbeDump } from "./probe-dumps";
 import { appendSubstrateLog } from "./substrate-log";
 import { pickAndLoadTrace } from "./trace-pick";
 import { handleCompareFile, handleCompareHead } from "./compare-load";
+import type { FrameRendererCtl } from "./frame-renderer";
 
 export type MessageCtx = {
   document: vscode.TextDocument;
@@ -23,6 +24,7 @@ export type MessageCtx = {
   send: () => Thenable<boolean>;
   sendView: () => Promise<unknown>;
   setLastAppliedVersion: (v: number) => void;
+  frameRenderer: FrameRendererCtl;
 };
 
 export async function handleMessage(raw: unknown, ctx: MessageCtx): Promise<void> {
@@ -99,6 +101,12 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
       return;
     case "substrate-log":
       await appendSubstrateLog(msg.entry, document.uri);
+      return;
+    case "frame-pause":
+      ctx.frameRenderer.pause();
+      return;
+    case "frame-resume":
+      ctx.frameRenderer.resume();
       return;
   }
 }

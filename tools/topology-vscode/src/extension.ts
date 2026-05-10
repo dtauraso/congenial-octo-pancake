@@ -116,6 +116,7 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
         send,
         sendView,
         setLastAppliedVersion: (v) => { lastAppliedVersion = v; },
+        frameRenderer,
       }),
     );
   }

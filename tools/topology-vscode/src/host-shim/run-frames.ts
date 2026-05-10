@@ -20,6 +20,11 @@ import {
 } from "../substrate/node-loop-uniform-v2";
 import { runWire, type WireLoopHandle } from "../substrate/wire-loop";
 import type { Wire } from "../substrate/wire-entity";
+import { pauseAware, type PauseSignal } from "../substrate/pause-aware";
+import {
+  createPauseController,
+  type PauseController,
+} from "../substrate/pause-controller";
 import {
   createRendererAdapter,
   type AdapterOptions,
@@ -38,6 +43,9 @@ export interface RunFramesOptions {
 
 export interface RunFramesHandle {
   stop(): void;
+  pause(): void;
+  resume(): void;
+  readonly paused: boolean;
   readonly recorder: Recorder<PacedFrame<unknown>>;
 }
 
@@ -47,7 +55,8 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
   const wireLoops: WireLoopHandle[] = [];
   const sources: SourceHandle[] = [];
 
-  for (const w of wires.values()) wireLoops.push(runWire(w));
+  const pause: PauseController = createPauseController();
+  for (const w of wires.values()) wireLoops.push(runWire(w, pause));
 
   for (const node of opts.spec.nodes) {
     const inputs: Wire<unknown>[] = [];
@@ -61,7 +70,7 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
     if (inputs.length === 0) {
       const queue = readNodeInit(node.data) as unknown as readonly unknown[];
       if (outputs.length > 0 && queue.length > 0) {
-        sources.push(spawnSource(outputs, queue));
+        sources.push(spawnSource(outputs, queue, pause));
       }
       continue;
     }
@@ -71,7 +80,7 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
       outputs,
       body: (vals) => outputs.map(() => vals[0]),
     };
-    nodes.push(runNode(nodeSpec));
+    nodes.push(runNode(nodeSpec, pause));
   }
 
   const adapter = createRendererAdapter<PacedFrame<unknown>>({
@@ -97,6 +106,9 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
       adapter.stop();
       recorder.stop();
     },
+    pause: () => pause.pause(),
+    resume: () => pause.resume(),
+    get paused() { return pause.paused; },
     recorder,
   };
 }
@@ -106,15 +118,20 @@ interface SourceHandle { stop(): void }
 function spawnSource<V>(
   outputs: readonly Wire<V>[],
   queue: readonly V[],
+  pause?: PauseSignal,
 ): SourceHandle {
   let running = true;
   void (async () => {
     for (const v of queue) {
       if (!running) return;
-      await Promise.all(outputs.map((w) => w.awaitEmpty()));
+      await Promise.all(
+        outputs.map((w) => pauseAware(() => w.awaitEmpty(), pause)),
+      );
       if (!running) return;
       for (const w of outputs) w.load(v);
-      await Promise.all(outputs.map((w) => w.awaitAcked()));
+      await Promise.all(
+        outputs.map((w) => pauseAware(() => w.awaitAcked(), pause)),
+      );
     }
   })();
   return { stop: () => { running = false; } };

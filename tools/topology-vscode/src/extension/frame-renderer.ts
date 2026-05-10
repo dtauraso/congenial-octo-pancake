@@ -16,6 +16,9 @@ const SETTING = "topology.frameRendererEnabled";
 export interface FrameRendererCtl {
   refresh(): void;
   dispose(): void;
+  pause(): void;
+  resume(): void;
+  readonly paused: boolean;
 }
 
 export function attachFrameRenderer(
@@ -55,5 +58,8 @@ export function attachFrameRenderer(
       stop();
       cfgSub.dispose();
     },
+    pause: () => handle?.pause(),
+    resume: () => handle?.resume(),
+    get paused() { return handle?.paused ?? false; },
   };
 }
