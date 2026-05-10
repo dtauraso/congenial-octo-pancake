@@ -9,58 +9,55 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — **start here**
-     for the next commit. Spec has been re-framed: wire-as-entity,
-     not inbox-deferral. Read carefully — this reverses the prior
-     cheap-fix framing.
-  2. [handoff-step1-notes.md](handoff-step1-notes.md) — what was
-     built on the rebuild branch (decision audit, coupling hacks
-     gated to step 1, automated logging, e2e).
-  3. [handoff-gate-a.md](handoff-gate-a.md) — earlier merge to main
-     (Gate A).
-  4. [handoff-rebuild-plan.md](handoff-rebuild-plan.md) — port plan,
-     contracts R1–R5, auto-retire signal.
-  5. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
+     for the deletion sweep. Names systems 1, 2, 2.5 explicitly and
+     the cheap alternatives to refuse.
+  2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
+     — system 3 model: forever-loops, line-level pause, events.
+  3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
      mode, open branches, housekeeping.
 
 ---
 
-State at handoff (2026-05-10, fiftieth session):
-  Active branch: `task/node-ticks`. Steps 1–6 + 7a + 7b landed
-  previously. **Step 7c — webview painter** landed this
-  session (commit `168645e`). New:
-  `webview/frame-store.ts` (useSyncExternalStore bridge;
-  `active` flips true on first FrameMsg). `main.tsx` routes
-  `frame` msgs into the store. `AnimatedEdge.tsx` and
-  `AnimatedNode/AnimatedNode.tsx` subscribe; while
-  frame-mode is active they paint per-wire empty/carrying
-  (tinted stroke + value chip mid-edge) and per-node
-  four-state (fill+border) on the SAME canvas — legacy
-  pulse rendering is suppressed by `!frameMode &&` guards.
-  Flag-off path is byte-identical. Build/tsc/vocab/LOC
-  clean; 309 pass, same two pre-existing reds.
+State at handoff (2026-05-10, fifty-first session):
+  Active branch: `task/node-ticks`. This session landed three
+  commits: `99dc8c5` (`run-frames` seeds Input from `data.init`,
+  spawns `runWire` for every wire — system 3 was wired to the
+  painter but inert in production: no source seeding, no wire
+  loops, so the pipeline jammed after one load); `03fcdf3`
+  (`PauseController` threaded through `runWire`/`runNode`/source
+  loop; exposed up through `RunFramesHandle` and
+  `FrameRendererCtl`; `frame-pause`/`frame-resume` webview→host
+  messages routed); `43d66a6` (session-log entry).
+  Build/tsc/vocab/LOC clean; 310 pass, same two pre-existing reds.
 
-  **Decision locked this session:** painter REPLACES the
-  legacy renderer on the same canvas while
-  `topology.frameRendererEnabled` is on. Not an overlay.
+  **Architectural shift this session:** the user named that there
+  have been three from-scratch substrate attempts (system 1 sim
+  runner, system 2 legacy substrate + wires-runtime, system 3
+  forever-loop substrate) plus a ticked sidecar (system 2.5). The
+  current state corrupts system 3 by layering it on top of all
+  prior systems instead of replacing them. `TransportControls`
+  branches on four substrate vocabularies; painter has
+  `!frameMode &&` guards to coexist with a legacy renderer that
+  shouldn't exist anymore.
 
-  **Not yet proof-out:** painter has not been driven through
-  VS Code on a real topology. Code is complete; visual
-  verification is the next move before flipping the default.
+  **Known UI bug:** `TransportControls.tsx` has `disabled={ticked}`
+  on the play/pause button, so the new `frame-pause`/`frame-resume`
+  toggle hookup never fires under `runtime: "ticked"`. Do **not**
+  patch in place; the deletion sweep is the right move.
 
-  **Model:** see `handoff-substrate-iteration.md`. Forever-loops per
+  **Model:** `handoff-substrate-iteration.md`. Forever-loops per
   node and per wire; backpressure coordination; line-level pause;
   ordinal-seq state-change events; renderer owns pacing. Substrate
-  is **timing-free** per MODEL.md. Runtime.ts port unblocked.
+  **timing-free** per MODEL.md.
 
-  **Held:** halt/resume on substrate; legacy is a working museum
-  (`LEGACY_SKIP`); send-on-non-empty throws; renderer adapter stays
-  outside `src/substrate/`.
+  **Held:** halt/resume on substrate; send-on-non-empty throws;
+  renderer adapter / host-shim / frame-store live outside
+  `src/substrate/` for the vocab gate.
 
   Pre-existing reds: `shape-d-cycle.test.ts`,
-  `handle-load-repro.test.ts`. Manual-ack:
-  [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
-  Working tree: `topology.{json,view.json}` — editor state.
-  Reference branches retained — do not delete.
+  `handle-load-repro.test.ts` — both test wires-runtime and retire
+  with the deletion sweep. Working tree: `topology.{json,view.json}`
+  — editor state. Reference branches retained — do not delete.
 
 ## Dev-loop
 
@@ -70,22 +67,23 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Read [MODEL.md](../../../MODEL.md) and
-[handoff-substrate-iteration.md](handoff-substrate-iteration.md).
-Step 7c (webview painter) landed. Next move: **proof-out**.
-Open the topology tab on a real spec, flip
-`topology.frameRendererEnabled` on, verify per-wire
-empty→dim / carrying→tinted+chip transitions and per-node
-four-state fill+border updates; confirm no legacy pulses bleed
-through. If proof-out passes, evaluate flipping the flag
-default. If friction surfaces (chip / `EdgeLabels` overlap,
-four-state legibility, identity-broadcast too thin for visual
-coverage), log to session-log.md and either fix forward or tee
-up 7d (richer node kinds). See
-[handoff-next-task.md](handoff-next-task.md).
+Open `task/remove-legacy-runtimes` from current `task/node-ticks`
+HEAD. Delete `sim/runner` (system 1), `substrate/runtime` + every
+`substrate/runtime-wires*` (system 2), and `substrate/ticked/`
+(system 2.5 sidecar). Rewrite `TransportControls.tsx` against
+`FrameRendererCtl` only — `pause`/`resume`/`paused` plus a Step
+that means "unpause for one event then re-pause" (likely a new
+`stepOnce()` on `PauseController`). Delete `!frameMode &&` guards
+in `AnimatedEdge` / `AnimatedNode`. Delete tests pinning
+system 1/2/2.5 behavior; the two pre-existing reds retire with
+wires-runtime. Port any non-shape-A behavior the user actually
+drives that wires-runtime currently hosts; delete what's unused.
+Vocab/tsc/build/proof-out gates as usual. See
+[handoff-next-task.md](handoff-next-task.md) for the full scope and
+the cheap-alternative refusal list.
 
-Dormant: triage pre-existing reds (`shape-d-cycle`,
-`handle-load-repro`); Shape D port. Tick-batching audit superseded.
+Dormant: Shape D port (likely deleted with wires-runtime unless
+ported). Tick-batching audit superseded.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
