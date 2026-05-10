@@ -10,7 +10,7 @@
 // inputs are skipped (sources need a seed mechanism, out of scope
 // for 7b). Richer node kinds (and-gate, latch, ...) land later.
 
-import type { Spec } from "../schema";
+import type { Spec, StateValue } from "../schema";
 import type { FrameMsg } from "../messages";
 import { buildWireEntities } from "../substrate/build-wire-entities";
 import {
@@ -18,12 +18,14 @@ import {
   type NodeLoopHandleV2,
   type NodeSpecV2,
 } from "../substrate/node-loop-uniform-v2";
+import { runWire, type WireLoopHandle } from "../substrate/wire-loop";
 import type { Wire } from "../substrate/wire-entity";
 import {
   createRendererAdapter,
   type AdapterOptions,
 } from "../renderer/renderer-adapter";
 import { createRecorder, type Recorder } from "../recorder/recorder";
+import { readNodeInit } from "../sim/seeds";
 import { composeShim, type PacedFrame } from "./host-shim";
 import { serializeFrame } from "./serialize-frame";
 
@@ -42,6 +44,10 @@ export interface RunFramesHandle {
 export function runFrames(opts: RunFramesOptions): RunFramesHandle {
   const wires = buildWireEntities(opts.spec);
   const nodes: NodeLoopHandleV2[] = [];
+  const wireLoops: WireLoopHandle[] = [];
+  const sources: SourceHandle[] = [];
+
+  for (const w of wires.values()) wireLoops.push(runWire(w));
 
   for (const node of opts.spec.nodes) {
     const inputs: Wire<unknown>[] = [];
@@ -52,7 +58,13 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
       if (edge.target === node.id) inputs.push(w);
       if (edge.source === node.id) outputs.push(w);
     }
-    if (inputs.length === 0) continue;
+    if (inputs.length === 0) {
+      const queue = readNodeInit(node.data) as unknown as readonly unknown[];
+      if (outputs.length > 0 && queue.length > 0) {
+        sources.push(spawnSource(outputs, queue));
+      }
+      continue;
+    }
     const nodeSpec: NodeSpecV2<unknown, unknown> = {
       id: node.id,
       inputs,
@@ -80,9 +92,30 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
     stop: () => {
       shim.stop();
       for (const n of nodes) n.stop();
+      for (const wl of wireLoops) wl.stop();
+      for (const s of sources) s.stop();
       adapter.stop();
       recorder.stop();
     },
     recorder,
   };
+}
+
+interface SourceHandle { stop(): void }
+
+function spawnSource<V>(
+  outputs: readonly Wire<V>[],
+  queue: readonly V[],
+): SourceHandle {
+  let running = true;
+  void (async () => {
+    for (const v of queue) {
+      if (!running) return;
+      await Promise.all(outputs.map((w) => w.awaitEmpty()));
+      if (!running) return;
+      for (const w of outputs) w.load(v);
+      await Promise.all(outputs.map((w) => w.awaitAcked()));
+    }
+  })();
+  return { stop: () => { running = false; } };
 }

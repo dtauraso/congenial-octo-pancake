@@ -1,8 +1,10 @@
-// Step 7b: pin the runFrames orchestrator. Verifies that:
-//  1. Source-only nodes (zero inputs) are skipped without throwing,
-//     since 7b has no seed mechanism.
+// Step 7b + source-seeding: pin the runFrames orchestrator. Verifies:
+//  1. Source-only nodes with no `data.init` produce no source emissions
+//     (queue empty → loop never loads).
 //  2. No external load → no frames paced; recorder stays empty.
 //  3. stop() prevents any further paced frames from arriving.
+//  4. Input node with `data.init` seeds its outgoing wires; identity
+//     downstream node forwards; recorder records carrying frames.
 
 import { describe, expect, it } from "vitest";
 import { runFrames } from "../../src/host-shim/run-frames";
@@ -64,6 +66,31 @@ describe("runFrames", () => {
     });
     clock.flush();
     expect(h.recorder.length()).toBe(0);
+    h.stop();
+  });
+
+  it("seeds Input node with data.init onto outgoing wires", async () => {
+    _resetSeqForTests();
+    const sent: FrameMsg[] = [];
+    const clock = fakeClock();
+    const spec: Spec = {
+      nodes: [
+        { id: "src", type: "Input", data: { init: [7, 8] } },
+        { id: "dst", type: "Identity" },
+      ],
+      edges: [e("e1", "src", "dst")],
+    };
+    const h = runFrames({
+      spec,
+      post: (m) => sent.push(m),
+      schedule: clock.schedule,
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    clock.flush();
+    const carrying = sent.filter((m) =>
+      m.wires.some(([, s]) => s.kind === "carrying"),
+    );
+    expect(carrying.length).toBeGreaterThan(0);
     h.stop();
   });
 
