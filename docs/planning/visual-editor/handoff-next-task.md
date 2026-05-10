@@ -1,81 +1,70 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`. Pair substrate uses **manual ack** on
-`wForward` and remains user-verified end-to-end on Shape A. Build
-green. Manual-ack contract test pinned to verified behavior in
-commit `ccd1f19`.
+**State:** `task/node-ticks`, phase 2 landed but **not yet visually
+verified**. User reports the editor's tick counter still increments
+**by 2 per ⏭ click** in ticked mode after the attempted fix below.
+Build green. Working tree dirty (uncommitted attempted fix — see
+"Uncommitted attempt").
 
-## What changed this session
+## The bug
 
-[runtime-wires-manual-ack.test.ts](../../../tools/topology-vscode/test/contracts/runtime-wires-manual-ack.test.ts):
-- First test now asserts `getManualAckEdges()` for Shape A returns
-  `[{ id: "in0->rg", label: "in0→readGate" }]` and
-  `isManualAckEdge("in0->rg") === true` (was `[]` / `false` under
-  the prior auto-ack design).
-- New click-roundtrip test: starts shape A, waits for wForward to
-  hold queue[0]=1, calls `clearManualAckSlot("in0->rg")`, asserts
-  it returns true, waits for wForward to refill, asserts pending
-  is queue[1]=2, then asserts no further pulse without a second
-  click.
+In ticked Shape A, clicking ⏭ once should advance the tick label by
+exactly 1. It still advances by 2. Expected behavior per
+[handoff-ticked-substrate-plan.md](handoff-ticked-substrate-plan.md)
+phase 2 exit criterion.
 
-## Pre-existing red tests (carry into next session)
+## Uncommitted attempt (did not fix it)
 
-Two failures present before this session, unrelated to the change:
-- `test/contracts/shape-d-cycle.test.ts` — ackEdge depth tracking
-  fails (seed onArrive fires before listeners attach; existing
-  compensation insufficient).
-- `test/contracts/handle-load-repro.test.ts` — real-`topology.json`
-  parse/match/build flow.
+Working tree changes:
+- `tools/topology-vscode/src/webview/panels/TimelinePanel.tsx` — when
+  `isTickedActive()`, render label as `tick ${tickedTickCount()}`
+  instead of falling through to `getTotalTicks()`. Subscribed to
+  `subscribeTicked`.
+- `tools/topology-vscode/src/substrate/ticked/index.ts` — moved
+  subscriber set to module scope (`_subs`) so subscribers survive
+  `stopTicked()` / runtime swaps. `start` and `stop` notify.
 
-Triaging these is the cheapest cleanup before opening new work.
+Hypothesis was: label was reading `getTotalTicks()` (a counter
+incremented by every `publishTick(...)` call, and Shape A fires it
+twice per step — once for `Input`, once for `ReadGate`). Routing
+through `tickedTickCount()` should have shown +1 per click. User
+says no change. Either:
+  a) the label isn't actually showing `tickedTickCount()` (check
+     `isTickedActive()` — maybe ticked mode never actually started
+     and we're still on a different runtime path), OR
+  b) `step(rt)` is being called twice per click (check React
+     StrictMode double-invoke, double event binding, or something
+     else calling `tickedStep()` from a subscriber).
 
-## Routing (unchanged)
+## How to debug next session
 
-```
-USE_PAIR_SUBSTRATE_SHAPE_A = true   // wins for shape "input->readGate"
-USE_STEP_SUBSTRATE_SHAPE_A = false  // dormant
-```
+1. Build: `cd tools/topology-vscode && npm run build`.
+2. Open editor, load a Shape A spec with `runtime: "ticked"`.
+3. Add a `console.log` in `tickedStep()` and in `step()` (runtime.ts)
+   — confirm whether one click → one or two invocations.
+4. Check `isTickedActive()` returns true at the time of click; if
+   false, ticked startup never happened and the label is reading
+   `getTotalTicks()` (the +2 source).
+5. Inspect `TransportControls.onStep`: it's the only caller of
+   `tickedStep` we know of. Grep for any other.
 
-Shapes B, C, D untouched.
+## Decision
 
-## Pick the next move
+Either land the working-tree fix (if root cause is confirmed and
+fixed) or revert it. Do **not** merge to `main` until ⏭ → +1 is
+visually verified.
 
-### 0. Ticked substrate (NEW — primary direction)
+## Pre-existing red tests (carry over)
 
-See [handoff-ticked-substrate-plan.md](handoff-ticked-substrate-plan.md).
-Substrate-owned tick: each pass through `nodes[]` = 1 tick, pulse
-traversal lives inside `node.run()`. Goal is making time first-class
-and observable ("concurrent clocks frozen on command"). Phase 1 is a
-spike on Shape A behind a `runtime: "ticked"` spec flag, no existing
-substrate touched.
-
-### 1. Triage red tests (smallest, do first)
-
-Both failures listed above. shape-d-cycle is interesting because it
-overlaps with the next item; handle-load-repro may be schema/spec
-drift on `topology.view.json` (working tree shows it as M).
-
-### 2. Shape D port
-
-See [handoff-shape-d-plan.md](handoff-shape-d-plan.md). The
-manual-ack pacing model is now the established pattern; port D's
-internal loop to use it where applicable.
-
-### 3. Uniform-node work / timeout removal
-
-[handoff-uniform-node-plan.md](handoff-uniform-node-plan.md) and
-[handoff-timeout-removal.md](handoff-timeout-removal.md). Both were
-gated on the pair model being trusted; that gate is lifted.
-
-## Open question (unchanged)
-
-Should `wPermit` carry the value back (so readGate logic can depend
-on what it received) or remain an opaque "go" token? Defer until a
-shape that needs the value motivates it.
+- `test/contracts/shape-d-cycle.test.ts` — ackEdge depth race.
+- `test/contracts/handle-load-repro.test.ts` — real `topology.json`.
 
 ## Working tree at handoff
 
-Clean except `topology.view.json` (incidental drift, leave or stash).
+Modified, not committed:
+- `tools/topology-vscode/src/substrate/ticked/index.ts`
+- `tools/topology-vscode/src/webview/panels/TimelinePanel.tsx`
+- `topology.view.json` (incidental drift)
 
 ## ALWAYS clause
 

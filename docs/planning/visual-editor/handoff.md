@@ -22,21 +22,19 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, thirty-first session):
-  Active branch: `task/node-ticks`. **Ticked substrate phase 2
-  landed (commit `c881ada`)**: the 600ms auto-driver is gone. The
-  ticked runtime now advances only on `tickedStep()`. The Step
-  button in `TransportControls.tsx` is wired to call `tickedStep()`
-  when `isTickedActive()`; Play/Pause is disabled in that mode (no
-  Resume — phase 2 deliberately omits wall-clock auto-play). New
-  APIs in `src/substrate/ticked/`: `subscribeTicked`,
-  `tickedInboxSnapshot`. Phase 1 contract test still green and was
-  updated to match the simplified `startTickedShapeA(spec)`
-  signature. Phase 2 UI behavior (P2 exit criterion: pause Shape A
-  mid-run, single step advances exactly one hop, inbound-port
-  readouts match) is **not yet visually verified** this session —
-  next session must drive the editor to confirm before merging to
-  main. Default callback substrate untouched. Pair substrate still
+State at handoff (2026-05-09, thirty-second session):
+  Active branch: `task/node-ticks`. Phase 2 landed (commit `c881ada`)
+  but **visual verification failed**: user reports the editor's tick
+  counter still increments **by 2 per ⏭ click** in ticked mode.
+  Attempted fix (uncommitted, in working tree) routes the label
+  through `tickedTickCount()` and moves the ticked subscriber set
+  to module scope so subs survive runtime swaps — user confirms
+  this did NOT fix the symptom. See
+  [handoff-next-task.md](handoff-next-task.md) for the debug
+  starting points (instrument `tickedStep` / `step`, confirm
+  `isTickedActive()` is true at click time, check for double
+  invocation). Do NOT merge to `main` until ⏭ → +1 is verified.
+  Default callback substrate untouched. Pair substrate still
   user-verified under manual ack (contract test pinned at commit
   `ccd1f19`).
 
@@ -53,8 +51,11 @@ State at handoff (2026-05-09, thirty-first session):
   on command**. Manual-ack doc:
   [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
-  Working tree: clean except `topology.view.json` (incidental drift,
-  leave or stash). Reference branches retained:
+  Working tree: uncommitted attempted fix in
+  `tools/topology-vscode/src/substrate/ticked/index.ts` and
+  `tools/topology-vscode/src/webview/panels/TimelinePanel.tsx`,
+  plus `topology.view.json` drift. Decide to land or revert after
+  root-causing the +2 bug. Reference branches retained:
   `task/runtime-substrate-rebuild`, `task/wires`,
   `task/node-visuals-strip`. Do not delete.
 
@@ -66,17 +67,12 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Verify phase 2 in the editor**, then merge `task/node-ticks` to
-`main` per the plan ("merge to main after phase 2 so later phases
-have a stable base"). Verification: load a Shape A spec with
-`runtime: "ticked"`, observe the system is paused-by-default,
-click ⏭ and confirm the tick counter increments by one per click
-and the readGate held-value display updates one input at a time.
-If verified, merge with sign-off (per CLAUDE.md "merging a task
-branch into `main`" requires explicit sign-off). After merging,
-start **phase 3 — drag-resilient pulse rendering** on a fresh
-task branch (independent of phases 1–2). See
-[handoff-ticked-substrate-plan.md](handoff-ticked-substrate-plan.md). Other dormant options:
+**Root-cause the +2 bug** (see
+[handoff-next-task.md](handoff-next-task.md)) so a single ⏭ click
+advances the displayed tick counter by exactly 1. Then re-attempt
+phase 2 visual verification and merge `task/node-ticks` → `main`
+with sign-off. Phase 3 (drag-resilient pulse rendering) waits on
+that. Other dormant options:
 
   - **Triage the two pre-existing red tests** (shape-d-cycle,
     handle-load-repro). May resolve as a side effect of ticked
