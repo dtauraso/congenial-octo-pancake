@@ -22,23 +22,15 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, twenty-fifth session):
-  Active branch: `task/node-ticks`. **Pair substrate landed**
-  (`98a2b0f`). New `substrate/runtime-wires-pair.ts` exports
-  `setupInputReadGatePair`: two wires (wForward cap=0, wPermit cap=1
-  internal), callback state machines on `onArrive`/`onAck`, no
-  `await` in node bodies, no driver. Routing in `runtime-wires.ts`:
-  pair > step > legacy. Step substrate disabled
-  (`USE_STEP_SUBSTRATE_SHAPE_A = false`) but kept in tree as
-  reference. Manual-ack contract updated: wForward is acked by the
-  visual layer (`selfAcksAll = false`), inverting the step
-  substrate's invariant. Build + tests green (265 passing).
-
-  **Not yet observed in the editor.** Next session must launch the
-  webview against a Shape A spec and check whether pulses space
-  cleanly under the pair substrate. If yes: step substrate's
-  same-tick drain was the cause. If they still stack: bug is in
-  `_use-pulse-lanes-wire.ts`, not the substrate.
+State at handoff (2026-05-09, twenty-sixth session):
+  Active branch: `task/node-ticks`. Pair substrate landed last
+  session (`98a2b0f`). This session: trimmed `topology.json` +
+  `topology.view.json` down to a true Shape A spec (just `in08`
+  Input → `readGate1` ReadGate; previously had `i0`+`i1` chain
+  inhibitors and an `i1→readGate.ack` feedback edge that made it
+  render as 4 nodes in the editor). Pair substrate behavior still
+  not observed — user noticed the wrong shape was loaded before
+  cadence could be judged.
 
   Carried context: Shape D self-pumps via `fb56c30`'s i1 fan-out +
   one-shot `seedLoop` + per-round `setTimeout(0)` yield in

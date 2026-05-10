@@ -1,8 +1,14 @@
 # Handoff — Next task (START HERE)
 
 **State:** `task/node-ticks`. Pair substrate landed in `98a2b0f`.
-Build + tests green. **Visual cadence not yet verified in the
-editor.** Next session opens the webview and watches.
+Build + tests green. Spec at repo root (`topology.json` +
+`topology.view.json`) has been trimmed to a true Shape A: only
+`in08` (Input) → `readGate1` (ReadGate), one edge
+`in0.out->readGate.chainIn`. Earlier 4-node version (with `i0`,
+`i1`, and `i1→readGate.ack`) was rendering instead and obscured
+the pair-substrate observation. **Visual cadence still not
+verified.** Next session opens the webview on the trimmed spec and
+watches.
 
 ## What landed
 
