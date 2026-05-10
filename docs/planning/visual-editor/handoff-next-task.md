@@ -83,10 +83,9 @@ implementation is large, say so plainly to David and get sign-off.
 - `test/contracts/shape-d-cycle.test.ts` — ackEdge depth race.
 - `test/contracts/handle-load-repro.test.ts` — real `topology.json`.
 
-## Working tree at handoff
+## Working tree
 
-Unstaged (editor state): `topology.json` (`"runtime": "ticked"`),
-`topology.view.json` (camera drift).
+Unstaged editor state: `topology.json`, `topology.view.json`.
 
 ## ALWAYS clause
 
