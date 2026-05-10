@@ -23,14 +23,17 @@ export function buildShapeA(spec: Spec, hooks: ShapeAHooks = {}): StepNode[] {
   const queue = readNodeInit(input.data);
   const slot = makeSlot<StateValue>();
   let i = 0;
+  let prevSlotEmpty = true;
 
   const inputNode: StepNode = {
     id: input.id,
     step() {
-      if (isFull(slot)) return;
-      if (queue.length === 0) return;
-      put(slot, queue[i++ % queue.length]);
-      hooks.onInputTick?.();
+      const slotEmpty = !isFull(slot);
+      if (prevSlotEmpty && slotEmpty && queue.length > 0) {
+        put(slot, queue[i++ % queue.length]);
+        hooks.onInputTick?.();
+      }
+      prevSlotEmpty = !isFull(slot);
     },
   };
   const readGateNode: StepNode = {

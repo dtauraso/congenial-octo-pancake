@@ -22,20 +22,17 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, twenty-second session):
-  Active branch: `task/node-ticks`. Latest code commit: `2b64352`
-  (spike: route Shape A through step substrate). Build + tsc clean.
-  No code changes this session — conceptual diagnosis only, plus a
-  CLAUDE.md edit splitting the "ask industry" rule into medium vs.
-  substance.
+State at handoff (2026-05-09, twenty-third session):
+  Active branch: `task/node-ticks`. Per-node `prevSlotEmpty` rule
+  landed on the Input step-node in
+  [src/substrate/step/shape-a.ts](../../../tools/topology-vscode/src/substrate/step/shape-a.ts).
+  Build + tsc clean. **Symptom persists:** user observed in editor
+  that edges still show long pulse trains. The rule as written did
+  not change visible cadence.
 
-  **Long-train diagnosis concluded:** under await, pacing was a
-  side-effect of `await wire.send` blocking — never a node-local
-  rule. Step substrate exposes that pacing was never declared. The
-  fix is per-node state, not FRAME_MS tuning, not a tick counter.
-  Chosen rule for `in0`: `if (prevSlotEmpty && slot.empty) emit`,
-  update `prevSlotEmpty` at end of step. No clock awareness inside
-  the node. Full reasoning in
+  Suspected cause: writer-before-reader array order drains the
+  slot same-tick, so `prevSlotEmpty` is always `true` end-of-step
+  and Input emits every tick. Full diagnosis + candidate fixes in
   [handoff-step-function-spike.md](handoff-step-function-spike.md).
 
   Carried context: Shape D self-pumps via `fb56c30`'s i1 fan-out +
@@ -60,18 +57,33 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Active task: implement the chosen per-node rule on Input for Shape
-A.** Single-file change in `src/substrate/step/`: add
-`prevSlotEmpty` state to the Input step-node, gate emit on
-`prevSlotEmpty && slot.empty`, update at end of `step()`. Rebuild,
-observe in editor — expect discrete arcs (one pulse per two ticks
-minimum). Do **not** tune FRAME_MS, do **not** add a `cooldownTicks`
-field — both re-introduce substrate coupling. See
-[handoff-step-function-spike.md](handoff-step-function-spike.md) for
-the full reasoning and decision tree after the rule lands. Both
-[handoff-timeout-removal.md](handoff-timeout-removal.md) and
-[handoff-uniform-node-plan.md](handoff-uniform-node-plan.md) remain
-on hold pending this.
+**Diagnose why the per-node rule did not change visible cadence on
+Shape A.** Do this before porting any further nodes or shapes. The
+rule is in
+[src/substrate/step/shape-a.ts](../../../tools/topology-vscode/src/substrate/step/shape-a.ts);
+the driver is in
+[src/substrate/step/driver.ts](../../../tools/topology-vscode/src/substrate/step/driver.ts).
+
+Suggested order (cheap to expensive):
+
+  1. **Instrument first.** Log Input emits and ReadGate consumes
+     per tick. Count over a 2-second window. If Input emits every
+     tick, the rule is being short-circuited by same-tick drain
+     (the most likely cause given writer-before-reader order). If
+     emits are spaced but the editor still shows a long train, it's
+     a visual layer issue.
+  2. **If logic-side:** redesign the rule so it survives same-tick
+     drain — e.g. add a `justEmitted` flag set on emit and cleared
+     only after observing one full empty-without-emit tick. Stay
+     clock-free; do not introduce FRAME_MS or counters.
+  3. **If visual-side:** investigate
+     [_use-pulse-lanes-wire.ts](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts).
+
+Shape D port and uniform-node work
+([handoff-shape-d-plan.md](handoff-shape-d-plan.md),
+[handoff-timeout-removal.md](handoff-timeout-removal.md),
+[handoff-uniform-node-plan.md](handoff-uniform-node-plan.md))
+remain on hold until Shape A reads as discrete arcs in the editor.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

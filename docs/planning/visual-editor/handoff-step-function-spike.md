@@ -10,14 +10,24 @@ clean. Spike was tested in the editor on Shape A.
 User-observed in editor: **animation runs as a "long train" of
 overlapping/continuous pulses** instead of discrete arcs.
 
+**Update (this session):** the per-node `prevSlotEmpty` rule was
+implemented on the Input step-node in
+[src/substrate/step/shape-a.ts](../../../tools/topology-vscode/src/substrate/step/shape-a.ts).
+**Symptom persists** — user reports edges still show long pulse
+trains in the editor. The rule as written is short-circuited
+(suspected: writer-before-reader array order drains the slot
+same-tick, so `prevSlotEmpty` is always true and Input emits every
+tick). The spike's central claim is not yet confirmed; either the
+rule needs richer state, the array order needs reconsideration, or
+the train is a visual-layer artifact. See "Next move" in
+[handoff.md](handoff.md) for the diagnostic plan.
+
 ## Diagnosis (concluded this session — no code changes)
 
-The "long train" is **not** a bug in the step substrate. It exposes a
-property that was hidden under the await substrate: pacing was never
-encoded in nodes. Under await, `await wire.send(v)` blocked the Input
-loop until ack — that blocking *was* the pacing, inherited from the
-substrate, not declared by the node. Swap the substrate, and Input has
-no local rule about how often to fire, so it fires every round.
+The "long train" is **not** a bug in the step substrate. Under
+await, `await wire.send(v)` blocked Input until ack — that blocking
+*was* the pacing, inherited from the substrate. Swap the substrate
+and Input has no local rule about how often to fire.
 
 Implication: each node must carry its own rule over its own slots +
 its own remembered state. **No reference to ticks, time, or clocks
@@ -32,11 +42,10 @@ Minimal, local, clock-free:
   - This `step()`: if `prevSlotEmpty && slot.empty`, emit. Else no-op.
   - Update `prevSlotEmpty` for next invocation.
 
-No counter, no tick number, no `cooldownTicks` field. If a richer
-cadence is wanted later, express it as a state machine over
-slot-events (e.g. "two consecutive empty observations"), not over
-ticks. The substrate's job is "you get to run now"; the node's job is
-"given what I see and what I remember, here's what I do."
+No counter, no tick number, no `cooldownTicks`. Richer cadence, if
+needed, must be a state machine over slot-events, not ticks. The
+substrate's job is "you get to run now"; the node's job is "given
+what I see and what I remember, here's what I do."
 
 ## Substrate, as committed
 
@@ -50,32 +59,33 @@ delivery; reverse → one-tick delay).
 `setTimeout`-chained) are irrelevant until the logic-level rule above
 lands. Don't tune FRAME_MS to fix the long train — fix the rule.
 
-## Medium vs. substance (CLAUDE.md updated)
-
-The "ask what industry converged on" rule now applies **only to the
-medium** (libraries, bundlers, runtimes, editors). It is **explicitly
-excluded** from substance decisions (execution model, node semantics,
-substrate, what a wire is). The await/Promise substrate was the
-cautionary example: industry-correct for the medium, wrong for the
-substance.
-
 ## Next move
 
-Implement the per-node rule on Input for Shape A. Single-file change
-to whatever Input step-node lives in under `src/substrate/step/`.
-Add `prevSlotEmpty` state, gate emit on it, update at end of step().
-Rebuild, observe in editor — expect discrete arcs at FRAME_MS cadence
-(one pulse per two ticks minimum). If clean, port the same pattern to
-the next node along the chain. If still trained, the rule is wrong,
-not the FRAME_MS.
+Diagnose why the rule did not change visible cadence on Shape A.
+Do not port Shape D or any further nodes until Shape A reads as
+discrete arcs in the editor.
 
-## Decision after the rule lands
+Suggested order (cheap to expensive):
 
-- Discrete arcs → port Shape D next session
-  ([handoff-shape-d-plan.md](handoff-shape-d-plan.md)).
-- Still trained → re-examine; do not reach for FRAME_MS or counters.
-- Visual-only artifact → investigate
-  [src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts](../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts).
+  1. **Instrument first.** Log Input emits and ReadGate consumes
+     per tick over a 2-second window. If Input emits every tick,
+     the rule is being short-circuited (most likely cause given
+     writer-before-reader order: ReadGate drains same-tick, slot
+     is empty end-of-step, `prevSlotEmpty` is always true). If
+     emits are spaced but the editor still shows a long train,
+     it's a visual-layer issue.
+  2. **If logic-side:** redesign the rule to survive same-tick
+     drain — e.g. add a `justEmitted` flag set on emit, cleared
+     only after observing one full empty-without-emit tick.
+     Alternatively reconsider driver array order, but note that
+     array order = topology behavior per the spike commitment, so
+     a flip needs an explicit rationale.
+  3. **If visual-side:** investigate
+     [_use-pulse-lanes-wire.ts](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts).
+
+Hard constraints still hold: no FRAME_MS tuning, no tick counter,
+no `cooldownTicks`. Allowed: richer state machines over slot/emit
+events.
 
 ## ALWAYS clause
 
