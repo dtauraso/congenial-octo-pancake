@@ -1,42 +1,40 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/remove-legacy-runtimes`. Steps 2–4 landed; steps 5–8 remain.
+**State:** `task/remove-legacy-runtimes`. Steps 2–5 landed; steps 6–8 remain.
 
-## Commits landed on this branch (step 4)
+## Commits landed (step 5)
 
-- `9d7f54f` — delete unimported `_use-pulse-lanes.ts` / `_use-pulse-lanes-wire.ts`
-- `31b1a15` — delete runner/timeline/fold-halo probes; port PulseInstance;
-  strip AnimatedNode; simplify TimelinePanel; wire main.tsx to frame-pause/resume.
+- `5619b84` — delete legacy substrate/sim modules. 50 files removed
+  (-3320 LOC). Stripped `historyToTrace` from `sim/trace.ts` (only
+  consumer was the deleted simulator); `webview/state/store.ts` still
+  uses the `TraceEvent` type so `trace.ts` itself stays.
 
-**Deleted:** `RunnerProbe.tsx`, `fold-halo-probe.ts`, `_stuck-runner-snapshot.ts`,
-`_stuck-pulse-probe.ts`, `timeline-probe.ts`, `timeline-probe/` dir,
-`Bookmarks.tsx`, `trace-load.ts`, `TraceStatus.tsx`,
-`TriggerSlotButton.tsx`, `ClearSlotButton.tsx`.
+**Deleted (step 5):** `src/sim/runner.ts`, `src/sim/runner/`,
+`src/sim/simulator.ts`, `src/sim/simulator/`, `src/sim/concurrency.ts`,
+`src/sim/drift.ts`, `src/sim/error-probe.ts`, `src/sim/event-bus.ts`,
+`src/sim/handlers.ts`, `src/sim/handlers/`, `src/sim/slot-release.ts`,
+`src/substrate/runtime.ts`, `src/substrate/runtime-wires*.ts` (6 files),
+`src/substrate/step/` (5 files), `src/substrate/ticked/` (3 files).
 
-**Ported / stripped:**
-- `PulseInstance.tsx` — runner/runtime-wires deps gone; pure rAF animation.
-- `AnimatedNode.tsx` — held/buffered/offset/tween/stateText stripped; frame-only.
-- `_handle-load.ts` — matchSubstrate/runner/runtime paths removed; spec+flow only.
-- `_on-node-drag.ts` — isRunnerPlaying branch removed; position-only drags.
-- `TimelinePanel.tsx` — collapses to `<TransportControls label="—" />`.
-- `main.tsx` — `installPulseLifetimes` gone; pause/resume post frame-pause/resume.
+**Kept in src/sim/:** `seeds.ts` (reached by `host-shim/run-frames.ts`),
+`trace.ts` (TraceEvent type still imported by `webview/state/store.ts`).
 
-All gates pass: vocab ✓ LOC ✓ tsc ✓ build ✓ 310 tests pass, 2 pre-existing reds.
+Build/tsc/vocab/LOC clean. Tests: 51 files fail to **load** because
+they import the just-deleted modules — that's step 6's sweep. Of the
+file loaders that succeed, 37 pass (189 individual tests pass).
 
 ## Remaining steps
 
-5. **Delete the systems.** No live webview importers remain. Delete:
-   `src/sim/runner*/`, `src/sim/simulator*/`, `src/sim/drift.ts`,
-   `src/sim/trace.ts`, `src/sim/handlers.ts`, `src/sim/event-bus.ts`,
-   `src/substrate/runtime.ts`, `src/substrate/runtime/`,
-   `src/substrate/runtime-wires*.ts`, `src/substrate/ticked/`.
-   Audit `src/sim/` for unused leftovers (keep `seeds.ts` if
-   `run-frames.ts` reaches it; otherwise delete too).
-6. **Delete pinned tests.** `**/runner.*test*`,
-   `**/runtime-wires*.test.ts`, `**/ticked*.test.ts`,
-   `shape-d-cycle.test.ts`, `handle-load-repro.test.ts`.
+6. **Delete pinned tests.** Sweep every test file that fails to load
+   (~51 files), plus the two pre-existing reds (`shape-d-cycle.test.ts`,
+   `handle-load-repro.test.ts`). Use
+   `npm test 2>&1 | grep "Failed to load\|Cannot find module"` to
+   enumerate. Anything testing wires-runtime, ticked-runtime, simulator,
+   sim/runner, or substrate/step goes.
 7. **Gates.** Vocab → LOC → tsc → build → tests (expect all green).
-   Proof-out: load topology, play/pause/step, verify pulses animate.
+   Proof-out: load topology in extension dev host, hit play/pause/step,
+   verify pulses animate, pause halts at line level, step advances one
+   event.
 8. **Refresh handoff and merge to main** (requires sign-off).
 
 ## Survivor surface (do not delete)
@@ -45,9 +43,9 @@ Substrate transitively reached by `host-shim/run-frames.ts`:
 `wire-entity.ts`, `wire-loop.ts`, `wire-events.ts`, `wire.ts`,
 `node-streams.ts`, `node-loop*.ts`, `pause-controller.ts`,
 `pause-aware.ts`, `match.ts`, `log.ts`, `trigger-gate.ts`,
-`build-wires.ts`, `build-wire-entities.ts`, `step/`. Plus
-`host-shim/`, `extension/frame-renderer.ts`, `handle-message.ts`,
-renderer adapter, recorder. Keep `seeds.ts` if reached.
+`build-wires.ts`, `build-wire-entities.ts`. Plus `host-shim/`,
+`extension/frame-renderer.ts`, `handle-message.ts`, renderer adapter,
+recorder. `sim/seeds.ts` and `sim/trace.ts` (type-only) survive.
 
 ## Refuse cheap alternatives
 
