@@ -36,21 +36,9 @@ the refactor retires them.
 - Tick close is event-driven: substrate observes wires returning to
   `empty`. It does not schedule the close.
 
-## Why this re-framing matters
-
-Prior sessions kept reaching for timing vocabulary (durations,
-ms-per-pixel, scheduled tick boundaries, renderer-signals-complete).
-Each was the industry-default answer for the medium and the wrong
-answer for the substance (CLAUDE.md "Medium vs. substance"). This
-session pinned the model and added guardrails:
-
-- `MODEL.md` at repo root.
-- `tools/topology-vscode/scripts/check-substrate-vocab.mjs` lint.
-- CLAUDE.md top-of-file pointer + "no multi-step plans with options
-  for substrate/wire work" rule.
-
-Future sessions: do not propose plans-with-options for substrate or
-wire work. State the next single concrete step and wait for sign-off.
+Guardrails: `MODEL.md`, `check-substrate-vocab.mjs` lint, CLAUDE.md
+"no plans-with-options for substrate/wire work" rule. Future sessions:
+state next single concrete step and wait for sign-off.
 
 ## Next move — wire-as-entity (refinement still open)
 
