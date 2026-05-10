@@ -1,67 +1,90 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/node-ticks`. Shape D cycle is closed AND self-pumping
-under option (c) (commit `fb56c30`): the cycle drives `readGate.chainIn`
-and `readGate.ack` from i1's fan-out, in0 is a one-shot seed. Suite
-green (259/259), tsc + build clean.
+**State:** `task/node-ticks`. Shape A's per-node `prevSlotEmpty` rule
+landed on the step-substrate Input but **did not change visible
+cadence** — pulses still stack. Diagnosis session reframed the
+problem: do not patch the rule, do not patch the step substrate.
+Build a new minimal shape that bypasses both.
 
-## What option (c) changed
+## Why a new shape
 
-**Wiring** ([runtime-wires-shape-d.ts](../../../tools/topology-vscode/src/substrate/runtime-wires-shape-d.ts)):
+Step substrate (same-tick drain) and retired Promise/await substrate
+share one failure: writer and reader collapse into one
+indistinguishable instant — no observable "occupied" phase. The
+`prevSlotEmpty` rule cannot gate what isn't observable. CLAUDE.md
+medium-vs-substance names this. Build the smallest substrate where
+the phase is real.
 
-- in0 → `seedLoop(inWire, queue[0])`. Single send at startup; in0 no
-  longer drives the cycle rate.
-- readGate inputs both cycle-mode (`cycleMask: [true, true]`). Both
-  feedback edges are consume-on-read.
-- i0 uses `andGateLoopWithCycleInputs([outWire], [true], …)`. Forward
-  edge is consume-on-read.
-- i1 uses new `andGateLoopFanOut([cycleWire], [true], [ackWireE, inWire], …)`.
-  Closes the cycle by broadcasting to both feedback edges.
-- `selfAckEdges` lists all four cycle edges.
+## The minimal shape
 
-**Substrate** ([node-loop-cycle.ts](../../../tools/topology-vscode/src/substrate/node-loop-cycle.ts)):
+Two nodes, two wires, no ticks, no `await`, no driver:
 
-- New `andGateLoopFanOut(inbound, cycleMask, outbound, reduce, opts)`.
-- Fan-out yields **one `setTimeout(0)` per round-trip** at the top of
-  each iteration. Load-bearing: with every edge consume-on-read, the
-  cycle would otherwise pump entirely in microtasks and starve
-  macrotasks (timers, animation frames, test ticks).
+- `wForward: in0 → readGate` (cap 0) — carries the value; this is
+  the wire the editor animates as a pulse.
+- `wPermit: readGate → in0` (cap 1) — carries a "go" token.
 
-## Why option (c), not (a) or (b)
+Loops are **callback state machines** driven by wire events
+(`onArrive`, `onAck`, `onValueChange`). No `await` in the node
+bodies. The only "time" in the system is the pulse traversing the
+arc on screen — that physical event drives `ackWire(wForward)` via
+the existing `usePulseLanesWire` listener, which then triggers
+readGate's `onArrive`-handler to send the next permit.
 
-(b) — gating inputLoop on a downstream signal — was rejected: it
-couples in0 to the cycle and destroys the AND's "two independent
-arrivals" semantics at readGate.
+Sketch:
 
-(c) preserves the AND: in0 still independently delivers chainIn (just
-once, as a seed); the cycle independently delivers ack via the
-fan-out. readGate observes two distinct sources.
+```
+in0 state: waitingPermit | readyToSend
+  wPermit.onArrive → consume permit, wForward.send(value)
+  (no await; send is sync, ack arrives later via callback)
 
-## What the next session might do
+readGate state: waitingValue | working | readyToPermit
+  wForward.onArrive → run readGate logic synchronously,
+                      ackWire(wForward) is called by the visual
+                      layer on pulse arrival, then send wPermit("go")
+```
 
-- **Run the editor and watch the self-pump** to confirm the visual
-  layer behaves with the fan-out node. The tick counter and the
-  per-edge selfAckEdges (visual auto-ack suppression) may need tweaks
-  if pulses look off.
-- **Shape C contract test** — still owed.
-- **Delete unused `TriggerGate`** module if not needed.
-- **Beyond Shape D:** the hierarchical chain (more inhibitors,
-  partition nodes, AND-gate tree). The fan-out + cycle-input toolkit
-  is now the substrate vocabulary for any closed cycle.
+One pulse on screen at a time. Cadence = arc traversal time. No
+flag, no counter, no FRAME_MS.
 
-## Read before touching the cycle
+## Where it lands
 
-- [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md) —
-  external-acker assumption (still load-bearing for non-cycle edges).
-- [handoff-cycle2-diagnosis.md](handoff-cycle2-diagnosis.md) — why
-  feedback edges must be consume-on-read.
-- The `setTimeout(0)` yield in `andGateLoopFanOut` — removing it
-  reintroduces microtask starvation (OOM in tests).
+- New `substrate/runtime-wires-pair.ts` exporting
+  `setupInputReadGatePair(...)`. Sibling to existing shape setups.
+- New match case so this topology routes here, **not** through
+  `step/`. Leave `step/` in place but dormant — Shape A's machinery
+  is reference, not active.
+- Animation layer: no changes. `usePulseLanesWire` already does the
+  right thing on `wForward`. `wPermit` need not animate (or render
+  later as a faint return arrow).
 
-## Working tree note
+## Diagnostic value
 
-`.claude/settings.json` and `topology.view.json` may carry incidental
-drift — leave or stash.
+If pulses space cleanly under the pair shape, the step substrate's
+tick/drain ordering was the source. If they still stack, the bug is
+in the visual layer (geometry/lanes), not the substrate — and we
+investigate
+[_use-pulse-lanes-wire.ts](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts)
+without the step substrate confounding the picture.
+
+## Open question for next session
+
+Should `wPermit` carry the value back (so readGate's logic can
+depend on what it received) or just an opaque "go" token? Defer
+until a single pulse round-trips cleanly.
+
+## On hold until the pair shape reads as discrete arcs
+
+- Shape D port and uniform-node work
+  ([handoff-shape-d-plan.md](handoff-shape-d-plan.md),
+  [handoff-timeout-removal.md](handoff-timeout-removal.md),
+  [handoff-uniform-node-plan.md](handoff-uniform-node-plan.md)).
+- Shape C contract test.
+
+## Working tree
+
+`.claude/settings.json`, `topology.view.json`, plus pre-existing
+edits to `runtime-wires-shapes.ts` +
+`test/contracts/runtime-wires-manual-ack.test.ts` — leave or stash.
 
 ## ALWAYS clause
 

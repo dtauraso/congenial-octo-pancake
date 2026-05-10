@@ -22,24 +22,27 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-09, twenty-third session):
+State at handoff (2026-05-09, twenty-fourth session):
   Active branch: `task/node-ticks`. Per-node `prevSlotEmpty` rule
-  landed on the Input step-node in
-  [src/substrate/step/shape-a.ts](../../../tools/topology-vscode/src/substrate/step/shape-a.ts).
-  Build + tsc clean. **Symptom persists:** user observed in editor
-  that edges still show long pulse trains. The rule as written did
-  not change visible cadence.
+  on the step-substrate Input did not change visible cadence —
+  pulses still stack. Diagnosis session **reframed the problem**:
+  do not patch the rule, do not patch the step substrate. Build a
+  new minimal shape (in0 + readGate only, two wires, callback state
+  machines, no ticks, no `await`) that exposes a real "occupied"
+  phase between send and consume.
 
-  Suspected cause: writer-before-reader array order drains the
-  slot same-tick, so `prevSlotEmpty` is always `true` end-of-step
-  and Input emits every tick. Full diagnosis + candidate fixes in
-  [handoff-step-function-spike.md](handoff-step-function-spike.md).
+  Step substrate same-tick drain and the retired Promise/await
+  substrate share one failure mode: writer and reader collapse into
+  one indistinguishable instant. CLAUDE.md medium-vs-substance rule
+  names this. Plan in
+  [handoff-next-task.md](handoff-next-task.md). No code yet — next
+  session implements `setupInputReadGatePair` in a new
+  `substrate/runtime-wires-pair.ts`.
 
   Carried context: Shape D self-pumps via `fb56c30`'s i1 fan-out +
   one-shot `seedLoop` + per-round `setTimeout(0)` yield in
-  `andGateLoopFanOut`. Old loop variants still in tree; retired in
-  uniform-node step 7 (on hold pending spike outcome). Conceptual
-  frame: **concurrent clocks frozen on command**. Manual-ack doc:
+  `andGateLoopFanOut`. Conceptual frame: **concurrent clocks frozen
+  on command**. Manual-ack doc:
   [../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
 
   Working tree: `.claude/settings.json`, `topology.view.json`, and
@@ -57,33 +60,31 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-**Diagnose why the per-node rule did not change visible cadence on
-Shape A.** Do this before porting any further nodes or shapes. The
-rule is in
-[src/substrate/step/shape-a.ts](../../../tools/topology-vscode/src/substrate/step/shape-a.ts);
-the driver is in
-[src/substrate/step/driver.ts](../../../tools/topology-vscode/src/substrate/step/driver.ts).
+**Build the in0+readGate pair shape.** See
+[handoff-next-task.md](handoff-next-task.md) for the full plan.
+Summary:
 
-Suggested order (cheap to expensive):
+  - Two wires: `wForward: in0→readGate` (cap 0, animated) and
+    `wPermit: readGate→in0` (cap 1, "go" token).
+  - Node loops are callback state machines on `onArrive`/`onAck`/
+    `onValueChange`. **No `await` in node bodies, no ticks, no
+    driver.** The pulse traversing the arc on screen is the only
+    timer; `usePulseLanesWire` already calls `ackWire(wForward)` on
+    arrival, which triggers readGate to send the next permit.
+  - New `substrate/runtime-wires-pair.ts` + new match case so this
+    topology routes here, not through `step/`. Step substrate stays
+    in tree as reference.
 
-  1. **Instrument first.** Log Input emits and ReadGate consumes
-     per tick. Count over a 2-second window. If Input emits every
-     tick, the rule is being short-circuited by same-tick drain
-     (the most likely cause given writer-before-reader order). If
-     emits are spaced but the editor still shows a long train, it's
-     a visual layer issue.
-  2. **If logic-side:** redesign the rule so it survives same-tick
-     drain — e.g. add a `justEmitted` flag set on emit and cleared
-     only after observing one full empty-without-emit tick. Stay
-     clock-free; do not introduce FRAME_MS or counters.
-  3. **If visual-side:** investigate
-     [_use-pulse-lanes-wire.ts](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts).
+Diagnostic value: if pulses space cleanly under the pair shape, the
+step substrate's tick/drain ordering was the cause. If they still
+stack, bug is in
+[_use-pulse-lanes-wire.ts](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge/_use-pulse-lanes-wire.ts).
 
 Shape D port and uniform-node work
 ([handoff-shape-d-plan.md](handoff-shape-d-plan.md),
 [handoff-timeout-removal.md](handoff-timeout-removal.md),
 [handoff-uniform-node-plan.md](handoff-uniform-node-plan.md))
-remain on hold until Shape A reads as discrete arcs in the editor.
+remain on hold until the pair shape reads as discrete arcs.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
