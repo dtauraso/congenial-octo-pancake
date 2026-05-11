@@ -52,12 +52,12 @@ disk) — revert the tab if you edit the file outside VS Code.
 
 ## Next move
 
-  Start `task/edge-pulse-motion` from `main`: renderer-only
-  `pulse-clock` module + per-edge rAF hook driven by the new
-  loaded / taken / ack phase transitions. Lives under
-  `src/webview/rf/`, never imported from `src/substrate/`. See
+  Start `task/edge-pulse-motion` from `main`: renderer-only per-edge
+  rAF owned by `AnimatedEdge`, driven by the new loaded / taken / ack
+  phase transitions. Lives under `src/webview/rf/`, never imported
+  from `src/substrate/`. See
   [handoff-next-task.md](handoff-next-task.md) for shape and the
-  one open question (single global rAF vs per-edge).
+  rejected global-rAF default (seamless-geometry argument).
 
 Dormant: Shape D port; tick-batching audit superseded; restart-Input
 friction (input cycles once and stops — separate task whenever).

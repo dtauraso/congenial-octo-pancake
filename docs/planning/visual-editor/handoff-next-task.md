@@ -21,10 +21,12 @@ must never be imported from `src/substrate/` (vocab gate + module
 boundary).
 
 ## Shape (proposed, confirm before coding)
-  - `pulse-clock.ts` — rAF-driven clock module; exposes a per-edge
-    hook returning normalized progress `[0, 1]` for the active pulse.
-  - `AnimatedEdge.tsx` — consume the hook; render the moving dot /
-    value badge along the SVG path using progress.
+  - `AnimatedEdge.tsx` — owns its own rAF for the active pulse.
+    Mount/phase-change starts rAF; `loaded → taken` and unmount cancel
+    it. Reads its current SVG path each frame, places the moving dot
+    / value badge at normalized progress `[0, 1]`.
+  - Optional `pulse-clock.ts` — only if shared helpers (easing, time
+    source) emerge; not a central clock.
   - No new message types; phase transitions in existing frames are
     the only input.
 
@@ -32,10 +34,15 @@ boundary).
   - tsc ✓, build ✓, vitest green, vocab gate ✓
   - LOC budget: each new file ≤100 LOC.
 
-## Open question for sign-off
-Confirm the pulse-clock is per-edge rAF (one rAF loop subscribed by
-edges) vs. a single global rAF that fans out. Default plan: single
-global rAF, edges read their own progress — fewer rAF handles.
+## Design note: per-edge rAF, not global
+Per-edge rAF, owned by `AnimatedEdge`. Path and dot update in the
+same render → geometry changes (node drag, re-route) stay seamless
+by construction. Idle edges cost nothing. A previous handoff
+defaulted to a global rAF on a "fewer handles" argument; that
+argument is a micro-optimization (browsers coalesce rAF callbacks
+onto the same frame) and it trades away the seamless-geometry
+property. Reject the global default unless a concrete reason to
+centralize appears.
 
 ## Dormant
 Shape D port; tick-batching audit superseded; restart-Input friction
