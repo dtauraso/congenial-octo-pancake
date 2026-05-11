@@ -1,8 +1,6 @@
-// Step 7c: webview painter store. Receives FrameMsg from the host
-// (gated on `topology.frameRendererEnabled`) and exposes a
+// Webview painter store. Receives FrameMsg from the host and exposes a
 // useSyncExternalStore-friendly snapshot. `isFrameMode()` flips true
-// once the first frame arrives — that signal also tells the legacy
-// pulse-driven renderer to step aside on the same canvas.
+// once the first frame arrives.
 //
 // Lives outside src/substrate/ — it's a webview-side bridge, not a
 // substrate concern. Maps reconstructed from the [id, state] pair
