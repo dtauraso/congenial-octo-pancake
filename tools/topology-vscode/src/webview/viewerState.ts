@@ -4,8 +4,8 @@
 
 import type { StateValue } from "../schema";
 import {
-  isObj, isNum, isStr, isStrArr,
-  parseCamera, parseSavedView, parseFold, parseBookmark,
+  isObj, isStrArr,
+  parseCamera, parseSavedView, parseFold,
   collect, parseNodeViews, parseEdgeViews,
 } from "./viewerState.parse";
 
@@ -36,14 +36,6 @@ export type Fold = {
   collapsed: boolean;
 };
 
-// Phase 5.5 Chunk D: bookmarks are now resumption coordinates, not
-// timeline scrubber positions. Click → simulator.replayTo(cycle) with
-// `startNodeId` as the active node, then hand off to the step-debugger
-// in N2-paused state. Legacy `{name, t}` bookmarks are dropped on
-// load (no migration — the global clock they referenced no longer
-// exists).
-export type Bookmark = { name: string; startNodeId: string; cycle: number };
-
 export type NodeView = {
   x: number;
   y: number;
@@ -59,7 +51,6 @@ export type ViewerState = {
   camera?: Camera | LegacyCameraBox;
   views?: SavedView[];
   folds?: Fold[];
-  bookmarks?: Bookmark[];
   lastSelectionIds?: string[];
   nodes?: Record<string, NodeView>;
   edges?: Record<string, EdgeView>;
@@ -95,11 +86,6 @@ export function parseViewerState(text: string | undefined): ViewerState {
     const folds = collect(raw.folds, parseFold);
     if (folds) out.folds = folds;
     else console.warn("topology.view.json: folds is not an array, dropping");
-  }
-  if (raw.bookmarks !== undefined) {
-    const bookmarks = collect(raw.bookmarks, parseBookmark);
-    if (bookmarks) out.bookmarks = bookmarks;
-    else console.warn("topology.view.json: bookmarks is not an array, dropping");
   }
   if (raw.lastSelectionIds !== undefined) {
     if (isStrArr(raw.lastSelectionIds)) out.lastSelectionIds = raw.lastSelectionIds;

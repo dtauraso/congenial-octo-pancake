@@ -1,7 +1,6 @@
 import { Handle, Position, type NodeProps } from "reactflow";
 
 const FOLD_STROKE = "#b89a3c";
-const FOLD_HALO_BOX_SHADOW = `0 0 0 2px ${FOLD_STROKE}`;
 
 export type FoldNodeData = {
   label: string;
@@ -12,12 +11,6 @@ export type FoldNodeData = {
   height: number;
   diffCounts?: { added: number; removed: number; moved: number };
 };
-
-// Fold halo: retired (was driven by runner anim events; frame mode will
-// re-implement via frame state-change events when needed).
-function useFoldHaloState(_foldId: string, _memberIds: string[]): { buffered: boolean } {
-  return { buffered: false };
-}
 
 function DiffBadge({ counts }: { counts: { added: number; removed: number; moved: number } }) {
   const parts: Array<{ text: string; color: string }> = [];
@@ -51,9 +44,6 @@ const HANDLE_HIDDEN: React.CSSProperties = {
 
 export function FoldNode(props: NodeProps<FoldNodeData>) {
   const { data, selected } = props;
-  // Slice 2 owns when/why these change; slice 1 (below) owns where they
-  // mount and what they look like.
-  const { buffered } = useFoldHaloState(props.id, data.memberIds);
   if (data.collapsed) {
     return (
       <div
@@ -73,7 +63,6 @@ export function FoldNode(props: NodeProps<FoldNodeData>) {
           boxSizing: "border-box",
           cursor: "pointer",
           position: "relative",
-          ...(buffered ? { boxShadow: FOLD_HALO_BOX_SHADOW } : {}),
         }}
       >
         <Handle type="target" position={Position.Left} style={HANDLE_HIDDEN} />
@@ -96,7 +85,6 @@ export function FoldNode(props: NodeProps<FoldNodeData>) {
         borderRadius: 8,
         boxSizing: "border-box",
         pointerEvents: "none",
-        ...(buffered ? { boxShadow: FOLD_HALO_BOX_SHADOW } : {}),
       }}
     >
       <div

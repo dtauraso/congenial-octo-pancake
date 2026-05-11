@@ -3,7 +3,7 @@
 
 import type { StateValue } from "../schema";
 import type {
-  Bookmark, Camera, EdgeView, Fold, LegacyCameraBox,
+  Camera, EdgeView, Fold, LegacyCameraBox,
   NodeView, SavedView,
 } from "./viewerState";
 
@@ -49,12 +49,6 @@ export function parseFold(v: unknown): Fold | undefined {
     id: v.id, label: v.label, memberIds: v.memberIds,
     position: [v.position[0], v.position[1]], collapsed: v.collapsed,
   };
-}
-
-export function parseBookmark(v: unknown): Bookmark | undefined {
-  if (!isObj(v) || !isStr(v.name)) return undefined;
-  if (!isStr(v.startNodeId) || !isNum(v.cycle)) return undefined;
-  return { name: v.name, startNodeId: v.startNodeId, cycle: v.cycle };
 }
 
 export function collect<T>(v: unknown, parse: (x: unknown) => T | undefined): T[] | undefined {
