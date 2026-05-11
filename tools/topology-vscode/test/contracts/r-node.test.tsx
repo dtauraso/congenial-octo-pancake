@@ -8,6 +8,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, fireEvent, act } from "@testing-library/react";
 import { useRef } from "react";
 import { Node, type NodeHandle } from "../../src/webview/substrate-r/Node";
+import { ManualTakeButton } from "../../src/webview/substrate-r/ManualTakeButton";
 import type { WireHandle } from "../../src/webview/substrate-r/Wire";
 import type { Phase } from "../../src/webview/substrate-r/wire-phase";
 
@@ -35,13 +36,19 @@ function Harness({ wireRef, manualTake, onRun, nodeRef }: {
   nodeRef: React.RefObject<NodeHandle | null>;
 }) {
   return (
-    <svg>
+    <>
       <Node
         ref={nodeRef}
         inputs={[{ id: "in0", wireRef, manualTake }]}
         onRun={onRun}
       />
-    </svg>
+      {manualTake && (
+        <ManualTakeButton
+          wireRef={wireRef}
+          onTake={() => nodeRef.current?.requestTake("in0")}
+        />
+      )}
+    </>
   );
 }
 

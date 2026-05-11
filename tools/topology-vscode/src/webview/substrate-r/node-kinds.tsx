@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { Node, type NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
+import { ManualTakeButton } from "./ManualTakeButton";
 
 export function InputBody({
   nodeRef, outWireRef, initialQueue,
@@ -50,9 +51,15 @@ export function ReadGateBody({
   inWireRef: RefObject<WireHandle | null>;
 }) {
   return (
-    <Node
-      ref={nodeRef}
-      inputs={[{ id: "in0", wireRef: inWireRef, manualTake: true }]}
-    />
+    <>
+      <Node
+        ref={nodeRef}
+        inputs={[{ id: "in0", wireRef: inWireRef, manualTake: true }]}
+      />
+      <ManualTakeButton
+        wireRef={inWireRef}
+        onTake={() => nodeRef.current?.requestTake("in0")}
+      />
+    </>
   );
 }

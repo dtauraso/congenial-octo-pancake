@@ -102,15 +102,6 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
         <span data-testid="halted">{driver.halted ? "halted" : "running"}</span>
       </div>
       <svg width={600} height={200} data-testid="topology-svg">
-        {spec.nodes.map((node) => (
-          <NodeView
-            key={node.id}
-            node={node}
-            spec={spec}
-            nodeRef={nodeRefs.get(node.id)!}
-            wireRefs={wireRefs}
-          />
-        ))}
         {spec.wires.map((wire) => (
           <Wire
             key={wire.id}
@@ -120,6 +111,15 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
           />
         ))}
       </svg>
+      {spec.nodes.map((node) => (
+        <NodeView
+          key={node.id}
+          node={node}
+          spec={spec}
+          nodeRef={nodeRefs.get(node.id)!}
+          wireRefs={wireRefs}
+        />
+      ))}
     </div>
   );
 }

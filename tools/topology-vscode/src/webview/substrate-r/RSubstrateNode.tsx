@@ -105,9 +105,8 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
           style={handleStyle("right", ((i + 1) * 100) / (outputs.length + 1), KIND_COLORS[p.kind] ?? "#888")}
         />
       ))}
-      <div style={{ fontWeight: 500 }}>{data?.label ?? id}</div>
-      {data?.sublabel && <div style={{ fontSize: 9, opacity: 0.7 }}>{data.sublabel}</div>}
-      <svg width={20} height={20} style={{ overflow: "visible", position: "absolute", top: 4, left: -32 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <span style={{ fontWeight: 500 }}>{data?.label ?? id}</span>
         {kind === "input" && (
           <InputBody
             nodeRef={nodeRef}
@@ -118,7 +117,8 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
         {kind === "readgate" && (
           <ReadGateBody nodeRef={nodeRef} inWireRef={inWireRef} />
         )}
-      </svg>
+      </div>
+      {data?.sublabel && <div style={{ fontSize: 9, opacity: 0.7 }}>{data.sublabel}</div>}
     </div>
   );
 }

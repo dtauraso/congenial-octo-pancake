@@ -66,7 +66,11 @@ export function SubstrateProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Registry>(
     () => ({ registerWire, registerNode, getWireRef, driver }),
-    [registerWire, registerNode, getWireRef, driver],
+    // version is included so consumers (RSubstrateNode) re-render when
+    // wires/nodes register — otherwise they keep stale NULL_REF lookups
+    // from before RSubstrateEdge mounted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [registerWire, registerNode, getWireRef, driver, version],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
