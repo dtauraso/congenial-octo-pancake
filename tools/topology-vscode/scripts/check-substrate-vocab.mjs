@@ -37,6 +37,7 @@ const BANNED = [
   /\bdurationMs\b/,
   /\bdeadline\b/i,
   /\bschedule[rd]?\b/i,
+  /\bcarrying\b/,
 ];
 
 function walk(dir) {

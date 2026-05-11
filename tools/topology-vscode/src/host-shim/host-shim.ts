@@ -2,7 +2,7 @@
 // Composes substrate (wires + uniform node loops) with the step-4
 // renderer adapter and step-5 recorder via two independent
 // subscriptions per handoff-next-task.md. Derives PacedFrame
-// snapshots — per-wire empty|carrying(value), per-node
+// snapshots — per-wire empty|loaded(value)|taken(value), per-node
 // parked-input|running|parked-output|parked-ack — sampled at
 // event-emit time so the carried value is captured before the
 // substrate moves on. Leaf module: no DOM, no extension host, no
@@ -20,7 +20,8 @@ import type { Recorder } from "../recorder/recorder";
 
 export type WireFrameState<V> =
   | { readonly kind: "empty" }
-  | { readonly kind: "carrying"; readonly value: V };
+  | { readonly kind: "loaded"; readonly value: V }
+  | { readonly kind: "taken"; readonly value: V };
 
 export type NodeFrameState =
   | "parked-input"
@@ -72,15 +73,16 @@ export function composeShim<V>(io: ShimInputs<V>): ShimHandle {
   for (const w of io.wires) {
     offs.push(
       w.onEvent((e: WireEvent) => {
-        if (e.kind === "loaded" && w.state.kind === "carrying") {
-          wireState.set(w.id, { kind: "carrying", value: w.state.value });
+        if (e.kind === "loaded" && w.state.kind === "loaded") {
+          wireState.set(w.id, { kind: "loaded", value: w.state.value });
+          fanOut(snapshot(e.seq));
+        } else if (e.kind === "taken" && w.state.kind === "taken") {
+          wireState.set(w.id, { kind: "taken", value: w.state.value });
           fanOut(snapshot(e.seq));
         } else if (e.kind === "acked") {
           wireState.set(w.id, { kind: "empty" });
           fanOut(snapshot(e.seq));
         }
-        // "taken" leaves wire state at carrying until ack — invisible
-        // in the chosen frame schema, so no frame is emitted.
       }),
     );
   }

@@ -1,6 +1,6 @@
 // Contract tests for the step-3 uniform node loop. Pins:
 //   1. Single-in/single-out passes one value end-to-end.
-//   2. Multi-input parks until all inputs carrying, then runs once.
+//   2. Multi-input parks until all inputs loaded, then runs once.
 //   3. Multi-output parks at output-empty until destinations have
 //      acked before next round.
 //   4. Pause mid-run freezes; resume completes the round.
@@ -35,7 +35,7 @@ describe("node-loop-uniform-v2 — single in / single out", () => {
 
     wIn.load(5);
     await tickN();
-    expect(wOut.state.kind).toBe("carrying");
+    expect(wOut.state.kind).toBe("loaded");
     expect(wOut.take()).toBe(10);
     await tickN();
     expect(wOut.state.kind).toBe("empty");
@@ -70,7 +70,7 @@ describe("node-loop-uniform-v2 — multi-input join", () => {
 
     b.load(4);
     await tickN();
-    expect(out.state.kind).toBe("carrying");
+    expect(out.state.kind).toBe("loaded");
     expect(out.take()).toBe(7);
     await tickN();
 
@@ -97,15 +97,15 @@ describe("node-loop-uniform-v2 — multi-output ack backpressure", () => {
 
     inp.load(1);
     await tickN();
-    expect(o1.state.kind).toBe("carrying");
-    expect(o2.state.kind).toBe("carrying");
+    expect(o1.state.kind).toBe("loaded");
+    expect(o2.state.kind).toBe("loaded");
 
     // Try to push round 2 while outputs still carrying. Node is parked
     // at outputs.awaitAcked, so it must NOT load new output values.
     inp.load(10);
     await tickN();
-    expect(o1.state.kind === "carrying" && o1.state.value).toBe(1);
-    expect(o2.state.kind === "carrying" && o2.state.value).toBe(2);
+    expect(o1.state.kind === "loaded" && o1.state.value).toBe(1);
+    expect(o2.state.kind === "loaded" && o2.state.value).toBe(2);
 
     // Manually drain outputs.
     o1.take();
@@ -115,8 +115,8 @@ describe("node-loop-uniform-v2 — multi-output ack backpressure", () => {
     await tickN();
 
     // Round 2 should now have produced new outputs.
-    expect(o1.state.kind === "carrying" && o1.state.value).toBe(10);
-    expect(o2.state.kind === "carrying" && o2.state.value).toBe(11);
+    expect(o1.state.kind === "loaded" && o1.state.value).toBe(10);
+    expect(o2.state.kind === "loaded" && o2.state.value).toBe(11);
 
     o1.take();
     o1.ack();
@@ -152,7 +152,7 @@ describe("node-loop-uniform-v2 — pause mid-run", () => {
 
     pause.resume();
     await tickN();
-    expect(out.state.kind).toBe("carrying");
+    expect(out.state.kind).toBe("loaded");
     expect(out.take()).toBe(8);
     await tickN();
 

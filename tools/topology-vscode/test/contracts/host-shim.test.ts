@@ -46,7 +46,7 @@ const noopNode = () => ({
 });
 
 describe("host-shim — frame derivation", () => {
-  it("emits carrying(value) on load, empty on ack", () => {
+  it("emits loaded(v) on load, taken(v) on take, empty on ack", () => {
     _resetSeqForTests();
     const w = createWire<number>("w");
     const recorder = createRecorder<PacedFrame<number>>();
@@ -57,10 +57,11 @@ describe("host-shim — frame derivation", () => {
 
     w.load(42);
     let f = recorder.snapshot().at(-1)!;
-    expect(f.wires.get("w")).toEqual({ kind: "carrying", value: 42 });
+    expect(f.wires.get("w")).toEqual({ kind: "loaded", value: 42 });
 
     w.take();
-    expect(recorder.length()).toBe(1); // taken: no frame
+    f = recorder.snapshot().at(-1)!;
+    expect(f.wires.get("w")).toEqual({ kind: "taken", value: 42 });
 
     w.ack();
     f = recorder.snapshot().at(-1)!;
@@ -83,7 +84,7 @@ describe("host-shim — frame derivation", () => {
     w.ack();
     // The earlier frame still reports "alpha" — snapshot was a copy.
     expect(loadedFrame.wires.get("w")).toEqual({
-      kind: "carrying", value: "alpha",
+      kind: "loaded", value: "alpha",
     });
     adapter.stop();
   });
@@ -108,7 +109,7 @@ describe("host-shim — frame derivation", () => {
     w.ack();
 
     expect(seen).toEqual([]); // adapter stopped before flush
-    expect(recorder.length()).toBe(2); // recorder kept ingesting
+    expect(recorder.length()).toBe(3); // load + take + ack frames
   });
 });
 

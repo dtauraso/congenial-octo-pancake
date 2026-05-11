@@ -13,7 +13,7 @@ describe("serializeFrame", () => {
       seq: 7,
       wires: new Map([
         ["w1", { kind: "empty" }],
-        ["w2", { kind: "carrying", value: 42 }],
+        ["w2", { kind: "loaded", value: 42 }],
       ]),
       nodes: new Map([
         ["n1", "running"],
@@ -25,7 +25,7 @@ describe("serializeFrame", () => {
       seq: 7,
       wires: [
         ["w1", { kind: "empty" }],
-        ["w2", { kind: "carrying", value: 42 }],
+        ["w2", { kind: "loaded", value: 42 }],
       ],
       nodes: [
         ["n1", "running"],
@@ -37,14 +37,14 @@ describe("serializeFrame", () => {
   it("round-trips through parseHostToWebview", () => {
     const frame: PacedFrame<string> = {
       seq: 1,
-      wires: new Map([["w", { kind: "carrying", value: "v" }]]),
+      wires: new Map([["w", { kind: "loaded", value: "v" }]]),
       nodes: new Map([["n", "parked-ack"]]),
     };
     const parsed = parseHostToWebview(serializeFrame(frame));
     expect(parsed?.type).toBe("frame");
     if (parsed?.type === "frame") {
       expect(parsed.seq).toBe(1);
-      expect(parsed.wires).toEqual([["w", { kind: "carrying", value: "v" }]]);
+      expect(parsed.wires).toEqual([["w", { kind: "loaded", value: "v" }]]);
       expect(parsed.nodes).toEqual([["n", "parked-ack"]]);
     }
   });

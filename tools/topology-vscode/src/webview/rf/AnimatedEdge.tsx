@@ -22,20 +22,21 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
   const kind = data?.kind ?? "any";
   const stroke = KIND_COLORS[kind] ?? "#888";
   const dash = dashForKind(kind);
-  const carrying = wireState?.kind === "carrying";
+  const phase = wireState?.kind ?? "empty";
+  const active = phase === "loaded" || phase === "taken";
   const baseStyle: React.CSSProperties = {
     ...style,
     ...(dash ? { strokeDasharray: dash } : {}),
     stroke,
-    strokeWidth: carrying ? 3 : 1.5,
-    opacity: carrying ? 1 : 0.35,
+    strokeWidth: active ? 3 : 1.5,
+    opacity: active ? 1 : 0.35,
   };
   const markerEnd = markerEndUrl(kind, data?.arrowStyle);
   const showText = data?.label || data?.valueLabel;
-  const mid = showText || carrying
+  const mid = showText || active
     ? midpoint(route, sourceX, sourceY, targetX, targetY, lane)
     : null;
-  const frameValue = carrying ? String((wireState as { value: unknown }).value) : null;
+  const frameValue = active ? String((wireState as { value: unknown }).value) : null;
 
   return (
     <>

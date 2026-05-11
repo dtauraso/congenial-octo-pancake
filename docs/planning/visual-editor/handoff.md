@@ -8,8 +8,8 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-next-task.md](handoff-next-task.md) — completed task
-     record for `task/remove-legacy-runtimes` (merged to main).
+  1. [handoff-next-task.md](handoff-next-task.md) — active branch
+     `task/wire-phase-state` (in flight, awaiting sign-off).
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — system 3 model: forever-loops, line-level pause, events.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
@@ -17,32 +17,29 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, fifty-eighth session):
-  **No active task branch.** `task/remove-legacy-runtimes` merged
-  to main as `95904bd` and pushed. Reference branches retained.
+State at handoff (2026-05-10, fifty-ninth session):
+  **Active task branch:** `task/wire-phase-state` (not merged).
 
-  Branch achievement: legacy ticked/wires runtimes deleted; frame
-  renderer is the only runtime. During proof-out the renderer
-  adapter pause-gate bug was surfaced and fixed — substrate stays
-  timing-free, adapter owns pacing AND pause-gating. Contract test
-  at `tools/topology-vscode/test/contracts/run-frames-controls.test.ts`
-  covers pause/step/resume semantics.
+  Branch achievement: substrate wire phase widened from
+  `empty | carrying(v)` to `empty | loaded(v) | taken(v)` so the
+  renderer can distinguish traveling from arrived-but-not-acked.
+  Phase matches the wire loop's own await points; substrate stays
+  timing-free per MODEL.md. `carrying` is fully retired and added to
+  the vocab gate. Frame plumbing emits one frame per phase
+  transition (load / take / ack); AnimatedEdge reads the phase.
 
-  **Gates on main:** tsc ✓, build ✓, vitest 38 files / 193 tests pass.
+  **Gates on branch:** tsc ✓, build ✓, vitest 38 / 193 ✓, vocab gate ✓.
 
-  **Model:** `handoff-substrate-iteration.md`. Forever-loops per
-  node and per wire; backpressure coordination; line-level pause;
-  ordinal-seq state-change events; renderer owns pacing. Substrate
-  **timing-free** per MODEL.md.
+  **Model:** `handoff-substrate-iteration.md`, with phase amendment
+  in MODEL.md applied. Three phases ordinal, not timed.
 
   **Held:** halt/resume on substrate; send-on-non-empty throws;
   renderer adapter / host-shim / frame-store live outside
   `src/substrate/` for the vocab gate.
 
   Working tree: `topology.view.json` and `topology.json` — editor
-  state and active spec. The minimal proof-out topology is
-  in08 (Input) → readGate1 (ReadGate) on `chainIn`. Reference
-  branches retained — do not delete.
+  state and active spec. Minimal proof-out topology is
+  in08 (Input) → readGate1 (ReadGate) on `chainIn`.
 
 ## Dev-loop
 
@@ -54,13 +51,15 @@ disk) — revert the tab if you edit the file outside VS Code.
 
 ## Next move
 
-No active task. Drive the editor; log friction in
-[session-log.md](session-log.md). When friction surfaces a
-concrete task, start `task/<short-kebab>` and add a
-`handoff-next-task.md` for it.
+  1. Sign-off review of `task/wire-phase-state` and merge to `main`
+     (MODEL.md edit is sign-off-required).
+  2. Then start `task/edge-pulse-motion` per the conversation plan:
+     a renderer-only `pulse-clock` module + per-edge rAF hook driven
+     by the new phase transitions. Lives under
+     `src/webview/rf/`, never imported from `src/substrate/`.
 
-Dormant: Shape D port (deleted with wires-runtime; reintroduce only
-if friction surfaces). Tick-batching audit superseded.
+Dormant: Shape D port; tick-batching audit superseded; restart-Input
+friction (input cycles once and stops — separate task whenever).
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
