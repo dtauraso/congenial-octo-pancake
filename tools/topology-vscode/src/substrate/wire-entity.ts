@@ -21,6 +21,7 @@ export interface Wire<V> {
   take(): V;
   ack(): void;
   markArrived(): void;
+  clear(): void;
   awaitLoaded(): Promise<void>;
   awaitArrived(): Promise<void>;
   awaitEmpty(): Promise<void>;
@@ -34,6 +35,7 @@ class WireEntity<V> implements Wire<V> {
   readonly id: string;
   state: WireState<V> = { kind: "empty" };
   private arrived = false;
+  private clearPending = false;
   private listeners = new Set<(e: WireEvent) => void>();
   private waiters: Waiter[] = [];
   private readonly renderArrival: boolean;
@@ -66,6 +68,7 @@ class WireEntity<V> implements Wire<V> {
       );
     }
     this.arrived = false;
+    this.clearPending = false;
     this.state = { kind: "loaded", value };
     this.emit("loaded");
     if (!this.renderArrival) this.markArrived();
@@ -76,6 +79,11 @@ class WireEntity<V> implements Wire<V> {
     if (this.arrived) return;
     this.arrived = true;
     this.emit("arrived");
+    if (this.clearPending) {
+      this.clearPending = false;
+      this.state = { kind: "empty" };
+      this.emit("cleared");
+    }
   }
 
   take(): V {
@@ -104,6 +112,16 @@ class WireEntity<V> implements Wire<V> {
     }
     this.state = { kind: "empty" };
     this.emit("acked");
+  }
+
+  clear(): void {
+    if (this.state.kind === "empty") return;
+    if (this.state.kind === "loaded" && !this.arrived) {
+      this.clearPending = true;
+      return;
+    }
+    this.state = { kind: "empty" };
+    this.emit("cleared");
   }
 
   carry(value: V): void { this.load(value); }

@@ -77,3 +77,56 @@ describe("Wire slot contract — only loaded traversal animates", () => {
     expect(events.some((e) => e.kind === "arrived")).toBe(false);
   });
 });
+
+describe("Wire slot contract — editor clear() escape hatch", () => {
+  it("clear() on empty is a no-op (no event)", () => {
+    const w = createWire<number>("e1");
+    const events: WireEvent[] = [];
+    w.onEvent((e) => events.push(e));
+    w.clear();
+    expect(w.state).toEqual({ kind: "empty" });
+    expect(events).toEqual([]);
+  });
+
+  it("clear() from taken transitions to empty and emits cleared", () => {
+    const w = createWire<number>("e1");
+    w.load(1);
+    w.take();
+    const events: WireEvent[] = [];
+    w.onEvent((e) => events.push(e));
+    w.clear();
+    expect(w.state).toEqual({ kind: "empty" });
+    expect(events.map((e) => e.kind)).toEqual(["cleared"]);
+  });
+
+  it("clear() from loaded+arrived (headless) transitions to empty immediately", () => {
+    const w = createWire<number>("e1");
+    w.load(1);
+    const events: WireEvent[] = [];
+    w.onEvent((e) => events.push(e));
+    w.clear();
+    expect(w.state).toEqual({ kind: "empty" });
+    expect(events.map((e) => e.kind)).toEqual(["cleared"]);
+  });
+
+  it("clear() while pulse is in flight waits for arrival, then clears", () => {
+    const w = createWire<number>("e1", true);
+    w.load(1);
+    const events: WireEvent[] = [];
+    w.onEvent((e) => events.push(e));
+    w.clear();
+    expect(w.state).toEqual({ kind: "loaded", value: 1 });
+    expect(events).toEqual([]);
+    w.markArrived();
+    expect(w.state).toEqual({ kind: "empty" });
+    expect(events.map((e) => e.kind)).toEqual(["arrived", "cleared"]);
+  });
+
+  it("a fresh load() after clear() succeeds", () => {
+    const w = createWire<number>("e1");
+    w.load(1);
+    w.clear();
+    expect(() => w.load(2)).not.toThrow();
+    expect(w.state).toEqual({ kind: "loaded", value: 2 });
+  });
+});
