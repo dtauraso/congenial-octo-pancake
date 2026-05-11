@@ -9,11 +9,10 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — load-bearing
-     next task: cut the editor over to the new React-resident substrate.
+     next task: port edge visual fidelity onto `RSubstrateEdge`.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
-     — earlier decided substrate model (forever-loops). Superseded for
-     the visual editor by the React-component substrate; kept as the
-     model that the new primitives realize.
+     — substrate model background (forever-loops). Realized by the
+     React-component substrate now on `main`.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
      mode, open branches, housekeeping.
 
@@ -21,44 +20,26 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-11, end of session):
 
-  **Active task branch:** `task/collapse-to-one-layer`. Latest commit
-  `33af8ee` (handoff doc update). Pushed. Not yet merged. Posture
-  remains structural rewrite — the deletion sweep is now fully
-  drained. This session landed two source-deletion commits plus the
-  doc update, on top of the prior session's logging/messaging/state
-  cleanup:
+  **Active branch:** `main`. `task/collapse-to-one-layer` was
+  merged in this session. The substrate rewrite, deletion sweep,
+  and spec promotion all landed. Posture returns to friction-driven
+  per CLAUDE.md.
 
-  1. `025f9df` delete dead exports sweep round 2 (-443 lines).
-     Removed `geom.ts`, `rf/adapter/flow-to-spec.ts`,
-     `rf/fold-activity.ts`, `rf/spec-colors.ts`, and the four
-     test files that only existed to exercise them. Trimmed
-     `postReady`/`isSynced`/`markSynced`/`lastSyncedText` from
-     save.ts; `markerEndUrl` from MarkerDefs; `POSITION_EPSILON`
-     from diff-core; `flowToSpec` re-export from adapter.ts.
-  2. `2ca5e59` delete dead schema types (-30 lines). Removed
-     orphan `EdgeRoute` and the Phase-5.5 handler formalism
-     block (`Emission`, `HandlerState/Input/Result/Fn`). Kept
-     `Port`/`Note`/`NodeSpec`/`SpecSegment`/`SeedEvent`/
-     `NodeTypeDef`/`EDGE_KINDS`/`ArrowStyle` — all referenced
-     inside `src/schema/`.
-  3. `33af8ee` handoff update — recorded that
-     `substrate-r/TopologyRoot.tsx` is intentionally kept as the
-     harness for `r-topology-smoke.test.tsx`, the only end-to-end
-     test of the substrate cycle.
+  This session's closing acts:
 
-  Net for the session: -473 lines source/test. No code candidates
-  remain on the deletion list. Prior-session context (logging
-  rewrite, dead message channels, bookmarks/fold-halo stubs, state
-  facade collapse) was landed in `38d2a9f`/`23eb90e`/`3da0928`/
-  `e06447b`/`83df794` — see git log for detail.
+  1. Folded `manual-take-model.md` and `react-surface-spec.md` into
+     [MODEL.md](../../../MODEL.md); deleted the two planning docs.
+     MODEL.md now contains the manual-take signal generalization,
+     the auto/manually-gated destination policy, and the React
+     surface realization (`<Wire>`, `<Node>`, `useTickDriver`,
+     geometry-change handling, bridge surface).
+  2. Merged `task/collapse-to-one-layer` into `main`. Edge visual
+     fidelity is no longer a merge blocker — tracked as the next
+     task (see handoff-next-task.md). Editor currently ships with
+     plain gray edges.
 
-  **Two specs on main:**
-  [manual-take-model.md](manual-take-model.md) and
-  [react-surface-spec.md](react-surface-spec.md).
-
-  **Gates:** tsc ✓, build ✓, vitest 114/114 ✓, vocab ✓, LOC ✓.
-  (Test count: 132 → 114 with the four test-file deletions plus
-  one inline `POSITION_EPSILON` assertion removed.)
+  **Gates at merge:** tsc ✓, build ✓, vitest 114/114 ✓, vocab ✓,
+  LOC ✓.
 
 ## Dev-loop
 
@@ -66,10 +47,10 @@ Edit → `npm run build` → topology tab refreshes in place.
 
 ## Next move
 
-  Read [handoff-next-task.md](handoff-next-task.md). The
-  merge-blocking item is edge visual fidelity on `RSubstrateEdge`
-  (kind colors, dashes, route variants, arrow markers, edge labels);
-  port from git history at `87822c1^`. Deletion sweep is done.
+  Read [handoff-next-task.md](handoff-next-task.md). Open a fresh
+  `task/<short-kebab>` branch and port edge visual fidelity onto
+  `RSubstrateEdge` (kind colors, dashes, route variants, arrow
+  markers, edge labels) from git history at `87822c1^`.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
