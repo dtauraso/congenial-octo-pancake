@@ -18,26 +18,28 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, fifty-sixth session):
-  Active branch: `task/remove-legacy-runtimes`. Step 6 landed in
-  `2dd03f9`: 53 test files deleted (-2781 LOC) — all of
-  `test/handlers/` (12 files), all of `test/simulator/` (13 files),
-  all of `test/trace/` except `parser-validation.test.ts` (12 of 13),
-  all `test/contracts/` tests for the removed runtimes (15 files
-  including the two pre-existing reds `shape-d-cycle` and
-  `handle-load-repro` plus `pulse-bridge-balance.test.tsx`, which
-  dynamic-imported `sim/runner/_state` so didn't surface in step 5's
-  load-failure enumeration), and `test/concurrency.test.ts`,
-  `test/drift.test.ts`, `test/replay-spec-invariant.test.ts`.
+State at handoff (2026-05-10, fifty-seventh session):
+  Active branch: `task/remove-legacy-runtimes`. Step 7 mid-proof-out;
+  step 8 (merge) remains.
 
-  **Gates clean:** vocab ✓, LOC ✓, tsc ✓, build ✓,
-  tests 37/37 files / 189/189 tests pass.
+  Latest commit `2e7e9a6` — removed `topology.frameRendererEnabled`
+  flag. Legacy ticked renderer was gone since step 5, but the flag
+  still defaulted off, so play/pause/step posted to an undefined
+  handle and silently no-op'd. Frame renderer now always runs.
+
+  Proof-out state: F5 dev host + Cmd-R produced a brief mid-canvas
+  pulse then nothing. Cause: working-tree `topology.view.json` is
+  2 nodes / 0 edges, so the adapter emitted the initial state and
+  had nothing to advance. Pipeline is live; topology is empty. User
+  needs to wire nodes + seed a source to actually proof-out.
+
+  **Gates clean:** tsc ✓, build ✓, vitest 37/37 files /
+  189/189 tests pass.
 
   **Steps remaining (see handoff-next-task.md):**
-  7. Manual proof-out: load topology in extension dev host, hit
-     play/pause/step, verify pulses animate, pause halts at line
-     level, step advances one event. (User-driven — assistant cannot
-     drive the UI.)
+  7. Finish proof-out: wire nodes in editor (or load fixture with
+     edges + seed), confirm pulses animate, pause halts at line
+     level, step advances one event. (User-driven.)
   8. Refresh handoff and merge to main (sign-off required).
 
   **Model:** `handoff-substrate-iteration.md`. Forever-loops per
