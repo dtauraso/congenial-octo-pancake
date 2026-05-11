@@ -1,80 +1,72 @@
-# Next task: affordance for readGate1.ack
+# Next task: generalize manual-gate or pick up friction
 
-**Branch:** none yet. `task/wire-slot-contract-audit` is the active
-branch but its scope (substrate slot-contract tests) is **done** —
-see handoff.md. Awaiting sign-off + merge before opening the next
+**Branch:** none yet. `task/wire-slot-contract-audit` is done — see
+handoff.md. Awaiting sign-off + merge before opening the next
 branch.
 
-## Why this is next
+## What just landed
 
-Two layers have now landed:
-- **Schema layer** (`task/readgate-required-ack`, merged): `Port.required`,
-  `ReadGate.ack` marked required, `validatePorts` errors on missing
-  required edges. Closes "ReadGate silently free-runs without ack" at
-  parse time.
-- **Substrate layer** (`task/wire-slot-contract-audit`, awaiting
-  merge): three slot-contract rules from MODEL.md pinned by tests —
-  send-on-non-empty throws, `taken → empty` is substrate-only, only
-  `loaded` animates.
+A complete manual step-debug affordance for ReadGate, end to end:
 
-The live `topology.json` satisfies both layers because `ackSrc`
-(Input) is wired to `readGate1.ack`. But `ackSrc` is a **placeholder**,
-not a decided affordance. The required-input check is happy; the
-question of *what should be driving the ack in practice* is unresolved.
+- **Model:** ack is wire state, not a port. The slot lives inside
+  the destination node; the wire transports the pulse. (See
+  [memory/project_ack_is_wire_state.md](../../../memory/project_ack_is_wire_state.md).)
+- **Substrate:** `Wire.clear()` escape hatch + `cleared` event;
+  mid-flight clears wait for arrival.
+- **Editor:** top-left ⌫ button on ReadGate nodes posts
+  `clear-slot { nodeId, port }`; extension resolves the wire by
+  edge target/handle and calls `clearWire`.
+- **Runtime:** ReadGate is excluded from the generic auto-loop in
+  `run-frames.ts` so its slot stays loaded until ⌫ is clicked.
 
-## Required next task
+Live behavior: in0 sends pulse #1, slot holds, click ⌫ → next
+pulse, etc., until the init queue is exhausted.
 
-Decide and wire the ack source. Three candidates:
+## Required next task — pick one
 
-1. **Button node (manual ack).** User clicks once per cycle. Good
-   for stepping through the topology by hand; matches the
-   originally-attempted `task/readgate-ack-button` direction. Needs a
-   Button node type + view glyph + click→pulse plumbing.
-2. **Seeded Input (current `ackSrc`).** Cheapest; the Input cycles
-   once and stops (see "restart-Input friction" dormant). Becomes a
-   no-op after the first cycle unless restart is fixed.
-3. **Feedback loop from a downstream node.** The system acks itself
-   when downstream consumption completes. Most faithful to a
-   self-sustaining topology; requires picking the right downstream
-   signal and being careful about cycle semantics under MODEL.md.
+There is no single forced next step. Two reasonable directions; let
+friction decide:
 
-This is a UX/posture call, not a model call. The model and substrate
-already enforce the contract; the question is which affordance best
-fits the visual-editor posture (friction-driven, post-v0).
+1. **Generalize the manual-gate pattern.** Right now ReadGate is
+   hardcoded in two places: `run-frames.ts` (skip auto-loop) and
+   `ClearSlotButton.tsx` (render only if type === "ReadGate"). If
+   another node type needs the same affordance, lift this into a
+   `manual: true` flag on `NodeTypeDef` and key both branches off
+   it. Worth doing only when a second user shows up.
 
-## Approach
+2. **Friction-driven next task.** Drive the editor with the new
+   button, log surprises to
+   [session-log.md](session-log.md), and open a `task/<short-kebab>`
+   for the most pressing one. Candidates that surfaced recently:
+   - Restart-Input friction (Input cycles once and stops — the ⌫
+     button now makes "stops" visible; user may want a re-arm or
+     loop affordance).
+   - Identity body in `run-frames.ts:79-84` — once a non-readGate
+     node needs real semantics, the body registry sketch in
+     session-log applies.
+   - Multi-slot wires / fan-in (currently `load` on non-empty
+     throws with "fan-in must use an explicit merge node"; a merge
+     node doesn't exist yet).
 
-- Open `task/<short-kebab>` once the affordance is chosen.
-- Update the live `topology.json` / `topology.view.json` to reflect
-  the choice; remove the `ackSrc` placeholder if it's no longer the
-  decided source.
-- If Button is chosen, add the node type behind the existing schema
-  patterns (`NODE_TYPES`, `parse-meta.ts`, a view renderer entry).
-- If feedback is chosen, document the cycle in MODEL.md before
-  wiring — feedback edges interact with the slot contract.
-- Add a contract test or live-spec test that proves the affordance
-  works end-to-end with the required-input + slot-contract gates.
+## Out of scope (until friction promotes them)
 
-## Out of scope (for this task)
-
-- Extending `required` enforcement to outputs, fan-out cardinality,
-  or kind matching.
-- Generalizing the substrate to multi-slot wires.
-- Restart-Input friction as a generic fix (only address it if option
-  2 is chosen).
+- Audit-style sweeps (see
+  [audits.md](audits.md) for the registry).
+- Generalizing `clear()` to wires that aren't input slots.
+- A "step backward" affordance.
 
 ## Gates to clear before merge
 
-tsc ✓, build ✓, vitest ✓ (any new tests for the chosen affordance),
-vocab gate ✓, LOC ✓.
+tsc ✓, build ✓, vitest ✓, vocab gate ✓, LOC ✓.
 
 ## Dormant
 
-- Identity body in `run-frames.ts:79-84` — every non-source node
-  emits `vals[0]`. Real per-type semantics deferred until a node
-  needs them.
+- Identity body in `run-frames.ts:79-84` — every non-source,
+  non-ReadGate node emits `vals[0]`.
 - Shape D port; tick-batching audit superseded.
-- Restart-Input friction — touched only if option 2 wins.
+- Button node type — superseded by the editor-level ⌫ affordance.
+- The `required` port-flag mechanism in `parse-meta.ts` — has zero
+  callers now; kept for future required ports.
 
 ## ALWAYS clause
 
