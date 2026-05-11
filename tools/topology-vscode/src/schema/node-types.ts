@@ -80,10 +80,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
   },
   ReadGate: {
     role: "and-gate",
-    inputs: [
-      { name: "chainIn", kind: "chain" },
-      { name: "ack", kind: "feedback-ack", required: true },
-    ],
+    inputs: [{ name: "chainIn", kind: "chain" }],
     outputs: [{ name: "out", kind: "chain" }],
     shape: "rect", fill: "#f3e5f5", stroke: "#7b1fa2", width: 70, height: 40,
   },

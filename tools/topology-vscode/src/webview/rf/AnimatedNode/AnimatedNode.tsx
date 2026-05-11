@@ -5,6 +5,7 @@ import { subscribeFrame, getFrameSnapshot } from "../../frame-store";
 import type { NodeFrameMsgState } from "../../../messages";
 import { portStyle, HANDLE_STYLE_LEFT, HANDLE_STYLE_RIGHT } from "./_styles";
 import { SpecPanel } from "./SpecPanel";
+import { ClearSlotButton } from "./ClearSlotButton";
 import { NodeBody } from "./NodeBody";
 import type { AnimatedNodeData } from "./_types";
 
@@ -38,6 +39,7 @@ export function AnimatedNode(props: NodeProps<AnimatedNodeData>) {
       }}
     >
       <SpecPanel id={id} data={data} />
+      <ClearSlotButton nodeId={id} data={data} />
       {data.inputs.length === 0 ? (
         <Handle type="target" position={Position.Left} style={HANDLE_STYLE_LEFT} isConnectable={false} />
       ) : (

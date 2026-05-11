@@ -77,26 +77,7 @@ describe("parseSpec rejects", () => {
     expect((s.timing as { steps?: unknown }).steps).toBeUndefined();
   });
 
-  it("required input port with no incoming edge", () => {
-    // ReadGate.ack is marked required. A ReadGate with only chainIn wired
-    // (the silently-regresses-on-Button-delete scenario) must fail parse.
-    expect(() =>
-      parseSpec({
-        nodes: [
-          { id: "in0", type: "Input" },
-          { id: "rg", type: "ReadGate" },
-        ],
-        edges: [
-          {
-            id: "e1", source: "in0", sourceHandle: "out",
-            target: "rg", targetHandle: "chainIn", kind: "chain",
-          },
-        ],
-      }),
-    ).toThrow(/rg \(ReadGate\): required input "ack"/);
-  });
-
-  it("legend row with bad kind", () => {
+it("legend row with bad kind", () => {
     expect(() =>
       parseSpec({
         nodes: [okNode], edges: [],

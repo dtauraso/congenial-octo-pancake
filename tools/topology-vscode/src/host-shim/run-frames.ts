@@ -47,6 +47,7 @@ export interface RunFramesHandle {
   resume(): void;
   step(): void;
   markArrived(wireId: string): void;
+  clearWire(wireId: string): void;
   readonly paused: boolean;
   readonly recorder: Recorder<PacedFrame<unknown>>;
 }
@@ -74,6 +75,13 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
       if (outputs.length > 0 && queue.length > 0) {
         sources.push(spawnSource(outputs, queue, pause));
       }
+      continue;
+    }
+    if (node.type === "ReadGate") {
+      // ReadGate holds its input slot full after pulse arrival. The
+      // slot empties only via the editor's clear-slot button (calling
+      // Wire.clear()), which is what frees the upstream source to send
+      // the next pulse. No auto-take+ack loop.
       continue;
     }
     const nodeSpec: NodeSpecV2<unknown, unknown> = {
@@ -125,6 +133,10 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
     markArrived: (wireId: string) => {
       const w = wires.get(wireId);
       if (w) w.markArrived();
+    },
+    clearWire: (wireId: string) => {
+      const w = wires.get(wireId);
+      if (w) w.clear();
     },
     get paused() { return pause.paused; },
     recorder,

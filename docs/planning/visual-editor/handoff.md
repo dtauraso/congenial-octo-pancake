@@ -9,7 +9,7 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — next task:
-     wire-primitive slot-contract audit (no branch yet).
+     generalize the manual-gate pattern, or pick up a friction item.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — system 3 model: forever-loops, line-level pause, events.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
@@ -17,73 +17,55 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, fourth session of day):
+State at handoff (2026-05-10, fifth session of day):
 
-  **Active task branch:** `task/readgate-required-ack` (this session,
-  two commits, not yet merged). Awaiting sign-off to merge to main.
+  **Active task branch:** `task/wire-slot-contract-audit` (six
+  commits ahead of main, all pushed; verified working in editor).
+  Awaiting sign-off to merge.
 
-  **What landed:**
-  - `Port` type gained `required?: boolean`. `ReadGate.ack` is now
-    `required: true` in `NODE_TYPES`.
-  - `validatePorts` (in `parse-meta.ts`) now errors when any node has a
-    declared `required` input with no incoming edge. Error names the
-    node id, node type, and port — e.g. `node readGate1 (ReadGate):
-    required input "ack" has no incoming edge`. Parse failure routes
-    through `frame-renderer.ts` unchanged.
-  - New test in `test/parseSpec.test.ts` covers the parse-error path.
-  - `topology.json` gained an `ackSrc` Input feeding `readGate1.ack`
-    so the live spec validates. `topology.view.json` lost the stale
-    `btn1` entry left over from the abandoned button branch and gained
-    an `ackSrc` view entry.
+  **What landed (in commit order):**
+  1. `9477360` Slot-contract audit tests in
+     `test/contracts/wire-slot-contract.test.ts` (6 tests) pinning:
+     send-on-non-empty throws, `taken→empty` substrate-only (no
+     `arrived` event), only `loaded` animates (headless default
+     auto-arrives; rendered defers until `markArrived`).
+  2. `c6a50a1` Remove `ReadGate.ack` port and `ackSrc` Input from
+     the live topology. Model correction: ack is wire state, not a
+     separately-wired input port — the slot lives inside the
+     destination node, the wire transports the pulse.
+  3. `a7194bd` `Wire.clear()` substrate escape hatch + new
+     `cleared` event. Mid-flight clears wait for arrival (preserves
+     animation contract); taken→empty and loaded+arrived→empty
+     fire immediately.
+  4. `daf5d1f` Editor wiring: `clear-slot { nodeId, port }` message,
+     `RunFramesHandle.clearWire`, top-left ⌫ button on ReadGate
+     nodes (`ClearSlotButton.tsx`).
+  5. `b93a90d` Skip the generic node-loop for ReadGate-typed nodes
+     in `run-frames.ts` so the slot stays loaded after arrival;
+     each click of ⌫ advances one pulse from in0.
+  6. (this commit) `topology.view.json` camera state from the
+     working session.
 
-  **Gates:** tsc ✓, build ✓, vitest 194/194 ✓, vocab ✓, LOC ✓
-  (`npm run check:loc` clean).
+  **Gates:** tsc ✓, build ✓, vitest 204/204 ✓ (was 194; +6 audit
+  + 5 clear tests), vocab ✓, LOC ✓.
 
-  **Repo state:** task branch with two commits ahead of main. Working
-  tree has `topology.view.json` ackSrc/btn1 swap not yet committed —
-  fold it into the merge or commit on the branch before signing off.
-
-  **Held invariants (unchanged):** MODEL.md (Path A). Phases ordinal;
-  one permitted duration is per-wire `loaded` traversal time; one
-  permitted renderer→substrate signal is `pulse-arrived`. Headless
-  wires default `renderArrival: false`. Halt/resume on substrate;
-  send-on-non-empty throws.
+  **Held invariants (unchanged):** MODEL.md (Path A). Phases
+  ordinal; one permitted duration is per-wire `loaded` traversal
+  time; one permitted renderer→substrate signal is `pulse-arrived`.
+  Headless wires default `renderArrival: false`. Halt/resume on
+  substrate; send-on-non-empty throws. `Wire.clear()` is the
+  editor-only escape hatch and emits `cleared`.
 
 ## Dev-loop
 
 Edit → `npm run build` → topology tab refreshes in place. No Reload
 Window, no tab cycling. Watcher logs `[topology] bundleWatcher fired`
-to Output → Log (Extension Host). When `topology.json` is open in an
-editor tab, the extension reads from the buffer (not disk) — revert
-the tab if you edit the file outside VS Code.
+to Output → Log (Extension Host).
 
 ## Next move
 
-  **Sign-off + merge** `task/readgate-required-ack` to main (per the
-  workflow rule: merging to main requires explicit sign-off). Then
-  pick up the follow-on:
-
-  Wire-primitive slot-contract audit against MODEL.md: send-on-non-
-  empty throws; `taken → empty` is substrate-only (no renderer
-  round-trip); only `loaded` animates (headless wires default
-  `renderArrival: false`). Add substrate-level tests covering all
-  three. See [handoff-next-task.md](handoff-next-task.md) for the
-  framing.
-
-  Affordance question parked: `ackSrc` is a placeholder Input, not a
-  decided UX. Once the slot-contract audit lands, revisit whether the
-  gating source should be a Button (manual), Input (seeded), or
-  something else.
-
-## Dormant
-
-- Identity body in `run-frames.ts:79-84` — every non-source node
-  emits `vals[0]`. Body registry deferred until a node needs real
-  semantics.
-- Shape D port; tick-batching audit superseded.
-- Restart-Input friction (input cycles once and stops).
-- Button / manual-ack UX — parked until the slot-contract audit
-  decides what the gating source should look like.
+  **Sign-off + merge** `task/wire-slot-contract-audit` to main, then
+  pick up the follow-on in [handoff-next-task.md](handoff-next-task.md).
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

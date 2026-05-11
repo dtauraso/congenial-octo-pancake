@@ -1,80 +1,72 @@
-# Next task: wire-primitive slot-contract audit
+# Next task: generalize manual-gate or pick up friction
 
-**Branch:** none yet. `task/readgate-required-ack` is the active
-branch but its scope (required-input enforcement) is **done** — see
-handoff.md. Awaiting sign-off + merge before opening the next branch.
+**Branch:** none yet. `task/wire-slot-contract-audit` is done — see
+handoff.md. Awaiting sign-off + merge before opening the next
+branch.
 
-## Why this is next
+## What just landed
 
-Required-input enforcement landed on `task/readgate-required-ack`:
-`Port.required`, `ReadGate.ack` marked required, `validatePorts`
-errors on missing required edges, live `topology.json` updated with
-an `ackSrc` Input feeding ack. That closed the "ReadGate silently
-free-runs without ack" hole at the schema level.
+A complete manual step-debug affordance for ReadGate, end to end:
 
-The next layer down is the **wire primitive itself**: even with a
-required ack wired, the substrate has to honor the slot contract from
-[MODEL.md](../../../MODEL.md) (Path A). The audit verifies that
-contract is enforced mechanically, not just by convention.
+- **Model:** ack is wire state, not a port. The slot lives inside
+  the destination node; the wire transports the pulse. (See
+  [memory/project_ack_is_wire_state.md](../../../memory/project_ack_is_wire_state.md).)
+- **Substrate:** `Wire.clear()` escape hatch + `cleared` event;
+  mid-flight clears wait for arrival.
+- **Editor:** top-left ⌫ button on ReadGate nodes posts
+  `clear-slot { nodeId, port }`; extension resolves the wire by
+  edge target/handle and calls `clearWire`.
+- **Runtime:** ReadGate is excluded from the generic auto-loop in
+  `run-frames.ts` so its slot stays loaded until ⌫ is clicked.
 
-## Required next task
+Live behavior: in0 sends pulse #1, slot holds, click ⌫ → next
+pulse, etc., until the init queue is exhausted.
 
-Audit `tools/topology-vscode/src/substrate/` against the slot
-contract. Add substrate-level tests covering:
+## Required next task — pick one
 
-1. **Send-on-non-empty throws.** A source attempting to load a wire
-   already in `loaded` or `taken` state must throw — no queue, no
-   overwrite, no silent drop. Test: drive `wire.send()` (or whatever
-   the primitive entry point is) twice without an intervening
-   destination consume; assert throw on the second call.
+There is no single forced next step. Two reasonable directions; let
+friction decide:
 
-2. **`taken → empty` is substrate-only.** The transition from `taken`
-   to `empty` does not round-trip through the renderer. Concretely:
-   no renderer message is emitted on that transition; the source
-   learns the slot is clear via the substrate back-channel. Test:
-   spy the renderer message bus during a taken→empty transition and
-   assert no `pulse-arrived` (or any) message fires for it.
+1. **Generalize the manual-gate pattern.** Right now ReadGate is
+   hardcoded in two places: `run-frames.ts` (skip auto-loop) and
+   `ClearSlotButton.tsx` (render only if type === "ReadGate"). If
+   another node type needs the same affordance, lift this into a
+   `manual: true` flag on `NodeTypeDef` and key both branches off
+   it. Worth doing only when a second user shows up.
 
-3. **Only `loaded` traversal animates.** `taken` and `empty`
-   transitions produce no pixels. Headless wires default
-   `renderArrival: false`. Test: a headless wire's `loaded` phase
-   does not emit `pulse-arrived`; an unheaded wire's does.
+2. **Friction-driven next task.** Drive the editor with the new
+   button, log surprises to
+   [session-log.md](session-log.md), and open a `task/<short-kebab>`
+   for the most pressing one. Candidates that surfaced recently:
+   - Restart-Input friction (Input cycles once and stops — the ⌫
+     button now makes "stops" visible; user may want a re-arm or
+     loop affordance).
+   - Identity body in `run-frames.ts:79-84` — once a non-readGate
+     node needs real semantics, the body registry sketch in
+     session-log applies.
+   - Multi-slot wires / fan-in (currently `load` on non-empty
+     throws with "fan-in must use an explicit merge node"; a merge
+     node doesn't exist yet).
 
-Pick the existing test pattern in `test/contracts/` (e.g.
-`build-wire-entities.test.ts`, `node-loop.test.ts`) as the model.
+## Out of scope (until friction promotes them)
 
-## After the audit lands
-
-Revisit the affordance question parked from the abandoned
-`task/readgate-ack-button` branch: now that the model enforces
-required ack, and the wire enforces the slot contract, decide whether
-`readGate1.ack` should be driven by:
-- a **Button** node (manual ack, user-driven cycling),
-- a seeded **Input** (the current `ackSrc` placeholder),
-- or something else (e.g. a feedback loop from a downstream node).
-
-That decision is a UX/posture call, not a model call.
-
-## Out of scope (for this task)
-
-- Extending `required` enforcement to outputs, fan-out cardinality,
-  or kind matching. Stay scoped to the three slot-contract rules
-  above.
-- The Button node type — still parked.
-- Generalizing the substrate to multi-slot wires.
+- Audit-style sweeps (see
+  [audits.md](audits.md) for the registry).
+- Generalizing `clear()` to wires that aren't input slots.
+- A "step backward" affordance.
 
 ## Gates to clear before merge
 
-tsc ✓, build ✓, vitest ✓ (new contract tests), vocab gate ✓, LOC ✓.
+tsc ✓, build ✓, vitest ✓, vocab gate ✓, LOC ✓.
 
 ## Dormant
 
-- Identity body in `run-frames.ts:79-84` — every non-source node
-  emits `vals[0]`. Real per-type semantics deferred until a node
-  needs them (body-registry sketch in session-log).
-- Shape D port; tick-batching audit superseded; restart-Input
-  friction (input cycles once and stops — separate task whenever).
-- Button/manual-ack UX — revisit after this audit lands.
+- Identity body in `run-frames.ts:79-84` — every non-source,
+  non-ReadGate node emits `vals[0]`.
+- Shape D port; tick-batching audit superseded.
+- Button node type — superseded by the editor-level ⌫ affordance.
+- The `required` port-flag mechanism in `parse-meta.ts` — has zero
+  callers now; kept for future required ports.
 
 ## ALWAYS clause
 
