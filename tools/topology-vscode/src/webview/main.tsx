@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import "reactflow/dist/style.css";
 import "./webview.css";
 import App from "./rf/app";
-import { flushSave, flushViewSave, setTopogenStatus, vscode } from "./save";
+import { flushSave, flushViewSave, setTopogenStatus } from "./save";
 import { parseHostToWebview } from "../messages";
 import { getSpec, setDimmed, setRunStatus } from "./state";
 import { SubstrateProvider } from "./substrate-r/registry";
@@ -20,10 +20,6 @@ import { SubstrateProvider } from "./substrate-r/registry";
   // *not* in the set; pass undefined to clear.
   applyDim: (members: string[] | undefined) =>
     setDimmed(members ? new Set(members) : null),
-  // Frame-renderer play/pause hooks for e2e regression tests.
-  pauseSubstrate: () => { vscode.postMessage({ type: "frame-pause" }); },
-  resumeSubstrate: () => { vscode.postMessage({ type: "frame-resume" }); },
-  isSubstrateRunning: () => false,
 };
 
 // Surface any unhandled webview error to the extension host so it

@@ -13,7 +13,6 @@ import { writeProbeDump } from "./probe-dumps";
 import { appendSubstrateLog } from "./substrate-log";
 import { pickAndLoadTrace } from "./trace-pick";
 import { handleCompareFile, handleCompareHead } from "./compare-load";
-import type { FrameRendererCtl } from "./frame-renderer";
 
 export type MessageCtx = {
   document: vscode.TextDocument;
@@ -24,7 +23,6 @@ export type MessageCtx = {
   send: () => Thenable<boolean>;
   sendView: () => Promise<unknown>;
   setLastAppliedVersion: (v: number) => void;
-  frameRenderer: FrameRendererCtl;
 };
 
 export async function handleMessage(raw: unknown, ctx: MessageCtx): Promise<void> {
@@ -102,38 +100,6 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
     case "substrate-log":
       await appendSubstrateLog(msg.entry, document.uri);
       return;
-    case "frame-pause":
-      ctx.frameRenderer.pause();
-      return;
-    case "frame-resume":
-      ctx.frameRenderer.resume();
-      return;
-    case "frame-step":
-      ctx.frameRenderer.step();
-      return;
-    case "pulse-arrived":
-      ctx.frameRenderer.markArrived(msg.wireId);
-      return;
-    case "clear-slot": {
-      const wireId = resolveIncomingWireId(document, msg.nodeId, msg.port);
-      if (wireId) ctx.frameRenderer.clearWire(wireId);
-      return;
-    }
-  }
-}
-
-function resolveIncomingWireId(
-  document: vscode.TextDocument,
-  nodeId: string,
-  port: string,
-): string | undefined {
-  try {
-    const spec = JSON.parse(document.getText()) as {
-      edges?: ReadonlyArray<{ id: string; target: string; targetHandle?: string }>;
-    };
-    return spec.edges?.find((e) => e.target === nodeId && e.targetHandle === port)?.id;
-  } catch {
-    return undefined;
   }
 }
 

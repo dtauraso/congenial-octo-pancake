@@ -15,28 +15,6 @@ export type RunStatus =
 
 export type CompareSource = "head" | "file";
 
-// Wire / node frame state mirrors host-shim's PacedFrame. Inlined here so
-// messages.ts has no dependency on the substrate layer; the serializer in
-// host-shim/serialize-frame.ts is the bridge. Maps are flattened to arrays
-// of pairs so the postMessage structured-clone boundary stays JSON-shaped.
-export type WireFrameMsgState =
-  | { readonly kind: "empty" }
-  | { readonly kind: "loaded"; readonly value: unknown }
-  | { readonly kind: "taken"; readonly value: unknown };
-
-export type NodeFrameMsgState =
-  | "parked-input"
-  | "running"
-  | "parked-output"
-  | "parked-ack";
-
-export interface FrameMsg {
-  readonly type: "frame";
-  readonly seq: number;
-  readonly wires: ReadonlyArray<readonly [string, WireFrameMsgState]>;
-  readonly nodes: ReadonlyArray<readonly [string, NodeFrameMsgState]>;
-}
-
 export type WebviewToHostMsg =
   | { type: "ready" }
   | { type: "save"; text: string }
@@ -54,12 +32,7 @@ export type WebviewToHostMsg =
   | { type: "fold-halo-dump"; json: string }
   | { type: "runner-errors-dump"; json: string }
   | { type: "timeline-dump"; json: string }
-  | { type: "substrate-log"; entry: string }
-  | { type: "frame-pause" }
-  | { type: "frame-resume" }
-  | { type: "frame-step" }
-  | { type: "pulse-arrived"; wireId: string }
-  | { type: "clear-slot"; nodeId: string; port: string };
+  | { type: "substrate-log"; entry: string };
 
 export type HostToWebviewMsg =
   | { type: "load"; text: string }
@@ -71,19 +44,17 @@ export type HostToWebviewMsg =
   | { type: "compare-load"; source: CompareSource; text: string; label: string }
   | { type: "compare-error"; source: CompareSource; message: string }
   | { type: "trace-loaded"; text: string; label: string }
-  | { type: "trace-error"; message: string }
-  | FrameMsg;
+  | { type: "trace-error"; message: string };
 
 export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new Set([
   "ready", "save", "view-save", "run", "run-cancel", "compare-head", "compare-file",
   "trace-load", "trace-clear", "pulse-probe-dump", "stuck-pulse-dump", "stuck-pulse-followup-dump", "stuck-pulse-third-dump", "fold-halo-dump", "runner-errors-dump", "timeline-dump",
-  "substrate-log", "frame-pause", "frame-resume", "frame-step", "pulse-arrived",
-  "clear-slot",
+  "substrate-log",
 ]);
 
 export const HOST_TO_WEBVIEW_TYPES: ReadonlySet<HostToWebviewMsg["type"]> = new Set([
   "load", "view-load", "topogen-status", "run-status", "flush", "save-error",
-  "compare-load", "compare-error", "trace-loaded", "trace-error", "frame",
+  "compare-load", "compare-error", "trace-loaded", "trace-error",
 ]);
 
 export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {
@@ -113,12 +84,6 @@ export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {
       return typeof m.json === "string" ? (m as unknown as WebviewToHostMsg) : undefined;
     case "substrate-log":
       return typeof m.entry === "string" ? (m as unknown as WebviewToHostMsg) : undefined;
-    case "pulse-arrived":
-      return typeof m.wireId === "string" ? (m as unknown as WebviewToHostMsg) : undefined;
-    case "clear-slot":
-      return typeof m.nodeId === "string" && typeof m.port === "string"
-        ? (m as unknown as WebviewToHostMsg)
-        : undefined;
     default:
       return m as unknown as WebviewToHostMsg;
   }
