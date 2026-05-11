@@ -7,7 +7,6 @@ import type { Spec } from "../schema";
 // Position fields (x, y) moved to topology.view.json in audit #15.
 // "moved" detection would require comparing view state across snapshots;
 // for now the moved list is always empty (layout diffs are view-only).
-export const POSITION_EPSILON = 1;
 
 export type SpecDiff = {
   nodes: { added: string[]; removed: string[]; moved: string[] };

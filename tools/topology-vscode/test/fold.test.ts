@@ -4,11 +4,11 @@
 // mutating the spec. Locks down: collapsed members aren't emitted as RF
 // nodes; expanded folds emit a frame around their members; edges fully
 // inside a collapsed fold are dropped; edges crossing a collapsed boundary
-// are rerouted to the placeholder; flowToSpec ignores fold nodes.
+// are rerouted to the placeholder.
 
 import { describe, expect, it } from "vitest";
 import type { Spec } from "../src/schema";
-import { flowToSpec, specToFlow } from "../src/webview/rf/adapter";
+import { specToFlow } from "../src/webview/rf/adapter";
 import { createFold, toggleFold } from "../src/webview/fold-core";
 import type { ViewerState } from "../src/webview/viewerState";
 
@@ -100,18 +100,6 @@ describe("fold-aware specToFlow", () => {
     createFold(vs, ["b", "c"], [150, 0]);
     specToFlow(spec, vs.folds, vs);
     expect(JSON.stringify(spec)).toBe(before);
-  });
-
-  it("flowToSpec ignores fold nodes on the round-trip", () => {
-    const spec = makeSpec();
-    const vs: ViewerState = { nodes: { ...BASE_NODE_VIEWS } };
-    createFold(vs, ["b", "c"], [150, 0]);
-    toggleFold(vs, "fold0"); // expanded so member nodes are still in the flow
-
-    const flow = specToFlow(spec, vs.folds, vs);
-    const round = flowToSpec(flow.nodes, flow.edges);
-    expect(round.nodes.map((n) => n.id).sort()).toEqual(["a", "b", "c", "d"]);
-    expect(round.nodes.some((n) => n.id === "fold0")).toBe(false);
   });
 
   it("deleting a collapsed fold restores members and original edges (as if fold never existed)", () => {

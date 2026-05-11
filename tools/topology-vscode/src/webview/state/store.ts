@@ -47,7 +47,7 @@ export const useStore = create<Store>(() => ({
 }));
 
 // Live module-level bindings kept in sync with the store. Non-React
-// modules (save.ts, views.ts, geom.ts, etc.) import these directly and
+// modules (save.ts, views.ts, etc.) import these directly and
 // rely on ES-module live-binding semantics to see updates.
 export let spec: Spec = useStore.getState().spec;
 export let viewerState: ViewerState = useStore.getState().viewerState;
