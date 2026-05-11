@@ -17,11 +17,13 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, fifth session of day):
+State at handoff (2026-05-10, sixth session of day):
 
-  **Active task branch:** `task/wire-slot-contract-audit` (six
-  commits ahead of main, all pushed; verified working in editor).
-  Awaiting sign-off to merge.
+  **Active task branch:** `task/readgate-clear-button-gating` (two
+  commits ahead of `task/wire-slot-contract-audit`, which itself is
+  six commits ahead of main; all pushed; verified working in editor —
+  user confirmed 1 click = 1 pulse). Both branches awaiting sign-off
+  to merge.
 
   **What landed (in commit order):**
   1. `9477360` Slot-contract audit tests in
@@ -43,11 +45,18 @@ State at handoff (2026-05-10, fifth session of day):
   5. `b93a90d` Skip the generic node-loop for ReadGate-typed nodes
      in `run-frames.ts` so the slot stays loaded after arrival;
      each click of ⌫ advances one pulse from in0.
-  6. (this commit) `topology.view.json` camera state from the
+  6. `2df1` `topology.view.json` camera state from the
      working session.
+  7. `801860e` (branch `task/readgate-clear-button-gating`)
+     `ClearSlotButton` arms only when input wire phase === "loaded";
+     +4 RTL tests. Removes the empty-slot click confusion.
+  8. `2df12cc` host-shim now treats `cleared` like `acked` (emits an
+     empty frame). Without this, ⌫ → next pulse stayed at
+     `{kind:"loaded"}` across the frame so AnimatedEdge's
+     prev !== "loaded" guard never tripped and the user needed
+     multiple clicks before one pulse visibly animated; +1 test.
 
-  **Gates:** tsc ✓, build ✓, vitest 204/204 ✓ (was 194; +6 audit
-  + 5 clear tests), vocab ✓, LOC ✓.
+  **Gates:** tsc ✓, build ✓, vitest 209/209 ✓, vocab ✓, LOC ✓.
 
   **Held invariants (unchanged):** MODEL.md (Path A). Phases
   ordinal; one permitted duration is per-wire `loaded` traversal
@@ -64,8 +73,10 @@ to Output → Log (Extension Host).
 
 ## Next move
 
-  **Sign-off + merge** `task/wire-slot-contract-audit` to main, then
-  pick up the follow-on in [handoff-next-task.md](handoff-next-task.md).
+  **Sign-off + merge** `task/readgate-clear-button-gating` (which
+  contains everything from `task/wire-slot-contract-audit` plus the
+  two new commits) into main, then pick up the follow-on in
+  [handoff-next-task.md](handoff-next-task.md).
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
