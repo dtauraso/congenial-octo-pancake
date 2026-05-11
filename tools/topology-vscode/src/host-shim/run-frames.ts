@@ -46,12 +46,13 @@ export interface RunFramesHandle {
   pause(): void;
   resume(): void;
   step(): void;
+  markArrived(wireId: string): void;
   readonly paused: boolean;
   readonly recorder: Recorder<PacedFrame<unknown>>;
 }
 
 export function runFrames(opts: RunFramesOptions): RunFramesHandle {
-  const wires = buildWireEntities(opts.spec);
+  const wires = buildWireEntities(opts.spec, { renderArrival: true });
   const nodes: NodeLoopHandleV2[] = [];
   const wireLoops: WireLoopHandle[] = [];
   const sources: SourceHandle[] = [];
@@ -120,6 +121,10 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
     step: () => {
       stepArmed = true;
       if (pause.paused) pause.resume();
+    },
+    markArrived: (wireId: string) => {
+      const w = wires.get(wireId);
+      if (w) w.markArrived();
     },
     get paused() { return pause.paused; },
     recorder,

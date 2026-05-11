@@ -14,6 +14,7 @@ export interface FrameRendererCtl {
   pause(): void;
   resume(): void;
   step(): void;
+  markArrived(wireId: string): void;
   readonly paused: boolean;
 }
 
@@ -46,6 +47,7 @@ export function attachFrameRenderer(
     pause: () => handle?.pause(),
     resume: () => handle?.resume(),
     step: () => handle?.step(),
+    markArrived: (wireId: string) => handle?.markArrived(wireId),
     get paused() { return handle?.paused ?? false; },
   };
 }

@@ -8,6 +8,7 @@ import { type EdgeData, PULSE_SPEED_PX_PER_MS } from "./AnimatedEdge/_constants"
 import { EdgeLabels } from "./AnimatedEdge/_edge-labels";
 import { PulseInstance } from "./AnimatedEdge/PulseInstance";
 import { subscribeFrame, getFrameSnapshot } from "../frame-store";
+import { vscode } from "../save";
 
 type ActivePulse = { key: number; value: string; simStart: number };
 
@@ -38,7 +39,6 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
         simStart: performance.now(),
       });
     }
-    if (phase === "empty") setPulse(null);
     prevPhaseRef.current = phase;
   }, [phase, wireState]);
 
@@ -78,7 +78,10 @@ export function AnimatedEdge(props: EdgeProps<EdgeData>) {
           value={pulse.value}
           speedPxPerMs={PULSE_SPEED_PX_PER_MS}
           simStart={pulse.simStart}
-          onDone={() => setPulse((p) => (p && p.key === pulse.key ? null : p))}
+          onDone={() => {
+            vscode.postMessage({ type: "pulse-arrived", wireId: id });
+            setPulse((p) => (p && p.key === pulse.key ? null : p));
+          }}
         />
       )}
       {badgeValue !== null && mid && (

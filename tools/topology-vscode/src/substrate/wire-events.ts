@@ -1,7 +1,7 @@
 // Event types and ordinal sequence numbers for wire state changes.
 // Sequence numbers are pure ordinals (not durations); see MODEL.md.
 
-export type WireEventKind = "loaded" | "taken" | "acked";
+export type WireEventKind = "loaded" | "arrived" | "taken" | "acked";
 
 export interface WireEvent {
   readonly seq: number;

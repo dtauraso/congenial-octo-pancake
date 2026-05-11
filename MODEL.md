@@ -18,15 +18,24 @@ Stop, re-read this file, and re-derive from the model.
   own await points — source loads, destination takes, source is
   acked (returning the wire to `empty`). Phase is ordinal, not timed:
   `loaded` happened, then `taken` happened, then `empty`. No "during."
-- **Geometry is cosmetic.** Path length, snake-routing, edits to the
-  drawn line affect only what is rendered. They do not affect wire
-  state, tick count, or substrate correctness.
-- **The substrate halts and resumes pulses. That is all.** It does not
-  schedule them, time them, or wait on them. No durations are tracked
-  anywhere in the substrate.
+- **Geometry sets `loaded` traversal time; otherwise cosmetic.** Path
+  length and routing of a wire set how long that wire stays in
+  `loaded(v)` before `taken(v)` is allowed: `loadedTime = arcLength /
+  pulseSpeed`. Geometry has no other effect on substrate state — it
+  does not change values, tick ordinality, or which nodes are wired
+  to which. If geometry changes while a wire is `loaded`, the
+  remaining traversal time is re-derived from the new arc length and
+  the distance already covered.
+- **The substrate halts, resumes, and waits for `loaded` traversal.**
+  That is all. The only duration the substrate tracks is the per-wire
+  `loaded` traversal time defined above. It does not schedule
+  arbitrary work, does not time nodes, and does not track any other
+  durations.
 - **The renderer animates.** It owns pixels and motion. It plays out
-  visible state changes the substrate has already decided. It never
-  signals back to the substrate.
+  every `loaded(v)` the substrate has decided — to completion, in
+  order, never dropping one. The renderer's pulse arrival is the
+  signal that ends the `loaded` phase; that is the one back-channel
+  from renderer to substrate.
 - **Tick close is event-driven, not time-driven.** A round ends when
   every wire has cycled through `loaded → taken → empty`. The
   substrate observes this; it does not schedule it.
@@ -36,12 +45,16 @@ Stop, re-read this file, and re-derive from the model.
 If you find yourself writing or reasoning with these words while
 working on the substrate, you have drifted:
 
-- duration, ms, milliseconds, seconds
-- speed, px/ms, pixel rate
+- duration, ms, milliseconds, seconds — **except** the one allowed
+  duration: a wire's `loaded` traversal time derived from geometry.
+- speed, px/ms, pixel rate — **except** the single global pulse speed
+  constant used to derive `loaded` traversal time.
 - schedule, scheduler, deadline, timeout, setTimeout, setInterval
-- wall-clock, Date.now, performance.now
+- wall-clock, Date.now, performance.now (for substrate scheduling;
+  the renderer may still use `performance.now` for animation)
 - "tick takes X", "tick boundary at Y", "tick duration"
-- "renderer signals complete", "wait for animation"
+- "renderer signals complete" applied to anything other than the one
+  permitted signal: pulse arrival ending the `loaded` phase
 - inbox queue, edge queue, slot ledger, buffered values
 
 These belong to the renderer or to legacy code that is being retired.
@@ -52,6 +65,9 @@ None of them describe the substrate.
 - tick (ordinal), round, step
 - empty, loaded(v), taken(v)
 - halt, resume, snap
+- arc length, pulse speed, loaded traversal time (the one permitted
+  duration)
+- pulse arrived (the one permitted renderer→substrate signal)
 - node runs, wire loads, destination takes, source acks
 - arrives, observes
 
