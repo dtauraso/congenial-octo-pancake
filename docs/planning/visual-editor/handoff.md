@@ -19,59 +19,59 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, end of session):
+State at handoff (2026-05-11, end of session):
 
   **Active task branch:** `task/collapse-to-one-layer`. Latest commit
-  `ea79bf9` (delete dead sim/trace + TraceState, -240 lines). Prior:
-  `3f8d529` (delete old substrate + host-shim + renderer + recorder +
-  legacy tests, -3257 lines). Pushed. Not yet merged. Posture is
-  structural rewrite, not friction-driven — David approved the
-  substrate-rule override AND the editor-may-break-mid-rewrite
-  premise to push through the cutover. Editor's webview runs on the
-  new substrate; the live Input → wire → ReadGate cycle works
-  end-to-end with a clickable ⌫ button. Frame-pump, old substrate,
-  host-shim, renderer-adapter, and recorder are all deleted. Edge
-  visual fidelity remains. See
-  [handoff-next-task.md](handoff-next-task.md).
+  `e06447b` (delete dead bookmarks + fold-halo stub, -78 lines).
+  Pushed. Not yet merged. Posture remains structural rewrite — David
+  signed off on continuing the deletion sweep beyond the substrate
+  cutover. The session landed four commits, all deletion or
+  React-native replacement work:
+
+  1. `38d2a9f` delete the old slog/substrate-log logging system
+     (7 files, -134 lines).
+  2. `23eb90e` new logging system: `<ErrorBoundary>` +
+     `<CrashListeners>` + `postLog` transport + extension-side
+     `appendWebviewLog` writing `.probe/webview-log.jsonl`
+     (+153 lines, 4 new files under `src/webview/log/`).
+  3. `3da0928` delete dead probe-dump and trace message channels
+     (-116 lines; 11 message types removed, `probe-dumps.ts` and
+     `trace-pick.ts` deleted).
+  4. `e06447b` delete dead bookmarks system and fold-halo stub
+     (-78 lines; `bookmarks-store.ts`, `Bookmark` type and parser,
+     `useFoldHaloState` stub and `FOLD_HALO_BOX_SHADOW`).
+
+  Net for the session: substrate has no logging code at all; the new
+  React-resident logging lives at `src/webview/log/` (post.ts,
+  ErrorBoundary.tsx, CrashListeners.tsx). Eleven dead message types
+  retired and two stubs (bookmarks, fold-halo) deleted.
 
   **Two specs landed**, both on main:
   - [manual-take-model.md](manual-take-model.md) — destination-policy
     model; take is the single permitted observer→substrate signal.
-    Auto destinations emit take on animation completion; manual-take
-    destinations emit it on user click. Same substrate event.
   - [react-surface-spec.md](react-surface-spec.md) — substrate
     primitives as React components: `<Wire>` owns phase, `<Node>`
-    owns run and manual-take, `useTickDriver` walks rounds and
-    observes wire cycle completion. Plus behavioral traces for the
-    pulse animation cycle and geometry-change-while-loaded.
+    owns run and manual-take, `useTickDriver` walks rounds.
 
-  **New primitives + registry + RF integration landed** on this
-  branch. Cutover commit at `09ada85`; deletions at `87822c1`;
-  manual-take button + registry fix at `2cb806b`; frame-pump dead
-  code removed at `6a9e6f9`; old substrate/host-shim/renderer/recorder
-  + 18 legacy contract tests removed at `3f8d529`; dead sim/trace +
-  TraceState + 5 parser tests removed at `ea79bf9`.
-  Editor wiring now flows through the new substrate:
-  - `webview/substrate-r/wire-phase.ts` — pure reducer.
-  - `webview/substrate-r/Wire.tsx` — `<Wire>` with sync-observable
-    phase apply + RAF animation effect.
-  - `webview/substrate-r/Node.tsx` — render-less imperative `<Node>`;
-    exposes run() and requestTake().
-  - `webview/substrate-r/ManualTakeButton.tsx` — HTML ⌫ button,
-    subscribes to wire phase, arms when loaded.
-  - `webview/substrate-r/useTickDriver.ts` — driver with event-driven
-    round close + halt/resume/step.
-  - `webview/substrate-r/TopologyRoot.tsx` — spec-driven orchestrator.
-  - `webview/substrate-r/spec.ts` — RTopologySpec shape.
-  - `webview/substrate-r/node-kinds.tsx` — Input and ReadGate kinds.
+  **Gates:** tsc ✓, build ✓, vitest 132/132 ✓, vocab ✓, LOC ✓.
+  (Test count dropped 133 → 132 with the bookmarks parser test
+  removal in `e06447b`.)
 
-  **Gates:** tsc ✓, build ✓, vitest 133/133 ✓, vocab ✓, LOC ✓.
-  (Test count dropped from 222 → 138 with the legacy-test purge,
-  then 138 → 133 with the sim/trace parser-validation removal.)
-
-  **Audit blocker fix on this branch:** substrate/log.ts no longer
-  uses `require`; reads `__vscodeApi` off `window`. Substrate is
-  webview-portable.
+  **Open dead-export candidates** (surfaced via ts-prune, not yet
+  acted on):
+  - `src/webview/geom.ts` — entire file (83 LOC) has no importers.
+  - `save.ts:postReady`, `save.ts:isSynced`, `save.ts:markSynced`
+    plus the `lastSyncedText` module state they share — vestigial
+    pre-zustand sync tracking.
+  - `MarkerDefs.tsx:markerEndUrl` — helper export with no callers
+    (the `MarkerDefs` component is alive).
+  - `substrate-r/TopologyRoot.tsx` — flagged as "spec-driven
+    orchestrator" in the cutover commit but only used by
+    `test/contracts/r-topology-smoke.test.tsx`. Live editor wires
+    `RSubstrateNode` / `RSubstrateEdge` directly under React Flow.
+    Judgment call before deleting: is the smoke test exercising
+    valuable substrate-primitives behavior under a different name,
+    or is it scaffolding from the spike?
 
 ## Dev-loop
 
@@ -79,8 +79,10 @@ Edit → `npm run build` → topology tab refreshes in place.
 
 ## Next move
 
-  Read [handoff-next-task.md](handoff-next-task.md). The cutover step
-  is where this branch becomes user-visible.
+  Read [handoff-next-task.md](handoff-next-task.md). The
+  merge-blocking item is edge visual fidelity. Dead-export sweep
+  candidates above are well-scoped follow-ups if the user wants to
+  keep stripping before tackling visuals.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

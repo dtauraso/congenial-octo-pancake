@@ -1,24 +1,19 @@
 # Next task: finish the collapse-to-one-layer rewrite
 
-**Branch:** `task/collapse-to-one-layer`. Latest commit `ea79bf9`
-(delete dead sim/trace + TraceState; -240 lines). Prior: `3f8d529`
-(delete old substrate, host-shim, renderer, recorder, legacy tests;
--3257 lines). Pushed. Not yet mergeable; remaining items below.
+**Branch:** `task/collapse-to-one-layer`. Latest commit `e06447b`
+(delete dead bookmarks system + fold-halo stub, -78 lines). Pushed.
+Not yet mergeable; remaining items below.
 
-## State at handoff (2026-05-10, session end)
+## State at handoff (2026-05-11, session end)
 
-The substrate rewrite is in. The manual-take cycle works end-to-end
-in the live VS Code editor (step → pulse arrives at ReadGate → ⌫
-button arms yellow → click clears the wire). All legacy substrate
-code is deleted: `substrate/wire*`, `substrate/node-loop*`,
-`substrate/{node-streams,match,trigger-gate,pause-aware,pause-controller,build-wires,build-wire-entities}`,
-and the dead `src/host-shim/`, `src/renderer/`, `src/recorder/`
-directories. 18 legacy contract tests were purged. Only
-`substrate/log.ts` remains in `src/substrate/` (webview-portable).
-`src/sim/` is gone too — trace/seeds were dead since the recorder
-purge, and no webview component reads useTrace.
+The substrate rewrite is in. Logging has been re-shaped to fit the
+new model: `<ErrorBoundary>` + `<CrashListeners>` + `postLog`
+transport at `src/webview/log/`, with the extension-side appender
+writing `.probe/webview-log.jsonl`. The old `slog`/substrate-log
+side-channel is gone. Dead message channels (probe-dumps, trace) and
+dead stubs (bookmarks, fold-halo) have all been deleted.
 
-Gates green: tsc ✓, build ✓, vitest 133/133 ✓, vocab ✓, LOC ✓.
+Gates green: tsc ✓, build ✓, vitest 132/132 ✓, vocab ✓, LOC ✓.
 
 ## Owed before merge
 
@@ -36,12 +31,26 @@ Gates green: tsc ✓, build ✓, vitest 133/133 ✓, vocab ✓, LOC ✓.
    will be inert. Friction-driven posture: port each type only
    when it surfaces in a real session.
 
+## Optional follow-up sweeps (orthogonal to merge blockers)
+
+3. **Dead-export sweep, round 2.** ts-prune surfaced:
+   - `src/webview/geom.ts` — entire file (83 LOC) has zero importers.
+   - `save.ts` — `postReady`, `isSynced`, `markSynced`, and shared
+     `lastSyncedText` state, all unused.
+   - `MarkerDefs.tsx:markerEndUrl` — helper export with no callers.
+   - `substrate-r/TopologyRoot.tsx` — only `r-topology-smoke.test.tsx`
+     uses it. Live editor mounts substrate via RSubstrateNode /
+     RSubstrateEdge under React Flow, not through TopologyRoot.
+     Decide whether the smoke test is exercising valuable
+     primitives behavior under a misnamed harness, or whether it's
+     spike scaffolding to delete.
+
 ## Post-merge
 
-3. **Promote specs into MODEL.md.** Fold `manual-take-model.md` and
+4. **Promote specs into MODEL.md.** Fold `manual-take-model.md` and
    `react-surface-spec.md` content into `MODEL.md`. Delete the
    planning docs.
-4. **CLAUDE.md posture note.** Substrate rule was overridden for
+5. **CLAUDE.md posture note.** Substrate rule was overridden for
    this rewrite. Default posture returns to friction-driven.
 
 ## ALWAYS clause
