@@ -8,75 +8,64 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-next-task.md](handoff-next-task.md) — next task:
-     generalize the manual-gate pattern, or pick up a friction item.
+  1. [handoff-next-task.md](handoff-next-task.md) — load-bearing
+     next task: cut the editor over to the new React-resident substrate.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
-     — system 3 model: forever-loops, line-level pause, events.
+     — earlier decided substrate model (forever-loops). Superseded for
+     the visual editor by the React-component substrate; kept as the
+     model that the new primitives realize.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
      mode, open branches, housekeeping.
 
 ---
 
-State at handoff (2026-05-10, sixth session of day):
+State at handoff (2026-05-11, mid-session):
 
-  **Active task branch:** none. `task/readgate-clear-button-gating`
-  (which superseded `task/wire-slot-contract-audit`) merged to main
-  at `a180168` after user confirmed 1 click = 1 pulse in the editor.
-  Both task branches still exist locally and on remote; safe to
-  delete on next housekeeping pass.
+  **Active task branch:** `task/collapse-to-one-layer`. Not yet
+  merged. Posture is structural rewrite, not friction-driven — David
+  approved the substrate-rule override to push the rewrite forward in
+  one session. Stopping point reached at the React Flow integration
+  boundary (the load-bearing cutover step).
 
-  **What landed (in commit order):**
-  1. `9477360` Slot-contract audit tests in
-     `test/contracts/wire-slot-contract.test.ts` (6 tests) pinning:
-     send-on-non-empty throws, `taken→empty` substrate-only (no
-     `arrived` event), only `loaded` animates (headless default
-     auto-arrives; rendered defers until `markArrived`).
-  2. `c6a50a1` Remove `ReadGate.ack` port and `ackSrc` Input from
-     the live topology. Model correction: ack is wire state, not a
-     separately-wired input port — the slot lives inside the
-     destination node, the wire transports the pulse.
-  3. `a7194bd` `Wire.clear()` substrate escape hatch + new
-     `cleared` event. Mid-flight clears wait for arrival (preserves
-     animation contract); taken→empty and loaded+arrived→empty
-     fire immediately.
-  4. `daf5d1f` Editor wiring: `clear-slot { nodeId, port }` message,
-     `RunFramesHandle.clearWire`, top-left ⌫ button on ReadGate
-     nodes (`ClearSlotButton.tsx`).
-  5. `b93a90d` Skip the generic node-loop for ReadGate-typed nodes
-     in `run-frames.ts` so the slot stays loaded after arrival;
-     each click of ⌫ advances one pulse from in0.
-  6. `2df1` `topology.view.json` camera state from the
-     working session.
-  7. `801860e` (branch `task/readgate-clear-button-gating`)
-     `ClearSlotButton` arms only when input wire phase === "loaded";
-     +4 RTL tests. Removes the empty-slot click confusion.
-  8. `2df12cc` host-shim now treats `cleared` like `acked` (emits an
-     empty frame). Without this, ⌫ → next pulse stayed at
-     `{kind:"loaded"}` across the frame so AnimatedEdge's
-     prev !== "loaded" guard never tripped and the user needed
-     multiple clicks before one pulse visibly animated; +1 test.
+  **Two specs landed**, both on main:
+  - [manual-take-model.md](manual-take-model.md) — destination-policy
+    model; take is the single permitted observer→substrate signal.
+    Auto destinations emit take on animation completion; manual-take
+    destinations emit it on user click. Same substrate event.
+  - [react-surface-spec.md](react-surface-spec.md) — substrate
+    primitives as React components: `<Wire>` owns phase, `<Node>`
+    owns run and manual-take, `useTickDriver` walks rounds and
+    observes wire cycle completion. Plus behavioral traces for the
+    pulse animation cycle and geometry-change-while-loaded.
 
-  **Gates:** tsc ✓, build ✓, vitest 209/209 ✓, vocab ✓, LOC ✓.
+  **New primitives landed** on this branch (no consumers in the live
+  editor yet — they sit alongside the existing substrate):
+  - `webview/substrate-r/wire-phase.ts` — pure reducer.
+  - `webview/substrate-r/Wire.tsx` — `<Wire>` with sync-observable
+    phase apply + RAF animation effect.
+  - `webview/substrate-r/Node.tsx` — `<Node>` with manual-take button
+    + subscribePhase observation.
+  - `webview/substrate-r/useTickDriver.ts` — driver with event-driven
+    round close + halt/resume/step.
+  - `webview/substrate-r/TopologyRoot.tsx` — spec-driven orchestrator.
+  - `webview/substrate-r/spec.ts` — RTopologySpec shape.
+  - `webview/substrate-r/node-kinds.tsx` — Input and ReadGate kinds.
 
-  **Held invariants (unchanged):** MODEL.md (Path A). Phases
-  ordinal; one permitted duration is per-wire `loaded` traversal
-  time; one permitted renderer→substrate signal is `pulse-arrived`.
-  Headless wires default `renderArrival: false`. Halt/resume on
-  substrate; send-on-non-empty throws. `Wire.clear()` is the
-  editor-only escape hatch and emits `cleared`.
+  **Gates:** tsc ✓, build ✓, vitest 237/237 ✓, vocab ✓, LOC ✓.
+  +30 tests vs the pre-rewrite baseline; nothing existing broken.
+
+  **Audit blocker fix on this branch:** substrate/log.ts no longer
+  uses `require`; reads `__vscodeApi` off `window`. Substrate is
+  webview-portable.
 
 ## Dev-loop
 
-Edit → `npm run build` → topology tab refreshes in place. No Reload
-Window, no tab cycling. Watcher logs `[topology] bundleWatcher fired`
-to Output → Log (Extension Host).
+Edit → `npm run build` → topology tab refreshes in place.
 
 ## Next move
 
-  Pick up the follow-on in
-  [handoff-next-task.md](handoff-next-task.md): generalize the
-  manual-gate pattern, or drive the editor and let friction pick the
-  next branch.
+  Read [handoff-next-task.md](handoff-next-task.md). The cutover step
+  is where this branch becomes user-visible.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

@@ -1,87 +1,101 @@
-# Next task: generalize manual-gate or pick up friction
+# Next task: cut the editor over to the new React-resident substrate
 
-**Branch:** none yet. `task/readgate-clear-button-gating` merged to
-main at `a180168` (2026-05-10). Open a fresh `task/<short-kebab>`
-when starting the next change.
+**Branch:** `task/collapse-to-one-layer`. Continue on this branch.
 
-## What just landed
+## Context
 
-A complete manual step-debug affordance for ReadGate, end to end:
+The substrate has been re-conceived as React components in the
+webview, eliminating the host-shim tick driver, the frame protocol,
+the frame-store, and the postMessage handlers for play/pause/step/
+clear-slot/pulse-arrived. Two specs are landed on main pinning the
+model and the React surface. Primitives are landed on this branch
+with 237/237 tests passing — but no consumers in the live editor
+yet. The cutover is the load-bearing remaining work.
 
-- **Model:** ack is wire state, not a port. The slot lives inside
-  the destination node; the wire transports the pulse. (See
-  [memory/project_ack_is_wire_state.md](../../../memory/project_ack_is_wire_state.md).)
-- **Substrate:** `Wire.clear()` escape hatch + `cleared` event;
-  mid-flight clears wait for arrival.
-- **Editor:** top-left ⌫ button on ReadGate nodes posts
-  `clear-slot { nodeId, port }`; extension resolves the wire by
-  edge target/handle and calls `clearWire`. Button is armed only when
-  the input wire's frame phase === "loaded" (disabled on empty/taken)
-  so users can't click on an empty slot expecting to start a pulse.
-- **Runtime:** ReadGate is excluded from the generic auto-loop in
-  `run-frames.ts` so its slot stays loaded until ⌫ is clicked. The
-  host-shim now treats `cleared` like `acked` and emits an empty
-  frame, so each ⌫ produces a clean empty→loaded transition the
-  renderer can animate (one click = one pulse).
+## What's done
 
-Live behavior: in0 sends pulse #1, slot holds, click ⌫ → next
-pulse, etc., until the init queue is exhausted.
+Read [handoff.md](handoff.md) for the full state. Six commits on
+this branch:
 
-## Required next task — pick one
+- `d550bab` substrate/log.ts blocker fix (substrate bundles in webview)
+- `03f1100` React-surface spec
+- `94a5674` `<Wire>` + phase reducer + 11 tests
+- `dc7a07c` `<Node>` + manual-take button + subscribePhase + 7 tests
+- `ccbb50c` `useTickDriver` + 7 tests
+- `b66ddf4` TopologyRoot harness + 3 end-to-end tests
+- `2dc3f8e` spec-driven TopologyRoot + Input/ReadGate kinds
 
-There is no single forced next step. Two reasonable directions; let
-friction decide:
+## What's left — the cutover
 
-1. **Generalize the manual-gate pattern.** Right now ReadGate is
-   hardcoded in two places: `run-frames.ts` (skip auto-loop) and
-   `ClearSlotButton.tsx` (render only if type === "ReadGate"). If
-   another node type needs the same affordance, lift this into a
-   `manual: true` flag on `NodeTypeDef` and key both branches off
-   it. Worth doing only when a second user shows up.
+Plain ordering, no options. Each item is a separate commit unless
+trivially small. **Each commit must leave the editor working.**
 
-2. **Friction-driven next task.** Drive the editor with the new
-   button, log surprises to
-   [session-log.md](session-log.md), and open a `task/<short-kebab>`
-   for the most pressing one. Candidates that surfaced recently:
-   - Restart-Input friction (Input cycles once and stops — the ⌫
-     button now makes "stops" visible; user may want a re-arm or
-     loop affordance).
-   - Identity body in `run-frames.ts:79-84` — once a non-readGate
-     node needs real semantics, the body registry sketch in
-     session-log applies.
-   - Multi-slot wires / fan-in (currently `load` on non-empty
-     throws with "fan-in must use an explicit merge node"; a merge
-     node doesn't exist yet).
+1. **RTopologySpec adapter.** Convert the editor's persisted spec
+   (with positions, edges, viewer state) into RTopologySpec. Lives
+   alongside the existing spec-to-flow adapter. Maps Input nodes to
+   `{kind: "input"}` and ReadGate to `{kind: "readgate"}`; derives
+   `pathD` / `arcLength` from the edge geometry React Flow produces.
+   Other node types: drop them in this pass (today's working
+   topology uses only Input + ReadGate). Test: adapter on a fixture.
 
-## Out of scope (until friction promotes them)
+2. **Global wire/node registry context.** A React context that holds
+   `Map<wireId, RefObject<WireHandle | null>>` and
+   `Map<nodeId, RefObject<NodeHandle | null>>`. Components register
+   on mount via context. `useTickDriver` reads from the context.
+   Replaces the per-render ref maps in current TopologyRoot.
 
-- Audit-style sweeps (see
-  [audits.md](audits.md) for the registry).
-- Generalizing `clear()` to wires that aren't input slots.
-- A "step backward" affordance.
+3. **AnimatedEdge replacement.** New `RSubstrateEdge` registered with
+   React Flow's `edgeTypes`. Reads sourceX/Y/targetX/Y from React
+   Flow props, computes pathD + arcLength, mounts a `<Wire>` whose
+   ref registers in the context.
 
-## Gates to clear before merge
+4. **AnimatedNode wrapping.** Wrap each React Flow node component so
+   that for Input and ReadGate it also mounts the matching
+   `<Node>`-kind body (Input/ReadGateBody from node-kinds.tsx) with
+   refs registered in the context.
 
-tsc ✓, build ✓, vitest ✓, vocab gate ✓, LOC ✓.
+5. **TopologyRoot at the app level.** Wrap `<AppView>` in a provider
+   that owns the registry context and runs `useTickDriver` against
+   it. The driver replaces host-shim's run-frames.
 
-## Dormant
+6. **TransportControls cutover.** Remove the postMessage path
+   (`frame-pause` / `frame-resume` / `frame-step`); call
+   `driver.halt/resume/step` from the context.
 
-- Identity body in `run-frames.ts:79-84` — every non-source,
-  non-ReadGate node emits `vals[0]`.
-- Shape D port; tick-batching audit superseded.
-- Button node type — superseded by the editor-level ⌫ affordance.
-- The `required` port-flag mechanism in `parse-meta.ts` — has zero
-  callers now; kept for future required ports.
+7. **Manual-take cutover.** Remove the postMessage `clear-slot`
+   path; the `<Node>` button already wires direct take().
+
+8. **Spec ingestion.** Extension sends spec on `ready`; webview's
+   adapter (step 1) projects into RTopologySpec.
+
+9. **Delete dead code.** Frame protocol, frame-store as
+   deserialization, host-shim run-frames frame emission, postMessage
+   handlers for play/pause/step/clear-slot/pulse-arrived, the
+   ReadGate auto-loop carveout, the `cleared`→`acked` collapse, old
+   `substrate/wire.ts` and friends (audit which substrate files are
+   now unused), the old `ClearSlotButton.tsx`.
+
+10. **Tests.** Migrate or delete: clear-slot-button-armed,
+    run-frames, run-frames-controls, recorder, serialize-frame,
+    host-shim, renderer-adapter, dom-substrate-smoke (some survive,
+    some get rewritten against the new shapes).
+
+11. **Promote specs into MODEL.md.** Once the rewrite is live, fold
+    manual-take-model.md and react-surface-spec.md into MODEL.md and
+    delete the planning files.
+
+12. **Update CLAUDE.md posture.** This was a structural rewrite under
+    overridden substrate rule. After cutover, posture returns to
+    friction-driven. Note this in CLAUDE.md if appropriate.
+
+## Risk
+
+The load-bearing step is 3+4+5 in one commit (they're coupled). If
+they ship together with the registry context working, the editor
+runs on the new substrate. If any of them is wrong, the editor
+breaks. Worth landing 1+2 as separate prep commits, then a careful
+single commit for 3+4+5.
 
 ## ALWAYS clause
 
-At end of session, overwrite this file (and the sibling `handoff-*.md`
-files) with a freshly-rendered prompt tailored to the state you're
-leaving the branch in, and commit on the active branch (main if no
-task is in flight). Do not rely on chat history; the next AI may be a
-fresh model with no transcript. The rendered handoff must itself
-contain this same ALWAYS clause so the loop is self-perpetuating
-across sessions. Use
-[continuation-prompt-template.md](continuation-prompt-template.md) as
-the structural source of truth; update the template when an invariant
-changes. Keep each file ≤100 LOC per the budget rule.
+(See handoff.md — same clause applies.)
