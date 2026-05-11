@@ -6,6 +6,7 @@ import { flushSave, flushViewSave, setTopogenStatus, vscode } from "./save";
 import { parseHostToWebview } from "../messages";
 import { setFrame } from "./frame-store";
 import { getSpec, setDimmed, setRunStatus } from "./state";
+import { SubstrateProvider } from "./substrate-r/registry";
 
 // Test-only hook for the Playwright e2e harness. The harness stub of
 // acquireVsCodeApi populates window.__wirefold_sent with every postMessage
@@ -65,7 +66,11 @@ window.addEventListener("unhandledrejection", (e) => {
 
 const app = document.getElementById("app")!;
 try {
-  createRoot(app).render(<App />);
+  createRoot(app).render(
+    <SubstrateProvider>
+      <App />
+    </SubstrateProvider>,
+  );
 } catch (err) {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { slog } = require("../substrate/log") as typeof import("../substrate/log");

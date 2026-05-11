@@ -1,25 +1,18 @@
-// Play / pause / step against the system 3 frame renderer
-// (FrameRendererCtl on the host). The webview owns no substrate
-// state — the toggle is optimistic; the host is the source of truth
-// for pause/resume.
+// Play / pause / step against the in-webview substrate driver.
+// Reads halted state and calls halt/resume/step directly via the
+// SubstrateProvider context — no postMessage.
 
-import { useState } from "react";
-import { vscode } from "../../save";
+import { useRegistry } from "../../substrate-r/registry";
 
 export function TransportControls({ label }: { label: string }) {
-  const [paused, setPaused] = useState(false);
+  const { driver } = useRegistry();
+  const paused = driver.halted;
   const onPlayPause = () => {
-    if (paused) {
-      vscode.postMessage({ type: "frame-resume" });
-      setPaused(false);
-    } else {
-      vscode.postMessage({ type: "frame-pause" });
-      setPaused(true);
-    }
+    if (paused) driver.resume();
+    else driver.halt();
   };
   const onStep = () => {
-    vscode.postMessage({ type: "frame-step" });
-    setPaused(true);
+    driver.step();
   };
   return (
     <>
