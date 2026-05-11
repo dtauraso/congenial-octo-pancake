@@ -1,8 +1,8 @@
 # Next task: generalize manual-gate or pick up friction
 
-**Branch:** none yet. `task/wire-slot-contract-audit` is done — see
-handoff.md. Awaiting sign-off + merge before opening the next
-branch.
+**Branch:** none yet. `task/readgate-clear-button-gating` (which
+supersedes `task/wire-slot-contract-audit`) is done — see handoff.md.
+Awaiting sign-off + merge before opening the next branch.
 
 ## What just landed
 
@@ -15,9 +15,14 @@ A complete manual step-debug affordance for ReadGate, end to end:
   mid-flight clears wait for arrival.
 - **Editor:** top-left ⌫ button on ReadGate nodes posts
   `clear-slot { nodeId, port }`; extension resolves the wire by
-  edge target/handle and calls `clearWire`.
+  edge target/handle and calls `clearWire`. Button is armed only when
+  the input wire's frame phase === "loaded" (disabled on empty/taken)
+  so users can't click on an empty slot expecting to start a pulse.
 - **Runtime:** ReadGate is excluded from the generic auto-loop in
-  `run-frames.ts` so its slot stays loaded until ⌫ is clicked.
+  `run-frames.ts` so its slot stays loaded until ⌫ is clicked. The
+  host-shim now treats `cleared` like `acked` and emits an empty
+  frame, so each ⌫ produces a clean empty→loaded transition the
+  renderer can animate (one click = one pulse).
 
 Live behavior: in0 sends pulse #1, slot holds, click ⌫ → next
 pulse, etc., until the init queue is exhausted.
