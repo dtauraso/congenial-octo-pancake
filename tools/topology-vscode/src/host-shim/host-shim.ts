@@ -79,7 +79,7 @@ export function composeShim<V>(io: ShimInputs<V>): ShimHandle {
         } else if (e.kind === "taken" && w.state.kind === "taken") {
           wireState.set(w.id, { kind: "taken", value: w.state.value });
           fanOut(snapshot(e.seq));
-        } else if (e.kind === "acked") {
+        } else if (e.kind === "acked" || e.kind === "cleared") {
           wireState.set(w.id, { kind: "empty" });
           fanOut(snapshot(e.seq));
         }

@@ -70,6 +70,32 @@ describe("host-shim — frame derivation", () => {
     adapter.stop();
   });
 
+  it("emits empty on cleared (editor escape hatch)", () => {
+    _resetSeqForTests();
+    const w = createWire<number>("w", true); // renderArrival so clear is reachable post-arrival
+    const recorder = createRecorder<PacedFrame<number>>();
+    const adapter = createRendererAdapter<PacedFrame<number>>({ delayMs: 1 });
+    composeShim<number>({
+      wires: [w], nodes: [noopNode()], adapter, recorder,
+    });
+
+    w.load(7);
+    w.markArrived();
+    expect(recorder.snapshot().at(-1)!.wires.get("w"))
+      .toEqual({ kind: "loaded", value: 7 });
+
+    w.clear();
+    expect(recorder.snapshot().at(-1)!.wires.get("w")).toEqual({ kind: "empty" });
+
+    // Next load must produce a fresh empty→loaded transition in frames so
+    // the renderer can re-trigger pulse animation.
+    w.load(8);
+    expect(recorder.snapshot().at(-1)!.wires.get("w"))
+      .toEqual({ kind: "loaded", value: 8 });
+
+    adapter.stop();
+  });
+
   it("captures the carried value at emit time, not after the wire moves on", () => {
     const w = createWire<string>("w");
     const recorder = createRecorder<PacedFrame<string>>();
