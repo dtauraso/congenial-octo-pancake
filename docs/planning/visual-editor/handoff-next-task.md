@@ -1,87 +1,34 @@
-# Next task: generalize manual-gate or pick up friction
+# Next task: edge visual fidelity on RSubstrateEdge
 
-**Branch:** none yet. `task/readgate-clear-button-gating` merged to
-main at `a180168` (2026-05-10). Open a fresh `task/<short-kebab>`
-when starting the next change.
+**Branch:** open a fresh `task/<short-kebab>` off `main`.
+`task/collapse-to-one-layer` was merged. Specs are in MODEL.md.
 
-## What just landed
+## State at handoff (2026-05-11, end of session)
 
-A complete manual step-debug affordance for ReadGate, end to end:
+The collapse-to-one-layer rewrite is on `main`. Substrate has no
+logging code (new logging lives at `src/webview/log/`), dead message
+channels and stubs are gone, dead exports are gone, and the two
+planning specs (`manual-take-model.md`, `react-surface-spec.md`) are
+folded into [MODEL.md](../../../MODEL.md) and deleted.
 
-- **Model:** ack is wire state, not a port. The slot lives inside
-  the destination node; the wire transports the pulse. (See
-  [memory/project_ack_is_wire_state.md](../../../memory/project_ack_is_wire_state.md).)
-- **Substrate:** `Wire.clear()` escape hatch + `cleared` event;
-  mid-flight clears wait for arrival.
-- **Editor:** top-left ⌫ button on ReadGate nodes posts
-  `clear-slot { nodeId, port }`; extension resolves the wire by
-  edge target/handle and calls `clearWire`. Button is armed only when
-  the input wire's frame phase === "loaded" (disabled on empty/taken)
-  so users can't click on an empty slot expecting to start a pulse.
-- **Runtime:** ReadGate is excluded from the generic auto-loop in
-  `run-frames.ts` so its slot stays loaded until ⌫ is clicked. The
-  host-shim now treats `cleared` like `acked` and emits an empty
-  frame, so each ⌫ produces a clean empty→loaded transition the
-  renderer can animate (one click = one pulse).
+Gates at merge: tsc ✓, build ✓, vitest 114/114 ✓, vocab ✓, LOC ✓.
 
-Live behavior: in0 sends pulse #1, slot holds, click ⌫ → next
-pulse, etc., until the init queue is exhausted.
+## Owed
 
-## Required next task — pick one
+1. **Edge visual fidelity.** `RSubstrateEdge` draws a plain gray
+   line. Lost vs `AnimatedEdge`: kind colors, dash patterns, route
+   variants (line/snake/below), arrow markers, edge labels. Port
+   from git history at `87822c1^` — the deleted
+   `webview/rf/AnimatedEdge/_geom-build.ts`, `_pulse-label.ts`,
+   `_edge-labels.tsx`, and `_constants.ts` hold the pieces.
 
-There is no single forced next step. Two reasonable directions; let
-friction decide:
-
-1. **Generalize the manual-gate pattern.** Right now ReadGate is
-   hardcoded in two places: `run-frames.ts` (skip auto-loop) and
-   `ClearSlotButton.tsx` (render only if type === "ReadGate"). If
-   another node type needs the same affordance, lift this into a
-   `manual: true` flag on `NodeTypeDef` and key both branches off
-   it. Worth doing only when a second user shows up.
-
-2. **Friction-driven next task.** Drive the editor with the new
-   button, log surprises to
-   [session-log.md](session-log.md), and open a `task/<short-kebab>`
-   for the most pressing one. Candidates that surfaced recently:
-   - Restart-Input friction (Input cycles once and stops — the ⌫
-     button now makes "stops" visible; user may want a re-arm or
-     loop affordance).
-   - Identity body in `run-frames.ts:79-84` — once a non-readGate
-     node needs real semantics, the body registry sketch in
-     session-log applies.
-   - Multi-slot wires / fan-in (currently `load` on non-empty
-     throws with "fan-in must use an explicit merge node"; a merge
-     node doesn't exist yet).
-
-## Out of scope (until friction promotes them)
-
-- Audit-style sweeps (see
-  [audits.md](audits.md) for the registry).
-- Generalizing `clear()` to wires that aren't input slots.
-- A "step backward" affordance.
-
-## Gates to clear before merge
-
-tsc ✓, build ✓, vitest ✓, vocab gate ✓, LOC ✓.
-
-## Dormant
-
-- Identity body in `run-frames.ts:79-84` — every non-source,
-  non-ReadGate node emits `vals[0]`.
-- Shape D port; tick-batching audit superseded.
-- Button node type — superseded by the editor-level ⌫ affordance.
-- The `required` port-flag mechanism in `parse-meta.ts` — has zero
-  callers now; kept for future required ports.
+2. **Other node types' substrate behavior.** Today only Input and
+   ReadGate have `node-kinds.tsx` entries. ChainInhibitor, AndGate,
+   Partition, EdgeNode, etc. mount with no `<Node>` body — fine for
+   the user's current working topology but anything that uses them
+   will be inert. Friction-driven posture: port each type only
+   when it surfaces in a real session.
 
 ## ALWAYS clause
 
-At end of session, overwrite this file (and the sibling `handoff-*.md`
-files) with a freshly-rendered prompt tailored to the state you're
-leaving the branch in, and commit on the active branch (main if no
-task is in flight). Do not rely on chat history; the next AI may be a
-fresh model with no transcript. The rendered handoff must itself
-contain this same ALWAYS clause so the loop is self-perpetuating
-across sessions. Use
-[continuation-prompt-template.md](continuation-prompt-template.md) as
-the structural source of truth; update the template when an invariant
-changes. Keep each file ≤100 LOC per the budget rule.
+(See handoff.md — same clause applies.)

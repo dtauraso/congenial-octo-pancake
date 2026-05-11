@@ -21,7 +21,6 @@ export const vscode: VsCodeApi = w.__vscodeApi ?? (w.__vscodeApi = acquireVsCode
 const status = document.getElementById("status")!;
 const topogenStatus = document.getElementById("topogen-status")!;
 
-let lastSyncedText: string | undefined;
 let lastViewSyncedText: string | undefined;
 
 // Debounced timing lives in <SaveLifecycle /> (useDebouncedCallback).
@@ -34,18 +33,6 @@ let viewSaveImpl: Saver | null = null;
 export function registerSavers(save: Saver, viewSave: Saver) {
   saveImpl = save;
   viewSaveImpl = viewSave;
-}
-
-export function postReady() {
-  vscode.postMessage({ type: "ready" });
-}
-
-export function isSynced(text: string): boolean {
-  return text === lastSyncedText;
-}
-
-export function markSynced(text: string) {
-  lastSyncedText = text;
 }
 
 export function setStatus(dirty: boolean) {
@@ -73,7 +60,6 @@ export function setTopogenStatus(s: TopogenStatus) {
 // after the trailing edge fires, or directly via flushSave/flushViewSave.
 export function performSave() {
   const text = JSON.stringify(spec, null, 2) + "\n";
-  lastSyncedText = text;
   vscode.postMessage({ type: "save", text });
   setStatus(false);
 }

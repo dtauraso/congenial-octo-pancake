@@ -1,11 +1,11 @@
 import type { EdgeKind } from "../../../schema";
-import { AnimatedEdge } from "../AnimatedEdge";
-import { AnimatedNode } from "../AnimatedNode";
 import { FoldNode } from "../FoldNode";
 import { NoteNode } from "../NoteNode";
+import { RSubstrateEdge } from "../../substrate-r/RSubstrateEdge";
+import { RSubstrateNode } from "../../substrate-r/RSubstrateNode";
 
-export const EDGE_TYPES = { animated: AnimatedEdge };
-export const RF_NODE_TYPES = { animated: AnimatedNode, fold: FoldNode, note: NoteNode };
+export const EDGE_TYPES = { animated: RSubstrateEdge };
+export const RF_NODE_TYPES = { animated: RSubstrateNode, fold: FoldNode, note: NoteNode };
 
 // Alignment-guide tolerance is in flow units; 4 covers off-grid drag
 // noise without firing on every near-miss.

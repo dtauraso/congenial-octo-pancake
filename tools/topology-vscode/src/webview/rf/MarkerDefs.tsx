@@ -13,11 +13,6 @@ import { KIND_COLORS, type EdgeKind } from "../../schema";
 // edge-connection in the cascade reference, but generated for every
 // kind for symmetry).
 
-export function markerEndUrl(kind: EdgeKind, arrowStyle: "filled" | "open" | undefined): string {
-  const variant = arrowStyle === "open" ? "open" : "filled";
-  return `url(#wf-arrow-${variant}-${kind})`;
-}
-
 const KINDS = Object.keys(KIND_COLORS) as EdgeKind[];
 
 export function MarkerDefs() {

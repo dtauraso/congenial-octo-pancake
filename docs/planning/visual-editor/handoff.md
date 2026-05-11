@@ -8,75 +8,49 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-next-task.md](handoff-next-task.md) — next task:
-     generalize the manual-gate pattern, or pick up a friction item.
+  1. [handoff-next-task.md](handoff-next-task.md) — load-bearing
+     next task: port edge visual fidelity onto `RSubstrateEdge`.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
-     — system 3 model: forever-loops, line-level pause, events.
+     — substrate model background (forever-loops). Realized by the
+     React-component substrate now on `main`.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
      mode, open branches, housekeeping.
 
 ---
 
-State at handoff (2026-05-10, sixth session of day):
+State at handoff (2026-05-11, end of session):
 
-  **Active task branch:** none. `task/readgate-clear-button-gating`
-  (which superseded `task/wire-slot-contract-audit`) merged to main
-  at `a180168` after user confirmed 1 click = 1 pulse in the editor.
-  Both task branches still exist locally and on remote; safe to
-  delete on next housekeeping pass.
+  **Active branch:** `main`. `task/collapse-to-one-layer` was
+  merged in this session. The substrate rewrite, deletion sweep,
+  and spec promotion all landed. Posture returns to friction-driven
+  per CLAUDE.md.
 
-  **What landed (in commit order):**
-  1. `9477360` Slot-contract audit tests in
-     `test/contracts/wire-slot-contract.test.ts` (6 tests) pinning:
-     send-on-non-empty throws, `taken→empty` substrate-only (no
-     `arrived` event), only `loaded` animates (headless default
-     auto-arrives; rendered defers until `markArrived`).
-  2. `c6a50a1` Remove `ReadGate.ack` port and `ackSrc` Input from
-     the live topology. Model correction: ack is wire state, not a
-     separately-wired input port — the slot lives inside the
-     destination node, the wire transports the pulse.
-  3. `a7194bd` `Wire.clear()` substrate escape hatch + new
-     `cleared` event. Mid-flight clears wait for arrival (preserves
-     animation contract); taken→empty and loaded+arrived→empty
-     fire immediately.
-  4. `daf5d1f` Editor wiring: `clear-slot { nodeId, port }` message,
-     `RunFramesHandle.clearWire`, top-left ⌫ button on ReadGate
-     nodes (`ClearSlotButton.tsx`).
-  5. `b93a90d` Skip the generic node-loop for ReadGate-typed nodes
-     in `run-frames.ts` so the slot stays loaded after arrival;
-     each click of ⌫ advances one pulse from in0.
-  6. `2df1` `topology.view.json` camera state from the
-     working session.
-  7. `801860e` (branch `task/readgate-clear-button-gating`)
-     `ClearSlotButton` arms only when input wire phase === "loaded";
-     +4 RTL tests. Removes the empty-slot click confusion.
-  8. `2df12cc` host-shim now treats `cleared` like `acked` (emits an
-     empty frame). Without this, ⌫ → next pulse stayed at
-     `{kind:"loaded"}` across the frame so AnimatedEdge's
-     prev !== "loaded" guard never tripped and the user needed
-     multiple clicks before one pulse visibly animated; +1 test.
+  This session's closing acts:
 
-  **Gates:** tsc ✓, build ✓, vitest 209/209 ✓, vocab ✓, LOC ✓.
+  1. Folded `manual-take-model.md` and `react-surface-spec.md` into
+     [MODEL.md](../../../MODEL.md); deleted the two planning docs.
+     MODEL.md now contains the manual-take signal generalization,
+     the auto/manually-gated destination policy, and the React
+     surface realization (`<Wire>`, `<Node>`, `useTickDriver`,
+     geometry-change handling, bridge surface).
+  2. Merged `task/collapse-to-one-layer` into `main`. Edge visual
+     fidelity is no longer a merge blocker — tracked as the next
+     task (see handoff-next-task.md). Editor currently ships with
+     plain gray edges.
 
-  **Held invariants (unchanged):** MODEL.md (Path A). Phases
-  ordinal; one permitted duration is per-wire `loaded` traversal
-  time; one permitted renderer→substrate signal is `pulse-arrived`.
-  Headless wires default `renderArrival: false`. Halt/resume on
-  substrate; send-on-non-empty throws. `Wire.clear()` is the
-  editor-only escape hatch and emits `cleared`.
+  **Gates at merge:** tsc ✓, build ✓, vitest 114/114 ✓, vocab ✓,
+  LOC ✓.
 
 ## Dev-loop
 
-Edit → `npm run build` → topology tab refreshes in place. No Reload
-Window, no tab cycling. Watcher logs `[topology] bundleWatcher fired`
-to Output → Log (Extension Host).
+Edit → `npm run build` → topology tab refreshes in place.
 
 ## Next move
 
-  Pick up the follow-on in
-  [handoff-next-task.md](handoff-next-task.md): generalize the
-  manual-gate pattern, or drive the editor and let friction pick the
-  next branch.
+  Read [handoff-next-task.md](handoff-next-task.md). Open a fresh
+  `task/<short-kebab>` branch and port edge visual fidelity onto
+  `RSubstrateEdge` (kind colors, dashes, route variants, arrow
+  markers, edge labels) from git history at `87822c1^`.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

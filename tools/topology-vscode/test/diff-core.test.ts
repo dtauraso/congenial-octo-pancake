@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import { parseSpec, type Spec } from "../src/schema";
-import { POSITION_EPSILON, diffSpecs } from "../src/webview/diff-core";
+import { diffSpecs } from "../src/webview/diff-core";
 
 function spec(s: Partial<Spec> & { nodes: Spec["nodes"]; edges: Spec["edges"] }): Spec {
   return parseSpec({ nodes: s.nodes, edges: s.edges });
@@ -71,7 +71,6 @@ describe("diffSpecs — node categories", () => {
     const a = baseA();
     const d = diffSpecs(a, a);
     expect(d.nodes.moved).toEqual([]);
-    expect(POSITION_EPSILON).toBe(1); // constant preserved for reference
   });
 });
 

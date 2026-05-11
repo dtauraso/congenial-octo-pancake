@@ -33,12 +33,25 @@ Stop, re-read this file, and re-derive from the model.
   durations.
 - **The renderer animates.** It owns pixels and motion. It plays out
   every `loaded(v)` the substrate has decided — to completion, in
-  order, never dropping one. The renderer's pulse arrival is the
-  signal that ends the `loaded` phase; that is the one back-channel
-  from renderer to substrate.
+  order, never dropping one.
+- **One renderer→substrate signal: take.** The single back-channel
+  from renderer to substrate is "take this wire's loaded value,"
+  which advances `loaded(v) → taken(v)`. The renderer decides when
+  to emit it based on the destination's policy (below). The
+  substrate does not distinguish the source — one signal, one
+  meaning.
+- **Destination policy: auto vs. manual-take.** A destination node
+  is either *auto* or *manually-gated*. For auto destinations the
+  renderer emits take on animation completion (recovering the
+  original behavior). For manually-gated destinations the renderer
+  emits take on user click; the wire stays in `loaded(v)` across
+  tick boundaries until that click arrives. Animation completion is
+  renderer-internal in this case, not a substrate event.
 - **Tick close is event-driven, not time-driven.** A round ends when
   every wire has cycled through `loaded → taken → empty`. The
-  substrate observes this; it does not schedule it.
+  substrate observes this; it does not schedule it. A round in
+  `loaded(v)` waiting for take continues to wait — halt/resume does
+  not abort it.
 
 ## Banned vocabulary (in substrate context)
 
@@ -54,7 +67,7 @@ working on the substrate, you have drifted:
   the renderer may still use `performance.now` for animation)
 - "tick takes X", "tick boundary at Y", "tick duration"
 - "renderer signals complete" applied to anything other than the one
-  permitted signal: pulse arrival ending the `loaded` phase
+  permitted signal: take, ending the `loaded` phase
 - inbox queue, edge queue, slot ledger, buffered values
 
 These belong to the renderer or to legacy code that is being retired.
@@ -67,9 +80,45 @@ None of them describe the substrate.
 - halt, resume, snap
 - arc length, pulse speed, loaded traversal time (the one permitted
   duration)
-- pulse arrived (the one permitted renderer→substrate signal)
+- take (the one permitted renderer→substrate signal)
+- auto destination, manually-gated destination, destination policy
 - node runs, wire loads, destination takes, source acks
 - arrives, observes
+
+## React surface realization
+
+The webview realizes the substrate as React components — substrate
+state IS React state. A wire's phase is not mirrored from elsewhere;
+it lives in React. No store adapter, no frame protocol, no transition
+detector.
+
+- **`<Wire>`** owns its phase in a reducer keyed on allowed
+  transitions (invalid transitions unrepresentable). Exposes
+  `load(v)`, `take()`, `ack()`. On entering `loaded(v)` a
+  `useEffect` launches a RAF pulse animation using arc length and
+  the global pulse-speed constant. Animation completion fires a
+  local callback; whether it calls `take()` is the destination's
+  concern. The wire is unaware of policy.
+- **`<Node>`** owns its `run()`, output-wire refs, and any
+  per-node affordances. Manual-take destinations render an
+  affordance whose click invokes `take()` on the input wire; it is
+  armed iff that wire's phase is `loaded(v)` (a direct read of
+  phase state, not a frame snapshot).
+- **`useTickDriver`** at the topology root owns the ordinal tick
+  count and `halted` flag. Per round: walk nodes once calling
+  `run()`, observe wire cycle completion, increment tick. Step
+  advances one round even when halted. Schedules nothing on
+  wall-clock time.
+- **Geometry change while `loaded(v)`** re-runs the animation
+  effect; `distanceCovered` is held in a ref (preserved across
+  geometry changes), and the RAF loop resumes at
+  `distanceCovered / newArcLength`. If `newArcLength` shrinks below
+  `distanceCovered`, the pulse clamps and the completion path runs
+  immediately. Phase, value, and tick ordinal are unaffected by
+  geometry in `empty` or `taken(v)` phases.
+- **Bridge surface** carries spec I/O only — `ready`, `spec`,
+  `view`, `save`, `view-save`, optionally `topogen-status`.
+  Nothing about ticks, phases, animation, or controls crosses.
 
 ## Why this file exists
 

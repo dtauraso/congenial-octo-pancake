@@ -1,7 +1,7 @@
 import { produce } from "immer";
 import type { Spec } from "../../schema";
 import type { ViewerState } from "../viewerState";
-import { useStore, withCap, type RunStatusUI, type Scope, type TraceState, type View } from "./store";
+import { useStore, withCap, type RunStatusUI, type Scope, type View } from "./store";
 
 // ---- Setters ----
 export function setSpec(next: Spec) {
@@ -22,13 +22,6 @@ export function setDimmed(next: Set<string> | null) {
 export function setRunStatus(next: RunStatusUI) {
   useStore.setState({ runStatus: next });
 }
-export function setTrace(next: TraceState) {
-  useStore.setState({ trace: next });
-}
-export function patchTrace(part: Partial<TraceState>) {
-  useStore.setState((s) => ({ trace: { ...s.trace, ...part } }));
-}
-
 // History-bypassing patch for incidental viewer fields (camera, selection,
 // fold position). Distinct from mutateViewer which pushes onto undo.
 export function patchViewerState(fn: (v: ViewerState) => void) {
