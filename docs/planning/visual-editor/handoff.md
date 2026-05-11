@@ -17,19 +17,23 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, sixtieth session):
-  **Active task branch:** none. `task/wire-phase-state` merged to
-  `main` as `c79b9a7` and the branch was deleted (local + remote).
+State at handoff (2026-05-10, sixty-first session):
+  **Active task branch:** `task/edge-pulse-motion` (pushed, awaiting
+  in-editor verification before merge to `main`). Last commit
+  `c33d204`.
 
-  Last achievement: substrate wire phase widened from
-  `empty | carrying(v)` to `empty | loaded(v) | taken(v)` so the
-  renderer can distinguish traveling from arrived-but-not-acked.
-  Phase matches the wire loop's own await points; substrate stays
-  timing-free per MODEL.md. `carrying` is fully retired and added to
-  the vocab gate. Frame plumbing emits one frame per phase
-  transition (load / take / ack); AnimatedEdge reads the phase.
+  Last achievement: AnimatedEdge now spawns a `PulseInstance` on the
+  `empty → loaded` phase transition, reading the value from the
+  frame store. The static held-value badge renders only on `taken`
+  (after the pulse finishes / unmounts), and clears on `taken →
+  empty` ack — matching the loaded/taken/ack ordinal. Legacy
+  event-driven trigger removed: `_use-pulse-lanes-ticked.ts` deleted
+  and `subscribe/publishEdgeArrive` stripped from
+  `substrate/node-streams.ts`. Per-edge rAF stays on each
+  `PulseInstance` (seamless geometry).
 
-  **Gates on main:** tsc ✓, build ✓, vitest 38 / 193 ✓, vocab gate ✓.
+  **Gates on branch:** tsc ✓, build ✓, vitest 38 / 193 ✓, vocab
+  gate ✓, LOC ✓ (AnimatedEdge.tsx = 95).
 
   **Model:** `handoff-substrate-iteration.md`, with phase amendment
   in MODEL.md applied. Three phases ordinal, not timed.
@@ -52,12 +56,18 @@ disk) — revert the tab if you edit the file outside VS Code.
 
 ## Next move
 
-  Start `task/edge-pulse-motion` from `main`: renderer-only per-edge
-  rAF owned by `AnimatedEdge`, driven by the new loaded / taken / ack
-  phase transitions. Lives under `src/webview/rf/`, never imported
-  from `src/substrate/`. See
-  [handoff-next-task.md](handoff-next-task.md) for shape and the
-  rejected global-rAF default (seamless-geometry argument).
+  Drive the editor and verify pulse motion: load the proof-out
+  topology (in08 → readGate1), trigger input, observe that the
+  pulse animates along the edge during `loaded` and that the static
+  badge replaces it on `taken` then clears on ack. If the visuals
+  match the model, merge `task/edge-pulse-motion` to `main`,
+  delete the branch (local + remote), and pick the next friction
+  item from [session-log.md](session-log.md). If they don't, log
+  the friction and iterate on this branch.
+
+  Pulse speed default lives at
+  `_constants.ts:PULSE_SPEED_PX_PER_MS` (0.3 px/ms = 300 px/s);
+  tune from session-log feedback if needed.
 
 Dormant: Shape D port; tick-batching audit superseded; restart-Input
 friction (input cycles once and stops — separate task whenever).
