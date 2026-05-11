@@ -77,6 +77,13 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
       }
       continue;
     }
+    if (node.type === "ReadGate") {
+      // ReadGate holds its input slot full after pulse arrival. The
+      // slot empties only via the editor's clear-slot button (calling
+      // Wire.clear()), which is what frees the upstream source to send
+      // the next pulse. No auto-take+ack loop.
+      continue;
+    }
     const nodeSpec: NodeSpecV2<unknown, unknown> = {
       id: node.id,
       inputs,
