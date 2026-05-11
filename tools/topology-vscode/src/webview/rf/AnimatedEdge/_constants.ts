@@ -28,7 +28,7 @@ export const PULSE_DASH_PX = 20;
 // dot's track on curves and diagonals.
 export const PULSE_LABEL_NORMAL_PX = 10;
 // Default traversal speed for an edge pulse in pixels of arc per ms.
-export const PULSE_SPEED_PX_PER_MS = 0.3;
+export const PULSE_SPEED_PX_PER_MS = 0.08;
 
 export type Pulse = {
   key: number;
