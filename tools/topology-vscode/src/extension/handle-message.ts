@@ -9,9 +9,7 @@ import { BuildAndRunRunner } from "../runCommand";
 import { writeSidecar } from "../sidecar";
 import { parseWebviewToHost, type HostToWebviewMsg, type WebviewToHostMsg } from "../messages";
 import { applyEdit } from "./html";
-import { writeProbeDump } from "./probe-dumps";
 import { appendWebviewLog } from "./webview-log";
-import { pickAndLoadTrace } from "./trace-pick";
 import { handleCompareFile, handleCompareHead } from "./compare-load";
 
 export type MessageCtx = {
@@ -82,20 +80,6 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
       return;
     case "compare-file":
       await handleCompareFile(document.uri, post);
-      return;
-    case "trace-load":
-      await pickAndLoadTrace(document.uri, post);
-      return;
-    case "trace-clear":
-      return;
-    case "pulse-probe-dump":
-    case "stuck-pulse-dump":
-    case "stuck-pulse-followup-dump":
-    case "stuck-pulse-third-dump":
-    case "fold-halo-dump":
-    case "runner-errors-dump":
-    case "timeline-dump":
-      await writeProbeDump(msg.type, msg.json, document.uri);
       return;
     case "webview-log":
       await appendWebviewLog(msg.entry, document.uri);

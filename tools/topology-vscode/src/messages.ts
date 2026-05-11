@@ -23,15 +23,6 @@ export type WebviewToHostMsg =
   | { type: "run-cancel" }
   | { type: "compare-head" }
   | { type: "compare-file" }
-  | { type: "trace-load" }
-  | { type: "trace-clear" }
-  | { type: "pulse-probe-dump"; json: string }
-  | { type: "stuck-pulse-dump"; json: string }
-  | { type: "stuck-pulse-followup-dump"; json: string }
-  | { type: "stuck-pulse-third-dump"; json: string }
-  | { type: "fold-halo-dump"; json: string }
-  | { type: "runner-errors-dump"; json: string }
-  | { type: "timeline-dump"; json: string }
   | { type: "webview-log"; entry: string };
 
 export type HostToWebviewMsg =
@@ -42,19 +33,16 @@ export type HostToWebviewMsg =
   | { type: "flush" }
   | { type: "save-error"; message: string }
   | { type: "compare-load"; source: CompareSource; text: string; label: string }
-  | { type: "compare-error"; source: CompareSource; message: string }
-  | { type: "trace-loaded"; text: string; label: string }
-  | { type: "trace-error"; message: string };
+  | { type: "compare-error"; source: CompareSource; message: string };
 
 export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new Set([
   "ready", "save", "view-save", "run", "run-cancel", "compare-head", "compare-file",
-  "trace-load", "trace-clear", "pulse-probe-dump", "stuck-pulse-dump", "stuck-pulse-followup-dump", "stuck-pulse-third-dump", "fold-halo-dump", "runner-errors-dump", "timeline-dump",
   "webview-log",
 ]);
 
 export const HOST_TO_WEBVIEW_TYPES: ReadonlySet<HostToWebviewMsg["type"]> = new Set([
   "load", "view-load", "topogen-status", "run-status", "flush", "save-error",
-  "compare-load", "compare-error", "trace-loaded", "trace-error",
+  "compare-load", "compare-error",
 ]);
 
 export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {
@@ -63,25 +51,15 @@ export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {
   if (typeof t !== "string" || !WEBVIEW_TO_HOST_TYPES.has(t as WebviewToHostMsg["type"])) {
     return undefined;
   }
-  // Per-variant field checks. Keep minimal; we trust our own sender, but
-  // reject anything that would round-trip a non-string payload to disk.
   const m = raw as Record<string, unknown>;
   switch (t) {
     case "save":
     case "view-save":
       return typeof m.text === "string" ? (m as unknown as WebviewToHostMsg) : undefined;
     case "run":
-      // text is optional; reject only if present-but-not-a-string
       return m.text === undefined || typeof m.text === "string"
         ? (m as unknown as WebviewToHostMsg)
         : undefined;
-    case "pulse-probe-dump":
-    case "stuck-pulse-dump":
-    case "stuck-pulse-followup-dump":
-    case "stuck-pulse-third-dump":
-    case "fold-halo-dump":
-    case "runner-errors-dump":
-      return typeof m.json === "string" ? (m as unknown as WebviewToHostMsg) : undefined;
     case "webview-log":
       return typeof m.entry === "string" ? (m as unknown as WebviewToHostMsg) : undefined;
     default:
