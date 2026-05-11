@@ -165,6 +165,24 @@ the matching kind. If unsure, downshift first and escalate only if the
 cheaper model produces poor output — the cost asymmetry favors trying
 cheap first.
 
+**Delegation is the default, not the exception.** Before running a
+multi-step investigation, grep sweep, or mechanical edit pass from the
+main (Opus) session, ask: "can a haiku or sonnet subagent do this?" If
+yes, delegate. The main session should be doing judgment, planning,
+and synthesis — not driving `grep`, `Read`, or repetitive `Edit` calls
+that a cheaper model handles fine. Concretely:
+
+- More than ~2 read-only lookups on a topic → spawn an `Explore`
+  subagent with `model: "haiku"`.
+- A clear, scoped edit spec (rename, flag removal, mechanical
+  refactor) → spawn a general-purpose subagent with
+  `model: "sonnet"`.
+- A single targeted Read/grep with a known path → just do it inline;
+  delegation overhead isn't worth it.
+
+If the main session catches itself doing executor-style work, that's a
+miss — note it and route the next similar task to a subagent.
+
 ## Language / runtime
 
 Go 1.21.4 — `github.com/dtauraso/wirefold`
