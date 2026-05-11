@@ -47,6 +47,7 @@ export interface RunFramesHandle {
   resume(): void;
   step(): void;
   markArrived(wireId: string): void;
+  clearWire(wireId: string): void;
   readonly paused: boolean;
   readonly recorder: Recorder<PacedFrame<unknown>>;
 }
@@ -125,6 +126,10 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
     markArrived: (wireId: string) => {
       const w = wires.get(wireId);
       if (w) w.markArrived();
+    },
+    clearWire: (wireId: string) => {
+      const w = wires.get(wireId);
+      if (w) w.clear();
     },
     get paused() { return pause.paused; },
     recorder,

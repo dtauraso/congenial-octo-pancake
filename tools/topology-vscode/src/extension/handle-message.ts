@@ -114,6 +114,26 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
     case "pulse-arrived":
       ctx.frameRenderer.markArrived(msg.wireId);
       return;
+    case "clear-slot": {
+      const wireId = resolveIncomingWireId(document, msg.nodeId, msg.port);
+      if (wireId) ctx.frameRenderer.clearWire(wireId);
+      return;
+    }
+  }
+}
+
+function resolveIncomingWireId(
+  document: vscode.TextDocument,
+  nodeId: string,
+  port: string,
+): string | undefined {
+  try {
+    const spec = JSON.parse(document.getText()) as {
+      edges?: ReadonlyArray<{ id: string; target: string; targetHandle?: string }>;
+    };
+    return spec.edges?.find((e) => e.target === nodeId && e.targetHandle === port)?.id;
+  } catch {
+    return undefined;
   }
 }
 

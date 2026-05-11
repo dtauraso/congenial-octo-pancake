@@ -58,7 +58,8 @@ export type WebviewToHostMsg =
   | { type: "frame-pause" }
   | { type: "frame-resume" }
   | { type: "frame-step" }
-  | { type: "pulse-arrived"; wireId: string };
+  | { type: "pulse-arrived"; wireId: string }
+  | { type: "clear-slot"; nodeId: string; port: string };
 
 export type HostToWebviewMsg =
   | { type: "load"; text: string }
@@ -77,6 +78,7 @@ export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new 
   "ready", "save", "view-save", "run", "run-cancel", "compare-head", "compare-file",
   "trace-load", "trace-clear", "pulse-probe-dump", "stuck-pulse-dump", "stuck-pulse-followup-dump", "stuck-pulse-third-dump", "fold-halo-dump", "runner-errors-dump", "timeline-dump",
   "substrate-log", "frame-pause", "frame-resume", "frame-step", "pulse-arrived",
+  "clear-slot",
 ]);
 
 export const HOST_TO_WEBVIEW_TYPES: ReadonlySet<HostToWebviewMsg["type"]> = new Set([
@@ -113,6 +115,10 @@ export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {
       return typeof m.entry === "string" ? (m as unknown as WebviewToHostMsg) : undefined;
     case "pulse-arrived":
       return typeof m.wireId === "string" ? (m as unknown as WebviewToHostMsg) : undefined;
+    case "clear-slot":
+      return typeof m.nodeId === "string" && typeof m.port === "string"
+        ? (m as unknown as WebviewToHostMsg)
+        : undefined;
     default:
       return m as unknown as WebviewToHostMsg;
   }
