@@ -1,80 +1,80 @@
-# Next task: wire-primitive slot-contract audit
+# Next task: affordance for readGate1.ack
 
-**Branch:** none yet. `task/readgate-required-ack` is the active
-branch but its scope (required-input enforcement) is **done** — see
-handoff.md. Awaiting sign-off + merge before opening the next branch.
+**Branch:** none yet. `task/wire-slot-contract-audit` is the active
+branch but its scope (substrate slot-contract tests) is **done** —
+see handoff.md. Awaiting sign-off + merge before opening the next
+branch.
 
 ## Why this is next
 
-Required-input enforcement landed on `task/readgate-required-ack`:
-`Port.required`, `ReadGate.ack` marked required, `validatePorts`
-errors on missing required edges, live `topology.json` updated with
-an `ackSrc` Input feeding ack. That closed the "ReadGate silently
-free-runs without ack" hole at the schema level.
+Two layers have now landed:
+- **Schema layer** (`task/readgate-required-ack`, merged): `Port.required`,
+  `ReadGate.ack` marked required, `validatePorts` errors on missing
+  required edges. Closes "ReadGate silently free-runs without ack" at
+  parse time.
+- **Substrate layer** (`task/wire-slot-contract-audit`, awaiting
+  merge): three slot-contract rules from MODEL.md pinned by tests —
+  send-on-non-empty throws, `taken → empty` is substrate-only, only
+  `loaded` animates.
 
-The next layer down is the **wire primitive itself**: even with a
-required ack wired, the substrate has to honor the slot contract from
-[MODEL.md](../../../MODEL.md) (Path A). The audit verifies that
-contract is enforced mechanically, not just by convention.
+The live `topology.json` satisfies both layers because `ackSrc`
+(Input) is wired to `readGate1.ack`. But `ackSrc` is a **placeholder**,
+not a decided affordance. The required-input check is happy; the
+question of *what should be driving the ack in practice* is unresolved.
 
 ## Required next task
 
-Audit `tools/topology-vscode/src/substrate/` against the slot
-contract. Add substrate-level tests covering:
+Decide and wire the ack source. Three candidates:
 
-1. **Send-on-non-empty throws.** A source attempting to load a wire
-   already in `loaded` or `taken` state must throw — no queue, no
-   overwrite, no silent drop. Test: drive `wire.send()` (or whatever
-   the primitive entry point is) twice without an intervening
-   destination consume; assert throw on the second call.
+1. **Button node (manual ack).** User clicks once per cycle. Good
+   for stepping through the topology by hand; matches the
+   originally-attempted `task/readgate-ack-button` direction. Needs a
+   Button node type + view glyph + click→pulse plumbing.
+2. **Seeded Input (current `ackSrc`).** Cheapest; the Input cycles
+   once and stops (see "restart-Input friction" dormant). Becomes a
+   no-op after the first cycle unless restart is fixed.
+3. **Feedback loop from a downstream node.** The system acks itself
+   when downstream consumption completes. Most faithful to a
+   self-sustaining topology; requires picking the right downstream
+   signal and being careful about cycle semantics under MODEL.md.
 
-2. **`taken → empty` is substrate-only.** The transition from `taken`
-   to `empty` does not round-trip through the renderer. Concretely:
-   no renderer message is emitted on that transition; the source
-   learns the slot is clear via the substrate back-channel. Test:
-   spy the renderer message bus during a taken→empty transition and
-   assert no `pulse-arrived` (or any) message fires for it.
+This is a UX/posture call, not a model call. The model and substrate
+already enforce the contract; the question is which affordance best
+fits the visual-editor posture (friction-driven, post-v0).
 
-3. **Only `loaded` traversal animates.** `taken` and `empty`
-   transitions produce no pixels. Headless wires default
-   `renderArrival: false`. Test: a headless wire's `loaded` phase
-   does not emit `pulse-arrived`; an unheaded wire's does.
+## Approach
 
-Pick the existing test pattern in `test/contracts/` (e.g.
-`build-wire-entities.test.ts`, `node-loop.test.ts`) as the model.
-
-## After the audit lands
-
-Revisit the affordance question parked from the abandoned
-`task/readgate-ack-button` branch: now that the model enforces
-required ack, and the wire enforces the slot contract, decide whether
-`readGate1.ack` should be driven by:
-- a **Button** node (manual ack, user-driven cycling),
-- a seeded **Input** (the current `ackSrc` placeholder),
-- or something else (e.g. a feedback loop from a downstream node).
-
-That decision is a UX/posture call, not a model call.
+- Open `task/<short-kebab>` once the affordance is chosen.
+- Update the live `topology.json` / `topology.view.json` to reflect
+  the choice; remove the `ackSrc` placeholder if it's no longer the
+  decided source.
+- If Button is chosen, add the node type behind the existing schema
+  patterns (`NODE_TYPES`, `parse-meta.ts`, a view renderer entry).
+- If feedback is chosen, document the cycle in MODEL.md before
+  wiring — feedback edges interact with the slot contract.
+- Add a contract test or live-spec test that proves the affordance
+  works end-to-end with the required-input + slot-contract gates.
 
 ## Out of scope (for this task)
 
 - Extending `required` enforcement to outputs, fan-out cardinality,
-  or kind matching. Stay scoped to the three slot-contract rules
-  above.
-- The Button node type — still parked.
+  or kind matching.
 - Generalizing the substrate to multi-slot wires.
+- Restart-Input friction as a generic fix (only address it if option
+  2 is chosen).
 
 ## Gates to clear before merge
 
-tsc ✓, build ✓, vitest ✓ (new contract tests), vocab gate ✓, LOC ✓.
+tsc ✓, build ✓, vitest ✓ (any new tests for the chosen affordance),
+vocab gate ✓, LOC ✓.
 
 ## Dormant
 
 - Identity body in `run-frames.ts:79-84` — every non-source node
   emits `vals[0]`. Real per-type semantics deferred until a node
-  needs them (body-registry sketch in session-log).
-- Shape D port; tick-batching audit superseded; restart-Input
-  friction (input cycles once and stops — separate task whenever).
-- Button/manual-ack UX — revisit after this audit lands.
+  needs them.
+- Shape D port; tick-batching audit superseded.
+- Restart-Input friction — touched only if option 2 wins.
 
 ## ALWAYS clause
 
