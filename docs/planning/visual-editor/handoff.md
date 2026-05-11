@@ -8,8 +8,8 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-next-task.md](handoff-next-task.md) — active branch
-     `task/wire-phase-state` (in flight, awaiting sign-off).
+  1. [handoff-next-task.md](handoff-next-task.md) — next branch
+     `task/edge-pulse-motion` (not yet started; prerequisite merged).
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — system 3 model: forever-loops, line-level pause, events.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
@@ -17,10 +17,11 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, fifty-ninth session):
-  **Active task branch:** `task/wire-phase-state` (not merged).
+State at handoff (2026-05-10, sixtieth session):
+  **Active task branch:** none. `task/wire-phase-state` merged to
+  `main` as `c79b9a7` and the branch was deleted (local + remote).
 
-  Branch achievement: substrate wire phase widened from
+  Last achievement: substrate wire phase widened from
   `empty | carrying(v)` to `empty | loaded(v) | taken(v)` so the
   renderer can distinguish traveling from arrived-but-not-acked.
   Phase matches the wire loop's own await points; substrate stays
@@ -28,7 +29,7 @@ State at handoff (2026-05-10, fifty-ninth session):
   the vocab gate. Frame plumbing emits one frame per phase
   transition (load / take / ack); AnimatedEdge reads the phase.
 
-  **Gates on branch:** tsc ✓, build ✓, vitest 38 / 193 ✓, vocab gate ✓.
+  **Gates on main:** tsc ✓, build ✓, vitest 38 / 193 ✓, vocab gate ✓.
 
   **Model:** `handoff-substrate-iteration.md`, with phase amendment
   in MODEL.md applied. Three phases ordinal, not timed.
@@ -51,12 +52,12 @@ disk) — revert the tab if you edit the file outside VS Code.
 
 ## Next move
 
-  1. Sign-off review of `task/wire-phase-state` and merge to `main`
-     (MODEL.md edit is sign-off-required).
-  2. Then start `task/edge-pulse-motion` per the conversation plan:
-     a renderer-only `pulse-clock` module + per-edge rAF hook driven
-     by the new phase transitions. Lives under
-     `src/webview/rf/`, never imported from `src/substrate/`.
+  Start `task/edge-pulse-motion` from `main`: renderer-only
+  `pulse-clock` module + per-edge rAF hook driven by the new
+  loaded / taken / ack phase transitions. Lives under
+  `src/webview/rf/`, never imported from `src/substrate/`. See
+  [handoff-next-task.md](handoff-next-task.md) for shape and the
+  one open question (single global rAF vs per-edge).
 
 Dormant: Shape D port; tick-batching audit superseded; restart-Input
 friction (input cycles once and stops — separate task whenever).

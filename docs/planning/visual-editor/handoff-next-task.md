@@ -1,57 +1,45 @@
-# Next task — wire phase state (in flight)
+# Next task — edge pulse motion (not yet started)
 
-**Branch:** `task/wire-phase-state`
-**Status:** code + tests green; not yet merged.
+**Branch:** `task/edge-pulse-motion` (to be created from `main`)
+**Status:** prerequisite landed; ready to start.
 
-## What landed
-Substrate wire phase widened from `empty | carrying(v)` to
-`empty | loaded(v) | taken(v)` so the renderer can distinguish
-"traveling" from "arrived but not yet acked". Phase matches the wire
-loop's own await points; still timing-free per [MODEL.md](../../../MODEL.md).
+## Prerequisite (landed on main)
+`task/wire-phase-state` merged as `c79b9a7`. Substrate wire phase is
+now `empty | loaded(v) | taken(v)`; `carrying` retired and banned by
+the vocab gate. Host-shim emits a frame on each of loaded / taken /
+acked. AnimatedEdge already reads `phase`.
 
-Files touched:
-  - [MODEL.md](../../../MODEL.md) — phase amendment + allowed-vocab
-    update; `carrying` retired entirely.
-  - [wire-entity.ts](../../../tools/topology-vscode/src/substrate/wire-entity.ts)
-    — three-phase `WireState`; `take()` now sets `taken(v)` before
-    emitting; `ack()` requires `taken`.
-  - [wire-loop.ts](../../../tools/topology-vscode/src/substrate/wire-loop.ts)
-    — acks when `state.kind === "taken"`.
-  - [host-shim.ts](../../../tools/topology-vscode/src/host-shim/host-shim.ts)
-    — emits a frame on each of loaded/taken/acked (taken is no longer
-    invisible).
-  - [messages.ts](../../../tools/topology-vscode/src/messages.ts) —
-    `WireFrameMsgState` widened.
-  - [AnimatedEdge.tsx](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx)
-    — reads `phase`; `loaded` and `taken` both render the value badge.
-  - [check-substrate-vocab.mjs](../../../tools/topology-vscode/scripts/check-substrate-vocab.mjs)
-    — `\bcarrying\b` is now banned.
-  - Tests: wire-entity-contract, wire-loop, node-loop-uniform-v2,
-    host-shim, run-frames, serialize-frame.
+## What this task adds
+Renderer-only pulse animation driven by the three-phase transitions:
+  - `empty → loaded` starts the pulse (value travels along the edge).
+  - `loaded → taken` ends the pulse (arrived; value badge holds).
+  - `taken → empty` (ack) clears the hold.
 
-## Gates
-  - tsc ✓
-  - build ✓
-  - vitest 38 / 193 ✓
-  - vocab gate ✓
+No substrate changes. Lives under
+[src/webview/rf/](../../../tools/topology-vscode/src/webview/rf/) and
+must never be imported from `src/substrate/` (vocab gate + module
+boundary).
 
-## Why this is a prerequisite
-Unblocks `task/edge-pulse-motion`. With three phases, the renderer's
-pulse animation triggers on `empty → loaded` (start travel) and ends
-on `loaded → taken` (arrived). The post-arrival hold is just the
-`taken` phase — no synthesis needed. Risks 1 / 4 / 5 in the
-pulse-motion plan dissolve once this lands.
+## Shape (proposed, confirm before coding)
+  - `pulse-clock.ts` — rAF-driven clock module; exposes a per-edge
+    hook returning normalized progress `[0, 1]` for the active pulse.
+  - `AnimatedEdge.tsx` — consume the hook; render the moving dot /
+    value badge along the SVG path using progress.
+  - No new message types; phase transitions in existing frames are
+    the only input.
 
-## Decisions encoded (David, this session)
-  1. Retire `carrying` entirely — gate enforces it.
-  2. Keep `v` in `taken(v)` so renderer can still show value during hold.
-  3. Single commit: MODEL.md + substrate + frame plumbing + renderer +
-     tests land together so the type system is never red between commits.
+## Gates to hit
+  - tsc ✓, build ✓, vitest green, vocab gate ✓
+  - LOC budget: each new file ≤100 LOC.
 
-## Next move
-  1. Sign-off review — MODEL.md edit + merge to `main`.
-  2. Start `task/edge-pulse-motion`: pulse-clock module +
-     per-edge rAF hook driven by phase transitions.
+## Open question for sign-off
+Confirm the pulse-clock is per-edge rAF (one rAF loop subscribed by
+edges) vs. a single global rAF that fans out. Default plan: single
+global rAF, edges read their own progress — fewer rAF handles.
+
+## Dormant
+Shape D port; tick-batching audit superseded; restart-Input friction
+(input cycles once and stops — separate task whenever).
 
 ## ALWAYS clause
 At end of session, overwrite this file (and the sibling `handoff-*.md`
