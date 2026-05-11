@@ -4,10 +4,7 @@
       "id": "in08",
       "type": "Input",
       "data": {
-        "init": [
-          0,
-          1
-        ]
+        "init": [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
       }
     },
     {
@@ -29,7 +26,6 @@
       }
     }
   ],
-  "runtime": "ticked",
   "timing": {
     "duration": "12s"
   },
