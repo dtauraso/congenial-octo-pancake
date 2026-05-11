@@ -1,19 +1,27 @@
 # Next task: finish the collapse-to-one-layer rewrite
 
-**Branch:** `task/collapse-to-one-layer`. Latest commit `e06447b`
-(delete dead bookmarks system + fold-halo stub, -78 lines). Pushed.
-Not yet mergeable; remaining items below.
+**Branch:** `task/collapse-to-one-layer`. Latest commit `33af8ee`
+(handoff doc update). Pushed. Not yet mergeable; remaining items
+below.
 
-## State at handoff (2026-05-11, session end)
+## State at handoff (2026-05-11, end of session)
 
-The substrate rewrite is in. Logging has been re-shaped to fit the
-new model: `<ErrorBoundary>` + `<CrashListeners>` + `postLog`
-transport at `src/webview/log/`, with the extension-side appender
-writing `.probe/webview-log.jsonl`. The old `slog`/substrate-log
-side-channel is gone. Dead message channels (probe-dumps, trace) and
-dead stubs (bookmarks, fold-halo) have all been deleted.
+The substrate rewrite is in. The deletion sweep is fully drained:
+substrate has no logging code at all (new logging lives at
+`src/webview/log/`), dead message channels (probe-dumps, trace) and
+dead stubs (bookmarks, fold-halo) are gone, and round-2 dead-export
+sweep landed (geom.ts, flow-to-spec.ts + tests, fold-activity,
+spec-colors, POSITION_EPSILON, markerEndUrl, save.ts sync helpers,
+schema EdgeRoute + handler formalism). `TopologyRoot.tsx` audited
+and kept as the harness for the substrate end-to-end smoke test.
 
-Gates green: tsc ✓, build ✓, vitest 132/132 ✓, vocab ✓, LOC ✓.
+Net for the session: -473 lines of source/test over two commits
+(`025f9df`, `2ca5e59`) plus the handoff update.
+
+Gates green: tsc ✓, build ✓, vitest 114/114 ✓, vocab ✓, LOC ✓.
+(Test count: 121 → 114 with the round-trip / fold-activity /
+spec-colors / spec-data-roundtrip test files deleted alongside
+their functions, then +1 inline assertion removed.)
 
 ## Owed before merge
 

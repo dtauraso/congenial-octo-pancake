@@ -22,48 +22,43 @@ Read them in this order on a fresh session:
 State at handoff (2026-05-11, end of session):
 
   **Active task branch:** `task/collapse-to-one-layer`. Latest commit
-  `83df794` (delete dead state exports + view live-binding, -30 lines).
-  Pushed. Not yet merged. Posture remains structural rewrite — David
-  signed off on continuing the deletion sweep beyond the substrate
-  cutover. The session landed five commits, all deletion or
-  React-native replacement work:
+  `33af8ee` (handoff doc update). Pushed. Not yet merged. Posture
+  remains structural rewrite — the deletion sweep is now fully
+  drained. This session landed two source-deletion commits plus the
+  doc update, on top of the prior session's logging/messaging/state
+  cleanup:
 
-  1. `38d2a9f` delete the old slog/substrate-log logging system
-     (7 files, -134 lines).
-  2. `23eb90e` new logging system: `<ErrorBoundary>` +
-     `<CrashListeners>` + `postLog` transport + extension-side
-     `appendWebviewLog` writing `.probe/webview-log.jsonl`
-     (+153 lines, 4 new files under `src/webview/log/`).
-  3. `3da0928` delete dead probe-dump and trace message channels
-     (-116 lines; 11 message types removed, `probe-dumps.ts` and
-     `trace-pick.ts` deleted).
-  4. `e06447b` delete dead bookmarks system and fold-halo stub
-     (-78 lines; `bookmarks-store.ts`, `Bookmark` type and parser,
-     `useFoldHaloState` stub and `FOLD_HALO_BOX_SHADOW`).
-  5. `83df794` delete dead state exports and view live-binding
-     (-30 lines; state.ts facade trimmed 8→3 re-exports; removed
-     `getView`, `useSpec`, `useView`, `useLastScope`, `useUndoState`
-     selectors, the `view` live-binding, and the `SVG_NS` const).
-     `can{Undo,Redo}{Spec,Viewer}` retained — undo tests use them.
+  1. `025f9df` delete dead exports sweep round 2 (-443 lines).
+     Removed `geom.ts`, `rf/adapter/flow-to-spec.ts`,
+     `rf/fold-activity.ts`, `rf/spec-colors.ts`, and the four
+     test files that only existed to exercise them. Trimmed
+     `postReady`/`isSynced`/`markSynced`/`lastSyncedText` from
+     save.ts; `markerEndUrl` from MarkerDefs; `POSITION_EPSILON`
+     from diff-core; `flowToSpec` re-export from adapter.ts.
+  2. `2ca5e59` delete dead schema types (-30 lines). Removed
+     orphan `EdgeRoute` and the Phase-5.5 handler formalism
+     block (`Emission`, `HandlerState/Input/Result/Fn`). Kept
+     `Port`/`Note`/`NodeSpec`/`SpecSegment`/`SeedEvent`/
+     `NodeTypeDef`/`EDGE_KINDS`/`ArrowStyle` — all referenced
+     inside `src/schema/`.
+  3. `33af8ee` handoff update — recorded that
+     `substrate-r/TopologyRoot.tsx` is intentionally kept as the
+     harness for `r-topology-smoke.test.tsx`, the only end-to-end
+     test of the substrate cycle.
 
-  Net for the session: substrate has no logging code at all; the new
-  React-resident logging lives at `src/webview/log/` (post.ts,
-  ErrorBoundary.tsx, CrashListeners.tsx). Eleven dead message types
-  retired, two stubs (bookmarks, fold-halo) deleted, and the state
-  module facade collapsed to its actual usage.
+  Net for the session: -473 lines source/test. No code candidates
+  remain on the deletion list. Prior-session context (logging
+  rewrite, dead message channels, bookmarks/fold-halo stubs, state
+  facade collapse) was landed in `38d2a9f`/`23eb90e`/`3da0928`/
+  `e06447b`/`83df794` — see git log for detail.
 
-  **Two specs landed**, both on main:
-  - [manual-take-model.md](manual-take-model.md) — destination-policy
-    model; take is the single permitted observer→substrate signal.
-  - [react-surface-spec.md](react-surface-spec.md) — substrate
-    primitives as React components: `<Wire>` owns phase, `<Node>`
-    owns run and manual-take, `useTickDriver` walks rounds.
+  **Two specs on main:**
+  [manual-take-model.md](manual-take-model.md) and
+  [react-surface-spec.md](react-surface-spec.md).
 
-  **Gates:** tsc ✓, build ✓, vitest 132/132 ✓, vocab ✓, LOC ✓.
-  (Test count dropped 133 → 132 with the bookmarks parser test
-  removal in `e06447b`.)
-
-  **Open dead-export candidates:** see `handoff-next-task.md` §3.
+  **Gates:** tsc ✓, build ✓, vitest 114/114 ✓, vocab ✓, LOC ✓.
+  (Test count: 132 → 114 with the four test-file deletions plus
+  one inline `POSITION_EPSILON` assertion removed.)
 
 ## Dev-loop
 
@@ -72,9 +67,9 @@ Edit → `npm run build` → topology tab refreshes in place.
 ## Next move
 
   Read [handoff-next-task.md](handoff-next-task.md). The
-  merge-blocking item is edge visual fidelity. Dead-export sweep
-  candidates above are well-scoped follow-ups if the user wants to
-  keep stripping before tackling visuals.
+  merge-blocking item is edge visual fidelity on `RSubstrateEdge`
+  (kind colors, dashes, route variants, arrow markers, edge labels);
+  port from git history at `87822c1^`. Deletion sweep is done.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
