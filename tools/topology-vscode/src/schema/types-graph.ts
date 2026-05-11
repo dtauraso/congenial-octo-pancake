@@ -75,6 +75,9 @@ export type Spec = {
   cycleAnchor?: string;
   legend?: LegendRow[];
   notes?: Note[];
+  // Substrate selector. Default (undefined) = callback substrate.
+  // "ticked" opts into the Phase 1 ticked substrate (Shape A only for now).
+  runtime?: "ticked";
 };
 
 export type NodeTypeDef = {

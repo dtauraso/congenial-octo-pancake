@@ -9,6 +9,17 @@
 import type { StateValue } from "../schema";
 
 const _tickListeners = new Set<(nodeId: string, ts: number) => void>();
+let _totalTicks = 0;
+const _totalTickListeners = new Set<() => void>();
+export function getTotalTicks(): number { return _totalTicks; }
+export function subscribeTotalTicks(fn: () => void): () => void {
+  _totalTickListeners.add(fn);
+  return () => _totalTickListeners.delete(fn);
+}
+export function resetTotalTicks(): void {
+  _totalTicks = 0;
+  for (const fn of _totalTickListeners) fn();
+}
 const _heldListeners = new Set<(nodeId: string, value: StateValue) => void>();
 const _bufferedListeners = new Set<(nodeId: string, ports: string[]) => void>();
 const _bufferedPorts = new Map<string, Set<string>>();
@@ -22,7 +33,20 @@ export function subscribeNodeTicks(
 
 export function publishTick(nodeId: string): void {
   const ts = performance.now();
+  _totalTicks += 1;
   for (const fn of _tickListeners) fn(nodeId, ts);
+  for (const fn of _totalTickListeners) fn();
+}
+
+const _edgeArriveListeners = new Set<(edgeId: string, value: StateValue) => void>();
+export function subscribeEdgeArrive(
+  fn: (edgeId: string, value: StateValue) => void,
+): () => void {
+  _edgeArriveListeners.add(fn);
+  return () => _edgeArriveListeners.delete(fn);
+}
+export function publishEdgeArrive(edgeId: string, value: StateValue): void {
+  for (const fn of _edgeArriveListeners) fn(edgeId, value);
 }
 
 export function subscribeNodeHeld(

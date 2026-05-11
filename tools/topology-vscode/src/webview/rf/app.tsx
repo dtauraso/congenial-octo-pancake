@@ -5,8 +5,6 @@ import {
 } from "reactflow";
 import { specToFlow } from "./adapter";
 import { RunButton } from "../panels/RunButton";
-import { ClearSlotButton } from "../panels/ClearSlotButton";
-import { RunnerProbe } from "../panels/RunnerProbe";
 import { SaveLifecycle } from "../SaveLifecycle";
 import { TimelinePanel } from "../panels/TimelinePanel";
 import { ViewsPanel } from "../panels/ViewsPanel";
@@ -23,7 +21,6 @@ import { useInnerState } from "./app/_use-inner-state";
 import { useNodeContextHandlers } from "./app/_on-node-context";
 import { useNodeDrag } from "./app/_on-node-drag";
 import { useUndoRedo } from "./app/_use-undo-redo";
-import "./timeline-probe";
 import type { AppCtx } from "./app/_ctx";
 
 function Inner() {
@@ -142,8 +139,6 @@ export default function App() {
       <SaveLifecycle />
       <Inner />
       <RunButton />
-      <ClearSlotButton />
-      <RunnerProbe />
       <ViewsPanel />
       <TimelinePanel />
     </ReactFlowProvider>

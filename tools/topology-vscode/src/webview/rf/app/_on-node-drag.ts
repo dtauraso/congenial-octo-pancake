@@ -1,8 +1,6 @@
 import { useCallback } from "react";
 import type { Node as RFNode } from "reactflow";
 import { NODE_TYPES } from "../../../schema";
-import { isPlaying as isRunnerPlaying } from "../../../sim/runner";
-import { MOTION_TYPES } from "../../../sim/handlers";
 import { scheduleSave, scheduleViewSave } from "../../save";
 import { mutateSpec, patchViewerState, spec, viewerState } from "../../state";
 import { ALIGN_TOL } from "./_constants";
@@ -62,28 +60,10 @@ export function useNodeDrag(
     const dx = node.position.x - prevX;
     const dy = node.position.y - prevY;
     if (dx === 0 && dy === 0) return;
-    // Phase 6 Chunk B record-mode-lite: paused drag on a motion-bearing
-    // node rewrites the per-phase slide rule (props.slidePx/slideDy) so
-    // the next firing lands at the dropped position. base (x, y) is the
-    // origin the slide accumulates from, not the rendered position, so
-    // editing it would shift the entire trajectory.
-    if (MOTION_TYPES.has(sn.type) && !isRunnerPlaying()) {
-      const next = mutateSpec((s) => {
-        const target = s.nodes.find((n) => n.id === node.id);
-        if (!target) return;
-        const p = { ...(target.props ?? {}) };
-        p.slidePx = Number(p.slidePx ?? 30) + dx;
-        p.slideDy = Number(p.slideDy ?? 0) + dy;
-        target.props = p;
-      });
-      ctx.lastSpec.current = next;
-      // View x/y didn't change, so RF must re-snap to the original
-      // position — otherwise the dragged-to coordinate sticks visually
-      // and compounds with the next state.dx tween.
-      ctx.rebuildFlow();
-      scheduleSave();
-      return;
-    }
+    // Motion-type slide-rule rewriting (record-mode-lite) retired:
+    // frame mode drives motion via substrate state events, not spec props.
+    // Treat all drags as position-only edits.
+    void mutateSpec; void scheduleSave; // keep imports if referenced elsewhere
     patchViewerState((v) => {
       if (!v.nodes) v.nodes = {};
       const existing = v.nodes[node.id] ?? { x: 0, y: 0 };

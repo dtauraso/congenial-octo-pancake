@@ -1,5 +1,17 @@
 # CLAUDE.md
 
+## Substrate model — read first
+
+Before changing anything in `tools/topology-vscode/src/substrate/`, the
+wire primitive, or anything that schedules/orders work, read
+[MODEL.md](MODEL.md). It pins the substrate model and the banned
+vocabulary that signals drift. If your reasoning uses banned
+vocabulary, you are in the wrong frame — stop and re-derive from the
+model. Do not propose multi-step plans with options for substrate/wire
+work; state the next single concrete step and wait. Run
+`node tools/topology-vscode/scripts/check-substrate-vocab.mjs` to
+catch drift mechanically.
+
 ## What this project is
 
 A concurrent dataflow system implemented in Go. The topology IS the logic — behavior emerges from wiring, not procedural code. Goroutines and channels replace conventional control flow.
@@ -108,7 +120,7 @@ Project memory lives in `memory/` at the repo root. Files:
 - **Cost markers:** only record a `($N.NN)` cost marker on a commit (or bundle of commits) when the work was sized at **≥$5 expected** beforehand. Sub-$5 work lands without a marker. Bundle small commits into ≥$5 chunks for marker purposes. Pre-v0 sub-$5 markers stay as historical record but are no longer the convention.
 - **Branch hygiene:** task-named branches (`task/<short-kebab-description>`) that merge to `main` quickly. Avoid long-lived feature branches like the v0 `visual-editor` pattern.
 - Channel names encode which two nodes are connected — preserve this convention.
-- Before starting a new tool or proposing a major substrate (rendering library, framework, parser, runtime), explicitly ask "what's the dominant choice the rest of the world converged on for this category?" and justify deviating if not adopting it.
+- **Medium vs. substance.** Before adopting a **medium** dependency (rendering library, framework, parser, bundler, file watcher, test runner, package manager, language/runtime version, editor integration), explicitly ask "what's the dominant choice the rest of the world converged on for this category?" and justify deviating if not adopting it. The medium is where industry has solved your problem; being weird there is pure overhead. Do **not** apply this heuristic to the **substance** of the system — the execution model, what a node is, how time/ticks work, what a wire is, how nodes coordinate, the substrate that runs nodes. Industry defaults there encode "logic in procedures, topology as plumbing," which is the inversion this project exists to challenge. For substance, ask "what does this system actually need?" and ignore industry — the whole point is that the answer is different. (Prior failure: the await/Promise substrate was the industry-correct JS translation of goroutines+channels, and it hid pacing inside the event loop, coupling nodes that should have been independent. Right answer for the medium, wrong answer for the substance.)
 
 ## Session handoff
 
@@ -152,6 +164,24 @@ Apply via `Agent({ model: "sonnet", ... })` or by spawning a subagent of
 the matching kind. If unsure, downshift first and escalate only if the
 cheaper model produces poor output — the cost asymmetry favors trying
 cheap first.
+
+**Delegation is the default, not the exception.** Before running a
+multi-step investigation, grep sweep, or mechanical edit pass from the
+main (Opus) session, ask: "can a haiku or sonnet subagent do this?" If
+yes, delegate. The main session should be doing judgment, planning,
+and synthesis — not driving `grep`, `Read`, or repetitive `Edit` calls
+that a cheaper model handles fine. Concretely:
+
+- More than ~2 read-only lookups on a topic → spawn an `Explore`
+  subagent with `model: "haiku"`.
+- A clear, scoped edit spec (rename, flag removal, mechanical
+  refactor) → spawn a general-purpose subagent with
+  `model: "sonnet"`.
+- A single targeted Read/grep with a known path → just do it inline;
+  delegation overhead isn't worth it.
+
+If the main session catches itself doing executor-style work, that's a
+miss — note it and route the next similar task to a subagent.
 
 ## Language / runtime
 

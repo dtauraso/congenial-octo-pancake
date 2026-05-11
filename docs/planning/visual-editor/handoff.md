@@ -8,87 +8,49 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-step1-notes.md](handoff-step1-notes.md) — what was
-     built on the rebuild branch (decision audit, coupling hacks
-     gated to step 1, automated logging, e2e).
-  2. [handoff-gate-a.md](handoff-gate-a.md) — earlier merge to main
-     (Gate A).
-  3. [handoff-next-task.md](handoff-next-task.md) — **start here**
-     for the next commit.
-  4. [handoff-rebuild-plan.md](handoff-rebuild-plan.md) — port plan,
-     contracts R1–R5, auto-retire signal.
-  5. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
+  1. [handoff-next-task.md](handoff-next-task.md) — **start here**
+     for the merge, on `task/remove-legacy-runtimes`.
+     Steps 2–7 landed; step 8 (merge, sign-off required) remains.
+  2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
+     — system 3 model: forever-loops, line-level pause, events.
+  3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
      mode, open branches, housekeeping.
 
 ---
 
-State at handoff (2026-05-08, end of tenth session):
-  Active branch: `task/node-ticks` (last merge to `main` at `07bbb7c`
-  was the manual-ack multi-edge work; this session adds tests only,
-  not yet merged).
+State at handoff (2026-05-10, fifty-eighth session):
+  Active branch: `task/remove-legacy-runtimes`. Step 7 done; step 8
+  (merge to main, sign-off required) remains.
 
-  This session **backfilled contract tests for back-channel-era
-  fixes** (commit `2f48ea9`):
+  Latest commits:
+  - `1a572da` — renderer adapter: pause-gate the pump. Bug surfaced
+    during proof-out: substrate is timing-free, adapter owns pacing
+    via queued events. Without a pause gate, step() flooded frames
+    and pause() had no visible effect. Adapter now accepts a
+    `PauseSignal` and gates pump() on it. Contract test added.
+  - `b67f189` — drop legacy `runtime: "ticked"` from topology.json;
+    extend Input seed to 10 values for observable proof-out.
 
-  - `test/contracts/input-loop-await-ready.test.ts` — pins
-    inputLoop's send-gating on `out.awaitReady` (commit d01973e),
-    the `awaitGate` hook used by pause/resume, and clean stop while
-    parked at awaitReady.
-  - `test/contracts/runtime-wires-manual-ack.test.ts` — pins
-    shape A/B `manualAckEdges` registration and that
-    `clearManualAckSlot` advances the joinLoop cycle when auto-ack
-    is suppressed (commits f2bffc6 + f9d929e).
-  - 258/258 vitest (was 251).
+  Proof-out (step 7): user-confirmed pulses animate on the
+  in08→readGate1 edge, pause halts the pump, step advances exactly
+  one frame, resume drains.
 
-  Prior session (`7d2ae39` and earlier on this branch)
-  **generalized manual-ack to multiple edges** and added the
-  i1→readGate.ack button + a "clear both" button:
+  **Gates clean:** tsc ✓, build ✓, vitest 38 files / 193 tests pass.
 
-  - `ShapeSetup.manualAckEdges: { id, label }[]` (was singular
-    `manualAckEdgeId`). Inhibitor shape registers both chainIn and
-    ack. Single-input shape registers in0→readGate.
-  - `runtime-wires.ts` exposes `getManualAckEdges()`,
-    `isManualAckEdge(id)`, `clearManualAckSlot(edgeId)`. Stop/start
-    clear+rebuild a list + Set in lockstep.
-  - `usePulseLanesWire` auto-ack skip uses `isManualAckEdge(w.id)`.
-  - `ClearSlotButton` renders one `OneClearButton` per registered
-    edge plus a `ClearAllButton` when ≥2 (clicks every id in one
-    tick → both upstream loops resume simultaneously).
-  - **Mechanism doc:** [docs/manual-ack-mechanism.md](../../manual-ack-mechanism.md)
-    — full chain, safe-cases, fragile-cases, load-bearing
-    assumption ("visual layer is the only auto-acker"). Read it
-    before touching any of the four files.
-  - 251/251 vitest at the time; tsc + build clean.
+  **Step remaining (see handoff-next-task.md):**
+  8. Merge to main (sign-off required). Reference branches retained.
 
-  Prior-session work (still current on this branch):
+  **Model:** `handoff-substrate-iteration.md`. Forever-loops per
+  node and per wire; backpressure coordination; line-level pause;
+  ordinal-seq state-change events; renderer owns pacing. Substrate
+  **timing-free** per MODEL.md.
 
-  - `joinLoop` primitive (ack-only multi-input join, paced by the
-    visual layer's `onDone → ackWire`).
-  - `matchSubstrate` shape B: Input + ChainInhibitor → ReadGate.
-  - `runtime-wires` dispatch + `runtime-wires-shapes.ts` helper;
-    ChainInhibitor with no inbound cycles `[1]` as a placeholder.
-  - Per-edge slot-pacing thread parked
-    (see [handoff-slot-plan.md](handoff-slot-plan.md)).
-  - Memory: [feedback_substrate_visual_pacer.md](../../../memory/feedback_substrate_visual_pacer.md).
+  **Held:** halt/resume on substrate; send-on-non-empty throws;
+  renderer adapter / host-shim / frame-store live outside
+  `src/substrate/` for the vocab gate.
 
-  On `main` (untouched this branch):
-
-  - **Visuals 1–4 on wires runtime** (`6554e07`…`8f13034`): flash,
-    glow ring, held tint, buffered halo via
-    `subscribeNodeTicks/Held/Buffered`.
-  - **Pause = freeze mid-arc** (`34b8c20`): `subscribeWiresPause`
-    fans one pause/resume signal; each `PulseInstance` owns its
-    rAF clock and freezes/rebases independently.
-
-  Conceptual frame: **concurrent clocks frozen on command**.
-  Tests green at 246/246 vitest; tsc + build clean.
-
-  Working tree: `.claude/settings.json` and `topology.view.json`
-  carry incidental drift; orthogonal — leave or stash.
-
-  Prior branches preserved as reference:
-  `task/runtime-substrate-rebuild`, `task/wires`,
-  `task/node-visuals-strip`. Do not delete.
+  Working tree: `topology.view.json` — editor state. Reference
+  branches retained — do not delete.
 
 ## Dev-loop
 
@@ -98,12 +60,15 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Start at [handoff-next-task.md](handoff-next-task.md). Manual-ack
-now covers both readGate slots (in0→readGate and i1→readGate, plus
-"both"). The next move is still **giving ChainInhibitor a real
-inbound** so it stops being a clock-style placeholder. Friction-driven
-posture stands. Before touching the manual-ack code, read
-[../../manual-ack-mechanism.md](../../manual-ack-mechanism.md).
+Continue on `task/remove-legacy-runtimes` at step 7: user drives the
+extension dev host (F5 in VS Code), loads a topology, hits
+play/pause/step. Verify pulses animate, pause halts at line level,
+step advances one event. Once user signs off on proof-out, step 8
+merges to main (sign-off required). See
+[handoff-next-task.md](handoff-next-task.md).
+
+Dormant: Shape D port (deleted with wires-runtime; reintroduce only
+if friction surfaces). Tick-batching audit superseded.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

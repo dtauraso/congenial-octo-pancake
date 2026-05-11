@@ -34,6 +34,11 @@ export function parseSpec(input: unknown): Spec {
       };
     }),
     cycleAnchor: opt(o.cycleAnchor, (x) => str(x, "spec.cycleAnchor")),
+    runtime: opt(o.runtime, (x) => {
+      const s = str(x, "spec.runtime");
+      if (s !== "ticked") throw new Error(`spec.runtime: unknown value "${s}"`);
+      return s;
+    }),
     legend: opt(o.legend, (l) =>
       arr(l, "spec.legend").map((r, i) =>
         parseLegendRow(r, `spec.legend[${i}]`),

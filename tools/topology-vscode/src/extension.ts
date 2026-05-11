@@ -6,6 +6,7 @@ import { viewSidecarUri, readSidecar } from "./sidecar";
 import type { HostToWebviewMsg } from "./messages";
 import { buildWebviewHtml } from "./extension/html";
 import { handleMessage } from "./extension/handle-message";
+import { attachFrameRenderer } from "./extension/frame-renderer";
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -46,10 +47,12 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
     const sendView = async () =>
       post({ type: "view-load", text: await readSidecar(sidecarUri) });
 
+    const frameRenderer = attachFrameRenderer(document, post);
     const docSub = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() !== document.uri.toString()) return;
       if (e.document.version <= lastAppliedVersion) return;
       send();
+      frameRenderer.refresh();
     });
     const viewStateSub = panel.onDidChangeViewState(() => {
       if (!panel.visible) post({ type: "flush" });
@@ -100,6 +103,7 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
       viewStateSub.dispose();
       topogen.dispose();
       runner.dispose();
+      frameRenderer.dispose();
     });
 
     panel.webview.onDidReceiveMessage((raw) =>
@@ -112,6 +116,7 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
         send,
         sendView,
         setLastAppliedVersion: (v) => { lastAppliedVersion = v; },
+        frameRenderer,
       }),
     );
   }

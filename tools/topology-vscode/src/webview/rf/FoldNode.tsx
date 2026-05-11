@@ -1,8 +1,4 @@
-import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { subscribeAnim } from "./timeline-probe";
-import { recordFoldHaloEvent } from "./fold-halo-probe";
-import { isFoldBoundaryEmit } from "./fold-activity";
 
 const FOLD_STROKE = "#b89a3c";
 const FOLD_HALO_BOX_SHADOW = `0 0 0 2px ${FOLD_STROKE}`;
@@ -17,59 +13,10 @@ export type FoldNodeData = {
   diffCounts?: { added: number; removed: number; moved: number };
 };
 
-// ----- Slice 2: halo timing/state -----
-// Owns when the fold halo turns on/off and when one-shot flash/glow fire,
-// driven by member-node fire events on the runner. Returns refs the
-// rendering slice mounts wherever it wants the visual to appear, plus a
-// boolean for the persistent buffered halo. Decoupling lets slice 1
-// (where the halo lives in the DOM) and this slice evolve independently.
-
-function useFoldHaloState(foldId: string, memberIds: string[]): { buffered: boolean } {
-  // Halo bound to animation lifecycle, not simulator events. The
-  // simulator fires receives at sim-instant times (often 0ms after the
-  // emit), so the model "received" before the user's eyes see the
-  // pulse arrive. Anchoring the halo to anim-end (inward) and
-  // anim-start (outward) means the halo flips when the user sees the
-  // pulse cross the boundary. Closes the model/view temporal-
-  // decoupling instance for the halo.
-  //
-  //  - anim-end on outside→member edge:  pulse visually arrived → on
-  //  - anim-start on member→outside edge: pulse visually departing → off
-  //
-  // Pause is free: the runner gates the rAF loop on play state, so
-  // anim-start/anim-end don't fire while paused.
-  const [buffered, setBuffered] = useState<boolean>(false);
-  useEffect(() => {
-    // Include foldId itself in the membership set: when the fold is
-    // collapsed, the adapter rewrites boundary edges so their source/
-    // target become the fold placeholder's id, not the original member.
-    // The placeholder is the visual stand-in for the members, so an
-    // anim event with foldId on one side IS a boundary crossing.
-    const members = new Set([...memberIds, foldId]);
-    let active = false;
-    recordFoldHaloEvent(foldId, "mount", foldId, memberIds, false);
-    return subscribeAnim((ev) => {
-      if (!isFoldBoundaryEmit(members, ev.fromNodeId, ev.toNodeId)) return;
-      const inward = members.has(ev.toNodeId);
-      // Inward: visual arrival = anim-end. Outward: visual departure
-      // = anim-start. Other combos (anim-start inward, anim-end
-      // outward) aren't the perceptual moment; ignore them.
-      const isOnTrigger = inward && ev.kind === "anim-end";
-      const isOffTrigger = !inward && ev.kind === "anim-start";
-      if (!isOnTrigger && !isOffTrigger) return;
-      const next = isOnTrigger;
-      if (next === active) return;
-      active = next;
-      recordFoldHaloEvent(
-        foldId,
-        active ? "start" : "end",
-        inward ? ev.toNodeId : ev.fromNodeId,
-        memberIds,
-      );
-      setBuffered(active);
-    });
-  }, [foldId, memberIds]);
-  return { buffered };
+// Fold halo: retired (was driven by runner anim events; frame mode will
+// re-implement via frame state-change events when needed).
+function useFoldHaloState(_foldId: string, _memberIds: string[]): { buffered: boolean } {
+  return { buffered: false };
 }
 
 function DiffBadge({ counts }: { counts: { added: number; removed: number; moved: number } }) {

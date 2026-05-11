@@ -1,15 +1,11 @@
 import { useEffect, useRef } from "react";
 import type { EdgeRoute } from "../../../schema";
-import { extendPulse } from "../../../sim/runner";
-import { isWiresRuntimePaused, subscribeWiresPause } from "../../../substrate/runtime-wires";
-import { noteAnimStart, noteAnimEnd, noteAnimRerun } from "../timeline-probe";
 import { type PathGeom } from "./_geom";
 import { PULSE_DASH_PX } from "./_constants";
 import { makeFrame } from "./_pulse-frame";
-import { pulseProbeMount, pulseProbeRerun, pulseProbeUnmount } from "./_stuck-pulse-probe";
 
 export function PulseInstance({
-  edgeId, fromNodeId, toNodeId, geom, route, stroke, value, pulseId, speedPxPerMs, simStart, onDone,
+  edgeId, fromNodeId, toNodeId, geom, route, stroke, value, speedPxPerMs, simStart, onDone,
 }: {
   edgeId: string;
   fromNodeId: string;
@@ -18,23 +14,16 @@ export function PulseInstance({
   route: EdgeRoute;
   stroke: string;
   value: string;
-  pulseId: string;
   speedPxPerMs: number;
   simStart: number;
   onDone: () => void;
 }) {
-  // First run vs re-run from a geom/speed change. On first run, rAF
-  // math is rooted at simStart (the emit timestamp from
-  // performance.now()); on re-run, we rebase to performance.now()
-  // because arcTraveledRef holds where we already were.
   const firstRunRef = useRef(true);
   const pathRef = useRef<SVGPathElement | null>(null);
   const labelRef = useRef<SVGTextElement | null>(null);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
   const arcTraveledRef = useRef(0);
-  const probeIdRef = useRef<number>(-1);
-  const probeCompletedRef = useRef(false);
 
   useEffect(() => {
     const path = pathRef.current;
@@ -43,9 +32,6 @@ export function PulseInstance({
     if (svgArc <= 0) return;
 
     const isFirstRun = firstRunRef.current;
-    const prevArc = arcTraveledRef.current;
-    // swapStart is mutable: pause snapshots elapsed and resume rebases
-    // swapStart so the per-pulse clock continues from the frozen point.
     let swapStart = isFirstRun ? simStart : performance.now();
     firstRunRef.current = false;
     const startArc = Math.min(arcTraveledRef.current, svgArc);
@@ -54,18 +40,7 @@ export function PulseInstance({
       doneRef.current();
       return;
     }
-    noteAnimStart(edgeId, fromNodeId, toNodeId);
     const remainingMs = remainingArc / speedPxPerMs;
-    // Distance-aware: tell the simulator how long this traversal will
-    // really take so its timer fallback matches the visual. Re-runs
-    // on geom/speed changes so node drag updates the timer too.
-    extendPulse(pulseId, remainingMs);
-    if (!isFirstRun) {
-      noteAnimRerun(edgeId, prevArc, startArc, svgArc, remainingMs);
-      if (probeIdRef.current >= 0) pulseProbeRerun(probeIdRef.current, remainingMs);
-    } else {
-      probeIdRef.current = pulseProbeMount(edgeId, remainingMs);
-    }
 
     let rafId = 0;
     const frame = makeFrame({
@@ -73,65 +48,22 @@ export function PulseInstance({
       svgArc, startArc, remainingArc, remainingMs,
       getSwapStart: () => swapStart,
       arcTraveledRef,
-      onComplete: () => { probeCompletedRef.current = true; doneRef.current(); },
-      probeId: probeIdRef.current,
+      onComplete: () => { doneRef.current(); },
     });
     const loop = () => { if (frame()) rafId = requestAnimationFrame(loop); else rafId = 0; };
-
-    // Per-pulse freeze: each in-flight pulse owns its own clock and
-    // independently halts when the runtime broadcasts pause. On pause
-    // we snapshot the elapsed-ms; on resume we rebase swapStart so
-    // the same elapsed value is reproduced and the rAF picks up where
-    // it left off. If we mount while already paused (e.g. node drag
-    // re-mounts the effect mid-pause), start frozen instead of letting
-    // a fresh rAF loop run the pulse to completion.
-    let frozenElapsed: number | null = null;
-    if (isWiresRuntimePaused()) {
-      frozenElapsed = 0;
-      // Paint one frame so label and dash snap to the new geom at the
-      // current arcTraveled. Without this, a node drag mid-pause leaves
-      // the label at its pre-remount coords while the path renders at
-      // new geom, separating label from pulse.
-      frame();
-    } else {
-      rafId = requestAnimationFrame(loop);
-    }
-    const unsubPause = subscribeWiresPause((paused) => {
-      if (paused) {
-        if (frozenElapsed !== null) return;
-        frozenElapsed = performance.now() - swapStart;
-        if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
-      } else {
-        if (frozenElapsed === null) return;
-        swapStart = performance.now() - frozenElapsed;
-        frozenElapsed = null;
-        if (!rafId) rafId = requestAnimationFrame(loop);
-      }
-    });
+    rafId = requestAnimationFrame(loop);
 
     return () => {
-      unsubPause();
       if (rafId) cancelAnimationFrame(rafId);
-      const elapsedNow = frozenElapsed !== null
-        ? frozenElapsed
-        : performance.now() - swapStart;
-      const localT = Math.min(1, elapsedNow / remainingMs);
+      const elapsed = performance.now() - swapStart;
+      const localT = Math.min(1, elapsed / remainingMs);
       arcTraveledRef.current = startArc + localT * remainingArc;
-      noteAnimEnd(edgeId, fromNodeId, toNodeId, localT >= 1, arcTraveledRef.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geom, speedPxPerMs]);
 
-  // Lifecycle (noteEdgePulseStarted/Ended) used to live here as a
-  // [edgeId]-keyed effect. It now lives in src/sim/runner/pulse-lifetimes
-  // so it fires regardless of whether this component mounts (folded
-  // edges, headless replay, future view modes). See contract C6.
-  // The stuck-pulse probe still uses this effect to track per-mount
-  // diagnostic state.
-  useEffect(() => {
-    return () => {
-      if (probeIdRef.current >= 0) pulseProbeUnmount(probeIdRef.current, probeCompletedRef.current);
-    };
-  }, [edgeId]);
+  // suppress unused-vars lint for fromNodeId/toNodeId kept for API compat
+  void fromNodeId; void toNodeId;
 
   return (
     <>
