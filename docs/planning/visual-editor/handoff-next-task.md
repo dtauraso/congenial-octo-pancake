@@ -1,6 +1,7 @@
 # Next task: finish the collapse-to-one-layer rewrite
 
-**Branch:** `task/collapse-to-one-layer`. Latest commit `3f8d529`
+**Branch:** `task/collapse-to-one-layer`. Latest commit `ea79bf9`
+(delete dead sim/trace + TraceState; -240 lines). Prior: `3f8d529`
 (delete old substrate, host-shim, renderer, recorder, legacy tests;
 -3257 lines). Pushed. Not yet mergeable; remaining items below.
 
@@ -14,8 +15,10 @@ code is deleted: `substrate/wire*`, `substrate/node-loop*`,
 and the dead `src/host-shim/`, `src/renderer/`, `src/recorder/`
 directories. 18 legacy contract tests were purged. Only
 `substrate/log.ts` remains in `src/substrate/` (webview-portable).
+`src/sim/` is gone too — trace/seeds were dead since the recorder
+purge, and no webview component reads useTrace.
 
-Gates green: tsc ✓, build ✓, vitest 138/138 ✓, vocab ✓, LOC ✓.
+Gates green: tsc ✓, build ✓, vitest 133/133 ✓, vocab ✓, LOC ✓.
 
 ## Owed before merge
 

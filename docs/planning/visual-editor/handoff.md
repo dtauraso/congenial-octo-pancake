@@ -22,6 +22,7 @@ Read them in this order on a fresh session:
 State at handoff (2026-05-10, end of session):
 
   **Active task branch:** `task/collapse-to-one-layer`. Latest commit
+  `ea79bf9` (delete dead sim/trace + TraceState, -240 lines). Prior:
   `3f8d529` (delete old substrate + host-shim + renderer + recorder +
   legacy tests, -3257 lines). Pushed. Not yet merged. Posture is
   structural rewrite, not friction-driven — David approved the
@@ -48,7 +49,8 @@ State at handoff (2026-05-10, end of session):
   branch. Cutover commit at `09ada85`; deletions at `87822c1`;
   manual-take button + registry fix at `2cb806b`; frame-pump dead
   code removed at `6a9e6f9`; old substrate/host-shim/renderer/recorder
-  + 18 legacy contract tests removed at `3f8d529`.
+  + 18 legacy contract tests removed at `3f8d529`; dead sim/trace +
+  TraceState + 5 parser tests removed at `ea79bf9`.
   Editor wiring now flows through the new substrate:
   - `webview/substrate-r/wire-phase.ts` — pure reducer.
   - `webview/substrate-r/Wire.tsx` — `<Wire>` with sync-observable
@@ -63,8 +65,9 @@ State at handoff (2026-05-10, end of session):
   - `webview/substrate-r/spec.ts` — RTopologySpec shape.
   - `webview/substrate-r/node-kinds.tsx` — Input and ReadGate kinds.
 
-  **Gates:** tsc ✓, build ✓, vitest 138/138 ✓, vocab ✓, LOC ✓.
-  (Test count dropped from 222 → 138 with the legacy-test purge.)
+  **Gates:** tsc ✓, build ✓, vitest 133/133 ✓, vocab ✓, LOC ✓.
+  (Test count dropped from 222 → 138 with the legacy-test purge,
+  then 138 → 133 with the sim/trace parser-validation removal.)
 
   **Audit blocker fix on this branch:** substrate/log.ts no longer
   uses `require`; reads `__vscodeApi` off `window`. Substrate is
