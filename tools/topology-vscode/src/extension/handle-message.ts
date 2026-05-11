@@ -10,6 +10,7 @@ import { writeSidecar } from "../sidecar";
 import { parseWebviewToHost, type HostToWebviewMsg, type WebviewToHostMsg } from "../messages";
 import { applyEdit } from "./html";
 import { writeProbeDump } from "./probe-dumps";
+import { appendWebviewLog } from "./webview-log";
 import { pickAndLoadTrace } from "./trace-pick";
 import { handleCompareFile, handleCompareHead } from "./compare-load";
 
@@ -95,6 +96,9 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
     case "runner-errors-dump":
     case "timeline-dump":
       await writeProbeDump(msg.type, msg.json, document.uri);
+      return;
+    case "webview-log":
+      await appendWebviewLog(msg.entry, document.uri);
       return;
   }
 }

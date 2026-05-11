@@ -6,6 +6,8 @@ import { flushSave, flushViewSave, setTopogenStatus } from "./save";
 import { parseHostToWebview } from "../messages";
 import { getSpec, setDimmed, setRunStatus } from "./state";
 import { SubstrateProvider } from "./substrate-r/registry";
+import { ErrorBoundary } from "./log/ErrorBoundary";
+import { CrashListeners } from "./log/CrashListeners";
 
 // Test-only hook for the Playwright e2e harness. The harness stub of
 // acquireVsCodeApi populates window.__wirefold_sent with every postMessage
@@ -24,9 +26,12 @@ import { SubstrateProvider } from "./substrate-r/registry";
 
 const app = document.getElementById("app")!;
 createRoot(app).render(
-  <SubstrateProvider>
-    <App />
-  </SubstrateProvider>,
+  <ErrorBoundary>
+    <CrashListeners />
+    <SubstrateProvider>
+      <App />
+    </SubstrateProvider>
+  </ErrorBoundary>,
 );
 
 window.addEventListener("message", (e) => {
