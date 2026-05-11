@@ -7,6 +7,8 @@
 // a real renderer is a follow-up step. The clock is injectable so
 // contract tests can drive time deterministically.
 
+import type { PauseSignal } from "../substrate/pause-aware";
+
 export interface RendererAdapter<E> {
   ingest(event: E): void;
   onPaced(listener: (event: E) => void): () => void;
@@ -17,6 +19,7 @@ export interface RendererAdapter<E> {
 export interface AdapterOptions {
   readonly delayMs: number;
   readonly schedule?: ScheduleFn;
+  readonly pauseSignal?: PauseSignal;
 }
 
 export type ScheduleFn = (ms: number, fn: () => void) => () => void;
@@ -32,20 +35,33 @@ export function createRendererAdapter<E>(
   const queue: E[] = [];
   const listeners = new Set<(event: E) => void>();
   const schedule = opts.schedule ?? defaultSchedule;
+  const pauseSignal = opts.pauseSignal;
   let cancel: (() => void) | null = null;
   let stopped = false;
 
   const pump = (): void => {
     if (stopped || cancel || queue.length === 0) return;
+    if (pauseSignal?.paused) return;
     cancel = schedule(opts.delayMs, () => {
       cancel = null;
       if (stopped) return;
+      if (pauseSignal?.paused) return;
       const event = queue.shift();
       if (event === undefined) return;
       for (const l of listeners) l(event);
       pump();
     });
   };
+
+  if (pauseSignal) {
+    void (async () => {
+      while (!stopped) {
+        await pauseSignal.awaitResume();
+        pump();
+        await pauseSignal.awaitPause().catch(() => {});
+      }
+    })();
+  }
 
   return {
     ingest: (event) => {

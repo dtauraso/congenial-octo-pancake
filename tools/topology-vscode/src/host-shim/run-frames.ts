@@ -87,6 +87,7 @@ export function runFrames(opts: RunFramesOptions): RunFramesHandle {
   const adapter = createRendererAdapter<PacedFrame<unknown>>({
     delayMs: opts.delayMs ?? 200,
     schedule: opts.schedule,
+    pauseSignal: pause,
   });
   const recorder = createRecorder<PacedFrame<unknown>>();
   let stepArmed = false;
