@@ -27,6 +27,8 @@ export const PULSE_DASH_PX = 20;
 // fixed screen-y offset) keeps the label's track parallel to the
 // dot's track on curves and diagonals.
 export const PULSE_LABEL_NORMAL_PX = 10;
+// Default traversal speed for an edge pulse in pixels of arc per ms.
+export const PULSE_SPEED_PX_PER_MS = 0.3;
 
 export type Pulse = {
   key: number;
