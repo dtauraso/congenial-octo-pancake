@@ -9,8 +9,8 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — **start here**
-     for the deletion sweep, mid-flight on `task/remove-legacy-runtimes`.
-     Steps 2–5 landed; steps 6–8 remain.
+     for the proof-out + merge, mid-flight on `task/remove-legacy-runtimes`.
+     Steps 2–6 landed; steps 7–8 remain.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — system 3 model: forever-loops, line-level pause, events.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
@@ -18,31 +18,27 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, fifty-fifth session):
-  Active branch: `task/remove-legacy-runtimes`. Step 5 landed in
-  `5619b84`: 50 files deleted (-3320 LOC) — `src/sim/runner*`,
-  `src/sim/simulator*`, `src/sim/handlers*`, `src/sim/concurrency.ts`,
-  `src/sim/drift.ts`, `src/sim/error-probe.ts`, `src/sim/event-bus.ts`,
-  `src/sim/slot-release.ts`, `src/substrate/runtime.ts`,
-  `src/substrate/runtime-wires*.ts` (6 files), `src/substrate/step/`,
-  `src/substrate/ticked/`. Stripped `historyToTrace` from
-  `sim/trace.ts` (only consumer was the simulator). Kept
-  `sim/seeds.ts` (reached by `host-shim/run-frames.ts`) and
-  `sim/trace.ts` (TraceEvent type still used by `webview/state/store.ts`).
-  Build/tsc/vocab/LOC clean.
+State at handoff (2026-05-10, fifty-sixth session):
+  Active branch: `task/remove-legacy-runtimes`. Step 6 landed in
+  `2dd03f9`: 53 test files deleted (-2781 LOC) — all of
+  `test/handlers/` (12 files), all of `test/simulator/` (13 files),
+  all of `test/trace/` except `parser-validation.test.ts` (12 of 13),
+  all `test/contracts/` tests for the removed runtimes (15 files
+  including the two pre-existing reds `shape-d-cycle` and
+  `handle-load-repro` plus `pulse-bridge-balance.test.tsx`, which
+  dynamic-imported `sim/runner/_state` so didn't surface in step 5's
+  load-failure enumeration), and `test/concurrency.test.ts`,
+  `test/drift.test.ts`, `test/replay-spec-invariant.test.ts`.
 
-  **Test state:** 51 test files now fail to load (they import
-  just-deleted modules). 37 file loaders succeed; 189 individual tests
-  pass. The deletion sweep is step 6.
+  **Gates clean:** vocab ✓, LOC ✓, tsc ✓, build ✓,
+  tests 37/37 files / 189/189 tests pass.
 
   **Steps remaining (see handoff-next-task.md):**
-  6. Delete every test file that fails to load post-step-5 (~51 files),
-     plus the two pre-existing reds (`shape-d-cycle`,
-     `handle-load-repro`).
-  7. Vocab → tsc → build → tests (expect green) → proof-out (load
-     topology, hit play/pause/step, verify pulses animate, pause halts
-     at line level, step advances one event).
-  8. Refresh handoff and merge (sign-off required).
+  7. Manual proof-out: load topology in extension dev host, hit
+     play/pause/step, verify pulses animate, pause halts at line
+     level, step advances one event. (User-driven — assistant cannot
+     drive the UI.)
+  8. Refresh handoff and merge to main (sign-off required).
 
   **Model:** `handoff-substrate-iteration.md`. Forever-loops per
   node and per wire; backpressure coordination; line-level pause;
@@ -53,10 +49,8 @@ State at handoff (2026-05-10, fifty-fifth session):
   renderer adapter / host-shim / frame-store live outside
   `src/substrate/` for the vocab gate.
 
-  Pre-existing reds: `shape-d-cycle.test.ts`,
-  `handle-load-repro.test.ts` — both test wires-runtime and retire
-  with the deletion sweep. Working tree: `topology.view.json` —
-  editor state. Reference branches retained — do not delete.
+  Working tree: `topology.view.json` — editor state. Reference
+  branches retained — do not delete.
 
 ## Dev-loop
 
@@ -66,17 +60,15 @@ fired` to Output → Log (Extension Host).
 
 ## Next move
 
-Continue on `task/remove-legacy-runtimes` at step 6: delete every
-test file that fails to load post-step-5 (~51 files). Enumerate via
-`npm test 2>&1 | grep "Failed to load\|Cannot find module"`. Anything
-testing wires-runtime, ticked-runtime, simulator, sim/runner, or
-substrate/step goes; also delete the two pre-existing reds
-(`shape-d-cycle.test.ts`, `handle-load-repro.test.ts`). Then step 7
-runs gates + manual proof-out; step 8 merges to main (sign-off
-required). See [handoff-next-task.md](handoff-next-task.md).
+Continue on `task/remove-legacy-runtimes` at step 7: user drives the
+extension dev host (F5 in VS Code), loads a topology, hits
+play/pause/step. Verify pulses animate, pause halts at line level,
+step advances one event. Once user signs off on proof-out, step 8
+merges to main (sign-off required). See
+[handoff-next-task.md](handoff-next-task.md).
 
-Dormant: Shape D port (likely deleted with wires-runtime unless
-ported). Tick-batching audit superseded.
+Dormant: Shape D port (deleted with wires-runtime; reintroduce only
+if friction surfaces). Tick-batching audit superseded.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

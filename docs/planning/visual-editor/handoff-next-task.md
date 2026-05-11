@@ -1,41 +1,34 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/remove-legacy-runtimes`. Steps 2–5 landed; steps 6–8 remain.
+**State:** `task/remove-legacy-runtimes`. Steps 2–6 landed; steps 7–8 remain.
 
-## Commits landed (step 5)
+## Commits landed
 
-- `5619b84` — delete legacy substrate/sim modules. 50 files removed
-  (-3320 LOC). Stripped `historyToTrace` from `sim/trace.ts` (only
-  consumer was the deleted simulator); `webview/state/store.ts` still
-  uses the `TraceEvent` type so `trace.ts` itself stays.
+- `5619b84` — step 5: delete legacy substrate/sim modules. 50 files
+  removed (-3320 LOC). Stripped `historyToTrace` from `sim/trace.ts`.
+- `2dd03f9` — step 6: delete tests for removed legacy runtimes. 53
+  files (-2781 LOC). Entire `test/handlers/`, entire `test/simulator/`,
+  all `test/trace/` except `parser-validation.test.ts`, every
+  `test/contracts/` test bound to the removed runtimes (including the
+  two pre-existing reds `shape-d-cycle`, `handle-load-repro`, and
+  `pulse-bridge-balance.test.tsx` which dynamic-imported
+  `sim/runner/_state` and didn't surface in step 5's load-failure
+  enumeration). Also `test/concurrency.test.ts`, `test/drift.test.ts`,
+  `test/replay-spec-invariant.test.ts`.
 
-**Deleted (step 5):** `src/sim/runner.ts`, `src/sim/runner/`,
-`src/sim/simulator.ts`, `src/sim/simulator/`, `src/sim/concurrency.ts`,
-`src/sim/drift.ts`, `src/sim/error-probe.ts`, `src/sim/event-bus.ts`,
-`src/sim/handlers.ts`, `src/sim/handlers/`, `src/sim/slot-release.ts`,
-`src/substrate/runtime.ts`, `src/substrate/runtime-wires*.ts` (6 files),
-`src/substrate/step/` (5 files), `src/substrate/ticked/` (3 files).
-
-**Kept in src/sim/:** `seeds.ts` (reached by `host-shim/run-frames.ts`),
-`trace.ts` (TraceEvent type still imported by `webview/state/store.ts`).
-
-Build/tsc/vocab/LOC clean. Tests: 51 files fail to **load** because
-they import the just-deleted modules — that's step 6's sweep. Of the
-file loaders that succeed, 37 pass (189 individual tests pass).
+**Gates after step 6:** vocab ✓, LOC ✓, tsc ✓, build ✓,
+tests 37/37 files / 189/189 tests pass.
 
 ## Remaining steps
 
-6. **Delete pinned tests.** Sweep every test file that fails to load
-   (~51 files), plus the two pre-existing reds (`shape-d-cycle.test.ts`,
-   `handle-load-repro.test.ts`). Use
-   `npm test 2>&1 | grep "Failed to load\|Cannot find module"` to
-   enumerate. Anything testing wires-runtime, ticked-runtime, simulator,
-   sim/runner, or substrate/step goes.
-7. **Gates.** Vocab → LOC → tsc → build → tests (expect all green).
-   Proof-out: load topology in extension dev host, hit play/pause/step,
-   verify pulses animate, pause halts at line level, step advances one
-   event.
+7. **Proof-out (user-driven).** Open the repo in VS Code, F5 to
+   launch the extension dev host, load a topology, hit play / pause /
+   step in the topology tab. Verify: pulses animate, pause halts at
+   line level (mid-rendezvous frozen states valid), step advances one
+   event. Assistant cannot drive the UI — flag explicitly if asked.
 8. **Refresh handoff and merge to main** (requires sign-off).
+   `git checkout main && git merge --no-ff task/remove-legacy-runtimes`,
+   then push. Reference branches retained — do not delete on merge.
 
 ## Survivor surface (do not delete)
 
@@ -46,12 +39,15 @@ Substrate transitively reached by `host-shim/run-frames.ts`:
 `build-wires.ts`, `build-wire-entities.ts`. Plus `host-shim/`,
 `extension/frame-renderer.ts`, `handle-message.ts`, renderer adapter,
 recorder. `sim/seeds.ts` and `sim/trace.ts` (type-only) survive.
+Test survivors: 37 files, all in `test/contracts/`, `test/trace/`
+(`parser-validation.test.ts` only), `test/` root non-deleted, plus
+`test/camera.test.ts`, `test/spec-colors.test.ts`, etc.
 
 ## Refuse cheap alternatives
 
 Per MODEL.md: refuse keeping legacy as museum; refuse `!frameMode &&`
-guards; refuse preserving ticked sidecar. The deletion sweep is the
-load-bearing move.
+guards; refuse preserving ticked sidecar. The deletion sweep is done;
+do not reintroduce.
 
 ## ALWAYS clause
 
