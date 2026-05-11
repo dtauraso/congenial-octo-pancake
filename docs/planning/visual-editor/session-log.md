@@ -8,6 +8,7 @@ See [session-log/_entry-format.md](session-log/_entry-format.md).
 
 ## Sessions
 
+- [2026-05-10 — readgate-ack-button torn out: gating must be schema-enforced](session-log/2026-05-10-readgate-ack-button-torn-out-fragile-gating.md)
 - [2026-05-10 — step mid-pulse replaces in-flight pulse instead of blocking](session-log/2026-05-10-step-mid-pulse-replaces-instead-of-blocking.md)
 - [2026-05-07 — Reload Window does not pick up new webview bundle](session-log/2026-05-07-reload-window-misses-webview-bundle.md)
 - [2026-05-05 — editor rename did not reach `go run` output](session-log/2026-05-05-editor-rename-did-not-reach-go-run-output.md)
