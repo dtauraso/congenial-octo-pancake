@@ -9,7 +9,7 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — next task:
-     schema-level required-input enforcement (no branch yet).
+     wire-primitive slot-contract audit (no branch yet).
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — system 3 model: forever-loops, line-level pause, events.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
@@ -17,29 +17,31 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, third session of day):
+State at handoff (2026-05-10, fourth session of day):
 
-  **Active task branch:** none. `main` is clean. The previous branch
-  `task/edge-pulse-motion` merged successfully (pulse arrival gates
-  the substrate phase; verified in editor).
+  **Active task branch:** `task/readgate-required-ack` (this session,
+  two commits, not yet merged). Awaiting sign-off to merge to main.
 
-  **Last session attempted** `task/readgate-ack-button` — added a
-  Button node type + manual ack edge to gate readGate1.chainIn. The
-  substrate side worked: with `btn1.out → readGate1.ack` wired,
-  `runNode`'s `awaitAll(awaitLoaded)` parked ReadGate until the user
-  clicked the button, so chainIn stayed `loaded` and Input
-  backpressured upstream. **Branch was torn out** because the gating
-  silently regressed the moment a user deleted the Button node + edge
-  (the schema declares `ack` as an input but `parseSpec` does not
-  enforce it being wired; `runNode` only builds inputs from edges
-  actually present). David rejected the posture as too fragile and
-  asked for a model-enforced design instead. Saved as feedback memory
-  `memory/feedback_enforce_required_inputs.md`.
+  **What landed:**
+  - `Port` type gained `required?: boolean`. `ReadGate.ack` is now
+    `required: true` in `NODE_TYPES`.
+  - `validatePorts` (in `parse-meta.ts`) now errors when any node has a
+    declared `required` input with no incoming edge. Error names the
+    node id, node type, and port — e.g. `node readGate1 (ReadGate):
+    required input "ack" has no incoming edge`. Parse failure routes
+    through `frame-renderer.ts` unchanged.
+  - New test in `test/parseSpec.test.ts` covers the parse-error path.
+  - `topology.json` gained an `ackSrc` Input feeding `readGate1.ack`
+    so the live spec validates. `topology.view.json` lost the stale
+    `btn1` entry left over from the abandoned button branch and gained
+    an `ackSrc` view entry.
 
-  **Repo state:** `main`, working tree clean. `topology.json` is the
-  minimal proof-out: in08 (Input) → readGate1 (ReadGate) on `chainIn`.
-  No Button node, no ack edge. With this spec running, pulses cycle
-  forever — that's the unresolved friction the next task addresses.
+  **Gates:** tsc ✓, build ✓, vitest 194/194 ✓, vocab ✓, LOC ✓
+  (`npm run check:loc` clean).
+
+  **Repo state:** task branch with two commits ahead of main. Working
+  tree has `topology.view.json` ackSrc/btn1 swap not yet committed —
+  fold it into the merge or commit on the branch before signing off.
 
   **Held invariants (unchanged):** MODEL.md (Path A). Phases ordinal;
   one permitted duration is per-wire `loaded` traversal time; one
@@ -57,21 +59,21 @@ the tab if you edit the file outside VS Code.
 
 ## Next move
 
-  Start `task/readgate-required-ack` (or similar). Add `required?:
-  boolean` to the Port type; mark `ReadGate.ack` required in
-  `NODE_TYPES`; add a validation pass in `parseSpec` that errors
-  on any node missing a required input edge; update `topology.json`
-  (or add a gating source) so the spec validates. See
-  [handoff-next-task.md](handoff-next-task.md) for the full scope and
-  what's explicitly out of scope (do not re-add the Button node as
-  part of this task — enforcement first, affordance second).
+  **Sign-off + merge** `task/readgate-required-ack` to main (per the
+  workflow rule: merging to main requires explicit sign-off). Then
+  pick up the follow-on:
 
-  Once enforcement lands, the follow-on is a wire-primitive audit
-  against the slot contract: send-on-non-empty throws, `taken → empty`
-  is substrate-only (the invisible back-channel), only `loaded`
-  animates. That audit is the model-enforced framing of "pulse goes to
-  slot; source stops until slot clears." Captured in
-  [handoff-next-task.md](handoff-next-task.md).
+  Wire-primitive slot-contract audit against MODEL.md: send-on-non-
+  empty throws; `taken → empty` is substrate-only (no renderer
+  round-trip); only `loaded` animates (headless wires default
+  `renderArrival: false`). Add substrate-level tests covering all
+  three. See [handoff-next-task.md](handoff-next-task.md) for the
+  framing.
+
+  Affordance question parked: `ackSrc` is a placeholder Input, not a
+  decided UX. Once the slot-contract audit lands, revisit whether the
+  gating source should be a Button (manual), Input (seeded), or
+  something else.
 
 ## Dormant
 
@@ -80,7 +82,8 @@ the tab if you edit the file outside VS Code.
   semantics.
 - Shape D port; tick-batching audit superseded.
 - Restart-Input friction (input cycles once and stops).
-- Button / manual-ack UX — parked, revisit after enforcement lands.
+- Button / manual-ack UX — parked until the slot-contract audit
+  decides what the gating source should look like.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the

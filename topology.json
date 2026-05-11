@@ -10,6 +10,13 @@
     {
       "id": "readGate1",
       "type": "ReadGate"
+    },
+    {
+      "id": "ackSrc",
+      "type": "Input",
+      "data": {
+        "init": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+      }
     }
   ],
   "edges": [
@@ -21,6 +28,18 @@
       "targetHandle": "chainIn",
       "kind": "chain",
       "label": "inputToReadGate",
+      "data": {
+        "slots": 1
+      }
+    },
+    {
+      "id": "ackSrc.out->readGate.ack",
+      "source": "ackSrc",
+      "sourceHandle": "out",
+      "target": "readGate1",
+      "targetHandle": "ack",
+      "kind": "feedback-ack",
+      "label": "ackToReadGate",
       "data": {
         "slots": 1
       }
