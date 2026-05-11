@@ -1,73 +1,71 @@
-# No active task branch — next task: gated-input enforcement
+# Next task: wire-primitive slot-contract audit
 
-**Branch:** none. Working tree on `main`, clean.
+**Branch:** none yet. `task/readgate-required-ack` is the active
+branch but its scope (required-input enforcement) is **done** — see
+handoff.md. Awaiting sign-off + merge before opening the next branch.
 
-## Why this is the next task
+## Why this is next
 
-ReadGate has two declared inputs in `NODE_TYPES.ReadGate`: `chainIn`
-and `ack`. The current substrate (`runNode` / `awaitAll(awaitLoaded)`)
-only parks on inputs that are **wired in the spec**, not on inputs
-**declared in the schema**. Consequence: if a ReadGate is loaded into
-the editor with only `chainIn` wired (the current `topology.json`),
-the node takes chainIn immediately on every cycle and Input keeps
-firing forever. The gating the user expects from the name "ReadGate"
-isn't enforced anywhere.
+Required-input enforcement landed on `task/readgate-required-ack`:
+`Port.required`, `ReadGate.ack` marked required, `validatePorts`
+errors on missing required edges, live `topology.json` updated with
+an `ackSrc` Input feeding ack. That closed the "ReadGate silently
+free-runs without ack" hole at the schema level.
 
-The prior session (task/readgate-ack-button) attempted to fix this by
-adding a Button node + ack edge, which works while wired but silently
-regresses the moment a user deletes either. David rejected that
-posture as too fragile and asked for a model-enforced design instead.
-Branch was torn out. Feedback memory saved at
-`memory/feedback_enforce_required_inputs.md`.
+The next layer down is the **wire primitive itself**: even with a
+required ack wired, the substrate has to honor the slot contract from
+[MODEL.md](../../../MODEL.md) (Path A). The audit verifies that
+contract is enforced mechanically, not just by convention.
 
 ## Required next task
 
-Add **schema-level required inputs** and validate at `parseSpec`:
+Audit `tools/topology-vscode/src/substrate/` against the slot
+contract. Add substrate-level tests covering:
 
-1. Extend `Port` (in `schema/types-graph.ts` or wherever ports are
-   typed) with `required?: boolean`. Default false.
-2. Mark `ReadGate.ack` as `required: true` in `NODE_TYPES`.
-3. In `parseSpec` (or a sibling validation pass it calls), reject any
-   spec where a node has a declared `required` input with no incoming
-   edge on that `targetHandle`. Error message names the node, port,
-   and node type. parse failure should already disable the frame
-   renderer cleanly (see `frame-renderer.ts:38`).
-4. The current `topology.json` will fail parse after this change —
-   that's the point. Either add a gating source for ack (Button node,
-   Input node, whatever) in the same commit, or stage in two commits:
-   validation first, fix the spec second.
+1. **Send-on-non-empty throws.** A source attempting to load a wire
+   already in `loaded` or `taken` state must throw — no queue, no
+   overwrite, no silent drop. Test: drive `wire.send()` (or whatever
+   the primitive entry point is) twice without an intervening
+   destination consume; assert throw on the second call.
 
-## Follow-on (separate task, after this lands)
+2. **`taken → empty` is substrate-only.** The transition from `taken`
+   to `empty` does not round-trip through the renderer. Concretely:
+   no renderer message is emitted on that transition; the source
+   learns the slot is clear via the substrate back-channel. Test:
+   spy the renderer message bus during a taken→empty transition and
+   assert no `pulse-arrived` (or any) message fires for it.
 
-Audit the wire primitive in `src/substrate/` against the slot
-contract from [MODEL.md](../../../MODEL.md):
+3. **Only `loaded` traversal animates.** `taken` and `empty`
+   transitions produce no pixels. Headless wires default
+   `renderArrival: false`. Test: a headless wire's `loaded` phase
+   does not emit `pulse-arrived`; an unheaded wire's does.
 
-1. Source attempting to load a `loaded` or `taken` wire throws (no
-   queue, no overwrite, no drop).
-2. `taken → empty` is substrate-only — no renderer round-trip. This is
-   the "invisible back-channel" that tells the source the slot is
-   clear.
-3. Only `loaded` traversal animates; `taken` and `empty` produce no
-   pixels. Headless wires default `renderArrival: false`.
+Pick the existing test pattern in `test/contracts/` (e.g.
+`build-wire-entities.test.ts`, `node-loop.test.ts`) as the model.
 
-Add substrate-level tests covering all three. This is the
-model-enforced framing of "pulse goes to slot; destination tells
-source to stop; source stops until slot clears."
+## After the audit lands
+
+Revisit the affordance question parked from the abandoned
+`task/readgate-ack-button` branch: now that the model enforces
+required ack, and the wire enforces the slot contract, decide whether
+`readGate1.ack` should be driven by:
+- a **Button** node (manual ack, user-driven cycling),
+- a seeded **Input** (the current `ackSrc` placeholder),
+- or something else (e.g. a feedback loop from a downstream node).
+
+That decision is a UX/posture call, not a model call.
 
 ## Out of scope (for this task)
 
-- The Button node type and the manual-ack UX from the abandoned
-  branch. Do not re-add it as part of this task. Once required-input
-  validation is in, *then* decide whether the gating source should be
-  a Button (manual), an Input (seeded), or something else. The
-  enforcement comes first, the affordance second.
-- Generalizing required-port enforcement to optional outputs, fan-out
-  validation, etc. Stay scoped to required inputs.
+- Extending `required` enforcement to outputs, fan-out cardinality,
+  or kind matching. Stay scoped to the three slot-contract rules
+  above.
+- The Button node type — still parked.
+- Generalizing the substrate to multi-slot wires.
 
 ## Gates to clear before merge
 
-tsc ✓, build ✓, vitest ✓ (likely needs a new test for the parse-error
-path), vocab gate ✓, LOC ✓.
+tsc ✓, build ✓, vitest ✓ (new contract tests), vocab gate ✓, LOC ✓.
 
 ## Dormant
 
@@ -76,8 +74,7 @@ path), vocab gate ✓, LOC ✓.
   needs them (body-registry sketch in session-log).
 - Shape D port; tick-batching audit superseded; restart-Input
   friction (input cycles once and stops — separate task whenever).
-- The Button/manual-ack idea is parked, not killed. Revisit after
-  required-input enforcement lands.
+- Button/manual-ack UX — revisit after this audit lands.
 
 ## ALWAYS clause
 
