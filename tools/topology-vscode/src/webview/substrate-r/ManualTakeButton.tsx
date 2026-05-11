@@ -39,7 +39,7 @@ export function ManualTakeButton({
         padding: "1px 6px",
         fontSize: 11,
         lineHeight: 1.2,
-        background: armed ? "#ffeb3b" : "#fff",
+        background: "#fff",
         border: "1px solid #333",
         borderRadius: 3,
         cursor: armed ? "pointer" : "default",

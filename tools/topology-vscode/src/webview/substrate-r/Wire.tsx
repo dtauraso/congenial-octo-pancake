@@ -20,7 +20,7 @@ import {
 } from "react";
 import { type Action, type Phase, initialPhase, wirePhaseReducer } from "./wire-phase";
 
-const PULSE_SPEED_PX_PER_MS = 0.3;
+const PULSE_SPEED_PX_PER_MS = 0.08;
 
 export interface WireHandle {
   load(value: unknown): void;
@@ -110,7 +110,18 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
         markerEnd={markerEnd}
       />
       {phase.kind === "loaded" && pulsePos && (
-        <circle cx={pulsePos.x} cy={pulsePos.y} r={4} fill={stroke} />
+        <>
+          <circle cx={pulsePos.x} cy={pulsePos.y} r={4} fill={stroke} />
+          <text
+            x={pulsePos.x + 6}
+            y={pulsePos.y - 6}
+            fontSize={10}
+            fill={stroke}
+            style={{ pointerEvents: "none", userSelect: "none" }}
+          >
+            {String(phase.value)}
+          </text>
+        </>
       )}
     </g>
   );
