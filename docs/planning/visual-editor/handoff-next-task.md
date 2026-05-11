@@ -9,33 +9,42 @@ now `empty | loaded(v) | taken(v)`; `carrying` retired and banned by
 the vocab gate. Host-shim emits a frame on each of loaded / taken /
 acked. AnimatedEdge already reads `phase`.
 
-## What this task adds
-Renderer-only pulse animation driven by the three-phase transitions:
-  - `empty → loaded` starts the pulse (value travels along the edge).
-  - `loaded → taken` ends the pulse (arrived; value badge holds).
-  - `taken → empty` (ack) clears the hold.
+## Audit finding — scope is smaller than originally framed
+The pulse machinery is already mostly in place. Per-edge rAF already
+exists ([PulseInstance.tsx:46-54](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge/PulseInstance.tsx#L46-L54));
+arc-length probing, frame tick, and label tracking are working code.
+`AnimatedEdge.tsx` already reads the new `phase` field
+([AnimatedEdge.tsx:25-26](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx#L25-L26))
+but only uses it for stroke/opacity — it does not spawn a
+`PulseInstance` on transitions. A legacy event-driven trigger path
+(`_use-pulse-lanes-ticked.ts` + `subscribeEdgeArrive`) is unused but
+still in the tree.
 
-No substrate changes. Lives under
-[src/webview/rf/](../../../tools/topology-vscode/src/webview/rf/) and
-must never be imported from `src/substrate/` (vocab gate + module
-boundary).
+## What this task does (reduced scope)
+1. In `AnimatedEdge.tsx`: on `empty → loaded`, mount a `PulseInstance`
+   with the value; on `loaded → taken`, let it finish / unmount; on
+   `taken → empty` (ack), the hold-state badge clears.
+2. Delete the unused legacy trigger path:
+   `_use-pulse-lanes-ticked.ts` and any `subscribeEdgeArrive` plumbing
+   it depends on (verify no live callers first).
+3. No new `pulse-clock.ts`. No global rAF. The existing per-edge rAF
+   in `PulseInstance` stays.
 
-## Shape (proposed, confirm before coding)
-  - `pulse-clock.ts` — rAF-driven clock module; exposes a per-edge
-    hook returning normalized progress `[0, 1]` for the active pulse.
-  - `AnimatedEdge.tsx` — consume the hook; render the moving dot /
-    value badge along the SVG path using progress.
-  - No new message types; phase transitions in existing frames are
-    the only input.
+No substrate changes. Renderer-only; module boundary unchanged.
 
 ## Gates to hit
   - tsc ✓, build ✓, vitest green, vocab gate ✓
-  - LOC budget: each new file ≤100 LOC.
+  - LOC budget: nothing currently over 100 LOC in this subtree; keep
+    it that way.
 
-## Open question for sign-off
-Confirm the pulse-clock is per-edge rAF (one rAF loop subscribed by
-edges) vs. a single global rAF that fans out. Default plan: single
-global rAF, edges read their own progress — fewer rAF handles.
+## Design note: per-edge rAF, not global (kept)
+Per-edge rAF lives on each `PulseInstance`. Path and dot update in the
+same component → geometry changes (node drag, re-route) stay seamless
+by construction. A previous handoff defaulted to a global rAF on a
+"fewer handles" argument; that argument is a micro-optimization
+(browsers coalesce rAF callbacks onto the same frame) and it trades
+away the seamless-geometry property. Reject the global default unless
+a concrete reason to centralize appears.
 
 ## Dormant
 Shape D port; tick-batching audit superseded; restart-Input friction
