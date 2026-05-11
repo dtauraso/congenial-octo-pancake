@@ -19,14 +19,16 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-11, end of session):
+State at handoff (2026-05-10, end of session):
 
-  **Active task branch:** `task/collapse-to-one-layer`. Not yet
-  merged. Posture is structural rewrite, not friction-driven — David
-  approved the substrate-rule override AND the editor-may-break-mid-
-  rewrite premise to push through the cutover. Editor's webview now
-  runs on the new substrate. Visual fidelity reduced — not mergeable
-  until restored. See [handoff-next-task.md](handoff-next-task.md).
+  **Active task branch:** `task/collapse-to-one-layer`. Latest commit
+  `2cb806b`. Not yet merged. Posture is structural rewrite, not
+  friction-driven — David approved the substrate-rule override AND
+  the editor-may-break-mid-rewrite premise to push through the
+  cutover. Editor's webview now runs on the new substrate; the live
+  Input → wire → ReadGate cycle works end-to-end with a clickable ⌫
+  button. Edge visual fidelity and old-code deletions remain. See
+  [handoff-next-task.md](handoff-next-task.md).
 
   **Two specs landed**, both on main:
   - [manual-take-model.md](manual-take-model.md) — destination-policy
@@ -40,21 +42,23 @@ State at handoff (2026-05-11, end of session):
     pulse animation cycle and geometry-change-while-loaded.
 
   **New primitives + registry + RF integration landed** on this
-  branch. Cutover commit at `09ada85`; deletions at `87822c1`.
+  branch. Cutover commit at `09ada85`; deletions at `87822c1`;
+  manual-take button + registry fix at `2cb806b`.
   Editor wiring now flows through the new substrate:
   - `webview/substrate-r/wire-phase.ts` — pure reducer.
   - `webview/substrate-r/Wire.tsx` — `<Wire>` with sync-observable
     phase apply + RAF animation effect.
-  - `webview/substrate-r/Node.tsx` — `<Node>` with manual-take button
-    + subscribePhase observation.
+  - `webview/substrate-r/Node.tsx` — render-less imperative `<Node>`;
+    exposes run() and requestTake().
+  - `webview/substrate-r/ManualTakeButton.tsx` — HTML ⌫ button,
+    subscribes to wire phase, arms when loaded.
   - `webview/substrate-r/useTickDriver.ts` — driver with event-driven
     round close + halt/resume/step.
   - `webview/substrate-r/TopologyRoot.tsx` — spec-driven orchestrator.
   - `webview/substrate-r/spec.ts` — RTopologySpec shape.
   - `webview/substrate-r/node-kinds.tsx` — Input and ReadGate kinds.
 
-  **Gates:** tsc ✓, build ✓, vitest 237/237 ✓, vocab ✓, LOC ✓.
-  +30 tests vs the pre-rewrite baseline; nothing existing broken.
+  **Gates:** tsc ✓, build ✓, vitest 233/233 ✓, vocab ✓, LOC ✓.
 
   **Audit blocker fix on this branch:** substrate/log.ts no longer
   uses `require`; reads `__vscodeApi` off `window`. Substrate is
