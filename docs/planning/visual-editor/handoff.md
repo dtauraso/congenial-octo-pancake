@@ -8,8 +8,9 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-next-task.md](handoff-next-task.md) — load-bearing
-     next task: port edge visual fidelity onto `RSubstrateEdge`.
+  1. [handoff-next-task.md](handoff-next-task.md) — open friction:
+     port `<Node>` bodies for the remaining node types when each
+     surfaces in a session.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — substrate model background (forever-loops). Realized by the
      React-component substrate now on `main`.
@@ -20,26 +21,17 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-11, end of session):
 
-  **Active branch:** `main`. `task/collapse-to-one-layer` was
-  merged in this session. The substrate rewrite, deletion sweep,
-  and spec promotion all landed. Posture returns to friction-driven
-  per CLAUDE.md.
+  **Active branch:** `task/edge-visual-fidelity`. Edge visual
+  fidelity is ported onto `RSubstrateEdge`: kind colors via
+  `KIND_COLORS`, dashes via `dashForKind`, arrow markers via
+  `markerEndUrl`, route variants (line/snake/below) via the new
+  `edge-path.ts`, edge labels via the new `EdgeLabels.tsx`. `Wire`
+  now accepts optional `arcLength` (self-measures with
+  `getTotalLength()` when omitted), plus `strokeDasharray` and
+  `markerEnd` props. Branch is unmerged; reviewable.
 
-  This session's closing acts:
-
-  1. Folded `manual-take-model.md` and `react-surface-spec.md` into
-     [MODEL.md](../../../MODEL.md); deleted the two planning docs.
-     MODEL.md now contains the manual-take signal generalization,
-     the auto/manually-gated destination policy, and the React
-     surface realization (`<Wire>`, `<Node>`, `useTickDriver`,
-     geometry-change handling, bridge surface).
-  2. Merged `task/collapse-to-one-layer` into `main`. Edge visual
-     fidelity is no longer a merge blocker — tracked as the next
-     task (see handoff-next-task.md). Editor currently ships with
-     plain gray edges.
-
-  **Gates at merge:** tsc ✓, build ✓, vitest 114/114 ✓, vocab ✓,
-  LOC ✓.
+  **Gates:** tsc ✓, build ✓, vitest 114/114 ✓, vocab skipped (no
+  substrate/ dir), LOC ✓.
 
 ## Dev-loop
 
@@ -47,10 +39,12 @@ Edit → `npm run build` → topology tab refreshes in place.
 
 ## Next move
 
-  Read [handoff-next-task.md](handoff-next-task.md). Open a fresh
-  `task/<short-kebab>` branch and port edge visual fidelity onto
-  `RSubstrateEdge` (kind colors, dashes, route variants, arrow
-  markers, edge labels) from git history at `87822c1^`.
+  Merge `task/edge-visual-fidelity` into `main` (sign-off required
+  per CLAUDE.md workflow). After merge, posture returns to
+  friction-driven; the remaining owed work is porting `<Node>`
+  bodies for ChainInhibitor, AndGate, Partition, EdgeNode, etc.,
+  one type at a time as it surfaces in a real session. See
+  [handoff-next-task.md](handoff-next-task.md).
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
