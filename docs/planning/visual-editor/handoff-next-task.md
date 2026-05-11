@@ -1,8 +1,8 @@
 # Next task: generalize manual-gate or pick up friction
 
-**Branch:** none yet. `task/readgate-clear-button-gating` (which
-supersedes `task/wire-slot-contract-audit`) is done — see handoff.md.
-Awaiting sign-off + merge before opening the next branch.
+**Branch:** none yet. `task/readgate-clear-button-gating` merged to
+main at `a180168` (2026-05-10). Open a fresh `task/<short-kebab>`
+when starting the next change.
 
 ## What just landed
 

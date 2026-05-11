@@ -19,11 +19,11 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-10, sixth session of day):
 
-  **Active task branch:** `task/readgate-clear-button-gating` (two
-  commits ahead of `task/wire-slot-contract-audit`, which itself is
-  six commits ahead of main; all pushed; verified working in editor —
-  user confirmed 1 click = 1 pulse). Both branches awaiting sign-off
-  to merge.
+  **Active task branch:** none. `task/readgate-clear-button-gating`
+  (which superseded `task/wire-slot-contract-audit`) merged to main
+  at `a180168` after user confirmed 1 click = 1 pulse in the editor.
+  Both task branches still exist locally and on remote; safe to
+  delete on next housekeeping pass.
 
   **What landed (in commit order):**
   1. `9477360` Slot-contract audit tests in
@@ -73,10 +73,10 @@ to Output → Log (Extension Host).
 
 ## Next move
 
-  **Sign-off + merge** `task/readgate-clear-button-gating` (which
-  contains everything from `task/wire-slot-contract-audit` plus the
-  two new commits) into main, then pick up the follow-on in
-  [handoff-next-task.md](handoff-next-task.md).
+  Pick up the follow-on in
+  [handoff-next-task.md](handoff-next-task.md): generalize the
+  manual-gate pattern, or drive the editor and let friction pick the
+  next branch.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
