@@ -1,18 +1,11 @@
 import { create } from "zustand";
 import type { Node, Spec } from "../../schema";
 import type { RunStatus } from "../../messages";
-import type { TraceEvent } from "../../sim/trace";
 import { DEFAULT_VIEWER_STATE, type ViewerState } from "../viewerState";
 
 // Webview-local: idle is the pre-first-run default. The wire RunStatus has
 // no idle variant (the host only emits running/ok/error/cancelled).
 export type RunStatusUI = RunStatus | { state: "idle" };
-
-export type TraceState = {
-  loaded: TraceEvent[] | null;
-  name: string;
-  drift: string;
-};
 
 // Bounded snapshot stacks. Spec/viewer are treated as immutable (immer
 // produces a fresh tree per edit), so pushing the prior reference is
@@ -37,7 +30,6 @@ interface Store {
   lastScope: Scope;
   dimmed: Set<string> | null;
   runStatus: RunStatusUI;
-  trace: TraceState;
 }
 
 export const useStore = create<Store>(() => ({
@@ -52,7 +44,6 @@ export const useStore = create<Store>(() => ({
   lastScope: "spec",
   dimmed: null,
   runStatus: { state: "idle" },
-  trace: { loaded: null, name: "", drift: "" },
 }));
 
 // Live module-level bindings kept in sync with the store. Non-React

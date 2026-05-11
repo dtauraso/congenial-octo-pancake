@@ -1,7 +1,7 @@
 import { useShallow } from "zustand/react/shallow";
 import type { Spec } from "../../schema";
 import type { ViewerState } from "../viewerState";
-import { useStore, type RunStatusUI, type Scope, type TraceState, type View } from "./store";
+import { useStore, type RunStatusUI, type Scope, type View } from "./store";
 
 // ---- Plain getters (non-React) ----
 export const getSpec = (): Spec => useStore.getState().spec;
@@ -26,7 +26,6 @@ export const useUndoState = () =>
 
 export const useDimmed = (): Set<string> | null => useStore((s) => s.dimmed);
 export const useRunStatus = (): RunStatusUI => useStore((s) => s.runStatus);
-export const useTrace = (): TraceState => useStore(useShallow((s) => s.trace));
 
 export function canUndoSpec(): boolean { return useStore.getState().undoStack.length > 0; }
 export function canRedoSpec(): boolean { return useStore.getState().redoStack.length > 0; }

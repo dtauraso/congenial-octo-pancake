@@ -6,7 +6,6 @@ export {
   nodeById,
   SVG_NS,
   type RunStatusUI,
-  type TraceState,
   type View,
 } from "./state/store";
 export * from "./state/selectors";
