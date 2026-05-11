@@ -1,100 +1,85 @@
-# Next task: cut the editor over to the new React-resident substrate
+# Next task: finish the collapse-to-one-layer rewrite
 
 **Branch:** `task/collapse-to-one-layer`. Continue on this branch.
 
-## Context
+## State at end of last session (commits 09ada85, 87822c1)
 
-The substrate has been re-conceived as React components in the
-webview, eliminating the host-shim tick driver, the frame protocol,
-the frame-store, and the postMessage handlers for play/pause/step/
-clear-slot/pulse-arrived. Two specs are landed on main pinning the
-model and the React surface. Primitives are landed on this branch
-with 237/237 tests passing — but no consumers in the live editor
-yet. The cutover is the load-bearing remaining work.
+The editor's webview bundle now runs on the new React-resident
+substrate. EDGE_TYPES.animated → RSubstrateEdge, RF_NODE_TYPES.animated
+→ RSubstrateNode, App wrapped in SubstrateProvider. TransportControls
+calls driver.halt/resume/step directly via context (no postMessage).
+AnimatedEdge, AnimatedNode, ClearSlotButton, and frame-store have
+been deleted (24 files, 1315 LOC). 233/233 tests passing.
 
-## What's done
+## Known regressions (mid-rewrite)
 
-Read [handoff.md](handoff.md) for the full state. Six commits on
-this branch:
+These are accepted per the structural-rewrite override and need
+fixing before merge:
 
-- `d550bab` substrate/log.ts blocker fix (substrate bundles in webview)
-- `03f1100` React-surface spec
-- `94a5674` `<Wire>` + phase reducer + 11 tests
-- `dc7a07c` `<Node>` + manual-take button + subscribePhase + 7 tests
-- `ccbb50c` `useTickDriver` + 7 tests
-- `b66ddf4` TopologyRoot harness + 3 end-to-end tests
-- `2dc3f8e` spec-driven TopologyRoot + Input/ReadGate kinds
+1. **Visual fidelity of nodes.** `RSubstrateNode` renders a minimal
+   body (single rect, label, two handles). The legacy `AnimatedNode`
+   rendered multiple ports per side, KIND_COLORS-tinted handles,
+   fold panels, spec panels, four-state painter colors. Port this
+   styling into `RSubstrateNode` from the (deleted) helpers — refer
+   to git history at `87822c1^` for the `_styles.ts`, `NodeBody.tsx`,
+   `SpecPanel.tsx` modules.
 
-## What's left — the cutover
+2. **Edge visual fidelity.** `RSubstrateEdge` draws a plain line in
+   `#888`. Legacy `AnimatedEdge` used KIND_COLORS, dash patterns per
+   kind, route variants (line/snake/below), arrow markers, and edge
+   labels. Port from git history.
 
-Plain ordering, no options. Each item is a separate commit unless
-trivially small. **Each commit must leave the editor working.**
+3. **Input node initial queue.** RSubstrateNode reads
+   `data.initialQueue`. The spec adapter (`spec-to-flow.ts`) doesn't
+   set this field today — it has to project the Input node's spec
+   into `initialQueue` so the substrate has values to emit. Check
+   how the old substrate sourced Input values.
 
-1. **RTopologySpec adapter.** Convert the editor's persisted spec
-   (with positions, edges, viewer state) into RTopologySpec. Lives
-   alongside the existing spec-to-flow adapter. Maps Input nodes to
-   `{kind: "input"}` and ReadGate to `{kind: "readgate"}`; derives
-   `pathD` / `arcLength` from the edge geometry React Flow produces.
-   Other node types: drop them in this pass (today's working
-   topology uses only Input + ReadGate). Test: adapter on a fixture.
+4. **Non-Input/non-ReadGate nodes render nothing substrate-side.**
+   ChainInhibitor, AndGate, etc. mount with no `<Node>` kind. Either
+   port their behavior into `node-kinds.tsx` (per the model
+   re-derivation discussed mid-session) or omit them from the user's
+   working spec until they're ported.
 
-2. **Global wire/node registry context.** A React context that holds
-   `Map<wireId, RefObject<WireHandle | null>>` and
-   `Map<nodeId, RefObject<NodeHandle | null>>`. Components register
-   on mount via context. `useTickDriver` reads from the context.
-   Replaces the per-render ref maps in current TopologyRoot.
+## Deletions still owed
 
-3. **AnimatedEdge replacement.** New `RSubstrateEdge` registered with
-   React Flow's `edgeTypes`. Reads sourceX/Y/targetX/Y from React
-   Flow props, computes pathD + arcLength, mounts a `<Wire>` whose
-   ref registers in the context.
+5. **host-shim/run-frames.ts** frame emission loop. Webview no
+   longer consumes; can delete the frame-pump. Keep the host-shim
+   itself for spec I/O.
+6. **Extension host postMessage handlers** for `frame-pause`,
+   `frame-resume`, `frame-step`, `clear-slot`, `pulse-arrived`.
+   Webview no longer sends these.
+7. **Old substrate tests** that target frame-mode or the legacy
+   substrate primitives (`run-frames.test.ts`,
+   `run-frames-controls.test.ts`, `host-shim.test.ts`,
+   `serialize-frame.test.ts`, `recorder.test.ts`,
+   `renderer-adapter.test.ts`, `dom-substrate-smoke.test.tsx`,
+   etc.). Audit; most can be deleted.
+8. **Old substrate code.** `substrate/wire.ts`, `wire-loop.ts`,
+   `wire-events.ts`, `wire-entity.ts`, `node-loop*.ts`,
+   `node-streams.ts`, `match.ts`, `trigger-gate.ts`,
+   `pause-aware.ts`, `pause-controller.ts`, `build-wires.ts`,
+   `build-wire-entities.ts` — audit each for remaining importers
+   and delete what's unreferenced.
 
-4. **AnimatedNode wrapping.** Wrap each React Flow node component so
-   that for Input and ReadGate it also mounts the matching
-   `<Node>`-kind body (Input/ReadGateBody from node-kinds.tsx) with
-   refs registered in the context.
+## Spec promotion
 
-5. **TopologyRoot at the app level.** Wrap `<AppView>` in a provider
-   that owns the registry context and runs `useTickDriver` against
-   it. The driver replaces host-shim's run-frames.
+9. Fold `manual-take-model.md` and `react-surface-spec.md` content
+   into `MODEL.md` once the rewrite is verified working end-to-end
+   in the editor. Delete the planning docs.
+10. Update CLAUDE.md posture: substrate rule was overridden for this
+    rewrite; default posture returns to friction-driven.
 
-6. **TransportControls cutover.** Remove the postMessage path
-   (`frame-pause` / `frame-resume` / `frame-step`); call
-   `driver.halt/resume/step` from the context.
+## Order recommendation
 
-7. **Manual-take cutover.** Remove the postMessage `clear-slot`
-   path; the `<Node>` button already wires direct take().
+Verify the editor visually first (load it, click step, observe).
+Fix #3 (Input queue source) so the substrate has data. Then #1+#2
+to make it look right. Then prune #5–#8. Then #9–#10.
 
-8. **Spec ingestion.** Extension sends spec on `ready`; webview's
-   adapter (step 1) projects into RTopologySpec.
+## Branch is not mergeable to main yet
 
-9. **Delete dead code.** Frame protocol, frame-store as
-   deserialization, host-shim run-frames frame emission, postMessage
-   handlers for play/pause/step/clear-slot/pulse-arrived, the
-   ReadGate auto-loop carveout, the `cleared`→`acked` collapse, old
-   `substrate/wire.ts` and friends (audit which substrate files are
-   now unused), the old `ClearSlotButton.tsx`.
-
-10. **Tests.** Migrate or delete: clear-slot-button-armed,
-    run-frames, run-frames-controls, recorder, serialize-frame,
-    host-shim, renderer-adapter, dom-substrate-smoke (some survive,
-    some get rewritten against the new shapes).
-
-11. **Promote specs into MODEL.md.** Once the rewrite is live, fold
-    manual-take-model.md and react-surface-spec.md into MODEL.md and
-    delete the planning files.
-
-12. **Update CLAUDE.md posture.** This was a structural rewrite under
-    overridden substrate rule. After cutover, posture returns to
-    friction-driven. Note this in CLAUDE.md if appropriate.
-
-## Risk
-
-The load-bearing step is 3+4+5 in one commit (they're coupled). If
-they ship together with the registry context working, the editor
-runs on the new substrate. If any of them is wrong, the editor
-breaks. Worth landing 1+2 as separate prep commits, then a careful
-single commit for 3+4+5.
+The editor visual is broken until #1–#3 land. Keep the branch
+unmerged; restore visual fidelity before considering merge.
 
 ## ALWAYS clause
 

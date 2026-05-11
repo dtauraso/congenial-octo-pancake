@@ -19,13 +19,14 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-11, mid-session):
+State at handoff (2026-05-11, end of session):
 
   **Active task branch:** `task/collapse-to-one-layer`. Not yet
   merged. Posture is structural rewrite, not friction-driven — David
-  approved the substrate-rule override to push the rewrite forward in
-  one session. Stopping point reached at the React Flow integration
-  boundary (the load-bearing cutover step).
+  approved the substrate-rule override AND the editor-may-break-mid-
+  rewrite premise to push through the cutover. Editor's webview now
+  runs on the new substrate. Visual fidelity reduced — not mergeable
+  until restored. See [handoff-next-task.md](handoff-next-task.md).
 
   **Two specs landed**, both on main:
   - [manual-take-model.md](manual-take-model.md) — destination-policy
@@ -38,8 +39,9 @@ State at handoff (2026-05-11, mid-session):
     observes wire cycle completion. Plus behavioral traces for the
     pulse animation cycle and geometry-change-while-loaded.
 
-  **New primitives landed** on this branch (no consumers in the live
-  editor yet — they sit alongside the existing substrate):
+  **New primitives + registry + RF integration landed** on this
+  branch. Cutover commit at `09ada85`; deletions at `87822c1`.
+  Editor wiring now flows through the new substrate:
   - `webview/substrate-r/wire-phase.ts` — pure reducer.
   - `webview/substrate-r/Wire.tsx` — `<Wire>` with sync-observable
     phase apply + RAF animation effect.
