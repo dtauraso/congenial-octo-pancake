@@ -8,9 +8,8 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-next-task.md](handoff-next-task.md) — **start here**
-     for the merge, on `task/remove-legacy-runtimes`.
-     Steps 2–7 landed; step 8 (merge, sign-off required) remains.
+  1. [handoff-next-task.md](handoff-next-task.md) — completed task
+     record for `task/remove-legacy-runtimes` (merged to main).
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — system 3 model: forever-loops, line-level pause, events.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
@@ -19,26 +18,17 @@ Read them in this order on a fresh session:
 ---
 
 State at handoff (2026-05-10, fifty-eighth session):
-  Active branch: `task/remove-legacy-runtimes`. Step 7 done; step 8
-  (merge to main, sign-off required) remains.
+  **No active task branch.** `task/remove-legacy-runtimes` merged
+  to main as `95904bd` and pushed. Reference branches retained.
 
-  Latest commits:
-  - `1a572da` — renderer adapter: pause-gate the pump. Bug surfaced
-    during proof-out: substrate is timing-free, adapter owns pacing
-    via queued events. Without a pause gate, step() flooded frames
-    and pause() had no visible effect. Adapter now accepts a
-    `PauseSignal` and gates pump() on it. Contract test added.
-  - `b67f189` — drop legacy `runtime: "ticked"` from topology.json;
-    extend Input seed to 10 values for observable proof-out.
+  Branch achievement: legacy ticked/wires runtimes deleted; frame
+  renderer is the only runtime. During proof-out the renderer
+  adapter pause-gate bug was surfaced and fixed — substrate stays
+  timing-free, adapter owns pacing AND pause-gating. Contract test
+  at `tools/topology-vscode/test/contracts/run-frames-controls.test.ts`
+  covers pause/step/resume semantics.
 
-  Proof-out (step 7): user-confirmed pulses animate on the
-  in08→readGate1 edge, pause halts the pump, step advances exactly
-  one frame, resume drains.
-
-  **Gates clean:** tsc ✓, build ✓, vitest 38 files / 193 tests pass.
-
-  **Step remaining (see handoff-next-task.md):**
-  8. Merge to main (sign-off required). Reference branches retained.
+  **Gates on main:** tsc ✓, build ✓, vitest 38 files / 193 tests pass.
 
   **Model:** `handoff-substrate-iteration.md`. Forever-loops per
   node and per wire; backpressure coordination; line-level pause;
@@ -49,33 +39,36 @@ State at handoff (2026-05-10, fifty-eighth session):
   renderer adapter / host-shim / frame-store live outside
   `src/substrate/` for the vocab gate.
 
-  Working tree: `topology.view.json` — editor state. Reference
+  Working tree: `topology.view.json` and `topology.json` — editor
+  state and active spec. The minimal proof-out topology is
+  in08 (Input) → readGate1 (ReadGate) on `chainIn`. Reference
   branches retained — do not delete.
 
 ## Dev-loop
 
 Edit → `npm run build` → topology tab refreshes in place. No Reload
 Window, no tab cycling. Watcher logs `[topology] bundleWatcher
-fired` to Output → Log (Extension Host).
+fired` to Output → Log (Extension Host). When `topology.json` is
+open in an editor tab, the extension reads from the buffer (not
+disk) — revert the tab if you edit the file outside VS Code.
 
 ## Next move
 
-Continue on `task/remove-legacy-runtimes` at step 7: user drives the
-extension dev host (F5 in VS Code), loads a topology, hits
-play/pause/step. Verify pulses animate, pause halts at line level,
-step advances one event. Once user signs off on proof-out, step 8
-merges to main (sign-off required). See
-[handoff-next-task.md](handoff-next-task.md).
+No active task. Drive the editor; log friction in
+[session-log.md](session-log.md). When friction surfaces a
+concrete task, start `task/<short-kebab>` and add a
+`handoff-next-task.md` for it.
 
 Dormant: Shape D port (deleted with wires-runtime; reintroduce only
 if friction surfaces). Tick-batching audit superseded.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
-state you're leaving the branch in, and commit on the task branch.
-Do not rely on chat history; the next AI may be a fresh model with
-no transcript. The rendered handoff must itself contain this same
-ALWAYS clause so the loop is self-perpetuating across sessions. Use
+state you're leaving the branch in, and commit on the active branch
+(main if no task is in flight). Do not rely on chat history; the
+next AI may be a fresh model with no transcript. The rendered
+handoff must itself contain this same ALWAYS clause so the loop is
+self-perpetuating across sessions. Use
 [continuation-prompt-template.md](continuation-prompt-template.md)
 as the structural source of truth; update the template when an
 invariant changes. Keep each file ≤100 LOC per the budget rule.
