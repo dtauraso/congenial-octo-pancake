@@ -1,7 +1,7 @@
 // Step 3 of the substrate iteration plan: uniform node forever-loop
 // over wire-entity / pause-aware. Coexists with legacy
 // node-loop-uniform.ts. Body per handoff-substrate-iteration.md:
-// await inputs carrying → run → await outputs empty → load outputs
+// await inputs loaded → run → await outputs empty → load outputs
 // → await outputs acked. Every wait routes through pauseAware().
 // Substrate is timing-free per MODEL.md.
 

@@ -4,7 +4,7 @@
 //  2. No external load → no frames paced; recorder stays empty.
 //  3. stop() prevents any further paced frames from arriving.
 //  4. Input node with `data.init` seeds its outgoing wires; identity
-//     downstream node forwards; recorder records carrying frames.
+//     downstream node forwards; recorder records loaded/taken frames.
 
 import { describe, expect, it } from "vitest";
 import { runFrames } from "../../src/host-shim/run-frames";
@@ -87,10 +87,10 @@ describe("runFrames", () => {
     });
     await new Promise((r) => setTimeout(r, 0));
     clock.flush();
-    const carrying = sent.filter((m) =>
-      m.wires.some(([, s]) => s.kind === "carrying"),
+    const active = sent.filter((m) =>
+      m.wires.some(([, s]) => s.kind === "loaded" || s.kind === "taken"),
     );
-    expect(carrying.length).toBeGreaterThan(0);
+    expect(active.length).toBeGreaterThan(0);
     h.stop();
   });
 

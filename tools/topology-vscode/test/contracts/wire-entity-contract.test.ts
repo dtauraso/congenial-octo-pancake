@@ -1,8 +1,8 @@
 // Red contract test for the wire-as-entity model. Pins what MODEL.md
 // says the wire IS, before any implementation lands. Three claims:
 //
-//   1. Wire state is exactly `empty | carrying(v)`. No queue, no
-//      buffer, no length, no inFlight/idle. One value or none.
+//   1. Wire state is exactly `empty | loaded(v) | taken(v)`. No queue,
+//      no buffer, no length, no inFlight/idle. One value or none.
 //   2. Geometry is cosmetic — geometry edits do not affect wire state.
 //   3. Substrate source contains zero banned-vocabulary hits
 //      (lint-style assertion via check-substrate-vocab.mjs).
@@ -26,12 +26,14 @@ describe("Wire entity — state shape", () => {
     expect(w.state).toEqual({ kind: "empty" });
   });
 
-  it("carries one value after a send; observe returns it to empty", async () => {
+  it("transitions empty → loaded → taken → empty across load/take/ack", async () => {
     const { createWire } = await import("../../src/substrate/wire-entity");
     const w = createWire("e1");
-    w.carry(42);
-    expect(w.state).toEqual({ kind: "carrying", value: 42 });
-    w.observe();
+    w.load(42);
+    expect(w.state).toEqual({ kind: "loaded", value: 42 });
+    w.take();
+    expect(w.state).toEqual({ kind: "taken", value: 42 });
+    w.ack();
     expect(w.state).toEqual({ kind: "empty" });
   });
 

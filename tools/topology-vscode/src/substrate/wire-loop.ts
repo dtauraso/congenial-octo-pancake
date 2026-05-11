@@ -25,7 +25,7 @@ export function runWire<V>(
       if (!running) return;
       await pauseAware(() => takenSignal(wire), pause);
       if (!running) return;
-      if (wire.state.kind === "carrying") wire.ack();
+      if (wire.state.kind === "taken") wire.ack();
     }
   })();
   return { stop: () => { running = false; }, done };

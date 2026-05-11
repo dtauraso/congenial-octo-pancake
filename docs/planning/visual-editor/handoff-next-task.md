@@ -1,69 +1,65 @@
-# Handoff — Last completed task
+# Next task — wire phase state (in flight)
 
-**State:** `task/remove-legacy-runtimes` merged to main as `95904bd`
-and pushed. No active task branch.
+**Branch:** `task/wire-phase-state`
+**Status:** code + tests green; not yet merged.
 
-## Commits landed on the branch
+## What landed
+Substrate wire phase widened from `empty | carrying(v)` to
+`empty | loaded(v) | taken(v)` so the renderer can distinguish
+"traveling" from "arrived but not yet acked". Phase matches the wire
+loop's own await points; still timing-free per [MODEL.md](../../../MODEL.md).
 
-- `5619b84` — step 5: delete legacy substrate/sim modules.
-  50 files removed (-3320 LOC).
-- `2dd03f9` — step 6: delete tests for removed legacy runtimes.
-  53 files (-2781 LOC).
-- `2e7e9a6` — remove `topology.frameRendererEnabled` flag. Frame
-  renderer now always runs.
-- `1a572da` — renderer adapter: pause-gate the pump. Wires
-  `PauseController` through `AdapterOptions`; pump gates on it.
-  Contract test at
-  `tools/topology-vscode/test/contracts/run-frames-controls.test.ts`.
-- `b67f189` — drop legacy `runtime: "ticked"` from `topology.json`;
-  extend Input seed to 10 values.
-- `87dfae5` — handoff refresh.
-- `95904bd` — merge to main (no-ff).
+Files touched:
+  - [MODEL.md](../../../MODEL.md) — phase amendment + allowed-vocab
+    update; `carrying` retired entirely.
+  - [wire-entity.ts](../../../tools/topology-vscode/src/substrate/wire-entity.ts)
+    — three-phase `WireState`; `take()` now sets `taken(v)` before
+    emitting; `ack()` requires `taken`.
+  - [wire-loop.ts](../../../tools/topology-vscode/src/substrate/wire-loop.ts)
+    — acks when `state.kind === "taken"`.
+  - [host-shim.ts](../../../tools/topology-vscode/src/host-shim/host-shim.ts)
+    — emits a frame on each of loaded/taken/acked (taken is no longer
+    invisible).
+  - [messages.ts](../../../tools/topology-vscode/src/messages.ts) —
+    `WireFrameMsgState` widened.
+  - [AnimatedEdge.tsx](../../../tools/topology-vscode/src/webview/rf/AnimatedEdge.tsx)
+    — reads `phase`; `loaded` and `taken` both render the value badge.
+  - [check-substrate-vocab.mjs](../../../tools/topology-vscode/scripts/check-substrate-vocab.mjs)
+    — `\bcarrying\b` is now banned.
+  - Tests: wire-entity-contract, wire-loop, node-loop-uniform-v2,
+    host-shim, run-frames, serialize-frame.
 
-## Proof-out result
+## Gates
+  - tsc ✓
+  - build ✓
+  - vitest 38 / 193 ✓
+  - vocab gate ✓
 
-User-confirmed on the dev host:
-- Edge `in08.out → readGate1.chainIn` renders, pulses animate.
-- Pause halts the pump mid-stream.
-- Step advances exactly one frame, then re-pauses.
-- Resume drains queued frames.
+## Why this is a prerequisite
+Unblocks `task/edge-pulse-motion`. With three phases, the renderer's
+pulse animation triggers on `empty → loaded` (start travel) and ends
+on `loaded → taken` (arrived). The post-arrival hold is just the
+`taken` phase — no synthesis needed. Risks 1 / 4 / 5 in the
+pulse-motion plan dissolve once this lands.
 
-## Bug surfaced + fixed during proof-out
+## Decisions encoded (David, this session)
+  1. Retire `carrying` entirely — gate enforces it.
+  2. Keep `v` in `taken(v)` so renderer can still show value during hold.
+  3. Single commit: MODEL.md + substrate + frame plumbing + renderer +
+     tests land together so the type system is never red between commits.
 
-Renderer adapter was not pause-aware. Substrate is timing-free per
-MODEL.md; the adapter is the pacing layer. Without a pause gate on
-the adapter pump, queued events drained on next tick regardless of
-pause state — step() flooded frames; pause() looked like a no-op.
-Fix lives in `1a572da` and stays inside the renderer layer; the
-substrate vocab gate was not touched.
-
-## Gates on main
-
-tsc ✓, build ✓, vitest 38 files / 193 tests pass.
-
-## Survivor surface
-
-Substrate transitively reached by `host-shim/run-frames.ts`:
-`wire-entity.ts`, `wire-loop.ts`, `wire-events.ts`, `wire.ts`,
-`node-streams.ts`, `node-loop*.ts`, `pause-controller.ts`,
-`pause-aware.ts`, `match.ts`, `log.ts`, `trigger-gate.ts`,
-`build-wires.ts`, `build-wire-entities.ts`. Plus `host-shim/`,
-`extension/frame-renderer.ts`, `handle-message.ts`, renderer adapter,
-recorder. `sim/seeds.ts` and `sim/trace.ts` (type-only) survive.
-
-## Refuse cheap alternatives
-
-Per MODEL.md: do not reintroduce the renderer-enabled flag — there
-is nothing to fall back to. Do not move pacing into the substrate
-to "fix" pause; the adapter owns pacing and now owns pause-gating
-too. Do not keep legacy as museum; the deletion sweep is done.
+## Next move
+  1. Sign-off review — MODEL.md edit + merge to `main`.
+  2. Start `task/edge-pulse-motion`: pulse-clock module +
+     per-edge rAF hook driven by phase transitions.
 
 ## ALWAYS clause
-
-At end of session, overwrite this file (and sibling `handoff-*.md`)
-with a freshly-rendered prompt for the state you're leaving and
-commit on the active branch (main if no task is in flight). Do not
-rely on chat history; next AI may be fresh. The rendered handoff
-must contain this ALWAYS clause so the loop self-perpetuates. Use
-`continuation-prompt-template.md` as structural source of truth.
-Keep each file ≤100 LOC.
+At end of session, overwrite this file (and the sibling `handoff-*.md`
+files) with a freshly-rendered prompt tailored to the state you're
+leaving the branch in, and commit on the active branch. Do not rely on
+chat history; the next AI may be a fresh model with no transcript. The
+rendered handoff must itself contain this same ALWAYS clause so the
+loop is self-perpetuating across sessions. Use
+[continuation-prompt-template.md](continuation-prompt-template.md) as
+the structural source of truth; update the template when an invariant
+changes. Keep each file ≤100 LOC per the budget rule.

@@ -44,13 +44,13 @@ describe("pause-aware — mid-rendezvous", () => {
 
     wire.load("v");
     await new Promise<void>((r) => setImmediate(r));
-    // Pause while wire is carrying but not yet taken. Wire-loop is
+    // Pause while wire is loaded but not yet taken. Wire-loop is
     // parked at awaitTaken; nothing should ack.
     pause.pause();
     wire.take();
     await new Promise<void>((r) => setImmediate(r));
     expect(events).toEqual(["loaded", "taken"]); // no acked yet
-    expect(wire.state.kind).toBe("carrying");
+    expect(wire.state.kind).toBe("taken");
 
     pause.resume();
     await new Promise<void>((r) => setImmediate(r));

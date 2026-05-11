@@ -12,9 +12,12 @@ Stop, re-read this file, and re-derive from the model.
   happened. There is no "during" a tick from the substrate's view.
 - **One tick** = every node runs one round, and any pulse a node emits
   travels its wire to the destination within that round.
-- **The wire is a first-class entity.** A wire owns its state:
-  `empty | carrying(v)`. Not a queue, not a buffer, not a length. One
-  value or none.
+- **The wire is a first-class entity.** A wire owns its phase:
+  `empty | loaded(v) | taken(v)`. Not a queue, not a buffer, not a
+  length. One value or none. The three phases match the wire loop's
+  own await points — source loads, destination takes, source is
+  acked (returning the wire to `empty`). Phase is ordinal, not timed:
+  `loaded` happened, then `taken` happened, then `empty`. No "during."
 - **Geometry is cosmetic.** Path length, snake-routing, edits to the
   drawn line affect only what is rendered. They do not affect wire
   state, tick count, or substrate correctness.
@@ -25,7 +28,7 @@ Stop, re-read this file, and re-derive from the model.
   visible state changes the substrate has already decided. It never
   signals back to the substrate.
 - **Tick close is event-driven, not time-driven.** A round ends when
-  in-flight pulses have arrived (wires return to `empty`). The
+  every wire has cycled through `loaded → taken → empty`. The
   substrate observes this; it does not schedule it.
 
 ## Banned vocabulary (in substrate context)
@@ -47,9 +50,9 @@ None of them describe the substrate.
 ## Allowed vocabulary
 
 - tick (ordinal), round, step
-- empty, carrying(v)
+- empty, loaded(v), taken(v)
 - halt, resume, snap
-- node runs, wire carries, destination consumes
+- node runs, wire loads, destination takes, source acks
 - arrives, observes
 
 ## Why this file exists

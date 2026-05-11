@@ -21,7 +21,8 @@ export type CompareSource = "head" | "file";
 // of pairs so the postMessage structured-clone boundary stays JSON-shaped.
 export type WireFrameMsgState =
   | { readonly kind: "empty" }
-  | { readonly kind: "carrying"; readonly value: unknown };
+  | { readonly kind: "loaded"; readonly value: unknown }
+  | { readonly kind: "taken"; readonly value: unknown };
 
 export type NodeFrameMsgState =
   | "parked-input"
