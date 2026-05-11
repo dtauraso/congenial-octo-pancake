@@ -11,14 +11,13 @@ export function slog(label: string, data?: Record<string, unknown>): void {
     data: data ?? {},
   });
   console.log(`[substrate] ${label}`, data ?? {});
-  // Lazy webview import: in test/node envs `window` is undefined and
-  // pulling in webview/save would throw at module load.
+  // Read the vscode api off the window global that webview/save's top-level
+  // init caches there. Avoids a static import of webview/save (which touches
+  // `document` at module load and breaks in node) and avoids `require` (which
+  // doesn't bundle cleanly when substrate runs inside the webview).
   if (typeof window === "undefined") return;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { vscode } = require("../webview/save") as typeof import("../webview/save");
-    vscode.postMessage({ type: "substrate-log", entry });
-  } catch {
-    // Harness / test env: console.log above is enough.
-  }
+  const api = (window as unknown as {
+    __vscodeApi?: { postMessage(msg: unknown): void };
+  }).__vscodeApi;
+  api?.postMessage({ type: "substrate-log", entry });
 }
