@@ -22,10 +22,10 @@ Read them in this order on a fresh session:
 State at handoff (2026-05-11, end of session):
 
   **Active task branch:** `task/collapse-to-one-layer`. Latest commit
-  `e06447b` (delete dead bookmarks + fold-halo stub, -78 lines).
+  `83df794` (delete dead state exports + view live-binding, -30 lines).
   Pushed. Not yet merged. Posture remains structural rewrite — David
   signed off on continuing the deletion sweep beyond the substrate
-  cutover. The session landed four commits, all deletion or
+  cutover. The session landed five commits, all deletion or
   React-native replacement work:
 
   1. `38d2a9f` delete the old slog/substrate-log logging system
@@ -40,11 +40,17 @@ State at handoff (2026-05-11, end of session):
   4. `e06447b` delete dead bookmarks system and fold-halo stub
      (-78 lines; `bookmarks-store.ts`, `Bookmark` type and parser,
      `useFoldHaloState` stub and `FOLD_HALO_BOX_SHADOW`).
+  5. `83df794` delete dead state exports and view live-binding
+     (-30 lines; state.ts facade trimmed 8→3 re-exports; removed
+     `getView`, `useSpec`, `useView`, `useLastScope`, `useUndoState`
+     selectors, the `view` live-binding, and the `SVG_NS` const).
+     `can{Undo,Redo}{Spec,Viewer}` retained — undo tests use them.
 
   Net for the session: substrate has no logging code at all; the new
   React-resident logging lives at `src/webview/log/` (post.ts,
   ErrorBoundary.tsx, CrashListeners.tsx). Eleven dead message types
-  retired and two stubs (bookmarks, fold-halo) deleted.
+  retired, two stubs (bookmarks, fold-halo) deleted, and the state
+  module facade collapsed to its actual usage.
 
   **Two specs landed**, both on main:
   - [manual-take-model.md](manual-take-model.md) — destination-policy
@@ -57,21 +63,7 @@ State at handoff (2026-05-11, end of session):
   (Test count dropped 133 → 132 with the bookmarks parser test
   removal in `e06447b`.)
 
-  **Open dead-export candidates** (surfaced via ts-prune, not yet
-  acted on):
-  - `src/webview/geom.ts` — entire file (83 LOC) has no importers.
-  - `save.ts:postReady`, `save.ts:isSynced`, `save.ts:markSynced`
-    plus the `lastSyncedText` module state they share — vestigial
-    pre-zustand sync tracking.
-  - `MarkerDefs.tsx:markerEndUrl` — helper export with no callers
-    (the `MarkerDefs` component is alive).
-  - `substrate-r/TopologyRoot.tsx` — flagged as "spec-driven
-    orchestrator" in the cutover commit but only used by
-    `test/contracts/r-topology-smoke.test.tsx`. Live editor wires
-    `RSubstrateNode` / `RSubstrateEdge` directly under React Flow.
-    Judgment call before deleting: is the smoke test exercising
-    valuable substrate-primitives behavior under a different name,
-    or is it scaffolding from the spike?
+  **Open dead-export candidates:** see `handoff-next-task.md` §3.
 
 ## Dev-loop
 

@@ -33,11 +33,16 @@ Gates green: tsc ✓, build ✓, vitest 132/132 ✓, vocab ✓, LOC ✓.
 
 ## Optional follow-up sweeps (orthogonal to merge blockers)
 
-3. **Dead-export sweep, round 2.** ts-prune surfaced:
+3. **Dead-export sweep, round 2.** State-module facade already
+   cleaned in `83df794`. Remaining ts-prune candidates:
    - `src/webview/geom.ts` — entire file (83 LOC) has zero importers.
    - `save.ts` — `postReady`, `isSynced`, `markSynced`, and shared
      `lastSyncedText` state, all unused.
    - `MarkerDefs.tsx:markerEndUrl` — helper export with no callers.
+   - `rf/adapter.ts:flowToSpec`, `rf/fold-activity.ts:isFoldBoundaryEmit`,
+     `rf/spec-colors.ts:outgoingEdgeColors`, `diff-core.ts:POSITION_EPSILON`.
+   - `schema.ts` — several schema-type exports flagged unused; audit
+     before deleting (may be public-contract types).
    - `substrate-r/TopologyRoot.tsx` — only `r-topology-smoke.test.tsx`
      uses it. Live editor mounts substrate via RSubstrateNode /
      RSubstrateEdge under React Flow, not through TopologyRoot.
