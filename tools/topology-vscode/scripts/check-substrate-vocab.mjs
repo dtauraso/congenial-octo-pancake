@@ -4,25 +4,23 @@
 // See MODEL.md at repo root.
 //
 // Exits non-zero on any hit. Wire into CI / pre-commit as desired.
+//
+// Note: the old substrate at src/substrate/ has been deleted as part of
+// the collapse-to-one-layer rewrite; this script's target directory no
+// longer exists. Replacement vocab discipline for the new React-resident
+// substrate at src/webview/substrate-r/ is a separate follow-up.
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const ROOT = new URL("../src/substrate/", import.meta.url).pathname;
 
-// Legacy substrate files predate the wire-as-entity model and are kept
-// as a working museum until each shape is ported to substrate/ticked/.
-// Retire an entry here when its file is deleted or rewritten clean.
-// Anything NOT in this list (notably substrate/ticked/ and the upcoming
-// wire-entity.ts) must stay vocabulary-clean.
-const LEGACY_SKIP = [
-  /\/log\.ts$/,
-  /\/node-loop\.ts$/,
-  /\/node-loop-cycle\.ts$/,
-  /\/node-streams\.ts$/,
-  /\/runtime-wires(-[a-z-]+)?\.ts$/,
-  /\/step\//,
-];
+if (!existsSync(ROOT)) {
+  console.log("substrate/ directory not present; vocab check skipped.");
+  process.exit(0);
+}
+
+const LEGACY_SKIP = [];
 
 const BANNED = [
   /\bsetTimeout\b/,

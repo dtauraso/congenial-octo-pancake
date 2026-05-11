@@ -1,5 +1,4 @@
 import { parseSpec, type Spec } from "../../../schema";
-import { slog } from "../../../substrate/log";
 import { specToFlow } from "../adapter";
 import { clearSpecHistory, patchViewerState, setSpec, viewerState } from "../../state";
 import { scheduleViewSave } from "../../save";
@@ -30,7 +29,6 @@ export function handleLoad(ctx: AppCtx, text: string) {
     // would be incoherent (ids may not even exist there).
     clearSpecHistory();
     ctx.lastSpec.current = next;
-    slog("load", { nodes: next.nodes.length, edges: next.edges.length });
     const flow = specToFlow(next, viewerState.folds, viewerState);
     const presentIds = new Set(flow.nodes.map((n) => n.id));
     const filtered = (viewerState.lastSelectionIds ?? []).filter((id) => presentIds.has(id));
