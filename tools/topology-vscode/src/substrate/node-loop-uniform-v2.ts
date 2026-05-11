@@ -55,6 +55,10 @@ export function runNode<I, O>(
         spec.inputs.map((w) => pauseAware(() => w.awaitLoaded(), pause)),
       );
       if (!running) return;
+      await awaitAll(
+        spec.inputs.map((w) => pauseAware(() => w.awaitArrived(), pause)),
+      );
+      if (!running) return;
       const values = spec.inputs.map((w) => w.take());
       emit("entered-run");
       const outVals = spec.body(values);

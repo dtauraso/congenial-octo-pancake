@@ -9,13 +9,16 @@ import { createWire, type Wire } from "./wire-entity";
 
 export type WireEntityMap = Map<string, Wire<unknown>>;
 
-export function buildWireEntities(spec: Spec): WireEntityMap {
+export function buildWireEntities(
+  spec: Spec,
+  opts: { renderArrival?: boolean } = {},
+): WireEntityMap {
   const map: WireEntityMap = new Map();
   for (const edge of spec.edges ?? []) {
     if (map.has(edge.id)) {
       throw new Error(`buildWireEntities: duplicate edge id ${edge.id}`);
     }
-    map.set(edge.id, createWire<unknown>(edge.id));
+    map.set(edge.id, createWire<unknown>(edge.id, opts.renderArrival ?? false));
   }
   return map;
 }

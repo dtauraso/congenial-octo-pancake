@@ -28,9 +28,10 @@ describe("wire-loop — event ordering", () => {
     await new Promise<void>((r) => setImmediate(r));
 
     handle.stop();
-    expect(events.map((e) => e.kind)).toEqual(["loaded", "taken", "acked"]);
+    expect(events.map((e) => e.kind)).toEqual(["loaded", "arrived", "taken", "acked"]);
     expect(events[0].seq).toBeLessThan(events[1].seq);
     expect(events[1].seq).toBeLessThan(events[2].seq);
+    expect(events[2].seq).toBeLessThan(events[3].seq);
   });
 });
 
@@ -49,12 +50,12 @@ describe("pause-aware — mid-rendezvous", () => {
     pause.pause();
     wire.take();
     await new Promise<void>((r) => setImmediate(r));
-    expect(events).toEqual(["loaded", "taken"]); // no acked yet
+    expect(events).toEqual(["loaded", "arrived", "taken"]); // no acked yet
     expect(wire.state.kind).toBe("taken");
 
     pause.resume();
     await new Promise<void>((r) => setImmediate(r));
-    expect(events).toEqual(["loaded", "taken", "acked"]);
+    expect(events).toEqual(["loaded", "arrived", "taken", "acked"]);
     expect(wire.state.kind).toBe("empty");
 
     handle.stop();

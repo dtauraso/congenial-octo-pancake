@@ -17,22 +17,31 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, sixtieth session):
-  **Active task branch:** none. `task/wire-phase-state` merged to
-  `main` as `c79b9a7` and the branch was deleted (local + remote).
+State at handoff (2026-05-10, sixty-second session):
+  **Active task branch:** `task/edge-pulse-motion` (commit pending at
+  handoff; awaiting in-editor verification before merge to `main`).
 
-  Last achievement: substrate wire phase widened from
-  `empty | carrying(v)` to `empty | loaded(v) | taken(v)` so the
-  renderer can distinguish traveling from arrived-but-not-acked.
-  Phase matches the wire loop's own await points; substrate stays
-  timing-free per MODEL.md. `carrying` is fully retired and added to
-  the vocab gate. Frame plumbing emits one frame per phase
-  transition (load / take / ack); AnimatedEdge reads the phase.
+  Last achievement: **MODEL.md amended to Path A** — geometry now sets
+  the `loaded` phase's traversal time, and the substrate waits for
+  pulse arrival before `loaded → taken`. Substrate gained
+  `arrived` event + `markArrived`/`awaitArrived` on wires;
+  `node-loop-uniform-v2` awaits arrival before `take()`; webview
+  posts a new `pulse-arrived` message on `PulseInstance.onDone`,
+  routed through `handle-message → frameRenderer.markArrived →
+  runFrames.markArrived → wire.markArrived`. Pulse speed lowered to
+  0.08 px/ms. The previous `phase === "empty" → setPulse(null)` clear
+  was removed; preemption is now structurally impossible because the
+  substrate cannot re-enter `loaded` until the prior pulse arrived.
 
-  **Gates on main:** tsc ✓, build ✓, vitest 38 / 193 ✓, vocab gate ✓.
+  **Gates on branch:** tsc ✓, build ✓, vitest 38 / 193 ✓, vocab
+  gate ✓, LOC ✓.
 
-  **Model:** `handoff-substrate-iteration.md`, with phase amendment
-  in MODEL.md applied. Three phases ordinal, not timed.
+  **Model:** MODEL.md (amended). Phases stay ordinal; the one
+  permitted duration is per-wire `loaded` traversal time
+  (`arcLength / pulseSpeed`); the one permitted renderer→substrate
+  signal is pulse arrival. Headless wires (default
+  `renderArrival: false`) auto-mark arrival on `load` so existing
+  tests are unchanged.
 
   **Held:** halt/resume on substrate; send-on-non-empty throws;
   renderer adapter / host-shim / frame-store live outside
@@ -52,12 +61,17 @@ disk) — revert the tab if you edit the file outside VS Code.
 
 ## Next move
 
-  Start `task/edge-pulse-motion` from `main`: renderer-only per-edge
-  rAF owned by `AnimatedEdge`, driven by the new loaded / taken / ack
-  phase transitions. Lives under `src/webview/rf/`, never imported
-  from `src/substrate/`. See
-  [handoff-next-task.md](handoff-next-task.md) for shape and the
-  rejected global-rAF default (seamless-geometry argument).
+  Commit the in-flight changes on `task/edge-pulse-motion`, then
+  drive the editor and verify: every pulse traverses its full edge;
+  lengthening an edge mid-flight extends the loaded phase; firing
+  inputs rapidly no longer cuts pulses off at ~3/4. If the visuals
+  match, merge to `main`, delete the branch (local + remote), and
+  pick the next friction item from [session-log.md](session-log.md).
+  If they don't, log the friction and iterate.
+
+  Pulse speed default lives at
+  `_constants.ts:PULSE_SPEED_PX_PER_MS` (0.08 px/ms). Tune from
+  session-log feedback if needed.
 
 Dormant: Shape D port; tick-batching audit superseded; restart-Input
 friction (input cycles once and stops — separate task whenever).

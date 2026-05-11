@@ -20,21 +20,28 @@ export interface Wire<V> {
   load(value: V): void;
   take(): V;
   ack(): void;
+  markArrived(): void;
   awaitLoaded(): Promise<void>;
+  awaitArrived(): Promise<void>;
   awaitEmpty(): Promise<void>;
   awaitAcked(): Promise<void>;
   onEvent(listener: (e: WireEvent) => void): () => void;
 }
 
-type Waiter = { kind: "loaded" | "empty"; resolve: () => void };
+type Waiter = { kind: "loaded" | "arrived" | "empty"; resolve: () => void };
 
 class WireEntity<V> implements Wire<V> {
   readonly id: string;
   state: WireState<V> = { kind: "empty" };
+  private arrived = false;
   private listeners = new Set<(e: WireEvent) => void>();
   private waiters: Waiter[] = [];
+  private readonly renderArrival: boolean;
 
-  constructor(id: string) { this.id = id; }
+  constructor(id: string, renderArrival = false) {
+    this.id = id;
+    this.renderArrival = renderArrival;
+  }
 
   private emit(kind: WireEventKind): void {
     const evt: WireEvent = { seq: nextSeq(), wireId: this.id, kind };
@@ -43,6 +50,7 @@ class WireEntity<V> implements Wire<V> {
     for (const w of this.waiters) {
       const match =
         (w.kind === "loaded" && this.state.kind === "loaded") ||
+        (w.kind === "arrived" && this.state.kind === "loaded" && this.arrived) ||
         (w.kind === "empty" && this.state.kind === "empty");
       if (match) w.resolve();
       else remaining.push(w);
@@ -57,14 +65,29 @@ class WireEntity<V> implements Wire<V> {
           `fan-in must use an explicit merge node`,
       );
     }
+    this.arrived = false;
     this.state = { kind: "loaded", value };
     this.emit("loaded");
+    if (!this.renderArrival) this.markArrived();
+  }
+
+  markArrived(): void {
+    if (this.state.kind !== "loaded") return;
+    if (this.arrived) return;
+    this.arrived = true;
+    this.emit("arrived");
   }
 
   take(): V {
     if (this.state.kind !== "loaded") {
       throw new Error(
         `wire ${this.id}: take on phase=${this.state.kind}`,
+      );
+    }
+    if (!this.arrived) {
+      throw new Error(
+        `wire ${this.id}: take before pulse arrival; ` +
+          `await wire.awaitArrived() before take()`,
       );
     }
     const { value } = this.state;
@@ -86,9 +109,10 @@ class WireEntity<V> implements Wire<V> {
   carry(value: V): void { this.load(value); }
   observe(): V { const v = this.take(); this.ack(); return v; }
 
-  private waitFor(kind: "loaded" | "empty"): Promise<void> {
+  private waitFor(kind: "loaded" | "arrived" | "empty"): Promise<void> {
     if (
       (kind === "loaded" && this.state.kind === "loaded") ||
+      (kind === "arrived" && this.state.kind === "loaded" && this.arrived) ||
       (kind === "empty" && this.state.kind === "empty")
     ) {
       return Promise.resolve();
@@ -96,6 +120,7 @@ class WireEntity<V> implements Wire<V> {
     return new Promise<void>((resolve) => this.waiters.push({ kind, resolve }));
   }
   awaitLoaded(): Promise<void> { return this.waitFor("loaded"); }
+  awaitArrived(): Promise<void> { return this.waitFor("arrived"); }
   awaitEmpty(): Promise<void> { return this.waitFor("empty"); }
   awaitAcked(): Promise<void> { return this.waitFor("empty"); }
 
@@ -105,6 +130,6 @@ class WireEntity<V> implements Wire<V> {
   }
 }
 
-export function createWire<V>(id: string): Wire<V> {
-  return new WireEntity<V>(id);
+export function createWire<V>(id: string, renderArrival = false): Wire<V> {
+  return new WireEntity<V>(id, renderArrival);
 }

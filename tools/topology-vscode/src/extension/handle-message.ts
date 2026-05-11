@@ -111,6 +111,9 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
     case "frame-step":
       ctx.frameRenderer.step();
       return;
+    case "pulse-arrived":
+      ctx.frameRenderer.markArrived(msg.wireId);
+      return;
   }
 }
 
