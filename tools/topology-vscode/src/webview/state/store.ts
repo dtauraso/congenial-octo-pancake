@@ -51,7 +51,6 @@ export const useStore = create<Store>(() => ({
 // rely on ES-module live-binding semantics to see updates.
 export let spec: Spec = useStore.getState().spec;
 export let viewerState: ViewerState = useStore.getState().viewerState;
-export const view: View = { ...useStore.getState().view };
 export const nodeById = new Map<string, Node>();
 
 useStore.subscribe((s) => {
@@ -61,12 +60,7 @@ useStore.subscribe((s) => {
     for (const n of s.spec.nodes) nodeById.set(n.id, n);
   }
   if (s.viewerState !== viewerState) viewerState = s.viewerState;
-  if (s.view.x !== view.x || s.view.y !== view.y || s.view.w !== view.w || s.view.h !== view.h) {
-    view.x = s.view.x; view.y = s.view.y; view.w = s.view.w; view.h = s.view.h;
-  }
 });
-
-export const SVG_NS = "http://www.w3.org/2000/svg";
 
 export function withCap<T>(arr: T[], entry: T): T[] {
   const next = [...arr, entry];
