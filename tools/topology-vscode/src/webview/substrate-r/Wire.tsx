@@ -27,6 +27,7 @@ export interface WireHandle {
   take(): void;
   ack(): void;
   readonly phase: Phase;
+  subscribePhase(listener: (phase: Phase) => void): () => void;
 }
 
 export interface WireProps {
@@ -43,12 +44,21 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   const [phase, dispatch] = useReducer(wirePhaseReducer, initialPhase);
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
+  const phaseListenersRef = useRef(new Set<(p: Phase) => void>());
+
+  useEffect(() => {
+    for (const fn of phaseListenersRef.current) fn(phase);
+  }, [phase]);
 
   useImperativeHandle(ref, () => ({
     load: (value) => dispatch({ type: "load", value }),
     take: () => dispatch({ type: "take" }),
     ack: () => dispatch({ type: "ack" }),
     get phase() { return phaseRef.current; },
+    subscribePhase(listener) {
+      phaseListenersRef.current.add(listener);
+      return () => { phaseListenersRef.current.delete(listener); };
+    },
   }), []);
 
   const distanceCoveredRef = useRef(0);
