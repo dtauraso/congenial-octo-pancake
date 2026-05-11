@@ -22,13 +22,14 @@ Read them in this order on a fresh session:
 State at handoff (2026-05-10, end of session):
 
   **Active task branch:** `task/collapse-to-one-layer`. Latest commit
-  `2cb806b`. Not yet merged. Posture is structural rewrite, not
-  friction-driven — David approved the substrate-rule override AND
-  the editor-may-break-mid-rewrite premise to push through the
-  cutover. Editor's webview now runs on the new substrate; the live
-  Input → wire → ReadGate cycle works end-to-end with a clickable ⌫
-  button. Edge visual fidelity and old-code deletions remain. See
-  [handoff-next-task.md](handoff-next-task.md).
+  `6a9e6f9` (delete dead frame-pump). Not yet merged. Posture is
+  structural rewrite, not friction-driven — David approved the
+  substrate-rule override AND the editor-may-break-mid-rewrite
+  premise to push through the cutover. Editor's webview runs on the
+  new substrate; the live Input → wire → ReadGate cycle works
+  end-to-end with a clickable ⌫ button. The dead frame-pump (host
+  side) is gone. Edge visual fidelity and old-substrate deletions
+  remain. See [handoff-next-task.md](handoff-next-task.md).
 
   **Two specs landed**, both on main:
   - [manual-take-model.md](manual-take-model.md) — destination-policy
@@ -43,7 +44,8 @@ State at handoff (2026-05-10, end of session):
 
   **New primitives + registry + RF integration landed** on this
   branch. Cutover commit at `09ada85`; deletions at `87822c1`;
-  manual-take button + registry fix at `2cb806b`.
+  manual-take button + registry fix at `2cb806b`; frame-pump dead
+  code removed at `6a9e6f9`.
   Editor wiring now flows through the new substrate:
   - `webview/substrate-r/wire-phase.ts` — pure reducer.
   - `webview/substrate-r/Wire.tsx` — `<Wire>` with sync-observable
@@ -58,7 +60,7 @@ State at handoff (2026-05-10, end of session):
   - `webview/substrate-r/spec.ts` — RTopologySpec shape.
   - `webview/substrate-r/node-kinds.tsx` — Input and ReadGate kinds.
 
-  **Gates:** tsc ✓, build ✓, vitest 233/233 ✓, vocab ✓, LOC ✓.
+  **Gates:** tsc ✓, build ✓, vitest 222/222 ✓, vocab ✓, LOC ✓.
 
   **Audit blocker fix on this branch:** substrate/log.ts no longer
   uses `require`; reads `__vscodeApi` off `window`. Substrate is
