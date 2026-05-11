@@ -1,24 +1,24 @@
 // <Wire>: the substrate's wire primitive realized as a React component.
-// Phase state lives here (useReducer); the source/destination call
-// load/take/ack via an imperative handle.
+// Phase state lives here; the source/destination call load/take/ack via
+// an imperative handle.
 //
-// Animation is a wire-local effect keyed on entering `loaded`. When
-// loaded, a RAF loop walks the pulse along the rendered path using
-// performance.now() and a global pulse-speed constant. Completion
-// invokes onLoadedComplete(); destination policy decides what that
-// means (auto destinations call take() in the callback, manual-take
-// destinations leave it as a no-op until a user click).
+// Transitions are applied synchronously to a phaseRef and to subscribed
+// listeners before triggering a re-render. This lets the tick driver
+// observe round close in the same synchronous turn that nodes ran in —
+// without it, useReducer dispatch would defer commit and the driver
+// would see stale phase. The React state mirror exists so visual props
+// (path, pulse) recompute via the normal render cycle.
 //
-// Geometry change while loaded is handled by the effect's deps:
-// arcLength change re-runs the effect, but distanceCoveredRef survives
-// so the pulse resumes at its current fractional position along the
-// new path (MODEL.md: "remaining traversal time is re-derived from the
-// new arc length and the distance already covered").
+// Animation is a wire-local effect keyed on entering `loaded`. RAF +
+// performance.now() with distance-covered held in a ref so geometry
+// changes mid-loaded resume at the current fractional position along
+// the new path (MODEL.md: "remaining traversal time is re-derived from
+// the new arc length and the distance already covered").
 
 import {
-  forwardRef, useEffect, useImperativeHandle, useReducer, useRef, useState,
+  forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState,
 } from "react";
-import { type Phase, initialPhase, wirePhaseReducer } from "./wire-phase";
+import { type Action, type Phase, initialPhase, wirePhaseReducer } from "./wire-phase";
 
 const PULSE_SPEED_PX_PER_MS = 0.3;
 
@@ -38,28 +38,29 @@ export interface WireProps {
 }
 
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
-  { pathD, arcLength, stroke = "#888", onLoadedComplete },
-  ref,
+  { pathD, arcLength, stroke = "#888", onLoadedComplete }, ref,
 ) {
-  const [phase, dispatch] = useReducer(wirePhaseReducer, initialPhase);
-  const phaseRef = useRef(phase);
-  phaseRef.current = phase;
+  const phaseRef = useRef<Phase>(initialPhase);
+  const [phase, setPhase] = useState<Phase>(initialPhase);
   const phaseListenersRef = useRef(new Set<(p: Phase) => void>());
 
-  useEffect(() => {
-    for (const fn of phaseListenersRef.current) fn(phase);
-  }, [phase]);
+  const apply = useCallback((a: Action) => {
+    const next = wirePhaseReducer(phaseRef.current, a);
+    phaseRef.current = next;
+    for (const fn of phaseListenersRef.current) fn(next);
+    setPhase(next);
+  }, []);
 
   useImperativeHandle(ref, () => ({
-    load: (value) => dispatch({ type: "load", value }),
-    take: () => dispatch({ type: "take" }),
-    ack: () => dispatch({ type: "ack" }),
+    load: (value) => apply({ type: "load", value }),
+    take: () => apply({ type: "take" }),
+    ack: () => apply({ type: "ack" }),
     get phase() { return phaseRef.current; },
     subscribePhase(listener) {
       phaseListenersRef.current.add(listener);
       return () => { phaseListenersRef.current.delete(listener); };
     },
-  }), []);
+  }), [apply]);
 
   const distanceCoveredRef = useRef(0);
   const pathRef = useRef<SVGPathElement>(null);
