@@ -15,6 +15,14 @@ import { KIND_COLORS, type EdgeKind } from "../../schema";
 
 const KINDS = Object.keys(KIND_COLORS) as EdgeKind[];
 
+export function markerEndUrl(
+  kind: EdgeKind,
+  arrowStyle: "filled" | "open" | undefined,
+): string {
+  const variant = arrowStyle === "open" ? "open" : "filled";
+  return `url(#wf-arrow-${variant}-${kind})`;
+}
+
 export function MarkerDefs() {
   return (
     <svg

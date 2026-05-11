@@ -1,32 +1,31 @@
-// React Flow edge component backed by the new <Wire> substrate
-// primitive. Registers its wire ref with the SubstrateProvider so the
-// tick driver walks it; renders the path + animation via <Wire>.
-//
-// Replaces AnimatedEdge. Doesn't read from frame-store, doesn't post
-// pulse-arrived — <Wire> handles all of that internally.
+// React Flow edge component backed by the <Wire> substrate primitive.
+// Registers its wire ref with the SubstrateProvider so the tick driver
+// walks it; renders kind-coloured path, arrow marker, dash, and labels.
 
 import { useEffect, useMemo, useRef } from "react";
 import type { EdgeProps } from "reactflow";
 import { Wire, type WireHandle } from "./Wire";
 import { useRegistry } from "./registry";
+import { buildEdgePathD, edgeMidpoint, type EdgeRoute } from "./edge-path";
+import { EdgeLabels } from "./EdgeLabels";
+import { KIND_COLORS, type ArrowStyle, type EdgeKind } from "../../schema";
+import { dashForKind } from "../rf/edge-style";
+import { markerEndUrl } from "../rf/MarkerDefs";
 
 interface RSubstrateEdgeData {
-  kind?: string;
-}
-
-function buildLinePath(
-  sx: number, sy: number, tx: number, ty: number,
-): { d: string; len: number } {
-  const dx = tx - sx;
-  const dy = ty - sy;
-  return {
-    d: `M ${sx} ${sy} L ${tx} ${ty}`,
-    len: Math.sqrt(dx * dx + dy * dy),
-  };
+  kind?: EdgeKind;
+  route?: EdgeRoute;
+  lane?: number;
+  arrowStyle?: ArrowStyle;
+  label?: string;
+  valueLabel?: string;
 }
 
 export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
-  const { id, sourceX, sourceY, targetX, targetY } = props;
+  const {
+    id, sourceX, sourceY, targetX, targetY,
+    sourcePosition, targetPosition, data,
+  } = props;
   const wireRef = useRef<WireHandle | null>(null);
   const registry = useRegistry();
 
@@ -35,17 +34,43 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
     [id, registry],
   );
 
-  const geom = useMemo(
-    () => buildLinePath(sourceX, sourceY, targetX, targetY),
-    [sourceX, sourceY, targetX, targetY],
+  const route: EdgeRoute = data?.route ?? "line";
+  const lane = data?.lane ?? 0;
+  const kind: EdgeKind = data?.kind ?? "any";
+  const stroke = KIND_COLORS[kind] ?? "#888";
+  const dash = dashForKind(kind);
+  const markerEnd = markerEndUrl(kind, data?.arrowStyle);
+
+  const pathD = useMemo(
+    () => buildEdgePathD(
+      route,
+      sourceX, sourceY, sourcePosition,
+      targetX, targetY, targetPosition,
+      lane,
+    ),
+    [route, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, lane],
   );
 
+  const mid = (data?.label || data?.valueLabel)
+    ? edgeMidpoint(route, sourceX, sourceY, targetX, targetY, lane)
+    : null;
+
   return (
-    <Wire
-      ref={wireRef}
-      pathD={geom.d}
-      arcLength={geom.len}
-      stroke="#888"
-    />
+    <>
+      <Wire
+        ref={wireRef}
+        pathD={pathD}
+        stroke={stroke}
+        strokeDasharray={dash}
+        markerEnd={markerEnd}
+      />
+      <EdgeLabels
+        mid={mid}
+        label={data?.label}
+        valueLabel={data?.valueLabel}
+        kind={kind}
+        stroke={stroke}
+      />
+    </>
   );
 }

@@ -1,28 +1,25 @@
-# Next task: edge visual fidelity on RSubstrateEdge
+# Next task: port `<Node>` bodies for remaining node types
 
-**Branch:** open a fresh `task/<short-kebab>` off `main`.
-`task/collapse-to-one-layer` was merged. Specs are in MODEL.md.
+**Branch:** after merging `task/edge-visual-fidelity`, friction-driven.
+Open a fresh `task/<short-kebab>` only when a real session surfaces
+a specific node type as inert.
 
 ## State at handoff (2026-05-11, end of session)
 
-The collapse-to-one-layer rewrite is on `main`. Substrate has no
-logging code (new logging lives at `src/webview/log/`), dead message
-channels and stubs are gone, dead exports are gone, and the two
-planning specs (`manual-take-model.md`, `react-surface-spec.md`) are
-folded into [MODEL.md](../../../MODEL.md) and deleted.
+Edge visual fidelity is restored on `task/edge-visual-fidelity`:
+kind colors, dashes, arrow markers, route variants
+(line/snake/below), and edge labels are wired through
+`RSubstrateEdge` → `<Wire>`. New files:
+`src/webview/substrate-r/edge-path.ts`,
+`src/webview/substrate-r/EdgeLabels.tsx`. `Wire` now self-measures
+arc length when no explicit `arcLength` is passed, and accepts
+`markerEnd` + `strokeDasharray` props.
 
-Gates at merge: tsc ✓, build ✓, vitest 114/114 ✓, vocab ✓, LOC ✓.
+Gates at commit: tsc ✓, build ✓, vitest 114/114 ✓, LOC ✓.
 
 ## Owed
 
-1. **Edge visual fidelity.** `RSubstrateEdge` draws a plain gray
-   line. Lost vs `AnimatedEdge`: kind colors, dash patterns, route
-   variants (line/snake/below), arrow markers, edge labels. Port
-   from git history at `87822c1^` — the deleted
-   `webview/rf/AnimatedEdge/_geom-build.ts`, `_pulse-label.ts`,
-   `_edge-labels.tsx`, and `_constants.ts` hold the pieces.
-
-2. **Other node types' substrate behavior.** Today only Input and
+1. **Other node types' substrate behavior.** Today only Input and
    ReadGate have `node-kinds.tsx` entries. ChainInhibitor, AndGate,
    Partition, EdgeNode, etc. mount with no `<Node>` body — fine for
    the user's current working topology but anything that uses them

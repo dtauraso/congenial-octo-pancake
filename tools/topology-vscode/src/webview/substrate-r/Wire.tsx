@@ -32,13 +32,17 @@ export interface WireHandle {
 
 export interface WireProps {
   pathD: string;
-  arcLength: number;
+  // Optional explicit arc length. If omitted, measured from the live
+  // <path> element via getTotalLength() — correct for any curve.
+  arcLength?: number;
   stroke?: string;
+  strokeDasharray?: string;
+  markerEnd?: string;
   onLoadedComplete?: () => void;
 }
 
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
-  { pathD, arcLength, stroke = "#888", onLoadedComplete }, ref,
+  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, onLoadedComplete }, ref,
 ) {
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
@@ -74,16 +78,17 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     }
     const path = pathRef.current;
     if (!path) return;
+    const measuredLen = arcLength ?? path.getTotalLength();
     const simStart =
       performance.now() - distanceCoveredRef.current / PULSE_SPEED_PX_PER_MS;
     let raf = 0;
     const step = () => {
       const elapsed = performance.now() - simStart;
-      const distance = Math.min(elapsed * PULSE_SPEED_PX_PER_MS, arcLength);
+      const distance = Math.min(elapsed * PULSE_SPEED_PX_PER_MS, measuredLen);
       distanceCoveredRef.current = distance;
       const pt = path.getPointAtLength(distance);
       setPulsePos({ x: pt.x, y: pt.y });
-      if (distance >= arcLength) {
+      if (distance >= measuredLen) {
         onLoadedComplete?.();
         return;
       }
@@ -95,7 +100,15 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
 
   return (
     <g>
-      <path ref={pathRef} d={pathD} stroke={stroke} fill="none" strokeWidth={1.5} />
+      <path
+        ref={pathRef}
+        d={pathD}
+        stroke={stroke}
+        fill="none"
+        strokeWidth={1.5}
+        strokeDasharray={strokeDasharray}
+        markerEnd={markerEnd}
+      />
       {phase.kind === "loaded" && pulsePos && (
         <circle cx={pulsePos.x} cy={pulsePos.y} r={4} fill={stroke} />
       )}
