@@ -9,8 +9,8 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — open friction:
-     diagnose the manual-take "multiple clicks" bug, then port
-     `<Node>` bodies for remaining node types as each surfaces.
+     port `<Node>` bodies for remaining node types as each
+     surfaces.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — substrate model background (forever-loops). Realized by the
      React-component substrate now on `main`.
@@ -28,14 +28,11 @@ State at handoff (2026-05-11, mid-session):
   (`ManualTakeButton`) background white in both armed and disabled
   states. Opacity + cursor still distinguish the two.
 
-  **Open friction:** user reports having to click the clear-slot
-  button multiple times to advance to the next input value. Root
-  cause not yet diagnosed. Wiring analysis suggests one click
-  should advance one item; suspects include listener-notification
-  reentrancy in `Wire.apply()` (recursive `ack` mid-iteration
-  leaves listeners receiving phase transitions out of order
-  depending on Set insertion order) and microtask-vs-render
-  ordering for `ManualTakeButton`'s `phaseKind` state.
+  **Multi-click bug (closed):** user reported needing multiple
+  clicks on the clear-slot button to advance; on re-test it
+  advanced on a single click. Closed without code change; reopen
+  if it resurfaces. Prior suspect (listener-notification reentrancy
+  in `Wire.apply()`) remains a latent risk worth keeping in mind.
 
   **Gates:** build ✓ after last edit; tsc/vitest not re-run since
   merge; LOC ✓.
@@ -46,26 +43,11 @@ Edit → `npm run build` → topology tab refreshes in place.
 
 ## Next move
 
-Diagnose the multi-click bug before further node-kind work. Ask
-the user:
-
-  - When a click "fails," does the pulse visibly start moving
-    (slow at 0.08 px/ms could mask the advance) or does the wire
-    stay empty?
-  - Does the value label change between failing clicks?
-  - Is the button visually enabled when failing clicks land?
-
-Likely fix area: [Wire.tsx](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)
-`apply()` — the for-of over `phaseListenersRef` calls listeners
-with the closured `next`, but a listener that triggers a
-recursive apply (e.g. `InputBody` calling `ack` on `taken`) makes
-later listeners in the same outer iteration receive a stale
-phase.
-
-After that bug closes, posture returns to friction-driven; the
-remaining owed work is porting `<Node>` bodies for
-ChainInhibitor, AndGate, Partition, EdgeNode, etc., one type at a
-time as it surfaces. See [handoff-next-task.md](handoff-next-task.md).
+Posture is friction-driven. The remaining owed work is porting
+`<Node>` bodies for ChainInhibitor, AndGate, Partition, EdgeNode,
+etc., one type at a time as it surfaces in real editor use. See
+[handoff-next-task.md](handoff-next-task.md). No diagnosis task
+in flight.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to the
