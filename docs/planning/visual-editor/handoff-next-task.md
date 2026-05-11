@@ -1,26 +1,21 @@
 # Next task: finish the collapse-to-one-layer rewrite
 
-**Branch:** `task/collapse-to-one-layer`. Latest commit `6a9e6f9`
-(delete dead frame-pump). Not mergeable; remaining items below.
+**Branch:** `task/collapse-to-one-layer`. Latest commit `3f8d529`
+(delete old substrate, host-shim, renderer, recorder, legacy tests;
+-3257 lines). Pushed. Not yet mergeable; remaining items below.
 
 ## State at handoff (2026-05-10, session end)
 
-The substrate rewrite is in, the manual-take cycle works end-to-end
+The substrate rewrite is in. The manual-take cycle works end-to-end
 in the live VS Code editor (step → pulse arrives at ReadGate → ⌫
-button arms yellow → click clears the wire), and the dead host-side
-frame-pump has been removed in this session. Gates green:
-tsc ✓, build ✓, vitest 222/222 ✓, vocab ✓, LOC ✓.
+button arms yellow → click clears the wire). All legacy substrate
+code is deleted: `substrate/wire*`, `substrate/node-loop*`,
+`substrate/{node-streams,match,trigger-gate,pause-aware,pause-controller,build-wires,build-wire-entities}`,
+and the dead `src/host-shim/`, `src/renderer/`, `src/recorder/`
+directories. 18 legacy contract tests were purged. Only
+`substrate/log.ts` remains in `src/substrate/` (webview-portable).
 
-Frame-pump deletion sweep (commit `6a9e6f9`) removed:
-  - `host-shim/run-frames.ts`, `host-shim/serialize-frame.ts`
-  - `extension/frame-renderer.ts` and its wiring in `extension.ts`
-  - `handle-message.ts` cases: `frame-pause`, `frame-resume`,
-    `frame-step`, `pulse-arrived`, `clear-slot` (+ helper)
-  - `messages.ts`: `FrameMsg` / `WireFrameMsgState` /
-    `NodeFrameMsgState` types and 5 webview→host frame variants
-  - `main.tsx` test hooks: `pauseSubstrate`, `resumeSubstrate`,
-    `isSubstrateRunning`
-  - `test/contracts/{run-frames,run-frames-controls,serialize-frame}.test.ts`
+Gates green: tsc ✓, build ✓, vitest 138/138 ✓, vocab ✓, LOC ✓.
 
 ## Owed before merge
 
@@ -38,30 +33,12 @@ Frame-pump deletion sweep (commit `6a9e6f9`) removed:
    will be inert. Friction-driven posture: port each type only
    when it surfaces in a real session.
 
-## Deletions still owed
-
-3. **Old substrate code.** Audit `substrate/wire.ts`, `wire-loop.ts`,
-   `wire-events.ts`, `wire-entity.ts`, `node-loop*.ts`,
-   `node-streams.ts`, `match.ts`, `trigger-gate.ts`, `pause-aware.ts`,
-   `pause-controller.ts`, `build-wires.ts`, `build-wire-entities.ts`.
-   Delete unreferenced files. Keep `substrate/log.ts` (webview uses
-   it; already de-required).
-4. **Old tests** targeting legacy substrate primitives:
-   `host-shim.test.ts`, `recorder.test.ts`, `renderer-adapter.test.ts`,
-   `dom-substrate-smoke.test.tsx`, `wire-loop.test.ts`,
-   `wire-primitive.test.ts`, `wire-entity-contract.test.ts`,
-   `wire-slot-contract.test.ts`, `node-loop*.test.ts`,
-   `build-wire-entities.test.ts`, `and-gate-loop.test.ts`,
-   `input-loop-await-ready.test.ts`, `join-loop-slot-pacing.test.ts`,
-   `pause-controller.test.ts`, `ready-once*.test.ts`. Audit; most can
-   be deleted; some may need migration against the new substrate.
-
 ## Post-merge
 
-5. **Promote specs into MODEL.md.** Fold `manual-take-model.md` and
+3. **Promote specs into MODEL.md.** Fold `manual-take-model.md` and
    `react-surface-spec.md` content into `MODEL.md`. Delete the
    planning docs.
-6. **CLAUDE.md posture note.** Substrate rule was overridden for
+4. **CLAUDE.md posture note.** Substrate rule was overridden for
    this rewrite. Default posture returns to friction-driven.
 
 ## ALWAYS clause
