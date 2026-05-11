@@ -25,8 +25,8 @@ three-phase state machine and `awaitAll(awaitLoaded)` already do the
 gating) but the design silently regressed the moment a user deleted
 btn1 or its edge: parseSpec accepts a ReadGate with no ack wire,
 runNode falls back to one-input behavior, pulses flood again. No
-error, no warning. User called it "the stupidest and most fragile
-thing it can possibly do."
+error, no warning. User rejected the posture as too fragile and asked
+for a model-enforced design instead.
 
 **Lesson saved:** `memory/feedback_enforce_required_inputs.md` — when
 a node type's correctness depends on an input being wired, mark it

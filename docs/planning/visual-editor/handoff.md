@@ -17,7 +17,7 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, second session of day):
+State at handoff (2026-05-10, third session of day):
 
   **Active task branch:** none. `main` is clean. The previous branch
   `task/edge-pulse-motion` merged successfully (pulse arrival gates
@@ -32,8 +32,8 @@ State at handoff (2026-05-10, second session of day):
   silently regressed the moment a user deleted the Button node + edge
   (the schema declares `ack` as an input but `parseSpec` does not
   enforce it being wired; `runNode` only builds inputs from edges
-  actually present). David: "the stupidest and most fragile thing it
-  can possibly do." Saved as feedback memory
+  actually present). David rejected the posture as too fragile and
+  asked for a model-enforced design instead. Saved as feedback memory
   `memory/feedback_enforce_required_inputs.md`.
 
   **Repo state:** `main`, working tree clean. `topology.json` is the
@@ -65,6 +65,13 @@ the tab if you edit the file outside VS Code.
   [handoff-next-task.md](handoff-next-task.md) for the full scope and
   what's explicitly out of scope (do not re-add the Button node as
   part of this task — enforcement first, affordance second).
+
+  Once enforcement lands, the follow-on is a wire-primitive audit
+  against the slot contract: send-on-non-empty throws, `taken → empty`
+  is substrate-only (the invisible back-channel), only `loaded`
+  animates. That audit is the model-enforced framing of "pulse goes to
+  slot; source stops until slot clears." Captured in
+  [handoff-next-task.md](handoff-next-task.md).
 
 ## Dormant
 

@@ -16,7 +16,7 @@ isn't enforced anywhere.
 The prior session (task/readgate-ack-button) attempted to fix this by
 adding a Button node + ack edge, which works while wired but silently
 regresses the moment a user deletes either. David rejected that
-posture: "the stupidest and most fragile thing it can possibly do."
+posture as too fragile and asked for a model-enforced design instead.
 Branch was torn out. Feedback memory saved at
 `memory/feedback_enforce_required_inputs.md`.
 
@@ -36,6 +36,23 @@ Add **schema-level required inputs** and validate at `parseSpec`:
    that's the point. Either add a gating source for ack (Button node,
    Input node, whatever) in the same commit, or stage in two commits:
    validation first, fix the spec second.
+
+## Follow-on (separate task, after this lands)
+
+Audit the wire primitive in `src/substrate/` against the slot
+contract from [MODEL.md](../../../MODEL.md):
+
+1. Source attempting to load a `loaded` or `taken` wire throws (no
+   queue, no overwrite, no drop).
+2. `taken → empty` is substrate-only — no renderer round-trip. This is
+   the "invisible back-channel" that tells the source the slot is
+   clear.
+3. Only `loaded` traversal animates; `taken` and `empty` produce no
+   pixels. Headless wires default `renderArrival: false`.
+
+Add substrate-level tests covering all three. This is the
+model-enforced framing of "pulse goes to slot; destination tells
+source to stop; source stops until slot clears."
 
 ## Out of scope (for this task)
 
