@@ -1,21 +1,17 @@
 // @vitest-environment happy-dom
 //
-// End-to-end smoke test for the new substrate primitives. Mounts the
-// TopologyRoot harness and exercises one full cycle: source loads
-// wire, destination button arms, click → take, source acks, round
-// closes, tick advances.
+// End-to-end smoke test for the new substrate primitives, driven by
+// an RTopologySpec. Mounts TopologyRoot with one Input → wire →
+// ReadGate spec and exercises the full cycle.
 
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import { TopologyRoot } from "../../src/webview/substrate-r/TopologyRoot";
+import type { RTopologySpec } from "../../src/webview/substrate-r/spec";
 
 afterEach(cleanup);
-import { TopologyRoot } from "../../src/webview/substrate-r/TopologyRoot";
 
 beforeAll(() => {
-  // happy-dom doesn't implement getPointAtLength on SVGPathElement; the
-  // wire's animation effect calls it inside RAF. Stub a fixed point so
-  // the RAF loop doesn't throw. Animation correctness is not under
-  // test here — substrate plumbing is.
   if (!("getPointAtLength" in SVGPathElement.prototype)) {
     Object.defineProperty(SVGPathElement.prototype, "getPointAtLength", {
       value: () => ({ x: 0, y: 0 }),
@@ -24,39 +20,47 @@ beforeAll(() => {
   }
 });
 
-describe("TopologyRoot end-to-end", () => {
-  it("source loads wire on step → button arms → click takes → tick advances", () => {
+function makeSpec(queue: unknown[]): RTopologySpec {
+  return {
+    nodes: [
+      { id: "src", kind: "input", props: { queue } },
+      { id: "gate", kind: "readgate" },
+    ],
+    wires: [{
+      id: "w0",
+      source: { nodeId: "src", port: "out" },
+      target: { nodeId: "gate", port: "in0" },
+      pathD: "M 80 80 L 300 80",
+      arcLength: 220,
+    }],
+  };
+}
+
+describe("TopologyRoot end-to-end (spec-driven)", () => {
+  it("input loads wire on step → readgate button arms → click takes → tick advances", () => {
     const { getByTestId, container } = render(
-      <TopologyRoot initialQueue={[42]} haltedOnMount />,
+      <TopologyRoot spec={makeSpec([42])} haltedOnMount />,
     );
     expect(getByTestId("tick").textContent).toBe("tick: 0");
     expect(getByTestId("halted").textContent).toBe("halted");
 
-    // Step: source.run() loads wire(42). Round in flight (wire loaded).
     act(() => { fireEvent.click(getByTestId("step")); });
-
-    // Round did not close (destination is manual-take, wire still loaded).
     expect(getByTestId("tick").textContent).toBe("tick: 0");
 
-    // Manual-take button is armed.
-    const btn = container.querySelector('[data-input-id="in"]')!;
+    const btn = container.querySelector('[data-input-id="in0"]')!;
     expect(btn.getAttribute("data-armed")).toBe("true");
 
-    // Click the armed button → wire.take() → source's subscription
-    // → wire.ack() → wire empty → driver observes round close.
     act(() => { fireEvent.click(btn); });
-
     expect(getByTestId("tick").textContent).toBe("tick: 1");
     expect(btn.getAttribute("data-armed")).toBe("false");
   });
 
   it("subsequent step emits next value from the queue", () => {
     const { getByTestId, container } = render(
-      <TopologyRoot initialQueue={[1, 2]} haltedOnMount />,
+      <TopologyRoot spec={makeSpec([1, 2])} haltedOnMount />,
     );
     act(() => { fireEvent.click(getByTestId("step")); });
-    const btn = container.querySelector('[data-input-id="in"]')!;
-    expect(btn.getAttribute("data-armed")).toBe("true");
+    const btn = container.querySelector('[data-input-id="in0"]')!;
     act(() => { fireEvent.click(btn); });
     expect(getByTestId("tick").textContent).toBe("tick: 1");
 
@@ -66,17 +70,15 @@ describe("TopologyRoot end-to-end", () => {
     expect(getByTestId("tick").textContent).toBe("tick: 2");
   });
 
-  it("queue exhaustion: step after empty queue still advances tick (no-op round)", () => {
+  it("queue exhaustion: step with empty queue advances tick (no-op round)", () => {
     const { getByTestId, container } = render(
-      <TopologyRoot initialQueue={[1]} haltedOnMount />,
+      <TopologyRoot spec={makeSpec([1])} haltedOnMount />,
     );
     act(() => { fireEvent.click(getByTestId("step")); });
-    const btn = container.querySelector('[data-input-id="in"]')!;
+    const btn = container.querySelector('[data-input-id="in0"]')!;
     act(() => { fireEvent.click(btn); });
     expect(getByTestId("tick").textContent).toBe("tick: 1");
 
-    // Queue empty. step() runs source, source loads nothing, all wires
-    // stay empty, driver closes round immediately.
     act(() => { fireEvent.click(getByTestId("step")); });
     expect(getByTestId("tick").textContent).toBe("tick: 2");
     expect(btn.getAttribute("data-armed")).toBe("false");

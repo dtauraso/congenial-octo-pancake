@@ -1,68 +1,94 @@
-// Minimal end-to-end harness for the new substrate primitives. Wires
-// up one source node → one wire → one manual-take destination so the
-// design can be exercised before the real cutover.
-//
-// Source policy: emit the next value from a queue whenever its output
-// wire is empty. Source acks whenever its output wire becomes taken,
-// via a long-lived subscribePhase. This mirrors what every real
-// substrate node will need to do (the spec leaves source ack to the
-// node implementation).
-//
-// Destination policy: manual-take. The <Node> renders a button that
-// arms on `loaded` and clicks to `take()`. No animation completion
-// callback wired; the wire's animation runs and rests at the
-// destination end until the user clicks.
+// TopologyRoot: orchestrator for the new substrate. Builds the wire
+// and node tree from an RTopologySpec, runs useTickDriver across all
+// of them, and exposes halt/resume/step controls.
 
-import { useCallback, useEffect, useMemo, useRef, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Wire, type WireHandle } from "./Wire";
-import { Node, type NodeHandle } from "./Node";
+import { type NodeHandle } from "./Node";
 import { useTickDriver } from "./useTickDriver";
-
-function useEmittingSource(
-  wireRef: RefObject<WireHandle | null>,
-  initialQueue: unknown[],
-) {
-  const remainingRef = useRef([...initialQueue]);
-
-  useEffect(() => {
-    const handle = wireRef.current;
-    if (!handle) return;
-    return handle.subscribePhase((p) => {
-      if (p.kind === "taken") handle.ack();
-    });
-  }, [wireRef]);
-
-  return useCallback(() => {
-    const handle = wireRef.current;
-    if (!handle) return;
-    if (handle.phase.kind !== "empty") return;
-    if (remainingRef.current.length === 0) return;
-    handle.load(remainingRef.current.shift());
-  }, [wireRef]);
-}
+import type { RTopologySpec, RNodeSpec } from "./spec";
+import { InputBody, ReadGateBody } from "./node-kinds";
 
 export interface TopologyRootProps {
-  initialQueue?: unknown[];
+  spec: RTopologySpec;
   haltedOnMount?: boolean;
 }
 
-export function TopologyRoot({
-  initialQueue = [1, 2, 3],
-  haltedOnMount = false,
-}: TopologyRootProps) {
-  const wireRef = useRef<WireHandle | null>(null);
-  const sourceRef = useRef<NodeHandle | null>(null);
-  const destRef = useRef<NodeHandle | null>(null);
+function findWireForInput(
+  spec: RTopologySpec, nodeId: string, port: string,
+): string | undefined {
+  return spec.wires.find((w) => w.target.nodeId === nodeId && w.target.port === port)?.id;
+}
 
-  const sourceRun = useEmittingSource(wireRef, initialQueue);
+function findWireForOutput(
+  spec: RTopologySpec, nodeId: string, port: string,
+): string | undefined {
+  return spec.wires.find((w) => w.source.nodeId === nodeId && w.source.port === port)?.id;
+}
 
-  const nodeRefs = useMemo(() => [sourceRef, destRef], []);
-  const wireRefs = useMemo(() => [wireRef], []);
-  const driver = useTickDriver({ nodeRefs, wireRefs });
+function NodeView({
+  node, spec, nodeRef, wireRefs,
+}: {
+  node: RNodeSpec;
+  spec: RTopologySpec;
+  nodeRef: RefObject<NodeHandle | null>;
+  wireRefs: Map<string, RefObject<WireHandle | null>>;
+}) {
+  if (node.kind === "input") {
+    const outWireId = findWireForOutput(spec, node.id, "out");
+    const outWireRef = outWireId
+      ? wireRefs.get(outWireId)!
+      : { current: null } as RefObject<WireHandle | null>;
+    return (
+      <InputBody
+        nodeRef={nodeRef}
+        outWireRef={outWireRef}
+        initialQueue={node.props?.queue ?? []}
+      />
+    );
+  }
+  if (node.kind === "readgate") {
+    const inWireId = findWireForInput(spec, node.id, "in0");
+    const inWireRef = inWireId
+      ? wireRefs.get(inWireId)!
+      : { current: null } as RefObject<WireHandle | null>;
+    return <ReadGateBody nodeRef={nodeRef} inWireRef={inWireRef} />;
+  }
+  return null;
+}
+
+export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
+  // Stable refs per id, recreated only when ids change.
+  const wireRefsRef = useRef<Map<string, RefObject<WireHandle | null>>>(new Map());
+  const nodeRefsRef = useRef<Map<string, RefObject<NodeHandle | null>>>(new Map());
+
+  const wireRefs = useMemo(() => {
+    const next = new Map<string, RefObject<WireHandle | null>>();
+    for (const w of spec.wires) {
+      next.set(w.id, wireRefsRef.current.get(w.id) ?? { current: null });
+    }
+    wireRefsRef.current = next;
+    return next;
+  }, [spec.wires]);
+
+  const nodeRefs = useMemo(() => {
+    const next = new Map<string, RefObject<NodeHandle | null>>();
+    for (const n of spec.nodes) {
+      next.set(n.id, nodeRefsRef.current.get(n.id) ?? { current: null });
+    }
+    nodeRefsRef.current = next;
+    return next;
+  }, [spec.nodes]);
+
+  const driverConfig = useMemo(() => ({
+    nodeRefs: Array.from(nodeRefs.values()),
+    wireRefs: Array.from(wireRefs.values()),
+  }), [nodeRefs, wireRefs]);
+  const driver = useTickDriver(driverConfig);
 
   useEffect(() => {
     if (haltedOnMount) driver.halt();
-    // intentional: one-shot mount behavior
+    // one-shot mount behavior
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -75,21 +101,24 @@ export function TopologyRoot({
         <span data-testid="tick">tick: {driver.tick}</span>
         <span data-testid="halted">{driver.halted ? "halted" : "running"}</span>
       </div>
-      <svg width={400} height={160} data-testid="topology-svg">
-        <g data-testid="source-node">
-          <rect x={20} y={60} width={60} height={40} fill="#eee" stroke="#333" />
-          <text x={50} y={84} textAnchor="middle">src</text>
-          <Node ref={sourceRef} onRun={sourceRun} />
-        </g>
-        <g transform="translate(330, 80)" data-testid="dest-node">
-          <rect x={-30} y={-20} width={60} height={40} fill="#eee" stroke="#333" />
-          <text x={0} y={4} textAnchor="middle">dst</text>
-          <Node
-            ref={destRef}
-            inputs={[{ id: "in", wireRef, manualTake: true }]}
+      <svg width={600} height={200} data-testid="topology-svg">
+        {spec.nodes.map((node) => (
+          <NodeView
+            key={node.id}
+            node={node}
+            spec={spec}
+            nodeRef={nodeRefs.get(node.id)!}
+            wireRefs={wireRefs}
           />
-        </g>
-        <Wire ref={wireRef} pathD="M 80 80 L 300 80" arcLength={220} />
+        ))}
+        {spec.wires.map((wire) => (
+          <Wire
+            key={wire.id}
+            ref={wireRefs.get(wire.id)!}
+            pathD={wire.pathD}
+            arcLength={wire.arcLength}
+          />
+        ))}
       </svg>
     </div>
   );
