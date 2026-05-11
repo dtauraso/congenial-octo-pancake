@@ -18,7 +18,7 @@ export const EDGE_KINDS: readonly EdgeKind[] = [
   "pointer", "and-out", "edge-connection", "inhibit-in", "any",
 ];
 
-export type Port = { name: string; kind: EdgeKind };
+export type Port = { name: string; kind: EdgeKind; required?: boolean };
 export type StateValue = string | number;
 export type EdgeRoute = "line" | "snake" | "below";
 export type ArrowStyle = "filled" | "open";

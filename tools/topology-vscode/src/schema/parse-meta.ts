@@ -47,6 +47,7 @@ export function parseNote(v: unknown, path: string): Note {
 export function validatePorts(s: Spec): void {
   const byId = new Map(s.nodes.map((n) => [n.id, n]));
   const issues: string[] = [];
+  const wiredInputs = new Map<string, Set<string>>();
   for (const e of s.edges) {
     const src = byId.get(e.source);
     const dst = byId.get(e.target);
@@ -59,6 +60,23 @@ export function validatePorts(s: Spec): void {
     }
     if (dstDef && e.targetHandle && !dstDef.inputs.some((p) => p.name === e.targetHandle)) {
       issues.push(`edge ${e.id}: ${dst.type} has no input port "${e.targetHandle}"`);
+    }
+    if (e.targetHandle) {
+      let set = wiredInputs.get(e.target);
+      if (!set) { set = new Set(); wiredInputs.set(e.target, set); }
+      set.add(e.targetHandle);
+    }
+  }
+  for (const n of s.nodes) {
+    const def = NODE_TYPES[n.type];
+    if (!def) continue;
+    const wired = wiredInputs.get(n.id) ?? new Set<string>();
+    for (const p of def.inputs) {
+      if (p.required && !wired.has(p.name)) {
+        issues.push(
+          `node ${n.id} (${n.type}): required input "${p.name}" has no incoming edge`,
+        );
+      }
     }
   }
   if (issues.length) throw new ParseError(issues.join("\n"));
