@@ -4,7 +4,6 @@ import "./webview.css";
 import App from "./rf/app";
 import { flushSave, flushViewSave, setTopogenStatus, vscode } from "./save";
 import { parseHostToWebview } from "../messages";
-import { setFrame } from "./frame-store";
 import { getSpec, setDimmed, setRunStatus } from "./state";
 import { SubstrateProvider } from "./substrate-r/registry";
 
@@ -95,8 +94,6 @@ window.addEventListener("message", (e) => {
     // becoming hidden / about to dispose).
     flushSave();
     flushViewSave();
-  } else if (msg.type === "frame") {
-    setFrame(msg);
   }
   // view-load is fully handled inside App's message effect now that the
   // panels read their state from the zustand store directly.
