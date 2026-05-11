@@ -9,8 +9,8 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — **start here**
-     for the proof-out + merge, mid-flight on `task/remove-legacy-runtimes`.
-     Steps 2–6 landed; steps 7–8 remain.
+     for the merge, on `task/remove-legacy-runtimes`.
+     Steps 2–7 landed; step 8 (merge, sign-off required) remains.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — system 3 model: forever-loops, line-level pause, events.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
@@ -18,29 +18,27 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-10, fifty-seventh session):
-  Active branch: `task/remove-legacy-runtimes`. Step 7 mid-proof-out;
-  step 8 (merge) remains.
+State at handoff (2026-05-10, fifty-eighth session):
+  Active branch: `task/remove-legacy-runtimes`. Step 7 done; step 8
+  (merge to main, sign-off required) remains.
 
-  Latest commit `2e7e9a6` — removed `topology.frameRendererEnabled`
-  flag. Legacy ticked renderer was gone since step 5, but the flag
-  still defaulted off, so play/pause/step posted to an undefined
-  handle and silently no-op'd. Frame renderer now always runs.
+  Latest commits:
+  - `1a572da` — renderer adapter: pause-gate the pump. Bug surfaced
+    during proof-out: substrate is timing-free, adapter owns pacing
+    via queued events. Without a pause gate, step() flooded frames
+    and pause() had no visible effect. Adapter now accepts a
+    `PauseSignal` and gates pump() on it. Contract test added.
+  - `b67f189` — drop legacy `runtime: "ticked"` from topology.json;
+    extend Input seed to 10 values for observable proof-out.
 
-  Proof-out state: F5 dev host + Cmd-R produced a brief mid-canvas
-  pulse then nothing. Cause: working-tree `topology.view.json` is
-  2 nodes / 0 edges, so the adapter emitted the initial state and
-  had nothing to advance. Pipeline is live; topology is empty. User
-  needs to wire nodes + seed a source to actually proof-out.
+  Proof-out (step 7): user-confirmed pulses animate on the
+  in08→readGate1 edge, pause halts the pump, step advances exactly
+  one frame, resume drains.
 
-  **Gates clean:** tsc ✓, build ✓, vitest 37/37 files /
-  189/189 tests pass.
+  **Gates clean:** tsc ✓, build ✓, vitest 38 files / 193 tests pass.
 
-  **Steps remaining (see handoff-next-task.md):**
-  7. Finish proof-out: wire nodes in editor (or load fixture with
-     edges + seed), confirm pulses animate, pause halts at line
-     level, step advances one event. (User-driven.)
-  8. Refresh handoff and merge to main (sign-off required).
+  **Step remaining (see handoff-next-task.md):**
+  8. Merge to main (sign-off required). Reference branches retained.
 
   **Model:** `handoff-substrate-iteration.md`. Forever-loops per
   node and per wire; backpressure coordination; line-level pause;

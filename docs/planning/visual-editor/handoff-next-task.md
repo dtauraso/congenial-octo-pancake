@@ -1,8 +1,7 @@
 # Handoff — Next task (START HERE)
 
-**State:** `task/remove-legacy-runtimes`. Steps 2–6 landed; step 7
-mid-proof-out (pipeline confirmed live, needs non-empty topology);
-step 8 (merge) remains.
+**State:** `task/remove-legacy-runtimes`. Steps 2–7 landed; step 8
+(merge to main, sign-off required) remains.
 
 ## Commits landed
 
@@ -10,34 +9,39 @@ step 8 (merge) remains.
   removed (-3320 LOC).
 - `2dd03f9` — step 6: delete tests for removed legacy runtimes. 53
   files (-2781 LOC).
-- `2e7e9a6` — remove `topology.frameRendererEnabled` flag. With legacy
-  ticked renderer deleted, flag-off meant play/pause/step posted to an
-  undefined handle and silently no-op'd. Frame renderer now always
-  runs; vscode config entry deleted; stale "legacy renderer keeps
-  serving" comments removed.
+- `2e7e9a6` — remove `topology.frameRendererEnabled` flag. Frame
+  renderer now always runs.
+- `1a572da` — renderer adapter: pause-gate the pump. Without it,
+  `step()` flooded frames and `pause()` had no visible effect after
+  the substrate had already buffered events. Wires `PauseController`
+  through `AdapterOptions`; pump gates on it. New contract test at
+  `test/contracts/run-frames-controls.test.ts` covers pause/step/
+  resume semantics.
+- `b67f189` — drop legacy `runtime: "ticked"` from `topology.json`;
+  extend Input seed from `[0,1]` → 10-element sequence so proof-out
+  has enough activity to observe pause/step.
 
-**Gates after 2e7e9a6:** tsc ✓, build ✓, vitest 37/37 files /
-189/189 tests pass.
+**Gates after b67f189:** tsc ✓, build ✓, vitest 38 files / 193 tests
+pass.
 
-## Proof-out status (step 7, mid-flight)
+## Proof-out status (step 7, DONE)
 
 - F5 dev host launches, topology tab opens — ✓
-- Play/pause/step buttons render and dispatch — ✓
-- After `2e7e9a6` + Cmd-R: a brief pulse rendered mid-canvas on
-  reload, then nothing. Investigated: `topology.view.json` is 2
-  nodes / 0 edges, so the adapter emitted the initial state and had
-  nothing to advance. Pipeline isn't broken — the topology is empty.
-- **Outstanding:** load a non-empty topology (≥1 edge + a seeded
-  source via `init` in node data) and confirm pulses animate, pause
-  halts at line level, step advances one event.
+- Edge `in08.out → readGate1.chainIn` renders, pulses animate — ✓
+- Pause halts the pump mid-stream — ✓ (user-confirmed)
+- Step advances exactly one frame, then re-pauses — ✓ (user-confirmed
+  + contract test)
+- Resume drains queued frames — ✓
+
+Bug surfaced + fixed during proof-out: the renderer adapter was not
+pause-aware. Substrate is timing-free per MODEL.md; the adapter is
+the pacing layer. Without a pause gate on the adapter pump, queued
+events drained on next tick regardless of pause state. Fix in
+`1a572da`.
 
 ## Remaining steps
 
-7. **Finish proof-out (user-driven).** User wires the two nodes in
-   the editor (or loads a fixture topology with edges + seed), saves,
-   confirms pulses animate, pause halts at line level, step advances
-   one event. Assistant cannot drive the UI.
-8. **Refresh handoff and merge to main** (requires sign-off).
+8. **Merge to main** (requires sign-off).
    `git checkout main && git merge --no-ff task/remove-legacy-runtimes`,
    then push. Reference branches retained — do not delete on merge.
 
@@ -54,9 +58,10 @@ recorder. `sim/seeds.ts` and `sim/trace.ts` (type-only) survive.
 ## Refuse cheap alternatives
 
 Per MODEL.md: refuse keeping legacy as museum; refuse `!frameMode &&`
-guards; refuse preserving ticked sidecar. The deletion sweep is done;
-do not reintroduce. Also: do not reintroduce the renderer-enabled
-flag — there is nothing to fall back to.
+guards; refuse preserving ticked sidecar. Also: do not reintroduce
+the renderer-enabled flag — there is nothing to fall back to. Do
+not move pacing into the substrate to "fix" pause; the adapter owns
+pacing and now owns pause-gating too.
 
 ## ALWAYS clause
 
