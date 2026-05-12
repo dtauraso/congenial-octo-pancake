@@ -1,0 +1,231 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" font-weight="400" font-family="ui-sans-serif, system-ui, sans-serif">
+
+  <metadata>
+  {
+    "diagram": "06-q1-tick-driver",
+    "title": "Q1 — Tick-driver shape: Option A (central walker) vs Option B (self-scheduling nodes)",
+    "nodes": [
+      {"id": "driver-a",  "role": "tick-driver", "half": "left",  "option": "A"},
+      {"id": "node-a0",   "role": "node",        "half": "left",  "option": "A", "index": 0},
+      {"id": "node-a1",   "role": "node",        "half": "left",  "option": "A", "index": 1},
+      {"id": "node-a2",   "role": "node",        "half": "left",  "option": "A", "index": 2},
+      {"id": "node-b0",   "role": "node",        "half": "right", "option": "B", "index": 0},
+      {"id": "node-b1",   "role": "node",        "half": "right", "option": "B", "index": 1},
+      {"id": "node-b2",   "role": "node",        "half": "right", "option": "B", "index": 2}
+    ],
+    "edges": [
+      {"id": "driver-to-a0", "source": "driver-a", "target": "node-a0", "kind": "signal"},
+      {"id": "driver-to-a1", "source": "driver-a", "target": "node-a1", "kind": "signal"},
+      {"id": "driver-to-a2", "source": "driver-a", "target": "node-a2", "kind": "signal"},
+      {"id": "self-b0", "source": "node-b0", "target": "node-b0", "kind": "self-loop"},
+      {"id": "self-b1", "source": "node-b1", "target": "node-b1", "kind": "self-loop"},
+      {"id": "self-b2", "source": "node-b2", "target": "node-b2", "kind": "self-loop"}
+    ]
+  }
+  </metadata>
+
+  <desc>
+Option A (left)  — useTickDriver at top calls run() on each node per round; ordinal round-N to round-N+1 progression
+Option B (right) — no central driver; each node has a self-loop subscription and fires reactively when precondition holds
+driver-a         — central walker (useTickDriver); dispatches run() arrows down to node row
+node-a0..a2      — nodes polled every round by the walker
+node-b0..b2      — nodes with local slot subscriptions; fire independently on slot change
+divider          — dashed vertical; separates Option A from Option B
+  </desc>
+
+  <style>
+    svg { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 400; }
+
+    .diagram-bg      { fill: #fafafa; }
+    .title-text      { font-size: 16px; font-weight: bold; fill: #222; text-anchor: middle; }
+
+    .shape-driver    { fill: #e3f2fd; stroke: #1565c0; stroke-width: 2; }
+    .shape-node-a    { fill: #fff3e0; stroke: #e65100; stroke-width: 2; }
+    .shape-node-b    { fill: #fff3e0; stroke: #e65100; stroke-width: 2; }
+
+    .signal          { stroke: #7b1fa2; stroke-width: 1.5; fill: none; marker-end: url(#arrow-magenta); }
+    .self-loop       { stroke: #00838f; stroke-width: 1.5; fill: none; marker-end: url(#arrow-teal); stroke-dasharray: 4 2; }
+    .round-arrow     { stroke: #1565c0; stroke-width: 1.5; fill: none; marker-end: url(#arrow-indigo); }
+
+    .node-title      { font-size: 12px; text-anchor: middle; }
+    .node-sublabel   { font-size: 10px; text-anchor: middle; }
+
+    .option-label    { font-size: 14px; font-weight: bold; text-anchor: middle; }
+    .option-label-a  { fill: #1b5e20; }
+    .option-label-b  { fill: #b71c1c; }
+    .option-sublabel { font-size: 11px; text-anchor: middle; fill: #555; }
+
+    .round-label     { font-size: 10px; text-anchor: middle; fill: #1565c0; }
+    .pro-label       { font-size: 10px; fill: #1b5e20; }
+    .con-label       { font-size: 10px; fill: #b71c1c; }
+
+    .divider         { stroke: #aaa; stroke-width: 1; stroke-dasharray: 6 4; fill: none; }
+
+    .lean-note-bg    { fill: #e8f5e9; stroke: #2e7d32; stroke-width: 1; }
+    .lean-note-text  { fill: #1b5e20; font-size: 11px; text-anchor: middle; }
+
+    .legend-bg       { fill: #f0f0f0; stroke: #ccc; stroke-width: 1; }
+    .legend-text     { font-size: 11px; fill: #444; }
+
+    .sub-glyph       { font-size: 13px; text-anchor: middle; fill: #00838f; }
+  </style>
+
+  <defs>
+    <marker id="arrow-magenta" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#7b1fa2"/>
+    </marker>
+    <marker id="arrow-indigo" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#283593"/>
+    </marker>
+    <marker id="arrow-teal" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#00838f"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="500" rx="8" class="diagram-bg"/>
+
+  <!-- Title -->
+  <text x="450" y="28" class="title-text" font-weight="bold" fill="#222" stroke="none">Q1 — Tick-Driver Shape: Option A vs Option B</text>
+  <text x="450" y="46" class="node-sublabel" font-weight="300" fill="#555" stroke="none">MODEL-revised-draft.md § Open Question Q1</text>
+
+  <!-- Divider -->
+  <line x1="450" y1="56" x2="450" y2="420" class="divider"/>
+
+  <!-- ═══════ LEFT — OPTION A: central walker ═══════ -->
+  <text x="225" y="72" class="option-label option-label-a" font-weight="bold" fill="#1b5e20" stroke="none">Option A (tentative lean)</text>
+  <text x="225" y="88" class="option-sublabel" fill="#555" stroke="none">Central walker — useTickDriver calls run() each round</text>
+
+  <!-- driver-a -->
+  <g id="driver-a" data-role="tick-driver">
+    <rect x="130" y="105" width="190" height="40" rx="6" class="shape-driver"/>
+    <text x="225" y="121" class="node-title" font-weight="100" fill="#1565c0" stroke="none">useTickDriver</text>
+    <text x="225" y="136" class="node-sublabel" font-weight="100" fill="#555" stroke="none">walks nodes, calls run()</text>
+  </g>
+
+  <!-- Round progression annotation -->
+  <text x="225" y="158" class="round-label" font-weight="300" fill="#1565c0" stroke="none">round N</text>
+  <line x1="225" y1="160" x2="225" y2="174" class="round-arrow"/>
+  <text x="225" y="186" class="round-label" font-weight="300" fill="#1565c0" stroke="none">round N+1</text>
+
+  <!-- node-a0 -->
+  <g id="node-a0" data-role="node" data-index="0">
+    <rect x="50" y="200" width="80" height="36" rx="6" class="shape-node-a"/>
+    <text x="90" y="214" class="node-title" font-weight="100" fill="#e65100" stroke="none">node 0</text>
+    <text x="90" y="228" class="node-sublabel" font-weight="100" fill="#555" stroke="none">run()</text>
+  </g>
+
+  <!-- node-a1 -->
+  <g id="node-a1" data-role="node" data-index="1">
+    <rect x="185" y="200" width="80" height="36" rx="6" class="shape-node-a"/>
+    <text x="225" y="214" class="node-title" font-weight="100" fill="#e65100" stroke="none">node 1</text>
+    <text x="225" y="228" class="node-sublabel" font-weight="100" fill="#555" stroke="none">run()</text>
+  </g>
+
+  <!-- node-a2 -->
+  <g id="node-a2" data-role="node" data-index="2">
+    <rect x="320" y="200" width="80" height="36" rx="6" class="shape-node-a"/>
+    <text x="360" y="214" class="node-title" font-weight="100" fill="#e65100" stroke="none">node 2</text>
+    <text x="360" y="228" class="node-sublabel" font-weight="100" fill="#555" stroke="none">run()</text>
+  </g>
+
+  <!-- driver -> node-a0 -->
+  <g id="edge-driver-to-a0" data-role="edge" class="signal">
+    <path d="M180,145 L90,200" class="signal"/>
+  </g>
+  <!-- driver -> node-a1 -->
+  <g id="edge-driver-to-a1" data-role="edge" class="signal">
+    <line x1="225" y1="145" x2="225" y2="200" class="signal"/>
+  </g>
+  <!-- driver -> node-a2 -->
+  <g id="edge-driver-to-a2" data-role="edge" class="signal">
+    <path d="M270,145 L360,200" class="signal"/>
+  </g>
+
+  <!-- run() label on arrows -->
+  <text x="140" y="180" class="node-sublabel" font-weight="300" fill="#7b1fa2" stroke="none">run()</text>
+  <text x="237" y="178" class="node-sublabel" font-weight="300" fill="#7b1fa2" stroke="none">run()</text>
+  <text x="325" y="178" class="node-sublabel" font-weight="300" fill="#7b1fa2" stroke="none">run()</text>
+
+  <!-- Pros/Cons A -->
+  <text x="55" y="258" class="pro-label" font-weight="300" fill="#1b5e20" stroke="none">&#x2713; Tick ordinality stays crisp (round N, N+1)</text>
+  <text x="55" y="272" class="pro-label" font-weight="300" fill="#1b5e20" stroke="none">&#x2713; Halt/step semantics unchanged</text>
+  <text x="55" y="286" class="pro-label" font-weight="300" fill="#1b5e20" stroke="none">&#x2713; Ordering deterministic, visible in one place</text>
+  <text x="55" y="306" class="con-label" font-weight="300" fill="#b71c1c" stroke="none">&#x2717; Nodes polled even when nothing changed</text>
+  <text x="55" y="320" class="con-label" font-weight="300" fill="#b71c1c" stroke="none">&#x2717; Round-close condition slightly richer than today</text>
+
+  <!-- ═══════ RIGHT — OPTION B: self-scheduling ═══════ -->
+  <text x="675" y="72" class="option-label option-label-b" font-weight="bold" fill="#b71c1c" stroke="none">Option B</text>
+  <text x="675" y="88" class="option-sublabel" fill="#555" stroke="none">Self-scheduling — each node fires on its own slot change</text>
+
+  <!-- node-b0 -->
+  <g id="node-b0" data-role="node" data-index="0">
+    <rect x="500" y="130" width="90" height="40" rx="6" class="shape-node-b"/>
+    <text x="545" y="146" class="node-title" font-weight="100" fill="#e65100" stroke="none">node 0</text>
+    <text x="545" y="160" class="node-sublabel" font-weight="100" fill="#555" stroke="none">slot sub</text>
+  </g>
+
+  <!-- node-b1 -->
+  <g id="node-b1" data-role="node" data-index="1">
+    <rect x="640" y="130" width="90" height="40" rx="6" class="shape-node-b"/>
+    <text x="685" y="146" class="node-title" font-weight="100" fill="#e65100" stroke="none">node 1</text>
+    <text x="685" y="160" class="node-sublabel" font-weight="100" fill="#555" stroke="none">slot sub</text>
+  </g>
+
+  <!-- node-b2 -->
+  <g id="node-b2" data-role="node" data-index="2">
+    <rect x="780" y="130" width="90" height="40" rx="6" class="shape-node-b"/>
+    <text x="825" y="146" class="node-title" font-weight="100" fill="#e65100" stroke="none">node 2</text>
+    <text x="825" y="160" class="node-sublabel" font-weight="100" fill="#555" stroke="none">slot sub</text>
+  </g>
+
+  <!-- Self-loop glyphs (dashed arcs curving back to same node) -->
+  <!-- node-b0 self-loop -->
+  <g id="edge-self-b0" data-role="edge" class="self-loop">
+    <path d="M545,130 C545,100 590,100 590,130 L590,130" class="self-loop"/>
+  </g>
+  <text x="567" y="108" class="node-sublabel" font-weight="300" fill="#00838f" stroke="none">&#x21ba;</text>
+
+  <!-- node-b1 self-loop -->
+  <g id="edge-self-b1" data-role="edge" class="self-loop">
+    <path d="M685,130 C685,100 730,100 730,130 L730,130" class="self-loop"/>
+  </g>
+  <text x="707" y="108" class="node-sublabel" font-weight="300" fill="#00838f" stroke="none">&#x21ba;</text>
+
+  <!-- node-b2 self-loop -->
+  <g id="edge-self-b2" data-role="edge" class="self-loop">
+    <path d="M825,130 C825,100 870,100 870,130 L870,130" class="self-loop"/>
+  </g>
+  <text x="847" y="108" class="node-sublabel" font-weight="300" fill="#00838f" stroke="none">&#x21ba;</text>
+
+  <!-- "no driver" annotation -->
+  <text x="675" y="195" class="option-sublabel" fill="#888" stroke="none">no central driver</text>
+  <text x="675" y="210" class="node-sublabel" font-weight="300" fill="#00838f" stroke="none">each node fires reactively</text>
+  <text x="675" y="224" class="node-sublabel" font-weight="300" fill="#00838f" stroke="none">when slot precondition holds</text>
+
+  <!-- Pros/Cons B -->
+  <text x="465" y="258" class="pro-label" font-weight="300" fill="#1b5e20" stroke="none">&#x2713; Nothing happens when nothing changes</text>
+  <text x="465" y="272" class="pro-label" font-weight="300" fill="#1b5e20" stroke="none">&#x2713; Matches topology-IS-logic thesis</text>
+  <text x="465" y="286" class="pro-label" font-weight="300" fill="#1b5e20" stroke="none">&#x2713; Less driver code</text>
+  <text x="465" y="306" class="con-label" font-weight="300" fill="#b71c1c" stroke="none">&#x2717; Tick ordinality fuzzy — what defines round N?</text>
+  <text x="465" y="320" class="con-label" font-weight="300" fill="#b71c1c" stroke="none">&#x2717; Halt/step harder (pause all subscriptions)</text>
+  <text x="465" y="334" class="con-label" font-weight="300" fill="#b71c1c" stroke="none">&#x2717; Reentrancy risk balloons (chain fires in one turn)</text>
+
+  <!-- Lean annotation -->
+  <rect x="80" y="352" width="740" height="44" rx="4" class="lean-note-bg"/>
+  <text x="450" y="370" class="lean-note-text" font-weight="300" fill="#1b5e20" stroke="none">Tentative lean: Option A. Keep the walker. Self-scheduling sounds aesthetic but the loss of ordinal</text>
+  <text x="450" y="386" class="lean-note-text" font-weight="300" fill="#1b5e20" stroke="none">tick semantics is a real cost, and MODEL.md's existing tick discipline is load-bearing. (MODEL-revised-draft.md)</text>
+
+  <!-- ═══════ LEGEND ═══════ -->
+  <g id="legend" data-role="legend">
+    <rect x="20" y="412" width="860" height="70" rx="4" class="legend-bg"/>
+    <text x="40" y="430" class="legend-text" font-weight="bold" fill="#333" stroke="none">Legend:</text>
+    <line x1="100" y1="428" x2="140" y2="428" stroke="#7b1fa2" stroke-width="1.5" fill="none" marker-end="url(#arrow-magenta)"/>
+    <text x="148" y="432" class="legend-text" fill="#7b1fa2" stroke="none">run() call from walker (Option A)</text>
+    <line x1="380" y1="428" x2="420" y2="428" stroke="#00838f" stroke-width="1.5" stroke-dasharray="4 2" fill="none" marker-end="url(#arrow-teal)"/>
+    <text x="428" y="432" class="legend-text" fill="#00838f" stroke="none">self-loop subscription glyph (Option B) — fires reactively</text>
+    <text x="100" y="452" class="legend-text" fill="#1565c0" stroke="none">useTickDriver (#e3f2fd / #1565c0) — central walker box</text>
+    <text x="100" y="468" class="legend-text" fill="#e65100" stroke="none">node (#fff3e0 / #e65100) — same style both options; only activation mechanism differs</text>
+  </g>
+
+</svg>

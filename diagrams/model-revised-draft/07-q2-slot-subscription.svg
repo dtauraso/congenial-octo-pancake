@@ -1,0 +1,221 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" font-weight="400" font-family="ui-sans-serif, system-ui, sans-serif">
+
+  <metadata>
+  {
+    "diagram": "07-q2-slot-subscription",
+    "title": "Q2 — Slot subscription shape: Option A (per-slot listeners) vs Option B (single revision counter)",
+    "nodes": [
+      {"id": "node-a",    "role": "destination", "half": "left",  "option": "A"},
+      {"id": "rule-a",    "role": "firing-rule",  "half": "left",  "option": "A"},
+      {"id": "node-b",    "role": "destination", "half": "right", "option": "B"},
+      {"id": "counter-b", "role": "revision-counter", "half": "right", "option": "B"},
+      {"id": "rule-b",    "role": "firing-rule",  "half": "right", "option": "B"}
+    ],
+    "edges": [
+      {"id": "slot-a0-to-rule", "source": "node-a",    "target": "rule-a",    "kind": "per-slot-listener"},
+      {"id": "slot-a1-to-rule", "source": "node-a",    "target": "rule-a",    "kind": "per-slot-listener"},
+      {"id": "slot-a2-to-rule", "source": "node-a",    "target": "rule-a",    "kind": "per-slot-listener"},
+      {"id": "slots-to-counter","source": "node-b",    "target": "counter-b", "kind": "slot-change"},
+      {"id": "counter-to-rule", "source": "counter-b", "target": "rule-b",    "kind": "single-listener"}
+    ]
+  }
+  </metadata>
+
+  <desc>
+Option A (left)  — N per-slot listeners; each slot has its own subscription arrow to the firing rule
+Option B (right) — single revision counter on the node; any slot change increments it; one listener to firing rule
+node-a / node-b  — destination nodes with N input slots (shown as green squares on left face)
+rule-a / rule-b  — firing rule that re-evaluates when notified
+counter-b        — single integer counter incremented on any slot change; firing rule subscribes once to it
+divider          — dashed vertical; separates Option A from Option B
+  </desc>
+
+  <style>
+    svg { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 400; }
+
+    .diagram-bg        { fill: #fafafa; }
+    .title-text        { font-size: 16px; font-weight: bold; fill: #222; text-anchor: middle; }
+
+    .shape-destination { fill: #e8f5e9; stroke: #2e7d32; stroke-width: 2; }
+    .shape-rule        { fill: #f3e5f5; stroke: #7b1fa2; stroke-width: 2; }
+    .shape-counter     { fill: #e3f2fd; stroke: #1565c0; stroke-width: 2; }
+
+    .slot-filled       { fill: #2e7d32; }
+
+    .listener-a  { stroke: #00838f; stroke-width: 1.5; fill: none; marker-end: url(#arrow-teal); }
+    .listener-b  { stroke: #1565c0; stroke-width: 1.5; fill: none; marker-end: url(#arrow-indigo); }
+    .slot-feed   { stroke: #2e7d32; stroke-width: 1.5; fill: none; marker-end: url(#arrow-green); }
+
+    .node-title    { font-size: 12px; text-anchor: middle; }
+    .node-sublabel { font-size: 10px; text-anchor: middle; }
+
+    .option-label    { font-size: 14px; font-weight: bold; text-anchor: middle; }
+    .option-label-a  { fill: #b71c1c; }
+    .option-label-b  { fill: #1b5e20; }
+    .option-sublabel { font-size: 11px; text-anchor: middle; fill: #555; }
+
+    .pro-label  { font-size: 10px; fill: #1b5e20; }
+    .con-label  { font-size: 10px; fill: #b71c1c; }
+
+    .slot-label { font-size: 10px; text-anchor: start; }
+
+    .divider         { stroke: #aaa; stroke-width: 1; stroke-dasharray: 6 4; fill: none; }
+    .lean-note-bg    { fill: #e8f5e9; stroke: #2e7d32; stroke-width: 1; }
+    .lean-note-text  { fill: #1b5e20; font-size: 11px; text-anchor: middle; }
+
+    .legend-bg   { fill: #f0f0f0; stroke: #ccc; stroke-width: 1; }
+    .legend-text { font-size: 11px; fill: #444; }
+  </style>
+
+  <defs>
+    <marker id="arrow-teal" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#00838f"/>
+    </marker>
+    <marker id="arrow-indigo" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#1565c0"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#2e7d32"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="500" rx="8" class="diagram-bg"/>
+
+  <!-- Title -->
+  <text x="450" y="28" class="title-text" font-weight="bold" fill="#222" stroke="none">Q2 — Slot Subscription Shape: Option A vs Option B</text>
+  <text x="450" y="46" class="node-sublabel" font-weight="300" fill="#555" stroke="none">MODEL-revised-draft.md § Open Question Q2</text>
+
+  <!-- Divider -->
+  <line x1="450" y1="56" x2="450" y2="420" class="divider"/>
+
+  <!-- ═══════ LEFT — OPTION A: per-slot listeners ═══════ -->
+  <text x="225" y="72" class="option-label option-label-a" font-weight="bold" fill="#b71c1c" stroke="none">Option A</text>
+  <text x="225" y="88" class="option-sublabel" fill="#555" stroke="none">Per-slot listeners — N subscriptions per node</text>
+
+  <!-- node-a -->
+  <g id="node-a" data-role="destination">
+    <rect x="60" y="110" width="120" height="100" rx="6" class="shape-destination"/>
+    <text x="120" y="130" class="node-title" font-weight="100" fill="#2e7d32" stroke="none">destination</text>
+    <text x="120" y="145" class="node-sublabel" font-weight="100" fill="#555" stroke="none">N input slots</text>
+    <!-- slot squares on right face -->
+    <rect x="172" y="125" width="12" height="12" rx="2" class="slot-filled"/>
+    <rect x="172" y="148" width="12" height="12" rx="2" class="slot-filled"/>
+    <rect x="172" y="171" width="12" height="12" rx="2" class="slot-filled"/>
+  </g>
+
+  <!-- slot labels -->
+  <text x="188" y="135" class="slot-label" font-weight="300" fill="#2e7d32" stroke="none">slot 0</text>
+  <text x="188" y="158" class="slot-label" font-weight="300" fill="#2e7d32" stroke="none">slot 1</text>
+  <text x="188" y="181" class="slot-label" font-weight="300" fill="#2e7d32" stroke="none">slot N</text>
+
+  <!-- rule-a -->
+  <g id="rule-a" data-role="firing-rule">
+    <rect x="300" y="135" width="110" height="50" rx="6" class="shape-rule"/>
+    <text x="355" y="155" class="node-title" font-weight="100" fill="#7b1fa2" stroke="none">firing rule</text>
+    <text x="355" y="171" class="node-sublabel" font-weight="100" fill="#555" stroke="none">re-evaluates</text>
+  </g>
+
+  <!-- Per-slot listener arrows from each slot to rule-a -->
+  <g id="edge-slot-a0-to-rule" data-role="edge" class="listener-a">
+    <path d="M184,131 L300,148" class="listener-a"/>
+  </g>
+  <g id="edge-slot-a1-to-rule" data-role="edge" class="listener-a">
+    <line x1="184" y1="154" x2="300" y2="160" class="listener-a"/>
+  </g>
+  <g id="edge-slot-a2-to-rule" data-role="edge" class="listener-a">
+    <path d="M184,177 L300,172" class="listener-a"/>
+  </g>
+
+  <!-- listener labels -->
+  <text x="242" y="127" class="node-sublabel" font-weight="300" fill="#00838f" stroke="none">listener 0</text>
+  <text x="242" y="152" class="node-sublabel" font-weight="300" fill="#00838f" stroke="none">listener 1</text>
+  <text x="242" y="177" class="node-sublabel" font-weight="300" fill="#00838f" stroke="none">listener N</text>
+
+  <!-- Pros/Cons A -->
+  <text x="55" y="240" class="pro-label" font-weight="300" fill="#1b5e20" stroke="none">&#x2713; Precise — rule wakes only on relevant slot change</text>
+  <text x="55" y="254" class="pro-label" font-weight="300" fill="#1b5e20" stroke="none">&#x2713; Maps onto fine-grained reactivity patterns</text>
+  <text x="55" y="274" class="con-label" font-weight="300" fill="#b71c1c" stroke="none">&#x2717; N subscriptions per node, more bookkeeping</text>
+  <text x="55" y="288" class="con-label" font-weight="300" fill="#b71c1c" stroke="none">&#x2717; Each listener is its own reentrancy hazard</text>
+  <text x="55" y="302" class="con-label" font-weight="300" fill="#b71c1c" stroke="none">&#x2717; Same shape as Wire.subscribePhase risk, multiplied</text>
+
+  <!-- ═══════ RIGHT — OPTION B: single revision counter ═══════ -->
+  <text x="675" y="72" class="option-label option-label-b" font-weight="bold" fill="#1b5e20" stroke="none">Option B (tentative lean)</text>
+  <text x="675" y="88" class="option-sublabel" fill="#555" stroke="none">Single revision counter — one subscription per node</text>
+
+  <!-- node-b -->
+  <g id="node-b" data-role="destination">
+    <rect x="470" y="110" width="120" height="100" rx="6" class="shape-destination"/>
+    <text x="530" y="130" class="node-title" font-weight="100" fill="#2e7d32" stroke="none">destination</text>
+    <text x="530" y="145" class="node-sublabel" font-weight="100" fill="#555" stroke="none">N input slots</text>
+    <!-- slot squares on right face -->
+    <rect x="582" y="125" width="12" height="12" rx="2" class="slot-filled"/>
+    <rect x="582" y="148" width="12" height="12" rx="2" class="slot-filled"/>
+    <rect x="582" y="171" width="12" height="12" rx="2" class="slot-filled"/>
+  </g>
+
+  <!-- counter-b -->
+  <g id="counter-b" data-role="revision-counter">
+    <rect x="640" y="145" width="90" height="36" rx="6" class="shape-counter"/>
+    <text x="685" y="161" class="node-title" font-weight="100" fill="#1565c0" stroke="none">revision</text>
+    <text x="685" y="175" class="node-sublabel" font-weight="100" fill="#1565c0" stroke="none">counter</text>
+  </g>
+
+  <!-- All three slots feed into the counter (merged) -->
+  <g id="edge-slots-to-counter-0" data-role="edge" class="slot-feed">
+    <path d="M594,131 L640,157" class="slot-feed"/>
+  </g>
+  <g id="edge-slots-to-counter-1" data-role="edge" class="slot-feed">
+    <line x1="594" y1="154" x2="640" y2="163" class="slot-feed"/>
+  </g>
+  <g id="edge-slots-to-counter-2" data-role="edge" class="slot-feed">
+    <path d="M594,177 L640,169" class="slot-feed"/>
+  </g>
+
+  <text x="617" y="148" class="node-sublabel" font-weight="300" fill="#2e7d32" stroke="none">any</text>
+  <text x="617" y="160" class="node-sublabel" font-weight="300" fill="#2e7d32" stroke="none">slot</text>
+  <text x="617" y="172" class="node-sublabel" font-weight="300" fill="#2e7d32" stroke="none">change</text>
+
+  <!-- rule-b -->
+  <g id="rule-b" data-role="firing-rule">
+    <rect x="760" y="145" width="110" height="50" rx="6" class="shape-rule"/>
+    <text x="815" y="165" class="node-title" font-weight="100" fill="#7b1fa2" stroke="none">firing rule</text>
+    <text x="815" y="181" class="node-sublabel" font-weight="100" fill="#555" stroke="none">re-evaluates</text>
+  </g>
+
+  <!-- counter -> rule-b: single listener -->
+  <g id="edge-counter-to-rule" data-role="edge" class="listener-b">
+    <line x1="730" y1="163" x2="760" y2="163" class="listener-b"/>
+  </g>
+  <text x="745" y="156" class="node-sublabel" font-weight="300" fill="#1565c0" stroke="none">1 listener</text>
+
+  <!-- Pros/Cons B -->
+  <text x="465" y="240" class="pro-label" font-weight="300" fill="#1b5e20" stroke="none">&#x2713; One subscription per node, simpler bookkeeping</text>
+  <text x="465" y="254" class="pro-label" font-weight="300" fill="#1b5e20" stroke="none">&#x2713; Easier to bound reentrancy</text>
+  <text x="465" y="268" class="pro-label" font-weight="300" fill="#1b5e20" stroke="none">&#x2713; Easier to debug — log rule re-evals in one place</text>
+  <text x="465" y="288" class="con-label" font-weight="300" fill="#b71c1c" stroke="none">&#x2717; Rule wakes on every slot change, even irrelevant ones</text>
+  <text x="465" y="302" class="con-label" font-weight="300" fill="#b71c1c" stroke="none">&#x2717; Mildly wasteful for nodes with many partly-independent inputs</text>
+  <text x="465" y="316" class="con-label" font-weight="300" fill="#b71c1c" stroke="none">&#x2717; (rule body is cheap; savings of A rarely matter in practice)</text>
+
+  <!-- Lean annotation -->
+  <rect x="80" y="340" width="740" height="44" rx="4" class="lean-note-bg"/>
+  <text x="450" y="358" class="lean-note-text" font-weight="300" fill="#1b5e20" stroke="none">Tentative lean: Option B. Single counter. The reentrancy and debuggability wins are concrete;</text>
+  <text x="450" y="374" class="lean-note-text" font-weight="300" fill="#1b5e20" stroke="none">the precision loss is hypothetical. Rule body is cheap and extra wakes are benign. (MODEL-revised-draft.md)</text>
+
+  <!-- ═══════ LEGEND ═══════ -->
+  <g id="legend" data-role="legend">
+    <rect x="20" y="400" width="860" height="82" rx="4" class="legend-bg"/>
+    <text x="40" y="418" class="legend-text" font-weight="bold" fill="#333" stroke="none">Legend:</text>
+    <line x1="100" y1="416" x2="140" y2="416" stroke="#00838f" stroke-width="1.5" fill="none" marker-end="url(#arrow-teal)"/>
+    <text x="148" y="420" class="legend-text" fill="#00838f" stroke="none">per-slot listener (Option A) — one arrow per slot</text>
+    <line x1="430" y1="416" x2="470" y2="416" stroke="#1565c0" stroke-width="1.5" fill="none" marker-end="url(#arrow-indigo)"/>
+    <text x="478" y="420" class="legend-text" fill="#1565c0" stroke="none">single counter listener (Option B)</text>
+    <line x1="100" y1="436" x2="140" y2="436" stroke="#2e7d32" stroke-width="1.5" fill="none" marker-end="url(#arrow-green)"/>
+    <text x="148" y="440" class="legend-text" fill="#2e7d32" stroke="none">any-slot-change feed into counter</text>
+    <rect x="100" y="450" width="12" height="12" rx="2" fill="#2e7d32"/>
+    <text x="118" y="460" class="legend-text" fill="#2e7d32" stroke="none">slot square filled(v) on destination input port</text>
+    <text x="460" y="460" class="legend-text" fill="#555" stroke="none">Destination (#e8f5e9/#2e7d32)  Firing rule (#f3e5f5/#7b1fa2)  Counter (#e3f2fd/#1565c0)</text>
+    <text x="100" y="476" class="legend-text" fill="#555" stroke="none">Option A is NOT the lean — listed first only to mirror MODEL-revised-draft.md presentation order.</text>
+  </g>
+
+</svg>
