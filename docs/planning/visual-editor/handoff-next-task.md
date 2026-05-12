@@ -1,35 +1,50 @@
-# Next task: port `<Node>` bodies for remaining node types
+# Next task: review the substrate model pivot draft
 
-**Branch:** `main`, friction-driven. Open a fresh `task/<short-kebab>`
-once a specific node-kind body is in someone's way.
+**Branch:** `task/substrate-slot-in-node` (commit `cc9ee2f`).
+**Status:** awaiting David's review of the draft. No code yet.
 
-## State at handoff (2026-05-11, mid-session)
+## What to read
 
-Commit `3d6e719` (on `main`) adds a value label next to the pulse
-circle, slows pulse to 0.08 px/ms, and makes the clear-slot button
-white in both states.
+1. [MODEL-revised-draft.md](../../../MODEL-revised-draft.md) — the
+   proposed pivot. Sections: "Who does what," "React surface
+   realization," "What this retires," and the three "Open
+   questions" with explained Option A/B and tentative leans.
+2. [diagrams/model-revised-draft/README.md](../../../diagrams/model-revised-draft/README.md)
+   — index of the seven SVGs that visualize the draft and the
+   three open questions.
+3. [MODEL.md](../../../MODEL.md) — current authoritative model;
+   the draft contradicts it.
 
-The clear-slot multi-click bug previously suspected here is closed
-— on re-test the button advanced on a single click. No code change
-was needed. Reopen this section if it resurfaces.
+## Decisions David needs to make
 
-Latent risk worth keeping in mind: listener reentrancy in
-[Wire.tsx:51-56](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx#L51-L56).
-`apply()` iterates `phaseListenersRef` and passes a closured
-`next`. A listener that calls `handle.ack()` mid-iteration causes
-a recursive `apply`; later listeners in the outer iteration then
-receive the original closured `next`, which can overwrite phase
-state set by the recursion. Not currently observed in practice,
-but if odd ordering bugs surface, look here first.
+- **Q1** (tick driver): keep central walker (draft lean) or move to
+  self-scheduling nodes?
+- **Q2** (slot subscription): per-slot listeners or single
+  node-level revision counter (draft lean)?
+- **Q3** (visual depiction): slot indicator on the node (draft
+  lean) or keep parked-circle-on-wire visual?
+- Two ambiguities the diagram agent flagged in `03` and `02` that
+  the draft doesn't fully pin: (a) whether `consumed` is a
+  transient state that resets immediately, or terminal until the
+  next `fill`; (b) whether the source's `dest.slotPhase`
+  observation should be visible in topology diagrams or treated as
+  out-of-band.
 
-## Owed work
+## After approval
 
-**Other node types' substrate behavior.** Today only Input and
-ReadGate have `node-kinds.tsx` entries. ChainInhibitor, AndGate,
-Partition, EdgeNode, etc. mount with no `<Node>` body — fine for
-the user's current working topology but anything that uses them
-will be inert. Friction-driven posture: port each type only when
-it surfaces in a real session.
+Promote draft → MODEL.md, retire/update the
+[project_ack_is_wire_state](/Users/David/.claude/projects/-Users-David-Documents-github-wirefold/memory/project_ack_is_wire_state.md)
+memory, update CLAUDE.md's "Latch + AND gate backpressure pattern"
+section. Only then start code.
+
+## Latent risk worth keeping in mind
+
+Listener reentrancy in
+[Wire.tsx:51-56](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx#L51-L56)
+becomes more dangerous the more node-kinds subscribe under the
+current model. The pivot makes this go away (no
+`subscribePhase`); until then, treat it as a hazard if writing any
+new phase listeners.
 
 ## ALWAYS clause
 
