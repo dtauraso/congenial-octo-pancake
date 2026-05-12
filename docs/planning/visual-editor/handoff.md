@@ -9,81 +9,87 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — open task:
-     review the substrate model pivot draft and decide the three
-     open questions before any code touches the substrate.
+     promote the resolved substrate draft to authoritative
+     `MODEL.md`, retire invalidated memories, update CLAUDE.md,
+     then start code.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
-     — substrate model background (forever-loops). Realized by the
-     React-component substrate currently on `main`, which the
-     pivot draft proposes to revise.
-  3. [handoff-frame.md](handoff-frame.md) — conceptual frame, working
-     mode, open branches, housekeeping.
+     — forever-loop substrate background; now layered with the
+     slot-in-node resolution (slots owned by nodes, wire-bound
+     slot id, self-scheduling + global gate, cohort-indexed step).
+  3. [handoff-frame.md](handoff-frame.md) — conceptual frame,
+     working mode, open branches, housekeeping.
 
 ---
 
-State at handoff (2026-05-11, end of session):
+State at handoff (2026-05-12, end of session):
 
-  **Active branch:** `task/substrate-slot-in-node` (commit
-  `cc9ee2f`). Pure additive: drafts a substrate model pivot in
-  [MODEL-revised-draft.md](../../../MODEL-revised-draft.md) and
-  seven illustrative SVGs in
-  [diagrams/model-revised-draft/](../../../diagrams/model-revised-draft/).
-  No code changes. [MODEL.md](../../../MODEL.md) is still
-  authoritative.
+  **Active branch:** `task/substrate-slot-in-node`. Draft
+  [MODEL-revised-draft.md](../../../MODEL-revised-draft.md) is
+  now fully resolved — all three open questions decided. SVG
+  diagrams under
+  [diagrams/model-revised-draft/](../../../diagrams/model-revised-draft/)
+  match the resolutions. No code changes yet.
+  [MODEL.md](../../../MODEL.md) is still authoritative until
+  promoted.
 
-  **What the draft proposes:** split today's fused `<Wire>` object.
-  Wire becomes transient (`empty → in-flight(v) → empty`); the
-  parked slot moves to the destination node
-  (`empty → filled(v) → consumed`); source nodes observe
-  `dest.slotPhase(slotId)` directly instead of through wire phase.
-  Motivation: the current parked-on-wire model conflates substrate
-  phase, RAF animation, and React mount lifecycle in one
-  component, making any cross-cutting change (deletion mid-flight,
-  rewiring, multi-input firing rules like ReadGate) fragile.
+  **What the resolved draft says.**
+  - **Slot ownership.** The wire is transient
+    (`empty → in-flight(v) → empty`); the slot lives on the
+    destination node (`empty → filled(v) → consumed`). Wires
+    arrive at the node carrying a bound slot id; the node writes
+    its own slot.
+  - **Q1 — tick driver.** Self-scheduling nodes + one global
+    play/pause master switch. No central walker. A tick is one
+    cohort of simultaneously-firing edges
+    ([13-tick-as-edge-cohort.svg](../../../diagrams/model-revised-draft/13-tick-as-edge-cohort.svg)).
+    Cohort N is assigned at wire-time by the regular animation
+    loop; the gate releases cohort N only — random-access stepping
+    over the cohort axis
+    ([14-step-budget.svg](../../../diagrams/model-revised-draft/14-step-budget.svg)).
+  - **Q2 — firing rule + slot ownership.** Slots are passive
+    state; no subscription layer. Wire carries `(value, bound slot
+    id)`; the node receives the arrival, writes the slot,
+    re-evaluates its rule
+    ([07-q2-firing-rule-and-slot-ownership.svg](../../../diagrams/model-revised-draft/07-q2-firing-rule-and-slot-ownership.svg)).
+  - **Q3 — visual depiction.** Parked value renders on the dst's
+    input port (small square). Wire renders only the in-flight
+    pulse and is empty before/after
+    ([05-q3-slot-visual-depiction.svg](../../../diagrams/model-revised-draft/05-q3-slot-visual-depiction.svg)).
 
-  **Why it surfaced:** the user was working through what ReadGate
-  needs to do (consume N input slots, emit a pulse) and the
-  conversation derived that the slot-in-wire model couldn't
-  cleanly express multi-input firing rules without nodes naming
-  each other or duplicating state. Caught before any code was
-  written.
+  **Memories the resolved draft invalidates.**
+  - `project_ack_is_wire_state` — the wire has no ack under the
+    resolved model; backpressure lives in the slot's empty/filled
+    state observed by the source.
 
-  **Three open questions in the draft** (each has Option A/B with
-  pros/cons and a tentative lean):
-  - Q1: tick driver shape — central walker (lean A) vs.
-    self-scheduling nodes.
-  - Q2: slot subscription — per-slot listeners vs. one node-level
-    revision counter (lean B).
-  - Q3: visual depiction of slots — on the node (lean A) vs. at
-    the wire's end (current).
+  **CLAUDE.md sections that need rewriting.**
+  - "Latch + AND gate backpressure pattern" — the latch + AND-gate
+    wiring is the old shape; replace with the cohort-indexed
+    self-scheduling story.
+  - "Core concepts" — vocabulary check; some inhibitor-chain
+    phrasing presumes the fused wire.
 
-  **Memories that the draft will invalidate if promoted:**
-  - `project_ack_is_wire_state` — under the revised model the wire
-    has no ack.
-  - The latch + AND-gate backpressure pattern as described in
-    CLAUDE.md needs revisiting.
-
-  **Gates:** all seven SVGs pass `xmllint --noout`. No code, so
-  no build/tsc/vitest run. LOC ✓.
+  **Gates:** all SVGs pass `xmllint --noout`. No code, so no
+  build/tsc/vitest run. LOC ✓.
 
 ## Dev-loop
 
-Read [MODEL-revised-draft.md](../../../MODEL-revised-draft.md) and
-the diagrams in a tab. Decide on Q1/Q2/Q3, refine the draft if
-needed. When ready, promote draft → MODEL.md, retire memories,
-update CLAUDE.md, then start on code.
+Read the resolved draft + diagrams. If aligned, promote
+draft → MODEL.md, retire `project_ack_is_wire_state`, update
+CLAUDE.md, then start code. First code touch should land the
+slot-on-node + wire-bound-slot-id substrate change.
 
 ## Next move
 
 See [handoff-next-task.md](handoff-next-task.md). The next concrete
-step is David's review of the draft, not code.
+step is promotion + retirement, not code.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
-`handoff-*.md` files) with a freshly-rendered prompt tailored to the
-state you're leaving the branch in, and commit on the active branch
-(main if no task is in flight). Do not rely on chat history; the
-next AI may be a fresh model with no transcript. The rendered
-handoff must itself contain this same ALWAYS clause so the loop is
-self-perpetuating across sessions. Use
+`handoff-*.md` files) with a freshly-rendered prompt tailored to
+the state you're leaving the branch in, and commit on the active
+branch (main if no task is in flight). Do not rely on chat
+history; the next AI may be a fresh model with no transcript. The
+rendered handoff must itself contain this same ALWAYS clause so
+the loop is self-perpetuating across sessions. Use
 [continuation-prompt-template.md](continuation-prompt-template.md)
 as the structural source of truth; update the template when an
 invariant changes. Keep each file ≤100 LOC per the budget rule.

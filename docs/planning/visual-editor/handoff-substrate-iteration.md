@@ -1,92 +1,58 @@
----
-# Substrate iteration model — closed
+# Substrate iteration model — superseded layer
 
-**Status:** decided. Runtime.ts port is unblocked. The model below
-holds substrate timing-free per [MODEL.md](../../../MODEL.md);
-pacing lives entirely in the renderer.
+**Status:** the forever-loop substrate model below is preserved as
+background, but the slot-in-node pivot has now been **resolved** and
+supersedes parts of it. Read this file second, after
+[handoff-next-task.md](handoff-next-task.md).
 
-## The decision
+## What the resolved pivot changes about the model below
 
-**Forever-loop substrate.** Every node and every wire is its own
-`while(running)` async loop. Coordination is backpressure at each
-loop's `await` points. There is no outer step() iterator, no node
-enumeration, no scheduler picking order.
+- **Slot vs. wire.** The wire is transient
+  (`empty → in-flight(v) → empty`); the slot lives on the
+  destination node (`empty → filled(v) → consumed`). Wires no
+  longer "hold" a value; the parked state is node-side.
+- **No wire ack.** Backpressure now lives in the slot's
+  empty/filled state observed by the source, not in a separate ack
+  channel on the wire.
+- **Node body.** No longer "await inputs carrying, run, await
+  outputs empty, await acked." Instead: receive wire arrival →
+  write the bound slot id → re-evaluate the firing rule (defined
+  by the node's kind) → if it fires, emit a pulse on the output
+  wire.
+- **Tick is observable, not imposed.** A tick is one cohort of
+  simultaneously-firing edges (see
+  [13-tick-as-edge-cohort.svg](../../../diagrams/model-revised-draft/13-tick-as-edge-cohort.svg)).
+  Cohort N is assigned at wire-time by the regular animation loop;
+  the play/pause gate can release cohort N only (random-access
+  step).
 
-- **Node loop (uniform, same body for every node):** await all input
-  wires `carrying`, run, await all output wires `empty`, load output
-  wires, await output wires acked.
-- **Wire loop:** await source loaded me, await destination took me,
-  ack source.
-- **Network does the work, not the node.** AND, inhibition, latch,
-  XOR are wiring patterns, not node subtypes. Node bodies are uniform.
+## Background (preserved): forever-loop substrate
 
-## What this dissolves
+Every node and every wire is its own `while(running)` async loop.
+Coordination is backpressure at each loop's `await` points. No
+outer step() iterator, no node enumeration, no scheduler picking
+order.
 
-- Order-dependent chain traversal — no iterator, no enumeration.
-- Cycle-break rule — backpressure paces cycles natively (Shape D
-  self-pump is the trivial case).
-- Diamond fan-in / slot collision — each input port is its own wire.
-- Stack-depth-equals-path-length — flat loops, no recursion.
-- Once-per-tick enforcement — emergent from each loop awaiting ack
-  before its next iteration.
-- Two-tick latency smuggling — no tick as a substrate construct.
-
-## Pause: line-level
-
-Every wait is `Promise.race([stateChange, pauseSignal])`. On pause,
-each loop parks at its current `await`; closure-captured local state
-is preserved. On resume, parked promises unpark and loops continue
-from the same line. Mid-rendezvous states (wire loaded, dest hasn't
-taken) are valid frozen states.
-
-Discipline: no bare `await` in loop bodies — every wait routes
-through a pause-aware helper.
-
-## No durations in substrate
-
-Per MODEL.md: substrate halts and resumes pulses, that is all. No
-step-duration awaits, no setTimeout, no scheduled pacing. Substrate
-runs flat-out.
-
-The renderer owns pacing. It subscribes to substrate state-change
-events and plays them back at human-read speed, preserving order and
-causal structure. Faithful = preserves what happened, not preserves
-wall-clock. The renderer is the clock; the substrate is timing-free.
-
-## State-change events
-
-Substrate emits events on every transition (wire loaded, wire took,
-node entered run, node parked, etc.) with ordinal sequence numbers
-(not durations). Multiple subscribers attach independently:
-
-- Renderer (live view at human-read speed).
-- Recorder (appends events for replay/scrub/bug repro).
-- Anything else (metrics, audits) without substrate awareness.
+- **Pause: line-level.** Every wait is
+  `Promise.race([stateChange, pauseSignal])`. On pause, each loop
+  parks at its current `await`; on resume, loops continue. Now
+  realized as the global play/pause master switch.
+- **No durations in substrate.** Substrate halts/resumes pulses;
+  no setTimeout, no scheduled pacing. Substrate runs flat-out.
+- **Renderer owns pacing.** Subscribes to substrate state-change
+  events; plays them back at human-read speed, preserving order
+  and causal structure.
+- **State-change events.** Substrate emits events on every
+  transition (wire in-flight, slot filled, node fired, etc.) with
+  ordinal sequence numbers. Multiple subscribers attach
+  independently (renderer, recorder, audits).
 
 ## What this does NOT fix
 
-- Bad wiring still produces bad results — by design. Editor + audit
-  registry catch it before run.
-- Pre-existing red tests (`shape-d-cycle`, `handle-load-repro`).
-
-## Implementation order
-
-1. Extend `src/substrate/wire-entity.ts` with the wire's forever-loop,
-   Promise-based waits (`awaitLoaded`, `awaitEmpty`, `awaitAcked`),
-   pause-aware helper, state-change event emitter.
-2. Pause controller as shared module.
-3. Uniform node loop module (also emits events).
-4. Renderer adapter subscribes to events; plays back at human speed.
-5. Recorder subscribes (independent commit, whenever).
+Bad wiring still produces bad results — by design. The editor +
+audit registry catch it before run. ParseSpec rejects wires whose
+bound slot id doesn't exist on the destination node.
 
 ## ALWAYS clause
 
-At end of session, overwrite this file (and the sibling
-`handoff-*.md` files) with a freshly-rendered prompt tailored to the
-state you're leaving the branch in, and commit on the task branch.
-Do not rely on chat history; the next AI may be a fresh model with
-no transcript. The rendered handoff must itself contain this same
-ALWAYS clause so the loop is self-perpetuating across sessions. Use
-[continuation-prompt-template.md](continuation-prompt-template.md)
-as the structural source of truth; update the template when an
-invariant changes. Keep each file ≤100 LOC per the budget rule.
+(See handoff.md — same clause applies.)

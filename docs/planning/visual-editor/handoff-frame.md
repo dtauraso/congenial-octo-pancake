@@ -13,6 +13,13 @@
     transitions before snapshots, motion before structure.
   - **Snapshot + motion as a pair.** chan-wire (snapshot) +
     chan-anim (motion).
+  - **Decentralized, not distributed.** "Decentralized" means *no
+    center exists* — the property is genuinely local. "Distributed"
+    means *the center is reconstructed from pieces*, which is what
+    most coordinator-shaped designs do under a different name.
+    Resolved tick = edge cohort is genuinely decentralized: every
+    observer can recover it from local activity, no coordinator
+    assembles a global story.
 
 ## Substrate working mode
 
@@ -30,11 +37,12 @@
 
 ## Open branches
 
-  - `main` — production trunk, tip fbaaa2a (Gate A merge).
-  - `task/runtime-substrate-rebuild` — this branch. Rebuild work.
-  - `task/in0-readgate-emission-ack` — parked at dbab83c. Reference
-    for the old shape; **do not merge, do not delete** until first
-    green R1–R5 contract test (auto-retire signal).
+  - `main` — production trunk; check `git log` for tip.
+  - `task/substrate-slot-in-node` — this branch. Draft resolved;
+    ready to promote and start code.
+  - `task/in0-readgate-emission-ack` — parked; reference for the
+    old shape. **Do not merge, do not delete** until first green
+    contract test on the new substrate (auto-retire signal).
 
 Branch hygiene: no merge to main without explicit sign-off. Delete
 merged branches without re-asking. Force-push needs sign-off.
@@ -46,3 +54,7 @@ failure.
 If user surfaces unrelated friction, log to
 docs/planning/visual-editor/session-log.md and open a fresh
 task/<short-kebab>.
+
+## ALWAYS clause
+
+(See handoff.md — same clause applies.)

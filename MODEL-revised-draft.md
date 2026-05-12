@@ -102,91 +102,92 @@ slots live on nodes and source nodes observe destination slot phase
 directly — which means a node could in principle fire reactively the
 moment its precondition holds, without a central walker waking it.
 
-**Option A: keep central walker.** The driver continues to walk nodes
-once per round and call `run()`; nodes inspect their own slots and
-act.
-- *Pros:* Tick ordinality stays crisp — "round N happened, then N+1
-  happened." Halt/step semantics are unchanged. Ordering across
-  nodes is deterministic and observable from one place. Matches the
-  current React surface realization.
-- *Cons:* Nodes are polled even when nothing changed for them. The
-  driver still needs to know about both wire-cycle completion *and*
-  node-firing completion to detect round close, which is a slightly
-  richer condition than today.
+**What a tick actually is.** A tick is one cohort of edges that had
+activity at the same moment — see
+[diagrams/model-revised-draft/13-tick-as-edge-cohort.svg](diagrams/model-revised-draft/13-tick-as-edge-cohort.svg).
+The tick is observable in the edges themselves, not stored on any
+node. Counting ticks is counting the simultaneity layers of a
+cascade. This definition is intrinsic to the activity: it needs no
+walker, no coordinator, no global ID, and no node-side bookkeeping.
+Any earlier framing that treated "tick ordinality" as something
+only a central walker can provide was importing a top-down
+assumption that the cohort definition does not need.
 
-**Option B: self-scheduling nodes.** Each node subscribes to its own
-slot map; when the precondition holds, it fires. No central walker.
-- *Pros:* Nothing happens when nothing changes — matches the project
-  thesis that "topology IS the logic" and work emerges from wiring.
-  Less driver code.
-- *Cons:* Tick ordinality becomes fuzzy — what defines round N vs.
-  N+1 if there's no walker? Halt/step becomes harder (you'd have to
-  pause all node subscriptions). Reentrancy risk balloons: a node
-  firing changes a destination slot, which fires the next node, all
-  synchronously in one turn — the same shape as the latent
-  `phaseListeners` reentrancy risk today, but everywhere.
+**Resolution: self-scheduling nodes + global play/pause gate.**
+Nodes subscribe to their own slot maps and fire when preconditions
+hold. A single global gate halts or starts every node at once — one
+master switch, not per-node plumbing. The gate is orthogonal to the
+cohort-based tick definition: ticks remain well-defined as edge
+cohorts whenever the gate is on.
 
-**Tentative lean:** A. Keep the walker. Self-scheduling sounds
-aesthetic but the loss of ordinal tick semantics is a real cost,
-and MODEL.md's existing tick discipline is load-bearing.
+**Cohort enumeration is the step axis.** The regular animation loop
+assigns each wire its cohort number at wire-time (max predecessor
+cohort + 1), maintaining a cohort → wires registry as a side product
+of normal wiring — see
+[diagrams/model-revised-draft/14-step-budget.svg](diagrams/model-revised-draft/14-step-budget.svg).
+No separate setup pass. "Step N" is a pure lookup: the gate releases
+only wires tagged cohort N. Cohorts &lt; N and &gt; N stay inert.
+Random-access stepping over the cohort axis, with the same
+observability the cascade-firing pattern already exposes.
 
-### Q2. How a firing rule subscribes to its own slot map
+- *Properties:* Nothing happens when nothing changes — matches the
+  "topology IS the logic" thesis. Halt and step are recovered
+  cheaply via the master switch. Ticks are intrinsic to the
+  activity, not imposed by a walker. Within a released cohort,
+  wires by definition do not depend on each other, so the runaway
+  synchronous-cascade risk of naive self-scheduling does not arise.
+- *Cost:* Implementation surface area for the registry and gate
+  plumbing, comparable to the walker code it replaces.
 
-A node's firing rule needs to re-evaluate when its slots change. Two
-shapes for that subscription:
+### Q2. Firing rule and slot ownership
 
-**Option A: per-slot listeners.** Each slot is its own observable.
-The firing rule registers one listener per slot it cares about.
-- *Pros:* Precise — the rule only re-evaluates when a slot it
-  actually depends on changes. Maps cleanly onto fine-grained
-  reactivity patterns React users already know.
-- *Cons:* N subscriptions per node, more bookkeeping at
-  mount/unmount. Each listener is its own reentrancy hazard —
-  exactly the shape of today's `Wire.subscribePhase` risk, just
-  multiplied across slots.
+The original framing asked how a firing rule "subscribes" to its
+slot map (per-slot listeners vs. a node-level revision counter).
+That framing dissolves once slots are recognized as passive state
+owned by the node — slots do not notify anyone, so there is no
+subscription to choose a shape for.
 
-**Option B: one node-level revision counter.** Any slot change
-increments a single counter on the node. The firing rule subscribes
-once to that counter.
-- *Pros:* One subscription per node, simpler bookkeeping. Easier to
-  bound reentrancy — one notification per slot change instead of
-  one per listener per change. Easier to debug: you can log every
-  rule re-evaluation in one place.
-- *Cons:* The rule wakes on every slot change, even ones it doesn't
-  care about. For nodes with many inputs and partly-independent
-  preconditions this is mildly wasteful — but the rule body is cheap
-  and the savings of A rarely matter in practice.
+**Resolution.** A node's identity *is* its firing rule (e.g.
+ReadGate's identity is AND-of-3-slots; XOR's is inequality). Slots
+are passive cells of internal state, owned by the node, transitioning
+through `empty → filled(v) → consumed → empty`. The node receives
+incoming wire arrivals and writes the corresponding slot itself —
+see
+[diagrams/model-revised-draft/07-q2-firing-rule-and-slot-ownership.svg](diagrams/model-revised-draft/07-q2-firing-rule-and-slot-ownership.svg).
 
-**Tentative lean:** B. Single counter. The reentrancy and
-debuggability wins are concrete; the precision loss is hypothetical.
+A wire's destination is `(node N, slot s_k)`, established at
+construction time. On arrival, the wire carries its bound slot id;
+the destination node sees the id and writes `slots[s_k] := filled(v)`.
+The rule then re-evaluates over the slot map. One incoming wire per
+slot id — two wires cannot share a slot, so "right slot ↔ right
+wire" is deterministic by construction. Mis-wiring is caught at
+parseSpec, not at runtime.
+
+- *Properties:* No subscription layer. No listener bookkeeping.
+  Slot identity lives on the wire (addressing metadata), not on
+  the slot. The rule consults its slots when the node is woken by
+  an arrival; nothing pushes from the slot side.
+- *Cost:* The wire's construction-time binding must carry the slot
+  id — already implied by drawing wires to specific input ports in
+  the visual editor.
 
 ### Q3. Visual depiction of slots
 
 Today the parked value is drawn as a circle at the destination end
 of the wire ([Wire.tsx:112-125](tools/topology-vscode/src/webview/substrate-r/Wire.tsx#L112-L125)). Under the revised model the slot
-lives on the node, not the wire, so there's a question of whether
-the visual should follow.
+lives on the node, not the wire.
 
-**Option A: slot visualized on the destination node.** A small
+**Resolution: slot visualized on the destination node.** A small
 indicator on the destination's input port that fills when the slot
-is `filled(v)` (and possibly shows the value).
-- *Pros:* The visual matches the new ownership — anyone reading the
-  diagram sees "the value is parked at the node, not on the wire."
-  The model change is legible at a glance. Distinguishes in-flight
-  (on the wire) from parked (on the node) clearly.
-- *Cons:* More elements per node; node bodies get visually busier.
-  The SVG style guide and `diagrams/` reference SVGs need updating.
+is `filled(v)` (and may show the value) — see
+[diagrams/model-revised-draft/05-q3-slot-visual-depiction.svg](diagrams/model-revised-draft/05-q3-slot-visual-depiction.svg).
+The wire renders only its in-flight state and is empty after arrival;
+the parked value sits on the destination node where the model says
+it lives.
 
-**Option B: keep the parked circle at the wire's destination end.**
-Visually nothing changes; the dot still appears where it does today.
-- *Pros:* Minimal visual disruption; user keeps the existing mental
-  picture. No diagram updates.
-- *Cons:* The visual contradicts the model. The dot *looks* like
-  it's on the wire, but under the revised model the wire is empty
-  after arrival — the dot represents node slot state being drawn at
-  a wire-adjacent position for layout convenience. Future readers
-  will keep re-deriving the wrong ownership from the picture.
-
-**Tentative lean:** A. The whole motivation for the model change is
-that fusing concerns causes confusion; preserving a visual that
-fuses them again undermines the point.
+- *Properties:* Visual matches ownership; in-flight (on the wire) is
+  distinguishable from parked (on the node) at a glance. The whole
+  motivation for the model change is that fusing concerns causes
+  confusion; the diagram should not re-fuse them.
+- *Cost:* Node bodies get marginally busier; the SVG style guide and
+  reference SVGs need updating to match.
