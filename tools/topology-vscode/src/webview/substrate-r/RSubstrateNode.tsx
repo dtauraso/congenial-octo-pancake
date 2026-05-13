@@ -12,7 +12,7 @@ import { Handle, Position, useStore, type NodeProps } from "reactflow";
 import { KIND_COLORS, type EdgeKind } from "../../schema";
 import type { NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
-import { InputBody, ReadGateBody } from "./node-kinds";
+import { InputBody, ReadGateBody, RelayBody, JoinBody } from "./node-kinds";
 import { useRegistry } from "./registry";
 
 interface PortDef { name: string; kind: EdgeKind }
@@ -108,6 +108,12 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
             outWireRef={outWireRef}
             initialQueue={data?.nodeData?.init ?? []}
           />
+        )}
+        {kind === "relay" && (
+          <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} />
+        )}
+        {kind === "join" && (
+          <JoinBody nodeRef={nodeRef} outWireRef={outWireRef} />
         )}
         {kind === "readgate" && (
           <ReadGateBody nodeRef={nodeRef} />

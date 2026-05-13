@@ -70,6 +70,8 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
         markerEnd={markerEnd}
         destNodeRef={destNodeRef}
         destSlotId={destSlotId}
+        cohort={registry.getWireCohort(id)}
+        gate={registry.driver.gate}
       />
       <EdgeLabels
         mid={mid}
