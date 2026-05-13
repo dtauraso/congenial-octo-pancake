@@ -9,9 +9,9 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — open task:
-     lock the editor pulse path (input → readgate with a non-`in0`
-     schema port) in a contract test, then extend to multi-hop
-     (relay, join). Editor pulse verified live at tip `ef5db1a`.
+     non-`in0` readgate contract test landed at `42c9ec9`; next is
+     multi-hop in the editor (relay/join) and the optional mid-flight
+     `pathD`-change pulse-progress test.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — forever-loop substrate background; layered with the resolved
      slot-in-node model.
@@ -22,30 +22,28 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-13, end of session):
 
-  **Active branch:** `task/substrate-slot-in-node`. Tip `05f0f5d`.
-  Editor pulse path works live, and pulses now adapt to edge
-  geometry changes mid-flight. Session commits:
+  **Active branch:** `task/substrate-slot-in-node`. Tip `42c9ec9`.
+  Editor pulse path is now locked by a contract test for a non-`in0`
+  readgate slot, closing the landing-rule drift between the editor
+  and test paths. Session commits since last handoff:
 
-  - `05f0f5d` substrate: restart pulse RAF when `pathD` changes
-    mid-flight. The Wire RAF effect captured `measuredLen` once
-    and didn't depend on `pathD`, so dragging a node mid-flight
-    left the pulse completing at the stale arc length (vanishing
-    early on a lengthened edge). Added `pathD` to the dep array;
-    `distanceCoveredRef` preserves progress across restart.
-  - `ef5db1a` substrate: thread schema port names as slot ids into
-    node bodies. Fixed the `chainIn`/`in0` mismatch that crashed
-    the driver inside `run()` so no pulse ever started.
-  - `96718ac` substrate: prevent fossil pulses across spec edits
-    by keying `<Wire>` on its structural props.
-  - `4b0dae9` substrate: dispatch relay/join in editor + thread
-    cohort/gate.
-  - `fd7ad63` docs: substrate primitive landing rule in CLAUDE.md
-    (test path + editor path, dual dispatch).
+  - `42c9ec9` substrate: lock editor pulse path with non-in0
+    readgate contract test. Added per-node `ports` override on
+    `RNodeSpec`; `parseSpec` validates against the effective ports;
+    `TopologyRoot.NodeView` now threads `ports.inputs[i]` into
+    relay/join/readgate bodies — matching `RSubstrateNode` on the
+    editor path. New test `r-topology-readgate-port` covers
+    `input → readgate` via slot `"chainIn"` and a parseSpec
+    rejection case.
 
-  **Gates at handoff:** tsc clean, 123/123 vitest, `check:loc`
-  clean. Open housekeeping: `check-substrate-vocab.mjs` stale
-  (`substrate/` → `substrate-r/`); `task/in0-readgate-emission-ack`
-  past retire (needs user sign-off to delete).
+  Prior session tip was `05f0f5d` (RAF restart on `pathD` change)
+  and `ef5db1a` (slot-id threading on the editor path).
+
+  **Gates at handoff:** tsc clean, 125/125 vitest (+2 from the new
+  contract test), `check:loc` clean. Open housekeeping unchanged:
+  `check-substrate-vocab.mjs` stale (`substrate/` → `substrate-r/`);
+  `task/in0-readgate-emission-ack` past retire (needs user sign-off
+  to delete).
 
 ## Dev-loop
 
