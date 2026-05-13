@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 //
 // 2-input join: srcA → join.a, srcB → join.b, join → readgate. The
-// join's firing rule requires both slots `filled`; until both
-// predecessor cohorts arrive, the join does not emit and the
-// readgate's slot stays empty.
+// join's firing rule requires both slots `filled`. Cohort labels the
+// observation lap but does not gate delivery — when both predecessors
+// deliver in the same step, the join fires and readgate fills in that
+// same step.
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
@@ -61,19 +62,16 @@ describe("2-input join", () => {
     expect(btn.getAttribute("data-armed")).toBe("false");
   });
 
-  it("both predecessors deliver → second step releases cohort 1; readgate fills", () => {
+  it("both predecessors deliver → join fires; readgate fills after arrivals", () => {
     const { getByTestId, container } = render(
       <TopologyRoot spec={makeJoin([1], [2])} haltedOnMount />,
     );
     act(() => { fireEvent.click(getByTestId("step")); });
     flushRaf();
     expect(getByTestId("tick").textContent).toBe("tick: 1");
-    const btn = container.querySelector('[data-input-id="in0"]')!;
-    expect(btn.getAttribute("data-armed")).toBe("false");
-
-    act(() => { fireEvent.click(getByTestId("step")); });
     flushRaf();
-    expect(getByTestId("tick").textContent).toBe("tick: 2");
+    flushRaf();
+    const btn = container.querySelector('[data-input-id="in0"]')!;
     expect(btn.getAttribute("data-armed")).toBe("true");
   });
 });

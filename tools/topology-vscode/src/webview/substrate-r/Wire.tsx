@@ -76,26 +76,17 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   const tryFinalize = useCallback(() => {
     if (phaseRef.current.kind !== "in-flight") return;
     if (!animDoneRef.current) return;
-    if (pendingDeliverRef.current) return;
+    deliverIfPending();
     animDoneRef.current = false;
     apply({ type: "arrive" });
-  }, [apply]);
-
-  useEffect(() => {
-    if (!gate) return;
-    return gate.subscribe(cohort, () => {
-      deliverIfPending();
-      tryFinalize();
-    });
-  }, [gate, cohort, deliverIfPending, tryFinalize]);
+  }, [apply, deliverIfPending]);
 
   const load = useCallback((value: unknown) => {
     apply({ type: "load", value });
     valueRef.current = value;
     pendingDeliverRef.current = true;
     animDoneRef.current = false;
-    if (gate && gate.isReleased(cohort)) deliverIfPending();
-  }, [apply, gate, cohort, deliverIfPending]);
+  }, [apply]);
 
   const complete = useCallback(() => {
     if (phaseRef.current.kind !== "in-flight") return;
