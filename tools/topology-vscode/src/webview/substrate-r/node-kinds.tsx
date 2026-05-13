@@ -34,6 +34,25 @@ export function InputBody({
   return <Node ref={nodeRef} onRun={run} />;
 }
 
+export function RelayBody({
+  nodeRef, outWireRef,
+}: {
+  nodeRef: RefObject<NodeHandle | null>;
+  outWireRef: RefObject<WireHandle | null>;
+}) {
+  const run = useCallback(() => {
+    const node = nodeRef.current;
+    const wire = outWireRef.current;
+    if (!node || !wire) return;
+    if (node.slotPhase("in0") !== "filled") return;
+    if (!wire.canAccept) return;
+    const value = node.consume("in0");
+    wire.load(value);
+  }, [nodeRef, outWireRef]);
+
+  return <Node ref={nodeRef} slots={["in0"]} onRun={run} />;
+}
+
 export function ReadGateBody({
   nodeRef,
 }: {

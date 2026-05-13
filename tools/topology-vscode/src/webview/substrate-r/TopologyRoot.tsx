@@ -8,7 +8,7 @@ import { Wire, type WireHandle } from "./Wire";
 import { type NodeHandle } from "./Node";
 import { useTickDriver } from "./useTickDriver";
 import { parseSpec, type RTopologySpec, type RNodeSpec } from "./spec";
-import { InputBody, ReadGateBody } from "./node-kinds";
+import { InputBody, RelayBody, ReadGateBody } from "./node-kinds";
 
 export interface TopologyRootProps {
   spec: RTopologySpec;
@@ -41,6 +41,13 @@ function NodeView({
         initialQueue={node.props?.queue ?? []}
       />
     );
+  }
+  if (node.kind === "relay") {
+    const outWireId = findWireForOutput(spec, node.id, "out");
+    const outWireRef = outWireId
+      ? wireRefs.get(outWireId)!
+      : { current: null } as RefObject<WireHandle | null>;
+    return <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} />;
   }
   if (node.kind === "readgate") {
     return <ReadGateBody nodeRef={nodeRef} />;

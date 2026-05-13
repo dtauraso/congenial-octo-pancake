@@ -6,7 +6,7 @@
 // parse time — a wire whose target.port does not name a slot on its
 // destination kind is rejected here, not at runtime.
 
-export type RNodeKind = "input" | "readgate";
+export type RNodeKind = "input" | "relay" | "readgate";
 
 export interface RNodeSpec {
   id: string;
@@ -34,6 +34,7 @@ export interface KindPorts { inputs: string[]; outputs: string[] }
 
 export const NODE_KIND_PORTS: Record<RNodeKind, KindPorts> = {
   input:    { inputs: [],      outputs: ["out"] },
+  relay:    { inputs: ["in0"], outputs: ["out"] },
   readgate: { inputs: ["in0"], outputs: [] },
 };
 
