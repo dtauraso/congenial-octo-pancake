@@ -35,24 +35,32 @@ The long-term goal is constant-time equality, multiplication, and set membership
 
 **Lateral inhibition** — ensures only one timeline claims each input. Neighbors get suppressed so binding works cleanly.
 
-## Latch + AND gate backpressure pattern
+## Backpressure pattern (slot-in-node)
 
-Prevents channel overwrite in the pipeline. Each pipeline segment:
+Backpressure is intrinsic to the substrate, not a latch+AND-gate
+construction. Under the slot-in-node model:
 
-```
-source → readLatch → inhibitor → detectorLatch → inhibitor → ...
-```
+- Each input slot on a destination node has phase
+  `empty | filled(v) | consumed`.
+- A source node holds off loading until the destination slot it
+  targets reads `empty`, via `dest.slotPhase(slotId)` through its
+  output reference. No second wire, no ack edge, no AND-gate
+  release.
+- The destination's firing rule consumes its slot
+  (`filled(v) → consumed → empty`) when its precondition holds; that
+  alone re-opens the slot for the next load.
 
-Each latch holds one value and releases only when its controlling AND gate fires. The AND gate waits for:
-1. Detectors (sbd, sd) finished processing the current value
-2. Downstream latch ack (next pipeline slot is free)
+Stepping is cohort-indexed self-scheduling: nodes fire when
+preconditions hold, gated by one global play/pause. Cohort N is
+assigned at wire-time; the gate releases cohort N only — random-
+access stepping over the cohort axis. See [MODEL.md](MODEL.md)
+("Ticks and stepping") and
+[diagrams/model-revised-draft/14-step-budget.svg](diagrams/model-revised-draft/14-step-budget.svg).
 
-**Concrete wiring:**
-- `readGate = AND(in0Ready, detectorLatchAck)` → releases `readLatch`
-- `syncGate = AND(sbd0Done, sd0Done)` → releases `detectorLatch`
-- Each `detectorLatch` acks the gate controlling the previous latch
-
-See `docs/latch-backpressure.md` for the full cycle description.
+The prior latch + AND-gate wiring (`readGate`, `syncGate`,
+`detectorLatchAck`) is retired — it modeled backpressure as plumbing
+because the old wire fused delivery with parked state. With the
+slot owned by the node, the plumbing dissolves.
 
 ## Two modes, same machinery
 
