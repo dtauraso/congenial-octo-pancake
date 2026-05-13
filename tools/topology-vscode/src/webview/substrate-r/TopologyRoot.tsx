@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Wire, type WireHandle } from "./Wire";
 import { type NodeHandle } from "./Node";
 import { useTickDriver } from "./useTickDriver";
-import { parseSpec, type RTopologySpec, type RNodeSpec } from "./spec";
+import { parseSpec, nodePorts, type RTopologySpec, type RNodeSpec } from "./spec";
 import { InputBody, RelayBody, JoinBody, ReadGateBody } from "./node-kinds";
 
 export interface TopologyRootProps {
@@ -29,11 +29,13 @@ function NodeView({
   nodeRef: RefObject<NodeHandle | null>;
   wireRefs: Map<string, RefObject<WireHandle | null>>;
 }) {
+  const ports = nodePorts(node);
+  const outPort = ports.outputs[0];
+  const outWireId = outPort ? findWireForOutput(spec, node.id, outPort) : undefined;
+  const outWireRef = outWireId
+    ? wireRefs.get(outWireId)!
+    : { current: null } as RefObject<WireHandle | null>;
   if (node.kind === "input") {
-    const outWireId = findWireForOutput(spec, node.id, "out");
-    const outWireRef = outWireId
-      ? wireRefs.get(outWireId)!
-      : { current: null } as RefObject<WireHandle | null>;
     return (
       <InputBody
         nodeRef={nodeRef}
@@ -43,21 +45,20 @@ function NodeView({
     );
   }
   if (node.kind === "relay") {
-    const outWireId = findWireForOutput(spec, node.id, "out");
-    const outWireRef = outWireId
-      ? wireRefs.get(outWireId)!
-      : { current: null } as RefObject<WireHandle | null>;
-    return <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} />;
+    return <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={ports.inputs[0]} />;
   }
   if (node.kind === "join") {
-    const outWireId = findWireForOutput(spec, node.id, "out");
-    const outWireRef = outWireId
-      ? wireRefs.get(outWireId)!
-      : { current: null } as RefObject<WireHandle | null>;
-    return <JoinBody nodeRef={nodeRef} outWireRef={outWireRef} />;
+    return (
+      <JoinBody
+        nodeRef={nodeRef}
+        outWireRef={outWireRef}
+        slotAId={ports.inputs[0]}
+        slotBId={ports.inputs[1]}
+      />
+    );
   }
   if (node.kind === "readgate") {
-    return <ReadGateBody nodeRef={nodeRef} />;
+    return <ReadGateBody nodeRef={nodeRef} slotId={ports.inputs[0]} />;
   }
   return null;
 }

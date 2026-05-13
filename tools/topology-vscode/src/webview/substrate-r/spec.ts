@@ -12,6 +12,24 @@ export interface RNodeSpec {
   id: string;
   kind: RNodeKind;
   props?: { queue?: unknown[] };
+  // Per-node override of NODE_KIND_PORTS. Lets a spec declare e.g. a
+  // readgate whose input slot is "chainIn" rather than "in0",
+  // matching what the editor schema can produce. Arity must match the
+  // kind's defaults; only the names change.
+  ports?: { inputs?: string[]; outputs?: string[] };
+}
+
+export function nodePorts(node: RNodeSpec): KindPorts {
+  const defaults = NODE_KIND_PORTS[node.kind];
+  const inputs = node.ports?.inputs ?? defaults.inputs;
+  const outputs = node.ports?.outputs ?? defaults.outputs;
+  if (inputs.length !== defaults.inputs.length) {
+    throw new Error(`nodePorts: ${node.id} (${node.kind}) input arity ${inputs.length} ≠ ${defaults.inputs.length}`);
+  }
+  if (outputs.length !== defaults.outputs.length) {
+    throw new Error(`nodePorts: ${node.id} (${node.kind}) output arity ${outputs.length} ≠ ${defaults.outputs.length}`);
+  }
+  return { inputs, outputs };
 }
 
 export interface RWireSpec {
@@ -50,13 +68,13 @@ export function parseSpec(spec: RTopologySpec): RTopologySpec {
     if (!dest) throw new Error(`parseSpec: wire ${w.id} targets unknown node ${w.target.nodeId}`);
     const src = byId.get(w.source.nodeId);
     if (!src) throw new Error(`parseSpec: wire ${w.id} sourced from unknown node ${w.source.nodeId}`);
-    const destPorts = NODE_KIND_PORTS[dest.kind];
+    const destPorts = nodePorts(dest);
     if (!destPorts.inputs.includes(w.target.port)) {
       throw new Error(
         `parseSpec: wire ${w.id} target port "${w.target.port}" is not a slot on ${dest.kind} (${dest.id})`,
       );
     }
-    const srcPorts = NODE_KIND_PORTS[src.kind];
+    const srcPorts = nodePorts(src);
     if (!srcPorts.outputs.includes(w.source.port)) {
       throw new Error(
         `parseSpec: wire ${w.id} source port "${w.source.port}" is not an output on ${src.kind} (${src.id})`,
