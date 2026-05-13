@@ -62,6 +62,24 @@ The prior latch + AND-gate wiring (`readGate`, `syncGate`,
 because the old wire fused delivery with parked state. With the
 slot owned by the node, the plumbing dissolves.
 
+## Substrate primitive landing rule
+
+A substrate primitive (new node kind, new wire prop, new gate, new
+driver behavior) is **not landed** until it is dispatched on **both**
+paths:
+
+1. **Test path:** `TopologyRoot` and its contract tests under
+   `test/contracts/r-topology-*.test.tsx`.
+2. **Editor path:** `RSubstrateNode` (for node kinds) and/or
+   `RSubstrateEdge` (for wire props), and whatever registry/driver
+   plumbing the kind needs to actually fire in the live editor.
+
+If you add a kind to `node-kinds.tsx` and a `TopologyRoot` dispatch
+without also adding the `RSubstrateNode` dispatch, the editor will
+silently rot while tests stay green. The handoff's "verify pulses in
+the editor" step is impossible in that state. Treat editor dispatch
+as part of the same commit, not a follow-up.
+
 ## Two modes, same machinery
 
 - **Self-sustaining mode:** Partitions cycle through hierarchical data continuously — already running, already bound.
