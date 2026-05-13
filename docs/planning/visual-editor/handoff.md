@@ -8,9 +8,9 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-next-task.md](handoff-next-task.md) — open task: the
-     global play/pause gate + cohort registry (commit 2 of the
-     slot-in-node series). First code commit already landed.
+  1. [handoff-next-task.md](handoff-next-task.md) — open task: exercise
+     a multi-cohort (chain) topology end-to-end. Cohort gate + cursor
+     driver is in and green.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — forever-loop substrate background; layered with the resolved
      slot-in-node model.
@@ -21,57 +21,65 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-13, end of session):
 
-  **Active branch:** `task/substrate-slot-in-node`. First code
-  commit landed at 31c6cdb (pushed): wire reducer is
-  `empty | in-flight` only; slot lives on the destination
-  [Node](../../../tools/topology-vscode/src/webview/substrate-r/Node.tsx)
-  with `fill` / `consume` / `slotPhase` / `subscribeSlot` /
-  `requestConsume`; each
-  [Wire](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)
-  carries a construction-time `(destNodeRef, destSlotId)` binding
-  and, on RAF arrival, calls `dest.fill(slotId, v)` before
-  returning to empty;
-  [parseSpec](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts)
-  rejects wires whose `target.port` isn't a declared slot on the
-  destination kind; `ManualTakeButton` observes node slot phase
-  via `subscribeSlot`. `take` / `ack` paths retired. Contract
-  tests rewritten and green.
+  **Active branch:** `task/substrate-slot-in-node`. Commit 2 of the
+  slot-in-node series landed locally (cohort gate + cohort cursor
+  driver). On top of 31c6cdb's slot-in-node primitives this session
+  added:
 
-  **Gates at commit time:** `tsc --noEmit` clean. `npx vitest run`
-  → 109 tests passing (4 substrate contract files: wire phase,
-  node, tick driver, topology smoke). `npm run check:loc` →
-  no offenders. `check-substrate-vocab.mjs` still reports
-  "substrate/ directory not present" — its path target is stale
-  (actual dir is `substrate-r/`); fix is queued, not in scope here.
+  - [cohort-gate.ts](../../../tools/topology-vscode/src/webview/substrate-r/cohort-gate.ts)
+    — minimal `release(N) / isReleased(N) / subscribe(N, cb)` axis.
+    Park is in the gate, never in the wire's value.
+  - [spec.ts](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts)
+    — `parseSpec` assigns each wire `cohort = max(predecessor
+    cohorts) + 1` (0 when the source node has no incoming wires).
+    Cycle detection via DFS.
+  - [Wire.tsx](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)
+    — `complete()` consults the gate; if its cohort isn't released
+    yet it subscribes once and stays `in-flight` (no value
+    parked on the wire).
+  - [useTickDriver.ts](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts)
+    — retired the "all wires empty" round-close. Tick is the cohort
+    cursor; `step()` releases the current cohort and waits for that
+    cohort's wires to be empty, then advances.
 
-  **Auto-retire signal hit:** per
-  [handoff-frame.md](handoff-frame.md), `task/in0-readgate-
-  emission-ack` was held "until first green contract test on the
-  new substrate." That condition is now met. Branch deletion still
-  needs explicit user sign-off (destructive shared-state action);
-  flag at the next opportunity.
+  **Gates at handoff:** `tsc --noEmit` clean. `npx vitest run` → 123
+  passing across 20 files (added `cohort-gate.test.ts` 6/6 and
+  `r-parse-cohort.test.ts` 2/2). `npm run check:loc` clean (Wire.tsx
+  154, useTickDriver 93). `check-substrate-vocab.mjs` still reports
+  "substrate/ directory not present" — the script's path target is
+  stale (`substrate-r/` is the real dir); fix is still queued.
+
+  **Auto-retire signal:** still flagged — `task/in0-readgate-
+  emission-ack` is past its retire condition. Branch deletion is
+  destructive shared-state, so it needs explicit user sign-off.
+  Flag at next opportunity.
 
   **Pre-existing uncommitted diff:** `topology.view.json` still
-  carries a modification that pre-dated the slot-in-node work; it
-  was not part of 31c6cdb and was left alone again. Leave it
-  unless a future session has a reason to touch it.
+  carries a modification that pre-dates the slot-in-node work; not
+  touched again.
+
+  **Not yet committed:** the cohort-gate changes above are staged in
+  the working tree but not yet committed. The next session should
+  either land them as one commit (`substrate: cohort gate + cursor
+  driver`) or split into two (gate primitive + driver rewrite).
 
 ## Dev-loop
 
-Read [MODEL.md](../../../MODEL.md) + the slot-in-node
-[Node](../../../tools/topology-vscode/src/webview/substrate-r/Node.tsx)
-and
-[Wire](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx).
-Next code change: introduce the global play/pause gate + cohort
-registry so cohort N is released on a single observable axis
-(random-access step). See
+Read [MODEL.md](../../../MODEL.md) + the cohort gate
+([cohort-gate.ts](../../../tools/topology-vscode/src/webview/substrate-r/cohort-gate.ts))
+and the cursor driver
+([useTickDriver.ts](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts)).
+Next code change: exercise a multi-cohort topology (chain) end-to-end —
+the current smoke test only has cohort 0. See
 [handoff-next-task.md](handoff-next-task.md).
 
 ## Next move
 
 See [handoff-next-task.md](handoff-next-task.md). The next concrete
-step is the cohort gate: cohort assigned at wire-time
-(max predecessor cohort + 1), gate releases cohort N only.
+step is to introduce a chain-capable node kind (or wire two ReadGates
+through a relay) so cohorts > 0 actually fire in production, then
+write a contract test that asserts cohort N+1 stays parked until
+the cursor advances.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to

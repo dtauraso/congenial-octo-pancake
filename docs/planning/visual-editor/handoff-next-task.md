@@ -1,68 +1,65 @@
-# Next task: cohort gate + registry (commit 2 of slot-in-node)
+# Next task: multi-cohort chain (commit 3 of slot-in-node)
 
 **Branch:** `task/substrate-slot-in-node`.
-**Status:** first code commit landed (31c6cdb, pushed). Wire
-transient, slot on destination node, `(destNodeRef, destSlotId)`
-binding, parseSpec validation, slot-phase manual button, contract
-tests green. **Cohort + global gate not started.**
+**Status:** cohort gate + cursor driver landed locally (uncommitted
+working tree). All gates green. The only topology shape that exercises
+the substrate is `input → readgate` — a single wire at cohort 0.
+Cohorts > 0 are unproven in practice.
 
 ## What to read
 
 1. [MODEL.md](../../../MODEL.md) — "Ticks and stepping".
-2. [diagrams/model-revised-draft/13-tick-as-edge-cohort.svg](../../../diagrams/model-revised-draft/13-tick-as-edge-cohort.svg)
-   + [14-step-budget.svg](../../../diagrams/model-revised-draft/14-step-budget.svg).
-3. Current driver:
-   [useTickDriver.ts](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts)
-   — round close is currently "all wires empty," which under the
-   slot-in-node model fires the moment every in-flight wire has
-   arrived. Cohort gating replaces that one-shot close with a
-   release-by-cohort axis.
+2. [cohort-gate.ts](../../../tools/topology-vscode/src/webview/substrate-r/cohort-gate.ts)
+   and [useTickDriver.ts](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts)
+   to see how the cursor releases cohort N and waits.
+3. [spec.ts](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts)
+   — `assignCohorts` computes cohort during parseSpec.
 
 ## Target shape
 
-- **Cohort assignment.** At wire-time, each wire gets cohort N =
-  max(predecessor cohorts) + 1. Compute during parseSpec or on the
-  fly when wires register; the spec is small enough that either
-  works. Store the assignment somewhere the gate can query
-  (registry-side cohort map keyed by wire id).
-- **Global play/pause gate.** Single observable axis. `release(N)`
-  permits cohort N's wires to dispatch `arrive`; other cohorts
-  stay in-flight. `step()` becomes `release(current cohort)`, then
-  advances the cohort cursor. Random-access stepping = `release(N)`
-  for arbitrary N.
-- **`Wire.complete()` rerouting.** Today the RAF callback calls
-  `complete()` directly. Under the gate, `complete()` should ask
-  the gate "is my cohort released?" and otherwise park. The
-  parked wire resumes when the gate releases its cohort.
-- **`useTickDriver` retires the "all wires empty" close.** Tick =
-  cohort cursor, not round-close. Halt/resume become "freeze the
-  cursor" / "resume cursor advance".
+- Add a chain-capable node kind (smallest viable: a `relay` that has
+  one input slot `in0` and one output port `out`; on slot fill, emit
+  the value downstream when its outgoing wire `canAccept`). Register
+  it in `NODE_KIND_PORTS`.
+- Build a 3-node spec `input → relay → readgate` (two wires; wire2's
+  cohort should be 1).
+- Contract test asserting:
+  1. After one `step`, the cursor is at 1 and only wire1 fired —
+     wire2's value is in-flight or parked, NOT arrived.
+  2. After a second `step`, wire2 arrives and the readgate slot fills.
+  3. Removing the second `step` and asserting wire2 stays in-flight
+     (parked on gate) demonstrates park-in-gate semantics.
 
 ## Concrete starting steps
 
-1. Decide whether cohort lives in parseSpec output (static
-   topology) or in the registry (runtime). MODEL.md framing leans
-   wire-time → static; do the simpler thing first and revisit if
-   dynamic topologies arrive.
-2. Sketch the gate as a tiny module
-   (`tools/topology-vscode/src/webview/substrate-r/cohort-gate.ts`)
-   with `release(N)`, `isReleased(N)`, `subscribe(N, cb)`. Tests
-   first.
-3. Thread the gate into Wire: pass via context or prop alongside
-   `destNodeRef`. On RAF completion, check gate before dispatching
-   `arrive`.
-4. Rewrite the tick driver around the cohort cursor; update the
-   smoke test to drive by cohort release rather than round close.
+1. Add `relay` to `NODE_KIND_PORTS` in
+   [spec.ts](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts)
+   with `inputs: ["in0"]`, `outputs: ["out"]`.
+2. Add a `RelayBody` in
+   [node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
+   that subscribes to its `in0` slot; on `filled`, if its outgoing
+   wire `canAccept`, `consume("in0")` and `load` the wire.
+3. Wire `RelayBody` into [TopologyRoot.tsx](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx).
+4. Add a smoke test variant with the 3-node chain.
 
 ## Latent hazards
 
-- Don't reintroduce a parked value anywhere — the parked state is
-  the destination slot. A "park in the wire until the gate opens"
-  refactor would be the wrong shape; park is *in the gate*, not in
-  the wire's value.
-- Don't make the gate observable as "tick N is global wall time."
-  It's an axis the user can scrub; nothing in the substrate cares
-  what cohort is current except wires waiting on their own number.
+- The driver's `cohortWires` filter is `wire.cohort === cursor`. If
+  the relay's outgoing wire fires *during* cohort 0's run (because
+  slot-fill re-invokes `onRun`), the wire will be in-flight under
+  cohort 1 but the driver is still waiting on cohort 0. That's
+  correct — cohort 0 closes when cohort-0 wires are empty, regardless
+  of cohort-1 activity — but verify the test order makes that visible.
+- Don't park values on the wire. If a relay's outgoing wire is loaded
+  before cohort 1 is released, that's fine: the value sits in the
+  wire's `in-flight` phase and the wire subscribes to the gate.
+
+## Housekeeping (carry forward)
+
+- Commit the cohort gate work still sitting in the working tree.
+- Fix `check-substrate-vocab.mjs` path (still points at
+  `substrate/`, the live dir is `substrate-r/`).
+- Flag `task/in0-readgate-emission-ack` for user-approved deletion.
 
 ## ALWAYS clause
 
