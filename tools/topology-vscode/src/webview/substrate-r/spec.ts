@@ -29,11 +29,16 @@ export function nodePorts(node: RNodeSpec): KindPorts {
     if (inputs.length < 1) {
       throw new Error(`nodePorts: ${node.id} (readgate) needs at least one input slot`);
     }
-  } else if (inputs.length !== defaults.inputs.length) {
-    throw new Error(`nodePorts: ${node.id} (${node.kind}) input arity ${inputs.length} ≠ ${defaults.inputs.length}`);
-  }
-  if (outputs.length !== defaults.outputs.length) {
-    throw new Error(`nodePorts: ${node.id} (${node.kind}) output arity ${outputs.length} ≠ ${defaults.outputs.length}`);
+    // readgate outputs are variable-arity (0..N): the gate releases
+    // by firing rule, and instances may declare an output port to
+    // close a feedback cycle back into the chain.
+  } else {
+    if (inputs.length !== defaults.inputs.length) {
+      throw new Error(`nodePorts: ${node.id} (${node.kind}) input arity ${inputs.length} ≠ ${defaults.inputs.length}`);
+    }
+    if (outputs.length !== defaults.outputs.length) {
+      throw new Error(`nodePorts: ${node.id} (${node.kind}) output arity ${outputs.length} ≠ ${defaults.outputs.length}`);
+    }
   }
   return { inputs, outputs };
 }
@@ -93,29 +98,17 @@ export function parseSpec(spec: RTopologySpec): RTopologySpec {
 }
 
 function assignCohorts(spec: RTopologySpec): void {
-  const incomingByNode = new Map<string, RWireSpec[]>();
+  // Cohort is assigned at wire-time (MODEL.md): each wire's cohort is
+  // max(cohorts of its source node's already-assigned incoming wires)
+  // + 1, or 0 if none. Iterating in spec-array order = wire-creation
+  // order, so back-edges that close a cycle land last and pick up the
+  // highest cohort naturally — no DAG requirement.
+  const incomingAssignedByNode = new Map<string, number[]>();
   for (const w of spec.wires) {
-    const list = incomingByNode.get(w.target.nodeId) ?? [];
-    list.push(w);
-    incomingByNode.set(w.target.nodeId, list);
-  }
-  const cohort = new Map<string, number>();
-  const visiting = new Set<string>();
-  const wireById = new Map(spec.wires.map((w) => [w.id, w]));
-  const visit = (w: RWireSpec): number => {
-    const cached = cohort.get(w.id);
-    if (cached !== undefined) return cached;
-    if (visiting.has(w.id)) {
-      throw new Error(`parseSpec: cycle detected at wire ${w.id}`);
-    }
-    visiting.add(w.id);
-    const preds = incomingByNode.get(w.source.nodeId) ?? [];
-    const c = preds.length === 0 ? 0 : Math.max(...preds.map(visit)) + 1;
-    visiting.delete(w.id);
-    cohort.set(w.id, c);
-    return c;
-  };
-  for (const w of spec.wires) {
-    w.cohort = visit(wireById.get(w.id)!);
+    const priors = incomingAssignedByNode.get(w.source.nodeId) ?? [];
+    w.cohort = priors.length === 0 ? 0 : Math.max(...priors) + 1;
+    const destPriors = incomingAssignedByNode.get(w.target.nodeId) ?? [];
+    destPriors.push(w.cohort);
+    incomingAssignedByNode.set(w.target.nodeId, destPriors);
   }
 }
