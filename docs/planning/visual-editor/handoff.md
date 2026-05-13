@@ -8,11 +8,11 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-next-task.md](handoff-next-task.md) — open task: the
-     spec now accepts cycles (cohorts assigned at wire-creation
-     order) and the live rig closes a readGate → i0 → i1 → readGate
-     loop. Next is teaching readgate's firing rule to load its `out`
-     port so the cycle actually pulses.
+  1. [handoff-next-task.md](handoff-next-task.md) — open task:
+     the editor cycle (readGate1 ↔ i0 ↔ i1) needs live-user
+     verification. readgate now emits `1` on its `out` port, wire
+     delivery is decoupled from RAF animation, and the driver
+     auto-advances through idle cohorts at ~60Hz in resume mode.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — forever-loop substrate background; layered with the resolved
      slot-in-node model.
@@ -21,60 +21,53 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-13, mid-session):
+State at handoff (2026-05-13, end-of-session):
 
-  **Active branch:** `task/substrate-slot-in-node`. Tip pre-handoff
-  is `7407aa6`; working tree has uncommitted cycle support that
-  this handoff covers. Session moves since `7407aa6`:
+  **Active branch:** `task/substrate-slot-in-node`. Tip `f7236cf`.
+  Working tree clean (all session changes committed). 127/127
+  vitest green, tsc clean, `check:loc` clean, `out/webview.js`
+  rebuilt.
 
-  - `assignCohorts` in
-    [spec.ts](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts)
-    rewritten from DFS-with-cycle-throw to wire-creation-order
-    iteration. Each wire's cohort is computed from its source
-    node's already-assigned incoming wires at the moment the wire
-    is reached. Cycles no longer throw; back-edges land at the
-    highest cohort by construction.
-  - Same file: readgate output arity relaxed from fixed-0 to
-    variable-arity, matching its variable-arity inputs. Instances
-    can declare an `out` port to close a feedback cycle.
-  - [r-parse-cohort.test.ts](../../../tools/topology-vscode/test/contracts/r-parse-cohort.test.ts)
-    adds a cycle test (readgate → i0 → i1 → readgate, plus
-    in → readgate) asserting cohorts `[0, 1, 2, 3]`, no throw.
-  - [topology.json](../../../topology.json): added `i0`
-    (ChainInhibitor), readGate1 instance output `out`, edges
-    `readGate1.out → i0.in` and `i0.out → i1.in`. The cycle closes
-    through the pre-existing `i1.out → readGate1.chainIn2`.
-  - Initial reload crashed with a blank diagram — root cause was a
-    stray `"side": "top"` on readGate1's output, which the editor
-    schema (`left|right` only) rejected. Removed.
+  Session moves since `f2ee9ba`:
 
-  **Gates at handoff:** tsc clean, 126/126 vitest (including the
-  new cycle test), `check:loc` clean, `out/webview.js` rebuilt,
-  cycle renders in the editor after reload. The cycle does **not
-  pulse yet** — readgate's firing rule still ignores its new `out`
-  port (next task). Open housekeeping unchanged:
-  `check-substrate-vocab.mjs` stale (`substrate/` → `substrate-r/`);
-  `task/in0-readgate-emission-ack` past retire (needs user sign-off
-  to delete).
+  - `06a76fe` ReadGateBody fires its `out` port (emits `1`) when
+    all slots are filled and the out wire `canAccept`. Editor and
+    contract paths both dispatch. New test
+    [r-topology-readgate-emit.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-readgate-emit.test.tsx).
+    Node-kinds split into siblings to stay under the LOC budget.
+  - `b552b0d` Wire substrate delivery decoupled from RAF: gate
+    release writes the slot via a `pendingDeliver` flag; RAF only
+    tracks visual `animDone`; `in-flight → empty` requires both.
+    Removes the back-edge parking race.
+  - `f7236cf` Driver fast-path now re-arms
+    `requestAnimationFrame(advance)` in resume mode so the cursor
+    keeps walking through idle cohorts (~60Hz). Halted/step mode
+    unchanged.
+
+  **What's open:** the cycle should now sustain itself in the
+  editor. User needs to reload the webview and confirm. If it
+  still stalls, the suspect zones in handoff-next-task.md are the
+  starting points. Housekeeping (vocab-check path,
+  `task/in0-readgate-emission-ack` retire) carried.
 
 ## Dev-loop
 
 Read [MODEL.md](../../../MODEL.md), CLAUDE.md's "Substrate
-primitive landing rule", and the three primitive files:
-[RSubstrateNode.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateNode.tsx),
+primitive landing rule", the three primitive files
+([RSubstrateNode.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateNode.tsx),
 [RSubstrateEdge.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateEdge.tsx),
-[node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx).
-After any substrate-r edit, run `npm run build` — vitest/tsc
-alone don't refresh `out/webview.js`.
+[node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
++ siblings), and
+[Wire.tsx](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)
+for the decoupled-clocks model. After any substrate-r edit, run
+`npm run build` — vitest/tsc alone don't refresh `out/webview.js`.
 
 ## Next move
 
-See [handoff-next-task.md](handoff-next-task.md). Teach `readgate`'s
-firing rule to load its `out` port when the AND arms, so the
-readGate → i0 → i1 → readGate cycle pulses end-to-end without
-manual `⇢` clicks. Land on both test and editor paths per the
-substrate primitive landing rule. Settle the "what value does
-readgate emit" design question before coding.
+See [handoff-next-task.md](handoff-next-task.md). Verify the cycle
+self-sustains in the live editor; log any remaining friction to
+[session-log.md](session-log.md) and address in follow-up commits
+on this branch.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to
