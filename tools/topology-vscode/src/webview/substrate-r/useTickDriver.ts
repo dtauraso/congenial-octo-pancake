@@ -59,6 +59,7 @@ export function useTickDriver(config: TickDriverConfig): TickDriverHandle {
       inFlightRef.current = false;
       cursorRef.current = cohort + 1;
       setTick(cohort + 1);
+      if (!haltedRef.current) requestAnimationFrame(advance);
       return;
     }
 
