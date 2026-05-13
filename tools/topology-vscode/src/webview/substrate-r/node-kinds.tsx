@@ -53,6 +53,27 @@ export function RelayBody({
   return <Node ref={nodeRef} slots={["in0"]} onRun={run} />;
 }
 
+export function JoinBody({
+  nodeRef, outWireRef,
+}: {
+  nodeRef: RefObject<NodeHandle | null>;
+  outWireRef: RefObject<WireHandle | null>;
+}) {
+  const run = useCallback(() => {
+    const node = nodeRef.current;
+    const wire = outWireRef.current;
+    if (!node || !wire) return;
+    if (node.slotPhase("a") !== "filled") return;
+    if (node.slotPhase("b") !== "filled") return;
+    if (!wire.canAccept) return;
+    const va = node.consume("a");
+    const vb = node.consume("b");
+    wire.load([va, vb]);
+  }, [nodeRef, outWireRef]);
+
+  return <Node ref={nodeRef} slots={["a", "b"]} onRun={run} />;
+}
+
 export function ReadGateBody({
   nodeRef,
 }: {
