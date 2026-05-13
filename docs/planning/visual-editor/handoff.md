@@ -9,10 +9,10 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — open task:
-     ReadGate is now an N-slot AND on both paths and the live editor
-     has a 2-input AND rig; next is locking the editor AND in a
-     contract test, then a real multi-hop with `Relay` fed by a
-     third Input.
+     `ChainInhibitor` is now a substrate-r primitive with a manual
+     single-pulse emit button. Next is locking the inhibitor → AND
+     readgate path in a contract test, then giving the inhibitor an
+     upstream source so emission is self-driven instead of manual.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — forever-loop substrate background; layered with the resolved
      slot-in-node model.
@@ -23,36 +23,29 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-13, mid-session):
 
-  **Active branch:** `task/substrate-slot-in-node`. Tip is the
-  variable-arity readgate landing (commit message:
-  "substrate: variable-arity readgate + per-instance port overrides").
-  Session moves since the prior tip `42c9ec9`:
+  **Active branch:** `task/substrate-slot-in-node`. Tip is
+  `2cec842` ("substrate: ChainInhibitor primitive with manual
+  single-pulse emit"). Session moves since `211f33f`:
 
-  - `readgate` arity relaxed to N ≥ 1 in
-    [spec.ts](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts);
-    other kinds still fixed.
-  - `ReadGateBody` rewritten for AND semantics over N slots — one
-    button, armed only when every slot is `filled`, consumes all on
-    click. `ManualTakeButton` is now used only by `r-node` tests.
+  - New substrate-r kind `chaininhibitor`
+    ([spec.ts](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts))
+    with ports `{ inputs: ["in"], outputs: ["out"] }`.
+  - `ChainInhibitorBody` in
+    [node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
+    fires chain pass-through under slot-in-node (consume `in` →
+    load `out`) and adds a `⇢` button that loads a single value
+    (`1`) onto the out wire when `wire.canAccept` is true. Button
+    disarms on click; re-arms when the downstream slot drains.
   - Both dispatch paths
     ([TopologyRoot](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx),
     [RSubstrateNode](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateNode.tsx))
-    pass the full inputs array to `ReadGateBody`.
-  - Editor `Node` gains per-instance `inputs?` / `outputs?` Port
-    overrides, parsed and validated end-to-end; `spec-to-flow`
-    projects them into React Flow `data.inputs` / `data.outputs`.
-  - `Port` gains optional `side?: "left" | "right"`;
-    `RSubstrateNode` groups handles by effective side. Demonstrated
-    by `i1` declaring `outputs: [{ side: "left" }]` in the live rig.
-  - `Relay` registered in
-    [node-types.ts](../../../tools/topology-vscode/src/schema/node-types.ts)
-    — it was missing, which is why a fresh `Relay` node rendered
-    with no handles and silently swallowed its outgoing edge.
-  - Live rig: [topology.json](../../../topology.json) has `in08` and
-    `i1` (both `Input` for now — "i1 is a source for now") feeding
-    `readGate1.chainIn` and `chainIn2`. Visual sublabel on `i1`
-    still says "Relay"; rename via the editor inspector when
-    convenient.
+    dispatch `chaininhibitor` → `ChainInhibitorBody`.
+  - Live rig: [topology.json](../../../topology.json) — `i1` is
+    now `type: "ChainInhibitor"` (no `data.init`, output `out` kept
+    on the left side). Original orange coloring comes from
+    `NODE_TYPES["ChainInhibitor"]`. Edge `i1.out → readGate1.chainIn2`
+    unchanged. Sublabel in `topology.view.json` renamed to
+    "ChainInhibitor".
 
   **Gates at handoff:** tsc clean, 125/125 vitest, `check:loc`
   clean, `out/webview.js` rebuilt. Open housekeeping unchanged:
@@ -72,11 +65,12 @@ alone don't refresh `out/webview.js`.
 
 ## Next move
 
-See [handoff-next-task.md](handoff-next-task.md). Lock the 2-slot
-AND in a contract test through the editor's React Flow path, then
-swap `i1` to a real `Relay` fed by a third Input so the multi-hop
-path is exercised end-to-end. Capture any parking topology as a
-failing test before fixing.
+See [handoff-next-task.md](handoff-next-task.md). Lock the
+ChainInhibitor → ReadGate AND path in a contract test through
+the editor's React Flow path. Then decide whether i1 stays
+manually emitting (button-driven) or gets an upstream Input so
+the chain is fully self-driven. Capture any parking topology
+as a failing test before fixing.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to
