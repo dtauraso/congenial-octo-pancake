@@ -20,6 +20,9 @@ export interface RWireSpec {
   target: { nodeId: string; port: string };
   pathD: string;
   arcLength: number;
+  // Assigned by parseSpec: cohort = max(predecessor cohorts) + 1,
+  // 0 for wires whose source node has no incoming wires.
+  cohort?: number;
 }
 
 export interface RTopologySpec {
@@ -58,5 +61,34 @@ export function parseSpec(spec: RTopologySpec): RTopologySpec {
       );
     }
   }
+  assignCohorts(spec);
   return spec;
+}
+
+function assignCohorts(spec: RTopologySpec): void {
+  const incomingByNode = new Map<string, RWireSpec[]>();
+  for (const w of spec.wires) {
+    const list = incomingByNode.get(w.target.nodeId) ?? [];
+    list.push(w);
+    incomingByNode.set(w.target.nodeId, list);
+  }
+  const cohort = new Map<string, number>();
+  const visiting = new Set<string>();
+  const wireById = new Map(spec.wires.map((w) => [w.id, w]));
+  const visit = (w: RWireSpec): number => {
+    const cached = cohort.get(w.id);
+    if (cached !== undefined) return cached;
+    if (visiting.has(w.id)) {
+      throw new Error(`parseSpec: cycle detected at wire ${w.id}`);
+    }
+    visiting.add(w.id);
+    const preds = incomingByNode.get(w.source.nodeId) ?? [];
+    const c = preds.length === 0 ? 0 : Math.max(...preds.map(visit)) + 1;
+    visiting.delete(w.id);
+    cohort.set(w.id, c);
+    return c;
+  };
+  for (const w of spec.wires) {
+    w.cohort = visit(wireById.get(w.id)!);
+  }
 }

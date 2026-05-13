@@ -1,27 +1,29 @@
-// useTickDriver: substrate tick driver as a React hook at the topology
-// root. Owns the ordinal tick count and the halted flag.
+// useTickDriver: substrate tick driver as a cohort cursor. Tick is the
+// cohort cursor — a single observable axis the user can scrub. step()
+// walks the nodes once and releases the current cohort through the
+// global play/pause gate; wires of that cohort that finish their RAF
+// then dispatch `arrive` (parked wires resume from the gate). When
+// every wire of the current cohort is `empty`, the cursor advances.
 //
-// One round: walk all nodes once (call run()), then observe wires
-// returning to `empty`. The round closes when every wire is empty —
-// event-driven, not time-driven. On close, the ordinal tick increments
-// and (if not halted) the next round starts.
-//
-// step() advances one round even when halted. halt() prevents further
-// auto-advance; a round in flight (e.g. a wire waiting on manual-take)
-// continues to wait, as MODEL.md requires.
+// halt freezes the cursor; resume advances it again. The legacy
+// "all wires empty" round-close is retired — round-close is now
+// per-cohort, off the gate.
 
 import { useCallback, useMemo, useRef, useState, type RefObject } from "react";
 import type { WireHandle } from "./Wire";
 import type { NodeHandle } from "./Node";
+import { createCohortGate, type CohortGate } from "./cohort-gate";
 
 export interface TickDriverConfig {
   nodeRefs: RefObject<NodeHandle | null>[];
   wireRefs: RefObject<WireHandle | null>[];
+  gate?: CohortGate;
 }
 
 export interface TickDriverHandle {
   readonly tick: number;
   readonly halted: boolean;
+  readonly gate: CohortGate;
   halt(): void;
   resume(): void;
   step(): void;
@@ -35,23 +37,28 @@ export function useTickDriver(config: TickDriverConfig): TickDriverHandle {
   const inFlightRef = useRef(false);
   const configRef = useRef(config);
   configRef.current = config;
+  const gateRef = useRef<CohortGate | null>(null);
+  if (!gateRef.current) gateRef.current = config.gate ?? createCohortGate();
+  const gate = gateRef.current;
+  const cursorRef = useRef(0);
 
   const advance = useCallback(() => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
+    const cohort = cursorRef.current;
     const { nodeRefs, wireRefs } = configRef.current;
     const wires = wireRefs.map((r) => r.current).filter(
       (w): w is WireHandle => w !== null,
     );
+    const cohortWires = wires.filter((w) => (w.cohort ?? 0) === cohort);
 
     for (const r of nodeRefs) r.current?.run();
+    gate.release(cohort);
 
-    // No-work round: nothing left empty before run() departed from
-    // empty during run(). Close once; do NOT auto-advance (the
-    // substrate is idle, advancing again is pointless and would spin).
-    if (wires.every((w) => w.phase.kind === "empty")) {
+    if (cohortWires.every((w) => w.phase.kind === "empty")) {
       inFlightRef.current = false;
-      setTick((t) => t + 1);
+      cursorRef.current = cohort + 1;
+      setTick(cohort + 1);
       return;
     }
 
@@ -59,16 +66,16 @@ export function useTickDriver(config: TickDriverConfig): TickDriverHandle {
     let closed = false;
     const check = () => {
       if (closed) return;
-      if (!wires.every((w) => w.phase.kind === "empty")) return;
+      if (!cohortWires.every((w) => w.phase.kind === "empty")) return;
       closed = true;
       for (const u of unsubs) u();
       inFlightRef.current = false;
-      setTick((t) => t + 1);
-      // Defer auto-advance to break sync recursion through subscribePhase.
+      cursorRef.current = cohort + 1;
+      setTick(cohort + 1);
       if (!haltedRef.current) queueMicrotask(advance);
     };
-    for (const w of wires) unsubs.push(w.subscribePhase(check));
-  }, []);
+    for (const w of cohortWires) unsubs.push(w.subscribePhase(check));
+  }, [gate]);
 
   const halt = useCallback(() => setHalted(true), []);
   const resume = useCallback(() => {
@@ -80,7 +87,7 @@ export function useTickDriver(config: TickDriverConfig): TickDriverHandle {
   }, [advance]);
 
   return useMemo(
-    () => ({ tick, halted, halt, resume, step }),
-    [tick, halted, halt, resume, step],
+    () => ({ tick, halted, gate, halt, resume, step }),
+    [tick, halted, gate, halt, resume, step],
   );
 }

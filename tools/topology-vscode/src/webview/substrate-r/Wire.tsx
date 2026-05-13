@@ -18,6 +18,7 @@ import {
 } from "react";
 import { type Action, type Phase, initialPhase, wirePhaseReducer } from "./wire-phase";
 import type { NodeHandle } from "./Node";
+import type { CohortGate } from "./cohort-gate";
 
 const PULSE_SPEED_PX_PER_MS = 0.08;
 
@@ -26,6 +27,7 @@ export interface WireHandle {
   complete(): void;
   readonly phase: Phase;
   readonly canAccept: boolean;
+  readonly cohort: number;
   subscribePhase(listener: (phase: Phase) => void): () => void;
 }
 
@@ -37,11 +39,14 @@ export interface WireProps {
   markerEnd?: string;
   destNodeRef: RefObject<NodeHandle | null>;
   destSlotId: string;
+  cohort?: number;
+  gate?: CohortGate;
 }
 
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
-  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId }, ref,
+  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, cohort = 0, gate }, ref,
 ) {
+  const gateUnsubRef = useRef<(() => void) | null>(null);
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
   const phaseListenersRef = useRef(new Set<(p: Phase) => void>());
@@ -56,15 +61,25 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   const complete = useCallback(() => {
     const p = phaseRef.current;
     if (p.kind !== "in-flight") return;
+    if (gate && !gate.isReleased(cohort)) {
+      if (gateUnsubRef.current) return;
+      gateUnsubRef.current = gate.subscribe(cohort, () => {
+        gateUnsubRef.current?.();
+        gateUnsubRef.current = null;
+        complete();
+      });
+      return;
+    }
     const value = p.value;
     apply({ type: "arrive" });
     destNodeRef.current?.fill(destSlotId, value);
-  }, [apply, destNodeRef, destSlotId]);
+  }, [apply, destNodeRef, destSlotId, cohort, gate]);
 
   useImperativeHandle(ref, () => ({
     load: (value) => apply({ type: "load", value }),
     complete,
     get phase() { return phaseRef.current; },
+    get cohort() { return cohort; },
     get canAccept() {
       if (phaseRef.current.kind !== "empty") return false;
       const dest = destNodeRef.current;
@@ -75,7 +90,7 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
       phaseListenersRef.current.add(listener);
       return () => { phaseListenersRef.current.delete(listener); };
     },
-  }), [apply, complete, destNodeRef, destSlotId]);
+  }), [apply, complete, destNodeRef, destSlotId, cohort]);
 
   const distanceCoveredRef = useRef(0);
   const pathRef = useRef<SVGPathElement>(null);

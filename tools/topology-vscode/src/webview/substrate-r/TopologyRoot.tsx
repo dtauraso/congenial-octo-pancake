@@ -100,6 +100,8 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
             arcLength={wire.arcLength}
             destNodeRef={nodeRefs.get(wire.target.nodeId)!}
             destSlotId={wire.target.port}
+            cohort={wire.cohort ?? 0}
+            gate={driver.gate}
           />
         ))}
       </svg>
