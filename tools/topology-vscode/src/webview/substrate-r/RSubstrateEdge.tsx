@@ -3,7 +3,7 @@
 // walks it; renders kind-coloured path, arrow marker, dash, and labels.
 
 import { useEffect, useMemo, useRef } from "react";
-import type { EdgeProps } from "reactflow";
+import { useStore, type EdgeProps } from "reactflow";
 import { Wire, type WireHandle } from "./Wire";
 import { useRegistry } from "./registry";
 import { buildEdgePathD, edgeMidpoint, type EdgeRoute } from "./edge-path";
@@ -26,6 +26,8 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
     id, sourceX, sourceY, targetX, targetY,
     sourcePosition, targetPosition, data,
   } = props;
+  const target = useStore((s) => s.edges.find((e) => e.id === id)?.target ?? "");
+  const targetHandle = useStore((s) => s.edges.find((e) => e.id === id)?.targetHandle);
   const wireRef = useRef<WireHandle | null>(null);
   const registry = useRegistry();
 
@@ -33,6 +35,9 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
     () => registry.registerWire(id, wireRef),
     [id, registry],
   );
+
+  const destNodeRef = registry.getNodeRef(target) ?? { current: null };
+  const destSlotId = targetHandle ?? "in0";
 
   const route: EdgeRoute = data?.route ?? "line";
   const lane = data?.lane ?? 0;
@@ -63,6 +68,8 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
         stroke={stroke}
         strokeDasharray={dash}
         markerEnd={markerEnd}
+        destNodeRef={destNodeRef}
+        destSlotId={destSlotId}
       />
       <EdgeLabels
         mid={mid}

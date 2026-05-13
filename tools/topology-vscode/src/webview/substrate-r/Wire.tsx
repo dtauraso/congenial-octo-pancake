@@ -1,48 +1,46 @@
-// <Wire>: the substrate's wire primitive realized as a React component.
-// Phase state lives here; the source/destination call load/take/ack via
-// an imperative handle.
+// <Wire>: the substrate's wire primitive. Transient under the
+// slot-in-node model: a value enters at load, transits while
+// `in-flight`, and on arrival is written into the destination node's
+// slot — the wire is never a parking spot.
 //
-// Transitions are applied synchronously to a phaseRef and to subscribed
-// listeners before triggering a re-render. This lets the tick driver
-// observe round close in the same synchronous turn that nodes ran in —
-// without it, useReducer dispatch would defer commit and the driver
-// would see stale phase. The React state mirror exists so visual props
-// (path, pulse) recompute via the normal render cycle.
+// Each wire holds a construction-time binding to (destNodeRef,
+// destSlotId). On animation completion the wire calls
+// dest.fill(destSlotId, value) and dispatches `arrive`, returning to
+// `empty`. No `take`/`ack`/parked state.
 //
-// Animation is a wire-local effect keyed on entering `loaded`. RAF +
-// performance.now() with distance-covered held in a ref so geometry
-// changes mid-loaded resume at the current fractional position along
-// the new path (MODEL.md: "remaining traversal time is re-derived from
-// the new arc length and the distance already covered").
+// Animation is preserved (RAF + arc length + pulse). complete() is a
+// synchronous arrival path used by tests and by future deterministic
+// stepping; production paths arrive via the RAF callback.
 
 import {
   forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState,
+  type RefObject,
 } from "react";
 import { type Action, type Phase, initialPhase, wirePhaseReducer } from "./wire-phase";
+import type { NodeHandle } from "./Node";
 
 const PULSE_SPEED_PX_PER_MS = 0.08;
 
 export interface WireHandle {
   load(value: unknown): void;
-  take(): void;
-  ack(): void;
+  complete(): void;
   readonly phase: Phase;
+  readonly canAccept: boolean;
   subscribePhase(listener: (phase: Phase) => void): () => void;
 }
 
 export interface WireProps {
   pathD: string;
-  // Optional explicit arc length. If omitted, measured from the live
-  // <path> element via getTotalLength() — correct for any curve.
   arcLength?: number;
   stroke?: string;
   strokeDasharray?: string;
   markerEnd?: string;
-  onLoadedComplete?: () => void;
+  destNodeRef: RefObject<NodeHandle | null>;
+  destSlotId: string;
 }
 
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
-  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, onLoadedComplete }, ref,
+  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId }, ref,
 ) {
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
@@ -55,23 +53,36 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     setPhase(next);
   }, []);
 
+  const complete = useCallback(() => {
+    const p = phaseRef.current;
+    if (p.kind !== "in-flight") return;
+    const value = p.value;
+    apply({ type: "arrive" });
+    destNodeRef.current?.fill(destSlotId, value);
+  }, [apply, destNodeRef, destSlotId]);
+
   useImperativeHandle(ref, () => ({
     load: (value) => apply({ type: "load", value }),
-    take: () => apply({ type: "take" }),
-    ack: () => apply({ type: "ack" }),
+    complete,
     get phase() { return phaseRef.current; },
+    get canAccept() {
+      if (phaseRef.current.kind !== "empty") return false;
+      const dest = destNodeRef.current;
+      if (!dest) return false;
+      return dest.slotPhase(destSlotId) === "empty";
+    },
     subscribePhase(listener) {
       phaseListenersRef.current.add(listener);
       return () => { phaseListenersRef.current.delete(listener); };
     },
-  }), [apply]);
+  }), [apply, complete, destNodeRef, destSlotId]);
 
   const distanceCoveredRef = useRef(0);
   const pathRef = useRef<SVGPathElement>(null);
   const [pulsePos, setPulsePos] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    if (phase.kind !== "loaded") {
+    if (phase.kind !== "in-flight") {
       distanceCoveredRef.current = 0;
       setPulsePos(null);
       return;
@@ -89,14 +100,14 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
       const pt = path.getPointAtLength(distance);
       setPulsePos({ x: pt.x, y: pt.y });
       if (distance >= measuredLen) {
-        onLoadedComplete?.();
+        complete();
         return;
       }
       raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [phase.kind, arcLength, onLoadedComplete]);
+  }, [phase.kind, arcLength, complete]);
 
   return (
     <g>
@@ -109,7 +120,7 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
         strokeDasharray={strokeDasharray}
         markerEnd={markerEnd}
       />
-      {phase.kind === "loaded" && pulsePos && (
+      {phase.kind === "in-flight" && pulsePos && (
         <>
           <circle cx={pulsePos.x} cy={pulsePos.y} r={4} fill={stroke} />
           <text

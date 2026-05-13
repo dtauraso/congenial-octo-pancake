@@ -15,6 +15,7 @@ interface Registry {
   registerWire(id: string, ref: RefObject<WireHandle | null>): () => void;
   registerNode(id: string, ref: RefObject<NodeHandle | null>): () => void;
   getWireRef(id: string): RefObject<WireHandle | null> | undefined;
+  getNodeRef(id: string): RefObject<NodeHandle | null> | undefined;
   driver: TickDriverHandle;
 }
 
@@ -63,14 +64,17 @@ export function SubstrateProvider({ children }: { children: ReactNode }) {
   const getWireRef = useCallback(
     (id: string) => wireMapRef.current.get(id), [],
   );
+  const getNodeRef = useCallback(
+    (id: string) => nodeMapRef.current.get(id), [],
+  );
 
   const value = useMemo<Registry>(
-    () => ({ registerWire, registerNode, getWireRef, driver }),
+    () => ({ registerWire, registerNode, getWireRef, getNodeRef, driver }),
     // version is included so consumers (RSubstrateNode) re-render when
     // wires/nodes register — otherwise they keep stale NULL_REF lookups
     // from before RSubstrateEdge mounted.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [registerWire, registerNode, getWireRef, driver, version],
+    [registerWire, registerNode, getWireRef, getNodeRef, driver, version],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

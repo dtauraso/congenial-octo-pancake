@@ -1,5 +1,5 @@
-// Phase reducer for the new React-resident <Wire>. Pins allowed
-// transitions and the send-on-non-empty throw from the slot contract.
+// Phase reducer for the <Wire> primitive under the slot-in-node model.
+// Wire is transient: empty -> in-flight(v) -> empty. No parked state.
 
 import { describe, it, expect } from "vitest";
 import {
@@ -13,64 +13,32 @@ describe("wirePhaseReducer", () => {
     expect(initialPhase).toEqual({ kind: "empty" });
   });
 
-  it("empty -> load -> loaded(v)", () => {
+  it("empty -> load -> in-flight(v)", () => {
     const next = wirePhaseReducer(initialPhase, { type: "load", value: 42 });
-    expect(next).toEqual({ kind: "loaded", value: 42 });
+    expect(next).toEqual({ kind: "in-flight", value: 42 });
   });
 
-  it("loaded -> take -> taken(v) (value preserved)", () => {
-    const loaded: Phase = { kind: "loaded", value: "x" };
-    const next = wirePhaseReducer(loaded, { type: "take" });
-    expect(next).toEqual({ kind: "taken", value: "x" });
+  it("in-flight -> arrive -> empty", () => {
+    const inFlight: Phase = { kind: "in-flight", value: 7 };
+    expect(wirePhaseReducer(inFlight, { type: "arrive" })).toEqual({ kind: "empty" });
   });
 
-  it("taken -> ack -> empty", () => {
-    const taken: Phase = { kind: "taken", value: 7 };
-    const next = wirePhaseReducer(taken, { type: "ack" });
-    expect(next).toEqual({ kind: "empty" });
+  it("load on in-flight throws (send-on-non-empty)", () => {
+    const inFlight: Phase = { kind: "in-flight", value: 1 };
+    expect(() => wirePhaseReducer(inFlight, { type: "load", value: 2 }))
+      .toThrow(/load while in-flight/);
   });
 
-  it("load on loaded throws (send-on-non-empty)", () => {
-    const loaded: Phase = { kind: "loaded", value: 1 };
-    expect(() => wirePhaseReducer(loaded, { type: "load", value: 2 }))
-      .toThrow(/load while loaded/);
+  it("arrive on empty throws", () => {
+    expect(() => wirePhaseReducer(initialPhase, { type: "arrive" }))
+      .toThrow(/arrive while empty/);
   });
 
-  it("load on taken throws", () => {
-    const taken: Phase = { kind: "taken", value: 1 };
-    expect(() => wirePhaseReducer(taken, { type: "load", value: 2 }))
-      .toThrow(/load while taken/);
-  });
-
-  it("take on empty throws", () => {
-    expect(() => wirePhaseReducer(initialPhase, { type: "take" }))
-      .toThrow(/take while empty/);
-  });
-
-  it("take on taken throws", () => {
-    const taken: Phase = { kind: "taken", value: 1 };
-    expect(() => wirePhaseReducer(taken, { type: "take" }))
-      .toThrow(/take while taken/);
-  });
-
-  it("ack on empty throws", () => {
-    expect(() => wirePhaseReducer(initialPhase, { type: "ack" }))
-      .toThrow(/ack while empty/);
-  });
-
-  it("ack on loaded throws", () => {
-    const loaded: Phase = { kind: "loaded", value: 1 };
-    expect(() => wirePhaseReducer(loaded, { type: "ack" }))
-      .toThrow(/ack while loaded/);
-  });
-
-  it("full cycle: empty -> loaded -> taken -> empty", () => {
+  it("full cycle: empty -> in-flight -> empty", () => {
     let p: Phase = initialPhase;
     p = wirePhaseReducer(p, { type: "load", value: "hello" });
-    expect(p.kind).toBe("loaded");
-    p = wirePhaseReducer(p, { type: "take" });
-    expect(p.kind).toBe("taken");
-    p = wirePhaseReducer(p, { type: "ack" });
+    expect(p.kind).toBe("in-flight");
+    p = wirePhaseReducer(p, { type: "arrive" });
     expect(p.kind).toBe("empty");
   });
 });

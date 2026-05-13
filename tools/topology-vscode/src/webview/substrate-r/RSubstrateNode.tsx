@@ -52,19 +52,14 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
 
   const inputs = data?.inputs ?? [];
   const outputs = data?.outputs ?? [];
-  const firstInputPort = inputs[0]?.name;
   const firstOutputPort = outputs[0]?.name;
 
-  // Look up incoming/outgoing edge ids from React Flow's store.
-  const inWireId = useStore((s) => firstInputPort
-    ? s.edges.find((e) => e.target === id && e.targetHandle === firstInputPort)?.id
-    : undefined);
+  // Look up outgoing edge id from React Flow's store.
   const outWireId = useStore((s) => firstOutputPort
     ? s.edges.find((e) => e.source === id && e.sourceHandle === firstOutputPort)?.id
     : undefined);
 
   const NULL_REF = useMemo<{ current: WireHandle | null }>(() => ({ current: null }), []);
-  const inWireRef = inWireId ? (registry.getWireRef(inWireId) ?? NULL_REF) : NULL_REF;
   const outWireRef = outWireId ? (registry.getWireRef(outWireId) ?? NULL_REF) : NULL_REF;
 
   const width = data?.width ?? 90;
@@ -115,7 +110,7 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
           />
         )}
         {kind === "readgate" && (
-          <ReadGateBody nodeRef={nodeRef} inWireRef={inWireRef} />
+          <ReadGateBody nodeRef={nodeRef} />
         )}
       </div>
       {data?.sublabel && <div style={{ fontSize: 9, opacity: 0.7 }}>{data.sublabel}</div>}

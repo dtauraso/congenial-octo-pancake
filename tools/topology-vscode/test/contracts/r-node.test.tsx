@@ -1,51 +1,30 @@
 // @vitest-environment happy-dom
 //
-// <Node> contract: run() invokes onRun, requestTake invokes take on
-// the matching input wire only if phase is loaded, and the manual-take
-// button arms iff input wire's phase is loaded.
+// <Node> contract under slot-in-node: declares slots, accepts fill,
+// emits consume, exposes slot phase, notifies subscribers. The
+// manual-consume button arms iff the named slot is "filled" and
+// invokes requestConsume on click.
 
 import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent, act } from "@testing-library/react";
-import { useRef } from "react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { Node, type NodeHandle } from "../../src/webview/substrate-r/Node";
 import { ManualTakeButton } from "../../src/webview/substrate-r/ManualTakeButton";
-import type { WireHandle } from "../../src/webview/substrate-r/Wire";
-import type { Phase } from "../../src/webview/substrate-r/wire-phase";
 
-function makeMockWire(): WireHandle & { __setPhase(p: Phase): void } {
-  const listeners = new Set<(p: Phase) => void>();
-  let phase: Phase = { kind: "empty" };
-  return {
-    load: vi.fn((value) => { phase = { kind: "loaded", value }; listeners.forEach((l) => l(phase)); }),
-    take: vi.fn(() => {
-      if (phase.kind !== "loaded") return;
-      phase = { kind: "taken", value: phase.value };
-      listeners.forEach((l) => l(phase));
-    }),
-    ack: vi.fn(() => { phase = { kind: "empty" }; listeners.forEach((l) => l(phase)); }),
-    get phase() { return phase; },
-    subscribePhase(l) { listeners.add(l); return () => listeners.delete(l); },
-    __setPhase(p) { phase = p; listeners.forEach((l) => l(p)); },
-  };
-}
-
-function Harness({ wireRef, manualTake, onRun, nodeRef }: {
-  wireRef: React.RefObject<WireHandle | null>;
-  manualTake?: boolean;
+function Harness({ slots, onRun, onConsume, manualSlot, nodeRef }: {
+  slots?: string[];
   onRun?: () => void;
+  onConsume?: (slotId: string, v: unknown) => void;
+  manualSlot?: string;
   nodeRef: React.RefObject<NodeHandle | null>;
 }) {
   return (
     <>
-      <Node
-        ref={nodeRef}
-        inputs={[{ id: "in0", wireRef, manualTake }]}
-        onRun={onRun}
-      />
-      {manualTake && (
+      <Node ref={nodeRef} slots={slots} onRun={onRun} onConsume={onConsume} />
+      {manualSlot && (
         <ManualTakeButton
-          wireRef={wireRef}
-          onTake={() => nodeRef.current?.requestTake("in0")}
+          nodeRef={nodeRef}
+          slotId={manualSlot}
+          onConsume={() => nodeRef.current?.requestConsume(manualSlot)}
         />
       )}
     </>
@@ -55,78 +34,69 @@ function Harness({ wireRef, manualTake, onRun, nodeRef }: {
 describe("<Node>", () => {
   it("run() invokes onRun", () => {
     const onRun = vi.fn();
-    const wire = makeMockWire();
-    const wireRef = { current: wire } as React.RefObject<WireHandle | null>;
     const nodeRef = { current: null } as React.RefObject<NodeHandle | null>;
-    render(<Harness wireRef={wireRef} onRun={onRun} nodeRef={nodeRef} />);
+    render(<Harness onRun={onRun} nodeRef={nodeRef} />);
     nodeRef.current?.run();
     expect(onRun).toHaveBeenCalledOnce();
   });
 
-  it("requestTake calls take() when input phase is loaded", () => {
-    const wire = makeMockWire();
-    wire.__setPhase({ kind: "loaded", value: 1 });
-    const wireRef = { current: wire } as React.RefObject<WireHandle | null>;
+  it("declared slot starts empty; fill marks it filled; consume returns value and empties", () => {
     const nodeRef = { current: null } as React.RefObject<NodeHandle | null>;
-    render(<Harness wireRef={wireRef} nodeRef={nodeRef} />);
-    nodeRef.current?.requestTake("in0");
-    expect(wire.take).toHaveBeenCalledOnce();
+    render(<Harness slots={["a"]} nodeRef={nodeRef} />);
+    expect(nodeRef.current!.slotPhase("a")).toBe("empty");
+    nodeRef.current!.fill("a", 42);
+    expect(nodeRef.current!.slotPhase("a")).toBe("filled");
+    expect(nodeRef.current!.consume("a")).toBe(42);
+    expect(nodeRef.current!.slotPhase("a")).toBe("empty");
   });
 
-  it("requestTake is a no-op when input phase is empty", () => {
-    const wire = makeMockWire();
-    const wireRef = { current: wire } as React.RefObject<WireHandle | null>;
+  it("fill re-invokes onRun", () => {
+    const onRun = vi.fn();
     const nodeRef = { current: null } as React.RefObject<NodeHandle | null>;
-    render(<Harness wireRef={wireRef} nodeRef={nodeRef} />);
-    nodeRef.current?.requestTake("in0");
-    expect(wire.take).not.toHaveBeenCalled();
+    render(<Harness slots={["a"]} onRun={onRun} nodeRef={nodeRef} />);
+    onRun.mockClear();
+    nodeRef.current!.fill("a", 1);
+    expect(onRun).toHaveBeenCalledOnce();
   });
 
-  it("manual-take button is disarmed when input is empty", () => {
-    const wire = makeMockWire();
-    const wireRef = { current: wire } as React.RefObject<WireHandle | null>;
+  it("subscribeSlot fires on fill and consume", () => {
+    const nodeRef = { current: null } as React.RefObject<NodeHandle | null>;
+    render(<Harness slots={["a"]} nodeRef={nodeRef} />);
+    const cb = vi.fn();
+    const unsub = nodeRef.current!.subscribeSlot("a", cb);
+    nodeRef.current!.fill("a", 1);
+    expect(cb).toHaveBeenLastCalledWith("filled");
+    nodeRef.current!.consume("a");
+    expect(cb).toHaveBeenLastCalledWith("empty");
+    unsub();
+  });
+
+  it("fill on a non-empty slot throws", () => {
+    const nodeRef = { current: null } as React.RefObject<NodeHandle | null>;
+    render(<Harness slots={["a"]} nodeRef={nodeRef} />);
+    nodeRef.current!.fill("a", 1);
+    expect(() => nodeRef.current!.fill("a", 2)).toThrow(/while filled/);
+  });
+
+  it("requestConsume is a no-op when slot is empty", () => {
+    const onConsume = vi.fn();
+    const nodeRef = { current: null } as React.RefObject<NodeHandle | null>;
+    render(<Harness slots={["a"]} onConsume={onConsume} nodeRef={nodeRef} />);
+    nodeRef.current!.requestConsume("a");
+    expect(onConsume).not.toHaveBeenCalled();
+  });
+
+  it("manual button is disarmed when slot is empty, arms on fill, invokes consume on click", () => {
     const nodeRef = { current: null } as React.RefObject<NodeHandle | null>;
     const { container } = render(
-      <Harness wireRef={wireRef} manualTake nodeRef={nodeRef} />,
+      <Harness slots={["in0"]} manualSlot="in0" nodeRef={nodeRef} />,
     );
     const btn = container.querySelector('[data-input-id="in0"]')!;
     expect(btn.getAttribute("data-armed")).toBe("false");
-  });
-
-  it("manual-take button arms when input wire enters loaded", () => {
-    const wire = makeMockWire();
-    const wireRef = { current: wire } as React.RefObject<WireHandle | null>;
-    const nodeRef = { current: null } as React.RefObject<NodeHandle | null>;
-    const { container } = render(
-      <Harness wireRef={wireRef} manualTake nodeRef={nodeRef} />,
-    );
-    act(() => { wire.__setPhase({ kind: "loaded", value: 7 }); });
-    const btn = container.querySelector('[data-input-id="in0"]')!;
+    act(() => { nodeRef.current!.fill("in0", 7); });
     expect(btn.getAttribute("data-armed")).toBe("true");
-  });
-
-  it("clicking armed button invokes take on the wire", () => {
-    const wire = makeMockWire();
-    wire.__setPhase({ kind: "loaded", value: 7 });
-    const wireRef = { current: wire } as React.RefObject<WireHandle | null>;
-    const nodeRef = { current: null } as React.RefObject<NodeHandle | null>;
-    const { container } = render(
-      <Harness wireRef={wireRef} manualTake nodeRef={nodeRef} />,
-    );
-    const btn = container.querySelector('[data-input-id="in0"]')!;
-    fireEvent.click(btn);
-    expect(wire.take).toHaveBeenCalledOnce();
-  });
-
-  it("clicking disarmed button does nothing", () => {
-    const wire = makeMockWire();
-    const wireRef = { current: wire } as React.RefObject<WireHandle | null>;
-    const nodeRef = { current: null } as React.RefObject<NodeHandle | null>;
-    const { container } = render(
-      <Harness wireRef={wireRef} manualTake nodeRef={nodeRef} />,
-    );
-    const btn = container.querySelector('[data-input-id="in0"]')!;
-    fireEvent.click(btn);
-    expect(wire.take).not.toHaveBeenCalled();
+    act(() => { fireEvent.click(btn); });
+    expect(btn.getAttribute("data-armed")).toBe("false");
+    expect(nodeRef.current!.slotPhase("in0")).toBe("empty");
   });
 });

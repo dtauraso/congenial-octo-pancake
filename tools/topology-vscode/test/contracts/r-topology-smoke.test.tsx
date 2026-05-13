@@ -1,21 +1,24 @@
 // @vitest-environment happy-dom
 //
-// End-to-end smoke test for the new substrate primitives, driven by
-// an RTopologySpec. Mounts TopologyRoot with one Input → wire →
-// ReadGate spec and exercises the full cycle.
+// End-to-end smoke test for the slot-in-node substrate, driven by an
+// RTopologySpec. Mounts TopologyRoot with one Input → wire → ReadGate
+// spec and exercises the full cycle (load → in-flight → arrive →
+// slot filled → click → consume → next round).
+//
+// arcLength=0 so the wire's first RAF tick triggers `complete`,
+// keeping the test deterministic under fake timers.
 
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { TopologyRoot } from "../../src/webview/substrate-r/TopologyRoot";
 import type { RTopologySpec } from "../../src/webview/substrate-r/spec";
 
-afterEach(cleanup);
-
+afterEach(() => { cleanup(); vi.useRealTimers(); });
+beforeEach(() => { vi.useFakeTimers(); });
 beforeAll(() => {
   if (!("getPointAtLength" in SVGPathElement.prototype)) {
     Object.defineProperty(SVGPathElement.prototype, "getPointAtLength", {
-      value: () => ({ x: 0, y: 0 }),
-      configurable: true,
+      value: () => ({ x: 0, y: 0 }), configurable: true,
     });
   }
 });
@@ -31,13 +34,17 @@ function makeSpec(queue: unknown[]): RTopologySpec {
       source: { nodeId: "src", port: "out" },
       target: { nodeId: "gate", port: "in0" },
       pathD: "M 80 80 L 300 80",
-      arcLength: 220,
+      arcLength: 0,
     }],
   };
 }
 
+function flushRaf() {
+  act(() => { vi.advanceTimersByTime(50); });
+}
+
 describe("TopologyRoot end-to-end (spec-driven)", () => {
-  it("input loads wire on step → readgate button arms → click takes → tick advances", () => {
+  it("step → wire arrives → slot fills → button arms → click consumes", () => {
     const { getByTestId, container } = render(
       <TopologyRoot spec={makeSpec([42])} haltedOnMount />,
     );
@@ -45,13 +52,13 @@ describe("TopologyRoot end-to-end (spec-driven)", () => {
     expect(getByTestId("halted").textContent).toBe("halted");
 
     act(() => { fireEvent.click(getByTestId("step")); });
-    expect(getByTestId("tick").textContent).toBe("tick: 0");
+    flushRaf();
+    expect(getByTestId("tick").textContent).toBe("tick: 1");
 
     const btn = container.querySelector('[data-input-id="in0"]')!;
     expect(btn.getAttribute("data-armed")).toBe("true");
 
     act(() => { fireEvent.click(btn); });
-    expect(getByTestId("tick").textContent).toBe("tick: 1");
     expect(btn.getAttribute("data-armed")).toBe("false");
   });
 
@@ -60,11 +67,14 @@ describe("TopologyRoot end-to-end (spec-driven)", () => {
       <TopologyRoot spec={makeSpec([1, 2])} haltedOnMount />,
     );
     act(() => { fireEvent.click(getByTestId("step")); });
+    flushRaf();
     const btn = container.querySelector('[data-input-id="in0"]')!;
+    expect(btn.getAttribute("data-armed")).toBe("true");
     act(() => { fireEvent.click(btn); });
     expect(getByTestId("tick").textContent).toBe("tick: 1");
 
     act(() => { fireEvent.click(getByTestId("step")); });
+    flushRaf();
     expect(btn.getAttribute("data-armed")).toBe("true");
     act(() => { fireEvent.click(btn); });
     expect(getByTestId("tick").textContent).toBe("tick: 2");
@@ -75,6 +85,7 @@ describe("TopologyRoot end-to-end (spec-driven)", () => {
       <TopologyRoot spec={makeSpec([1])} haltedOnMount />,
     );
     act(() => { fireEvent.click(getByTestId("step")); });
+    flushRaf();
     const btn = container.querySelector('[data-input-id="in0"]')!;
     act(() => { fireEvent.click(btn); });
     expect(getByTestId("tick").textContent).toBe("tick: 1");

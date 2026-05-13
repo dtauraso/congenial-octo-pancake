@@ -1,17 +1,15 @@
-// Node-kind implementations for the new substrate. Each kind is a
-// React hook that wraps <Node> with kind-specific onRun behavior and
-// input descriptors.
+// Node-kind implementations under the slot-in-node substrate.
 //
-// Input: emits values from an init queue whenever its output wire is
-// empty; acks the output wire when it becomes taken (long-lived
-// subscription, independent of the tick).
+// Input: each run() checks `outWire.canAccept` (wire empty AND dest
+// slot empty) and loads the next queue value if so. No subscription,
+// no ack — the wire returns to empty on arrival under its own
+// machinery.
 //
-// ReadGate: manual-take destination on its input wire. No output
-// emission yet — current working topology terminates here. When/if
-// downstream consumers exist, ReadGate will also drive its output on
-// take.
+// ReadGate: declares slot "in0". Manual-gate destination — onRun is a
+// no-op; the slot fills when the wire arrives, and the button consumes
+// the slot on click. No downstream emission in this commit.
 
-import { useCallback, useEffect, useRef, type RefObject } from "react";
+import { useCallback, useRef, type RefObject } from "react";
 import { Node, type NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
 import { ManualTakeButton } from "./ManualTakeButton";
@@ -25,18 +23,10 @@ export function InputBody({
 }) {
   const remainingRef = useRef([...initialQueue]);
 
-  useEffect(() => {
-    const handle = outWireRef.current;
-    if (!handle) return;
-    return handle.subscribePhase((p) => {
-      if (p.kind === "taken") handle.ack();
-    });
-  }, [outWireRef]);
-
   const run = useCallback(() => {
     const handle = outWireRef.current;
     if (!handle) return;
-    if (handle.phase.kind !== "empty") return;
+    if (!handle.canAccept) return;
     if (remainingRef.current.length === 0) return;
     handle.load(remainingRef.current.shift());
   }, [outWireRef]);
@@ -45,20 +35,17 @@ export function InputBody({
 }
 
 export function ReadGateBody({
-  nodeRef, inWireRef,
+  nodeRef,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
-  inWireRef: RefObject<WireHandle | null>;
 }) {
   return (
     <>
-      <Node
-        ref={nodeRef}
-        inputs={[{ id: "in0", wireRef: inWireRef, manualTake: true }]}
-      />
+      <Node ref={nodeRef} slots={["in0"]} />
       <ManualTakeButton
-        wireRef={inWireRef}
-        onTake={() => nodeRef.current?.requestTake("in0")}
+        nodeRef={nodeRef}
+        slotId="in0"
+        onConsume={() => nodeRef.current?.requestConsume("in0")}
       />
     </>
   );
