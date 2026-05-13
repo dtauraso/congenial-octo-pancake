@@ -9,9 +9,9 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — open task:
-     cycle is live-verified; next is housekeeping (vocab-check
-     path, parked-branch retire) and deciding the fate of the
-     manual `⇢` debug button on ChainInhibitor.
+     substrate model just changed (delivery on RAF arrival, cohort
+     out of delivery path). Live re-verify, retire ChainInhibitor's
+     `⇢` debug button, then housekeeping.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — forever-loop substrate background; layered with the resolved
      slot-in-node model.
@@ -22,24 +22,29 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-13, end-of-session):
 
-  **Active branch:** `task/substrate-slot-in-node`. Tip `f7236cf`.
-  Working tree clean. 127/127 vitest green, tsc clean,
+  **Active branch:** `task/substrate-slot-in-node`. Tip `44406cd`.
+  Working tree clean. 126/126 vitest green, tsc clean,
   `check:loc` clean, `out/webview.js` rebuilt.
 
-  **Live-verified:** user reloaded the webview and confirmed the
-  cycle (readGate1 ↔ i0 ↔ i1, `in08 → chainIn`) self-sustains in
-  resume mode — pulses continuously, no manual step clicks needed
-  to drain the i1→readGate back-edge. The three commits since
-  `f2ee9ba` (readgate `out` emit, RAF-decoupled wire delivery,
-  driver fast-path rAF re-arm) resolve the parking friction.
+  **Substrate model just changed.** Cohort is now observation-only
+  (a label on wires for the scrub cursor) and delivery happens at
+  RAF arrival, not at load. Net effect: a single `wire.load` no
+  longer cascades synchronously through the topology — each hop
+  costs one wire animation. See commit `44406cd` and
+  [handoff-next-task.md](handoff-next-task.md) for the two user
+  clarifications that drove the change.
 
-  **What's open:** housekeeping carries — fix
-  `scripts/check-substrate-vocab.mjs` path
-  (`substrate/` → `substrate-r/`), and flag
+  **Needs live re-verify.** The earlier cycle verification was
+  under the old model. Reload the webview and confirm the cycle
+  still pulses end-to-end in resume mode, with each hop visibly
+  animating along one wire at a time.
+
+  **What's open:** retire ChainInhibitor's `⇢` button (a non-source
+  node shouldn't be able to originate values). Housekeeping carries
+  — fix `scripts/check-substrate-vocab.mjs` path
+  (`substrate/` → `substrate-r/`), flag
   `task/in0-readgate-emission-ack` for user-approved deletion.
-  Decide whether to retire ChainInhibitor's manual `⇢` button now
-  that the cycle runs on its own (debug aid vs. dead UI). Branch
-  is ready for sign-off to merge to `main`.
+  Then offer merge to `main`.
 
 ## Dev-loop
 
@@ -55,9 +60,10 @@ for the decoupled-clocks model. After any substrate-r edit, run
 
 ## Next move
 
-See [handoff-next-task.md](handoff-next-task.md). Cycle is
-verified; clear housekeeping items and ask user about merging to
-`main`. Log any new friction to
+See [handoff-next-task.md](handoff-next-task.md). Live re-verify
+the cycle under the new delivery-on-arrival model, retire
+ChainInhibitor's `⇢` button, clear housekeeping items, then offer
+merge to `main`. Log any new friction to
 [session-log.md](session-log.md).
 
 ALWAYS — at end of session, overwrite this file (and the sibling

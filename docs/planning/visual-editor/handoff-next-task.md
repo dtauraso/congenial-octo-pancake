@@ -1,59 +1,59 @@
-# Next task: housekeeping, then offer merge to main
+# Next task: confirm per-hop propagation; then housekeeping
 
-**Branch:** `task/substrate-slot-in-node`. Tip `f7236cf`.
-**Status:** cycle live-verified by user (2026-05-13). 127/127
-vitest green, tsc clean, LOC clean, build fresh.
+**Branch:** `task/substrate-slot-in-node`. Tip `44406cd`.
+**Status:** 126/126 vitest green, tsc clean, LOC clean, build fresh.
+Needs live re-verification — the substrate model just changed.
 
 ## What just landed (committed)
 
-Three commits resolve the i1→readGate back-edge parking friction
-surfaced earlier this session:
+`44406cd` substrate: deliver on RAF arrival; remove cohort gate from
+delivery path
+([Wire.tsx](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)).
 
-- `06a76fe` substrate: readgate emits `1` on its `out` port when all
-  slots are filled and the out wire `canAccept`. Dispatched on both
-  editor (RSubstrateNode) and test (TopologyRoot) paths. Contract
-  test
-  [r-topology-readgate-emit.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-readgate-emit.test.tsx).
-  Split `node-kinds.tsx` into siblings
-  [node-kinds-chain-inhibitor.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds-chain-inhibitor.tsx)
-  and
-  [node-kinds-readgate.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds-readgate.tsx)
-  for the LOC budget.
-- `b552b0d` substrate: decouple wire substrate delivery from RAF
-  animation in
-  [Wire.tsx](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx).
-  Substrate delivery (`dest.fill`) is gate-driven via
-  `pendingDeliver`; visual animation is RAF-driven via `animDone`;
-  phase `in-flight → empty` requires both clocks closed.
-- `f7236cf` driver: re-arm `requestAnimationFrame(advance)` in the
-  fast path of
-  [useTickDriver.ts](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts)
-  when not halted, so the cursor walks through idle cohorts in
-  resume mode (~60Hz).
+The session surfaced two coupled defects:
 
-## Live verification (2026-05-13)
+1. **Cohort gate sat on the delivery path.** `Wire.load` waited on
+   `gate.subscribe(cohort, …)` before delivering. That meant the
+   cursor (an observation axis) was holding back substrate firing.
+   User clarification: "the cohort is a different thing that happens
+   to be running at the same time" — observation-only.
+2. **One load cascaded synchronously through the whole topology.**
+   With delivery moved to `load`, a single click on a debug emit
+   button injected a stimulus into every downstream node in one
+   event-loop turn. User clarification: a button on i1 should send
+   one pulse on i1's edge, not start the entire animation.
 
-User reloaded the webview against `topology.json` (readGate1 ↔ i0
-↔ i1 closed loop, `in08` feeding `chainIn`) and confirmed: in
-resume mode the cycle pulses continuously while the input queue
-lasts; no manual step clicks needed to drain the
-i1→readGate.chainIn2 back-edge. The decoupled-clocks model holds
-end-to-end.
+Fix: `load` only stages; `tryFinalize` (called on RAF endpoint) is
+what calls `deliverIfPending()`. Each hop now costs one wire
+arrival. The cohort gate is no longer wired into delivery — it
+remains as a label the cursor reads for painting/scrub.
+
+Contract tests
+[r-topology-chain.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-chain.test.tsx)
+and
+[r-topology-join.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-join.test.tsx)
+updated to assert per-hop propagation (step + multiple flushRaf,
+not one synchronous step).
 
 ## Next move
 
-1. **Housekeeping.** Fix
+1. **Live re-verify the cycle.** Reload the webview against
+   `topology.json` and confirm that in resume mode the readGate1 ↔
+   i0 ↔ i1 cycle still pulses continuously, now with each hop
+   visibly animating along one wire at a time. Press i1's `⇢` and
+   confirm it produces one pulse on i1→readGate (not an instant
+   topology-wide cascade).
+2. **Retire ChainInhibitor's `⇢` debug button.** User's call:
+   ChainInhibitor is not a source. Its only legitimate emit is
+   "consume my slot and forward that value." The `⇢` button bypasses
+   the slot and loads a literal `1`, giving a non-source node source
+   powers. Remove from
+   [node-kinds-chain-inhibitor.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds-chain-inhibitor.tsx).
+3. **Housekeeping carries.** Fix
    `scripts/check-substrate-vocab.mjs` path
-   (`substrate/` → `substrate-r/`) so the vocab guard actually
-   runs against the live tree. Then flag
-   `task/in0-readgate-emission-ack` for user-approved deletion
-   (auto-retire signal hit long ago).
-2. **Manual `⇢` button on ChainInhibitor.** Now mostly redundant
-   when the cycle self-sustains. Ask user whether to keep as a
-   debug aid or remove. ReadGate's `⌫` stays — existing contract
-   test relies on it for the no-out-wire case.
-3. **Offer merge to `main`.** Branch is ready; needs explicit
-   user sign-off per branch hygiene.
+   (`substrate/` → `substrate-r/`). Flag
+   `task/in0-readgate-emission-ack` for user-approved deletion.
+4. **Offer merge to `main`** after (1)–(3) are clean.
 
 ## ALWAYS clause
 
