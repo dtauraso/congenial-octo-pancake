@@ -38,9 +38,11 @@
 ## Open branches
 
   - `main` — production trunk; check `git log` for tip.
-  - `task/substrate-slot-in-node` — this branch. Tip `79ede00`:
+  - `task/substrate-slot-in-node` — this branch. Tip `fd7ad63`:
     input, relay, join, readgate kinds all live with contract
-    tests (123/123 green). Next commit is the fan-out node.
+    tests AND dispatched in the editor (`RSubstrateNode` +
+    `RSubstrateEdge` thread cohort/gate). 123/123 green. Next
+    step is real-editor pulse verification, then fan-out.
   - `task/in0-readgate-emission-ack` — parked. **Auto-retire
     signal hit** (first green contract test on the new substrate
     is now in 31c6cdb); deletion still needs explicit user

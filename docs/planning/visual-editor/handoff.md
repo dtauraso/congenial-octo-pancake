@@ -9,9 +9,10 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — open task:
-     verify the source → wire → destination pulse behavior still
-     works under the slot-in-node substrate (regression check).
-     Fan-out is deferred.
+     drive a real topology in the editor (input → relay → readgate,
+     or join chain) and verify pulses flow end-to-end through the
+     slot-in-node loop now that the editor path dispatches all four
+     kinds and threads cohort/gate.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — forever-loop substrate background; layered with the resolved
      slot-in-node model.
@@ -22,31 +23,44 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-13, end of session):
 
-  **Active branch:** `task/substrate-slot-in-node`. Commit 4 of the
-  slot-in-node series landed and pushed (`79ede00`) — 2-input join
-  node. On top of the relay + multi-cohort chain (`1ca6f9f`) this
-  session added:
+  **Active branch:** `task/substrate-slot-in-node`. Three commits
+  landed this session catching the editor path up to the test
+  path:
 
-  - [spec.ts](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts)
-    — `join` kind registered in `NODE_KIND_PORTS` with `inputs:
-    ["a", "b"]`, `outputs: ["out"]`.
-  - [node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
-    — `JoinBody`. `onRun` fires only when both slots are `filled`
-    AND `outWire.canAccept`; consumes both and emits `[va, vb]`.
-    Re-entrancy from `Node.fill` is what makes the firing rule
-    fire as soon as the second slot arrives.
-  - [TopologyRoot.tsx](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx)
-    — dispatches the `join` kind to `JoinBody`.
-  - [r-topology-join.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-join.test.tsx)
-    — 3 tests: parseSpec assigns wA=wB=0/wOut=1; asymmetric case
-    (only srcA queued) never fires the join, readgate stays empty;
-    both queued → two steps deliver wOut at cohort 1 and arm the
-    readgate button.
+  - `96718ac` substrate: prevent fossil pulses across spec edits.
+    `<Wire>` is now keyed by its structural props so a spec edit
+    can't leave an `in-flight` phase stranded in a re-used React
+    instance.
+  - `4b0dae9` substrate: dispatch relay/join in editor + thread
+    cohort/gate. `RSubstrateNode` now dispatches `relay` and
+    `join` in addition to `input` and `readgate`. New
+    [cohort-assign.ts](../../../tools/topology-vscode/src/webview/substrate-r/cohort-assign.ts)
+    computes cohorts from raw edge tuples (no parseSpec port
+    validation, so mid-edit invalid specs don't throw). New
+    [CohortAssigner.tsx](../../../tools/topology-vscode/src/webview/substrate-r/CohortAssigner.tsx)
+    watches React Flow's edges and pushes the cohort map into
+    [registry.tsx](../../../tools/topology-vscode/src/webview/substrate-r/registry.tsx)
+    (now exposes `setCohorts` / `getWireCohort`). Mounted inside
+    `<ReactFlow>` in
+    [AppView.tsx](../../../tools/topology-vscode/src/webview/rf/app/AppView.tsx).
+    [RSubstrateEdge.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateEdge.tsx)
+    now passes `cohort` and `gate` to `<Wire>`.
+  - `fd7ad63` docs: substrate primitive landing rule. CLAUDE.md
+    encodes: a primitive isn't landed until both `TopologyRoot`
+    (test) **and** `RSubstrateNode`/`RSubstrateEdge` (editor)
+    dispatch to it.
+
+  **Why this session existed:** the prior handoff said "verify
+  pulses in the editor," but the editor had been silently lagging
+  the test path since `31c6cdb` — relay/join/cohort/gate never
+  reached `RSubstrateNode`/`RSubstrateEdge`. The verification
+  target was impossible. Fixed by catching the editor path up and
+  writing the rule into CLAUDE.md.
 
   **Gates at handoff:** `tsc --noEmit` clean. `npx vitest run` →
   123 passing across 21 files. `npm run check:loc` clean.
   `check-substrate-vocab.mjs` still stale (targets `substrate/`,
-  the live dir is `substrate-r/`) — fix queued.
+  live dir is `substrate-r/`) — fix queued.
 
   **Auto-retire signal:** `task/in0-readgate-emission-ack` still
   past its retire condition. Branch deletion is destructive
@@ -54,29 +68,24 @@ State at handoff (2026-05-13, end of session):
   opportunity.
 
   **Pre-existing uncommitted diff:** `topology.view.json` still
-  carries a modification that pre-dates the slot-in-node work; not
-  touched again.
-
-  **Commits this session:** `79ede00` substrate: 2-input join node
-  (pushed).
+  carries a modification that pre-dates this work; not touched.
 
 ## Dev-loop
 
-Read [MODEL.md](../../../MODEL.md) +
-[JoinBody](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
-and the join test
-([r-topology-join.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-join.test.tsx)).
-Next step is verification, not a new primitive — see
+Read [MODEL.md](../../../MODEL.md), the new CLAUDE.md "Substrate
+primitive landing rule" section, and
+[RSubstrateNode.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateNode.tsx)
++ [RSubstrateEdge.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateEdge.tsx).
+Next step is real-editor verification — see
 [handoff-next-task.md](handoff-next-task.md).
 
 ## Next move
 
-See [handoff-next-task.md](handoff-next-task.md). The next concrete
-step is to verify that the source → wire → destination pulse
-behavior working pre-slot-in-node still works now. Drive the editor
-against existing topologies, confirm pulses flow end-to-end, and
-capture any regression as a contract test before fixing. Fan-out
-(1→N distribute) is deferred.
+See [handoff-next-task.md](handoff-next-task.md). Load a topology
+in the editor with at least an input and a readgate (preferably
+also a relay or join), step the transport, and confirm pulses
+arrive at the destination slot. If any case parks, capture the
+failing topology as a contract test before fixing.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to
