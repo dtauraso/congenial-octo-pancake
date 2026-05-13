@@ -1,16 +1,23 @@
 // <Wire>: the substrate's wire primitive. Transient under the
-// slot-in-node model: a value enters at load, transits while
-// `in-flight`, and on arrival is written into the destination node's
-// slot — the wire is never a parking spot.
+// slot-in-node model.
 //
-// Each wire holds a construction-time binding to (destNodeRef,
-// destSlotId). On animation completion the wire calls
-// dest.fill(destSlotId, value) and dispatches `arrive`, returning to
-// `empty`. No `take`/`ack`/parked state.
+// Two clocks run side-by-side and neither overrides the other:
 //
-// Animation is preserved (RAF + arc length + pulse). complete() is a
-// synchronous arrival path used by tests and by future deterministic
-// stepping; production paths arrive via the RAF callback.
+//   • Substrate delivery (dest.fill) is gate-driven. On load, the
+//     value is staged; on `gate.release(cohort)` (or immediately at
+//     load if the cohort is already released), the wire writes the
+//     value into the destination slot. Delivered once per load.
+//
+//   • Visual animation is RAF-driven. The pulse travels along the
+//     path at a fixed speed. Reaching the endpoint does not deliver;
+//     it only marks the animation as done.
+//
+//   • Phase transition `in-flight → empty` happens once both clocks
+//     have closed: animation done AND substrate delivered. That is
+//     when the wire is observably ready for the next load.
+//
+// `complete()` on the handle is a synchronous "force-finish both
+// clocks" hook used by tests.
 
 import {
   forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState,
@@ -46,10 +53,12 @@ export interface WireProps {
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, cohort = 0, gate }, ref,
 ) {
-  const gateUnsubRef = useRef<(() => void) | null>(null);
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
   const phaseListenersRef = useRef(new Set<(p: Phase) => void>());
+  const pendingDeliverRef = useRef(false);
+  const animDoneRef = useRef(false);
+  const valueRef = useRef<unknown>(undefined);
 
   const apply = useCallback((a: Action) => {
     const next = wirePhaseReducer(phaseRef.current, a);
@@ -58,25 +67,45 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     setPhase(next);
   }, []);
 
-  const complete = useCallback(() => {
-    const p = phaseRef.current;
-    if (p.kind !== "in-flight") return;
-    if (gate && !gate.isReleased(cohort)) {
-      if (gateUnsubRef.current) return;
-      gateUnsubRef.current = gate.subscribe(cohort, () => {
-        gateUnsubRef.current?.();
-        gateUnsubRef.current = null;
-        complete();
-      });
-      return;
-    }
-    const value = p.value;
+  const deliverIfPending = useCallback(() => {
+    if (!pendingDeliverRef.current) return;
+    pendingDeliverRef.current = false;
+    destNodeRef.current?.fill(destSlotId, valueRef.current);
+  }, [destNodeRef, destSlotId]);
+
+  const tryFinalize = useCallback(() => {
+    if (phaseRef.current.kind !== "in-flight") return;
+    if (!animDoneRef.current) return;
+    if (pendingDeliverRef.current) return;
+    animDoneRef.current = false;
     apply({ type: "arrive" });
-    destNodeRef.current?.fill(destSlotId, value);
-  }, [apply, destNodeRef, destSlotId, cohort, gate]);
+  }, [apply]);
+
+  useEffect(() => {
+    if (!gate) return;
+    return gate.subscribe(cohort, () => {
+      deliverIfPending();
+      tryFinalize();
+    });
+  }, [gate, cohort, deliverIfPending, tryFinalize]);
+
+  const load = useCallback((value: unknown) => {
+    apply({ type: "load", value });
+    valueRef.current = value;
+    pendingDeliverRef.current = true;
+    animDoneRef.current = false;
+    if (gate && gate.isReleased(cohort)) deliverIfPending();
+  }, [apply, gate, cohort, deliverIfPending]);
+
+  const complete = useCallback(() => {
+    if (phaseRef.current.kind !== "in-flight") return;
+    deliverIfPending();
+    animDoneRef.current = true;
+    tryFinalize();
+  }, [deliverIfPending, tryFinalize]);
 
   useImperativeHandle(ref, () => ({
-    load: (value) => apply({ type: "load", value }),
+    load,
     complete,
     get phase() { return phaseRef.current; },
     get cohort() { return cohort; },
@@ -90,7 +119,7 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
       phaseListenersRef.current.add(listener);
       return () => { phaseListenersRef.current.delete(listener); };
     },
-  }), [apply, complete, destNodeRef, destSlotId, cohort]);
+  }), [load, complete, destNodeRef, destSlotId, cohort]);
 
   const distanceCoveredRef = useRef(0);
   const pathRef = useRef<SVGPathElement>(null);
@@ -115,14 +144,15 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
       const pt = path.getPointAtLength(distance);
       setPulsePos({ x: pt.x, y: pt.y });
       if (distance >= measuredLen) {
-        complete();
+        animDoneRef.current = true;
+        tryFinalize();
         return;
       }
       raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [phase.kind, arcLength, pathD, complete]);
+  }, [phase.kind, arcLength, pathD, tryFinalize]);
 
   return (
     <g>
