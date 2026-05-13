@@ -8,9 +8,9 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-next-task.md](handoff-next-task.md) — open task: exercise
-     a multi-cohort (chain) topology end-to-end. Cohort gate + cursor
-     driver is in and green.
+  1. [handoff-next-task.md](handoff-next-task.md) — open task: add a
+     2-input join node so multi-slot firing rules are exercised on
+     the new substrate.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — forever-loop substrate background; layered with the resolved
      slot-in-node model.
@@ -21,63 +21,59 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-13, end of session):
 
-  **Active branch:** `task/substrate-slot-in-node`. Commit 2 of the
-  slot-in-node series landed locally (cohort gate + cohort cursor
-  driver). On top of 31c6cdb's slot-in-node primitives this session
-  added:
+  **Active branch:** `task/substrate-slot-in-node`. Commit 3 of the
+  slot-in-node series landed and pushed (`1ca6f9f`) — relay node +
+  multi-cohort chain end-to-end. On top of the cohort gate +
+  cursor driver (`5c68b67`) this session added:
 
-  - [cohort-gate.ts](../../../tools/topology-vscode/src/webview/substrate-r/cohort-gate.ts)
-    — minimal `release(N) / isReleased(N) / subscribe(N, cb)` axis.
-    Park is in the gate, never in the wire's value.
   - [spec.ts](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts)
-    — `parseSpec` assigns each wire `cohort = max(predecessor
-    cohorts) + 1` (0 when the source node has no incoming wires).
-    Cycle detection via DFS.
-  - [Wire.tsx](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)
-    — `complete()` consults the gate; if its cohort isn't released
-    yet it subscribes once and stays `in-flight` (no value
-    parked on the wire).
-  - [useTickDriver.ts](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts)
-    — retired the "all wires empty" round-close. Tick is the cohort
-    cursor; `step()` releases the current cohort and waits for that
-    cohort's wires to be empty, then advances.
+    — `relay` kind registered in `NODE_KIND_PORTS` with `inputs:
+    ["in0"]`, `outputs: ["out"]`.
+  - [node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
+    — `RelayBody`. Its `onRun` drains the `in0` slot to the
+    outgoing wire when `wire.canAccept`. Because `Node.fill`
+    re-invokes `onRun`, wire-arrival immediately triggers emission
+    without waiting for the next driver pass.
+  - [TopologyRoot.tsx](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx)
+    — dispatches the `relay` kind to `RelayBody`.
+  - [r-topology-chain.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-chain.test.tsx)
+    — 3 tests: parseSpec assigns w1=0/w2=1; one step parks w2 on
+    the gate (readgate slot still empty, button not armed); a
+    second step releases cohort 1 and the slot fills.
 
-  **Gates at handoff:** `tsc --noEmit` clean. `npx vitest run` → 123
-  passing across 20 files (added `cohort-gate.test.ts` 6/6 and
-  `r-parse-cohort.test.ts` 2/2). `npm run check:loc` clean (Wire.tsx
-  154, useTickDriver 93). `check-substrate-vocab.mjs` still reports
-  "substrate/ directory not present" — the script's path target is
-  stale (`substrate-r/` is the real dir); fix is still queued.
+  **Gates at handoff:** `tsc --noEmit` clean. `npx vitest run` →
+  120 passing across 20 files. `npm run check:loc` clean.
+  `check-substrate-vocab.mjs` still stale (targets `substrate/`,
+  the live dir is `substrate-r/`) — fix queued.
 
-  **Auto-retire signal:** still flagged — `task/in0-readgate-
-  emission-ack` is past its retire condition. Branch deletion is
-  destructive shared-state, so it needs explicit user sign-off.
-  Flag at next opportunity.
+  **Auto-retire signal:** `task/in0-readgate-emission-ack` still
+  past its retire condition. Branch deletion is destructive
+  shared-state — needs explicit user sign-off. Flag at next
+  opportunity.
 
   **Pre-existing uncommitted diff:** `topology.view.json` still
   carries a modification that pre-dates the slot-in-node work; not
   touched again.
 
-  **Commits:** cohort gate landed at 5c68b67 (pushed); handoff
-  update at 1137202.
+  **Commits this session:** `1ca6f9f` substrate: relay node +
+  multi-cohort chain (pushed).
 
 ## Dev-loop
 
-Read [MODEL.md](../../../MODEL.md) + the cohort gate
-([cohort-gate.ts](../../../tools/topology-vscode/src/webview/substrate-r/cohort-gate.ts))
-and the cursor driver
-([useTickDriver.ts](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts)).
-Next code change: exercise a multi-cohort topology (chain) end-to-end —
-the current smoke test only has cohort 0. See
+Read [MODEL.md](../../../MODEL.md) +
+[RelayBody](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
+and the chain test
+([r-topology-chain.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-chain.test.tsx)).
+Next code change: a 2-input join node — see
 [handoff-next-task.md](handoff-next-task.md).
 
 ## Next move
 
 See [handoff-next-task.md](handoff-next-task.md). The next concrete
-step is to introduce a chain-capable node kind (or wire two ReadGates
-through a relay) so cohorts > 0 actually fire in production, then
-write a contract test that asserts cohort N+1 stays parked until
-the cursor advances.
+step is to add a `join` kind (slots `a`, `b`; output `out`) whose
+firing rule requires both slots `filled`, then a contract test
+demonstrating that the join doesn't emit until both predecessor
+cohorts have arrived.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to
