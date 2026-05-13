@@ -144,7 +144,7 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
           />
         )}
         {kind === "readgate" && (
-          <ReadGateBody nodeRef={nodeRef} slotIds={inputs.map((p) => p.name)} />
+          <ReadGateBody nodeRef={nodeRef} slotIds={inputs.map((p) => p.name)} outWireRef={outWireRef} />
         )}
       </div>
       {data?.sublabel && <div style={{ fontSize: 9, opacity: 0.7 }}>{data.sublabel}</div>}

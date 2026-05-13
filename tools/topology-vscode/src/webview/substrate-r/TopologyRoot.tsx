@@ -61,7 +61,7 @@ function NodeView({
     );
   }
   if (node.kind === "readgate") {
-    return <ReadGateBody nodeRef={nodeRef} slotIds={ports.inputs} />;
+    return <ReadGateBody nodeRef={nodeRef} slotIds={ports.inputs} outWireRef={outWireRef} />;
   }
   return null;
 }
