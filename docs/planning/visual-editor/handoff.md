@@ -22,23 +22,23 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-13, end of session):
 
-  **Active branch:** `task/substrate-slot-in-node`. Tip `ef5db1a`.
-  Editor pulse path now works live for input → readgate. The
-  slot-id mismatch that was silently crashing the driver mid-step
-  is fixed. Session commits:
+  **Active branch:** `task/substrate-slot-in-node`. Tip `05f0f5d`.
+  Editor pulse path works live, and pulses now adapt to edge
+  geometry changes mid-flight. Session commits:
 
+  - `05f0f5d` substrate: restart pulse RAF when `pathD` changes
+    mid-flight. The Wire RAF effect captured `measuredLen` once
+    and didn't depend on `pathD`, so dragging a node mid-flight
+    left the pulse completing at the stale arc length (vanishing
+    early on a lengthened edge). Added `pathD` to the dep array;
+    `distanceCoveredRef` preserves progress across restart.
   - `ef5db1a` substrate: thread schema port names as slot ids into
-    node bodies. `ReadGateBody`/`RelayBody`/`JoinBody` take slot
-    ids as props (defaults preserve test literals);
-    `RSubstrateNode` passes `data.inputs[i].name`. Prior to this,
-    `Wire.canAccept` threw `Node: unknown slot chainIn` inside
-    the driver's run loop and no pulse animated.
+    node bodies. Fixed the `chainIn`/`in0` mismatch that crashed
+    the driver inside `run()` so no pulse ever started.
   - `96718ac` substrate: prevent fossil pulses across spec edits
     by keying `<Wire>` on its structural props.
   - `4b0dae9` substrate: dispatch relay/join in editor + thread
-    cohort/gate. Adds `cohort-assign.ts`, `CohortAssigner.tsx`;
-    `registry` exposes `setCohorts`/`getWireCohort`;
-    `RSubstrateEdge` passes `cohort`+`gate` to `<Wire>`.
+    cohort/gate.
   - `fd7ad63` docs: substrate primitive landing rule in CLAUDE.md
     (test path + editor path, dual dispatch).
 

@@ -1,21 +1,24 @@
 # Next task: lock the editor pulse path in a contract test, extend to relay/join
 
-**Branch:** `task/substrate-slot-in-node`. Tip `ef5db1a`.
-**Status:** Editor pulse verified live for input → readgate. Slot-id
-mismatch fixed: bodies now take slot ids as props, RSubstrateNode
-threads `data.inputs[i].name` from the schema. Gates green: tsc
-clean, 123/123 tests, `check:loc` clean.
+**Branch:** `task/substrate-slot-in-node`. Tip `05f0f5d`.
+**Status:** Editor pulse verified live for input → readgate, and
+pulses now follow edges through mid-flight geometry changes. Gates
+green: tsc clean, 123/123 tests, `check:loc` clean.
 
 ## What just landed
 
-The `ef5db1a` fix: `ReadGateBody`/`RelayBody`/`JoinBody` accept
-`slotId` (and `slotAId`/`slotBId` for join) as props with defaults
-preserving the contract-test literals (`"in0"`, `"a"`, `"b"`).
-`RSubstrateNode` passes `inputs[i].name` from the schema's
-node-types. Before this fix, the editor's readgate declared its
-slot as `"in0"` while the wire arrived with `destSlotId =
-"chainIn"`, so `Wire.canAccept` threw inside the driver's `run()`
-loop and no pulse ever started.
+- `05f0f5d` — Wire RAF effect now depends on `pathD`, so geometry
+  changes mid-flight restart the RAF and pick up the new arc
+  length. `distanceCoveredRef` preserves progress across restart,
+  so the pulse resumes at the same arc distance on the new path.
+  Symptom before the fix: pulse traveled a fixed (old) distance
+  and vanished when the edge was lengthened mid-flight.
+- `ef5db1a` — `ReadGateBody`/`RelayBody`/`JoinBody` accept
+  `slotId` (and `slotAId`/`slotBId` for join) as props with
+  defaults preserving the contract-test literals (`"in0"`, `"a"`,
+  `"b"`). `RSubstrateNode` passes `inputs[i].name` from the
+  schema's node-types. Fixes the `chainIn`/`in0` mismatch that
+  crashed the driver mid-step.
 
 ## Next moves (pick in order of friction)
 
@@ -24,7 +27,9 @@ loop and no pulse ever started.
    *not* `"in0"` (e.g. `"chainIn"`). Today's tests only cover the
    `"in0"` default. The contract test goes under
    `test/contracts/r-topology-*.test.tsx`. This is what catches
-   any future regression of the slot-id thread.
+   any future regression of the slot-id thread. Optional companion
+   test: mid-flight `pathD` change preserves pulse progress and
+   completes at the new arc length (`05f0f5d`).
 2. **Multi-hop in the editor.** Drop a relay between input and
    readgate (or a join with two inputs) and step through. Confirm
    cohort 0 fires, then cohort 1, etc., and the readgate's ⌫ arms
