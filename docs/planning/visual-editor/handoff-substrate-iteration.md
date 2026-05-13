@@ -1,9 +1,9 @@
 # Substrate iteration model — superseded layer
 
 **Status:** the forever-loop substrate model below is preserved as
-background, but the slot-in-node pivot has now been **resolved** and
-supersedes parts of it. Read this file second, after
-[handoff-next-task.md](handoff-next-task.md).
+background. The slot-in-node pivot is **resolved and promoted** —
+[MODEL.md](../../../MODEL.md) is now authoritative. Read this file
+second, after [handoff-next-task.md](handoff-next-task.md).
 
 ## What the resolved pivot changes about the model below
 

@@ -1,66 +1,65 @@
-# Next task: promote resolved substrate draft
+# Next task: first code touch on slot-in-node substrate
 
 **Branch:** `task/substrate-slot-in-node`.
-**Status:** draft fully resolved. Three open questions decided. No
-code yet. Ready to promote, retire stale memories, update CLAUDE.md,
-then start code.
+**Status:** model promotion complete (commit 5f9ad30, pushed).
+[MODEL.md](../../../MODEL.md) is authoritative. CLAUDE.md updated.
+Invalidated memories retired/rewritten. **No substrate code changed
+yet.** Ready to start code.
 
 ## What to read
 
-1. [MODEL-revised-draft.md](../../../MODEL-revised-draft.md) — the
-   now-resolved pivot. Each prior "Open question" is now a
-   **Resolution** section with Properties / Cost. Read end-to-end;
-   note this draft supersedes parts of MODEL.md.
+1. [MODEL.md](../../../MODEL.md) — authoritative slot-in-node model.
+   Pay attention to "What things are", "Who does what", and "Ticks
+   and stepping".
 2. [diagrams/model-revised-draft/README.md](../../../diagrams/model-revised-draft/README.md)
-   — index of the diagrams (01–07 visualize the model; 13 defines
-   tick = edge cohort; 14 shows cohort-indexed stepping).
-3. [MODEL.md](../../../MODEL.md) — still authoritative until
-   promoted; the resolved draft contradicts it.
+   — diagram index. Key visuals:
+   - [07-q2-firing-rule-and-slot-ownership.svg](../../../diagrams/model-revised-draft/07-q2-firing-rule-and-slot-ownership.svg)
+     — wire carries `(value, bound slot id)`; node writes the named
+     slot and re-evaluates.
+   - [05-q3-slot-visual-depiction.svg](../../../diagrams/model-revised-draft/05-q3-slot-visual-depiction.svg)
+     — parked value on the destination's input port; wire empty
+     before/after.
+   - [13-tick-as-edge-cohort.svg](../../../diagrams/model-revised-draft/13-tick-as-edge-cohort.svg)
+     + [14-step-budget.svg](../../../diagrams/model-revised-draft/14-step-budget.svg)
+     — cohort = tick; gate releases cohort N only.
 
-## Resolutions in the draft
+## First code commit (this session's target)
 
-- **Q1 — tick driver.** Self-scheduling + one global play/pause
-  gate. Tick = edge cohort
-  ([13-tick-as-edge-cohort.svg](../../../diagrams/model-revised-draft/13-tick-as-edge-cohort.svg)).
-  Cohort N is assigned at wire-time by the regular animation loop;
-  gate releases cohort N only — random-access stepping
-  ([14-step-budget.svg](../../../diagrams/model-revised-draft/14-step-budget.svg)).
-  No central walker, no setup pass, no separate budget counter.
-- **Q2 — slot ownership.** Slots are passive state on the node.
-  Wires carry `(value, bound slot id)` set at construction time;
-  on arrival the node writes the named slot and re-evaluates its
-  rule
-  ([07-q2-firing-rule-and-slot-ownership.svg](../../../diagrams/model-revised-draft/07-q2-firing-rule-and-slot-ownership.svg)).
-  No subscription layer.
-- **Q3 — visual.** Parked value renders on dst's input port; wire
-  is empty after arrival
-  ([05-q3-slot-visual-depiction.svg](../../../diagrams/model-revised-draft/05-q3-slot-visual-depiction.svg)).
+Land the model's minimum viable substrate shape:
 
-## Concrete steps before code
+- **Slot lives on the destination node** as passive state
+  (`empty | filled(v) | consumed`). Node exposes
+  `slotPhase(slotId)` and `fill(slotId, v)`.
+- **Wire is transient** (`empty | in-flight(v) | empty`). Wire
+  holds a construction-time binding to `(destNode, slotId)`. On
+  animation completion, the wire calls `dest.fill(slotId, v)` and
+  returns to `empty`. No `load`/`take`/`ack`.
+- **parseSpec validation:** a wire whose `slotId` doesn't exist on
+  its destination is rejected at parse time, not runtime.
+- **Firing rule re-evaluates** on slot write. Auto destinations
+  fire when precondition holds; manually-gated wait for the user
+  click.
 
-1. **Promote draft → `MODEL.md`.** Either replace MODEL.md
-   wholesale or merge in. Delete `MODEL-revised-draft.md` after.
-2. **Retire memory** `project_ack_is_wire_state` — the wire has no
-   ack under the resolved model; backpressure lives in the slot's
-   empty/filled state, observed by the source.
-3. **Update [CLAUDE.md](../../../CLAUDE.md)** — at minimum the
-   "Latch + AND gate backpressure pattern" section. The latch +
-   AND-gate wiring is the old shape; replace with cohort-indexed
-   self-scheduling. Sanity-check the "Core concepts" vocabulary for
-   fused-wire phrasing that drifted.
-4. **Then start code.** First substrate touch: slot lives on the
-   destination node; wires carry `(value, bound slot id)`; arrival
-   writes the named slot. Gate + cohort registry can land in a
-   second commit.
+## Second commit (deferred)
 
-## Latent risk worth keeping in mind
+Global play/pause gate + cohort registry. Cohort N assigned at
+wire-time (max predecessor cohort + 1) by the regular animation
+loop. Gate releases cohort N only for random-access stepping.
 
-The listener reentrancy hazard in the old fused-wire
-`Wire.subscribePhase` path goes away under the resolved model
-(no slot-side subscription at all). Until the new substrate is in,
-treat any new `subscribePhase` listener as a hazard — they should
-not be added; the migration path is to write the slot-on-node code
-instead.
+## Concrete starting steps
+
+1. Locate the current substrate code path (likely under
+   `tools/topology-vscode/src/substrate/` and
+   `src/webview/substrate-r/`). Note: `check-substrate-vocab.mjs`
+   currently reports "substrate/ directory not present" — confirm
+   the actual location before editing.
+2. Identify the existing `<Wire>` component and node base. Plan the
+   minimal diff to retire `load`/`take`/`ack` and move the parked
+   state onto the node's slot map.
+3. Latent hazard: any new `subscribePhase` listener on wires is the
+   wrong migration path under the resolved model. If you find
+   yourself reaching for one, stop — write the slot-on-node code
+   instead.
 
 ## ALWAYS clause
 

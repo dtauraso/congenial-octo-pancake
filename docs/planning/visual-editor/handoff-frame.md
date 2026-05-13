@@ -38,8 +38,8 @@
 ## Open branches
 
   - `main` — production trunk; check `git log` for tip.
-  - `task/substrate-slot-in-node` — this branch. Draft resolved;
-    ready to promote and start code.
+  - `task/substrate-slot-in-node` — this branch. Model promoted
+    (MODEL.md authoritative); ready to start first code commit.
   - `task/in0-readgate-emission-ack` — parked; reference for the
     old shape. **Do not merge, do not delete** until first green
     contract test on the new substrate (auto-retire signal).

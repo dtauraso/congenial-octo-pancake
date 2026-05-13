@@ -9,79 +9,60 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — open task:
-     promote the resolved substrate draft to authoritative
-     `MODEL.md`, retire invalidated memories, update CLAUDE.md,
-     then start code.
+     first code touch landing slot-on-node + wire-bound-slot-id
+     in the substrate. Model promotion is already done.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
-     — forever-loop substrate background; now layered with the
-     slot-in-node resolution (slots owned by nodes, wire-bound
-     slot id, self-scheduling + global gate, cohort-indexed step).
+     — forever-loop substrate background; layered with the resolved
+     slot-in-node model (slots owned by nodes, wire-bound slot id,
+     self-scheduling + global gate, cohort-indexed step).
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame,
      working mode, open branches, housekeeping.
 
 ---
 
-State at handoff (2026-05-12, end of session):
+State at handoff (2026-05-13, end of session):
 
-  **Active branch:** `task/substrate-slot-in-node`. Draft
-  [MODEL-revised-draft.md](../../../MODEL-revised-draft.md) is
-  now fully resolved — all three open questions decided. SVG
-  diagrams under
+  **Active branch:** `task/substrate-slot-in-node`. Promotion
+  complete at commit 5f9ad30 (pushed): [MODEL.md](../../../MODEL.md)
+  is now the authoritative slot-in-node model;
+  `MODEL-revised-draft.md` deleted; [CLAUDE.md](../../../CLAUDE.md)
+  "Latch + AND gate backpressure pattern" section replaced with the
+  slot-phase backpressure description + cohort stepping pointer.
+  SVG diagrams under
   [diagrams/model-revised-draft/](../../../diagrams/model-revised-draft/)
-  match the resolutions. No code changes yet.
-  [MODEL.md](../../../MODEL.md) is still authoritative until
-  promoted.
+  are unchanged and remain the canonical visuals. **No substrate
+  code touched yet.**
 
-  **What the resolved draft says.**
-  - **Slot ownership.** The wire is transient
-    (`empty → in-flight(v) → empty`); the slot lives on the
-    destination node (`empty → filled(v) → consumed`). Wires
-    arrive at the node carrying a bound slot id; the node writes
-    its own slot.
-  - **Q1 — tick driver.** Self-scheduling nodes + one global
-    play/pause master switch. No central walker. A tick is one
-    cohort of simultaneously-firing edges
-    ([13-tick-as-edge-cohort.svg](../../../diagrams/model-revised-draft/13-tick-as-edge-cohort.svg)).
-    Cohort N is assigned at wire-time by the regular animation
-    loop; the gate releases cohort N only — random-access stepping
-    over the cohort axis
-    ([14-step-budget.svg](../../../diagrams/model-revised-draft/14-step-budget.svg)).
-  - **Q2 — firing rule + slot ownership.** Slots are passive
-    state; no subscription layer. Wire carries `(value, bound slot
-    id)`; the node receives the arrival, writes the slot,
-    re-evaluates its rule
-    ([07-q2-firing-rule-and-slot-ownership.svg](../../../diagrams/model-revised-draft/07-q2-firing-rule-and-slot-ownership.svg)).
-  - **Q3 — visual depiction.** Parked value renders on the dst's
-    input port (small square). Wire renders only the in-flight
-    pulse and is empty before/after
-    ([05-q3-slot-visual-depiction.svg](../../../diagrams/model-revised-draft/05-q3-slot-visual-depiction.svg)).
+  **Memories updated.**
+  - `project_ack_is_wire_state` — retired (file deleted, MEMORY.md
+    index entry removed). The wire has no ack under the resolved
+    model; backpressure lives in the slot's empty/filled state.
+  - `feedback_clear_button_armed_only_when_loaded` — rewritten to
+    slot-phase vocabulary (`armed = slotPhase === "filled"`,
+    `dest.slotPhase(slotId)`); MEMORY.md index entry updated.
 
-  **Memories the resolved draft invalidates.**
-  - `project_ack_is_wire_state` — the wire has no ack under the
-    resolved model; backpressure lives in the slot's empty/filled
-    state observed by the source.
+  **Pre-existing uncommitted diff:** `topology.view.json` carries a
+  modification that pre-dated this session — not part of the
+  promotion commit. Leave it alone unless a future session has a
+  reason to touch it.
 
-  **CLAUDE.md sections that need rewriting.**
-  - "Latch + AND gate backpressure pattern" — the latch + AND-gate
-    wiring is the old shape; replace with the cohort-indexed
-    self-scheduling story.
-  - "Core concepts" — vocabulary check; some inhibitor-chain
-    phrasing presumes the fused wire.
-
-  **Gates:** all SVGs pass `xmllint --noout`. No code, so no
-  build/tsc/vitest run. LOC ✓.
+  **Gates:** model + docs changes only; no code, so no
+  build/tsc/vitest run. LOC ✓. `check-substrate-vocab.mjs` reports
+  "substrate/ directory not present; vocab check skipped."
 
 ## Dev-loop
 
-Read the resolved draft + diagrams. If aligned, promote
-draft → MODEL.md, retire `project_ack_is_wire_state`, update
-CLAUDE.md, then start code. First code touch should land the
-slot-on-node + wire-bound-slot-id substrate change.
+Read [MODEL.md](../../../MODEL.md) + diagrams under
+[diagrams/model-revised-draft/](../../../diagrams/model-revised-draft/).
+The model is authoritative now. Start code: first touch lands the
+slot-on-node + wire-bound-slot-id substrate change. Gate + cohort
+registry can come in a second commit.
 
 ## Next move
 
 See [handoff-next-task.md](handoff-next-task.md). The next concrete
-step is promotion + retirement, not code.
+step is the first code commit: slot on destination node, wire
+carries `(value, bound slot id)`, arrival writes the named slot.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to
