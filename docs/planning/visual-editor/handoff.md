@@ -9,10 +9,9 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — open task:
-     the editor cycle (readGate1 ↔ i0 ↔ i1) needs live-user
-     verification. readgate now emits `1` on its `out` port, wire
-     delivery is decoupled from RAF animation, and the driver
-     auto-advances through idle cohorts at ~60Hz in resume mode.
+     cycle is live-verified; next is housekeeping (vocab-check
+     path, parked-branch retire) and deciding the fate of the
+     manual `⇢` debug button on ChainInhibitor.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — forever-loop substrate background; layered with the resolved
      slot-in-node model.
@@ -24,31 +23,23 @@ Read them in this order on a fresh session:
 State at handoff (2026-05-13, end-of-session):
 
   **Active branch:** `task/substrate-slot-in-node`. Tip `f7236cf`.
-  Working tree clean (all session changes committed). 127/127
-  vitest green, tsc clean, `check:loc` clean, `out/webview.js`
-  rebuilt.
+  Working tree clean. 127/127 vitest green, tsc clean,
+  `check:loc` clean, `out/webview.js` rebuilt.
 
-  Session moves since `f2ee9ba`:
+  **Live-verified:** user reloaded the webview and confirmed the
+  cycle (readGate1 ↔ i0 ↔ i1, `in08 → chainIn`) self-sustains in
+  resume mode — pulses continuously, no manual step clicks needed
+  to drain the i1→readGate back-edge. The three commits since
+  `f2ee9ba` (readgate `out` emit, RAF-decoupled wire delivery,
+  driver fast-path rAF re-arm) resolve the parking friction.
 
-  - `06a76fe` ReadGateBody fires its `out` port (emits `1`) when
-    all slots are filled and the out wire `canAccept`. Editor and
-    contract paths both dispatch. New test
-    [r-topology-readgate-emit.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-readgate-emit.test.tsx).
-    Node-kinds split into siblings to stay under the LOC budget.
-  - `b552b0d` Wire substrate delivery decoupled from RAF: gate
-    release writes the slot via a `pendingDeliver` flag; RAF only
-    tracks visual `animDone`; `in-flight → empty` requires both.
-    Removes the back-edge parking race.
-  - `f7236cf` Driver fast-path now re-arms
-    `requestAnimationFrame(advance)` in resume mode so the cursor
-    keeps walking through idle cohorts (~60Hz). Halted/step mode
-    unchanged.
-
-  **What's open:** the cycle should now sustain itself in the
-  editor. User needs to reload the webview and confirm. If it
-  still stalls, the suspect zones in handoff-next-task.md are the
-  starting points. Housekeeping (vocab-check path,
-  `task/in0-readgate-emission-ack` retire) carried.
+  **What's open:** housekeeping carries — fix
+  `scripts/check-substrate-vocab.mjs` path
+  (`substrate/` → `substrate-r/`), and flag
+  `task/in0-readgate-emission-ack` for user-approved deletion.
+  Decide whether to retire ChainInhibitor's manual `⇢` button now
+  that the cycle runs on its own (debug aid vs. dead UI). Branch
+  is ready for sign-off to merge to `main`.
 
 ## Dev-loop
 
@@ -64,10 +55,10 @@ for the decoupled-clocks model. After any substrate-r edit, run
 
 ## Next move
 
-See [handoff-next-task.md](handoff-next-task.md). Verify the cycle
-self-sustains in the live editor; log any remaining friction to
-[session-log.md](session-log.md) and address in follow-up commits
-on this branch.
+See [handoff-next-task.md](handoff-next-task.md). Cycle is
+verified; clear housekeeping items and ask user about merging to
+`main`. Log any new friction to
+[session-log.md](session-log.md).
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to
