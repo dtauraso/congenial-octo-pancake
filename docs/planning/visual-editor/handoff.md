@@ -58,10 +58,8 @@ State at handoff (2026-05-13, end of session):
   carries a modification that pre-dates the slot-in-node work; not
   touched again.
 
-  **Not yet committed:** the cohort-gate changes above are staged in
-  the working tree but not yet committed. The next session should
-  either land them as one commit (`substrate: cohort gate + cursor
-  driver`) or split into two (gate primitive + driver rewrite).
+  **Commits:** cohort gate landed at 5c68b67 (pushed); handoff
+  update at 1137202.
 
 ## Dev-loop
 
