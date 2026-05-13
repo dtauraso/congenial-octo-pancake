@@ -1,70 +1,74 @@
-# Next task: 2-input join node (commit 4 of slot-in-node)
+# Next task: fan-out / distribute node (commit 5 of slot-in-node)
 
 **Branch:** `task/substrate-slot-in-node`.
-**Status:** relay landed at `1ca6f9f`. Chain `input → relay →
-readgate` works end-to-end with w1=cohort 0, w2=cohort 1. All
-gates green. The next missing primitive is a node that owns more
-than one input slot — until that lands, the substrate can't
-express any firing rule that depends on coincidence (AND gates,
-edge detectors, sync latches all need it).
+**Status:** join landed at `79ede00`. Topology `srcA, srcB → join →
+readgate` runs end-to-end. Multi-slot firing rule (coincidence) is
+proven. Gates green: tsc clean, 123/123 tests, `check:loc` clean.
+
+The next missing primitive is fan-out: one source emitting onto
+multiple wires (one input slot, ≥2 output wires). Until it lands,
+the substrate can't express any topology where one value drives two
+or more destinations — needed for lateral inhibition, distribute,
+and any AND-tree reduction.
 
 ## What to read
 
-1. [MODEL.md](../../../MODEL.md) — slot phases and firing rules.
+1. [MODEL.md](../../../MODEL.md) — slot phases, firing rules, and
+   the rule that emission requires all targeted output wires to be
+   `canAccept`.
 2. [Node.tsx](../../../tools/topology-vscode/src/webview/substrate-r/Node.tsx)
-   — slots are declared by id; `fill` re-invokes `onRun`, so a
-   firing rule that reads two slots is just an `onRun` body.
+   — slot API; no change expected.
 3. [node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
-   — `RelayBody` is the template; the join is a strict superset.
-4. [spec.ts](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts)
-   — `assignCohorts` already does `max(predecessor cohorts) + 1`,
-   so a join's outgoing wire's cohort is correct without changes.
+   — `RelayBody` and `JoinBody` are the templates. Fan-out is a
+   relay with N outgoing wire refs instead of one.
+4. [TopologyRoot.tsx](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx)
+   — `findWireForOutput` returns one wire id; fan-out needs the
+   plural variant (collect every wire whose `source.nodeId/port`
+   matches).
 
 ## Target shape
 
-- Register `join` in `NODE_KIND_PORTS` with `inputs: ["a", "b"]`,
-  `outputs: ["out"]`.
-- `JoinBody` declares slots `["a", "b"]` and an `onRun` that
-  fires only when **both** slots are `filled` AND `outWire.canAccept`.
-  On fire: `consume("a")`, `consume("b")`, `load(combine(va, vb))`.
-  Use a simple combiner (e.g. `[va, vb]` tuple) — the model
-  doesn't care about the payload shape yet.
-- Wire `JoinBody` into [TopologyRoot.tsx](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx).
+- Register `fanout` in `NODE_KIND_PORTS` with `inputs: ["in0"]` and
+  outputs `["out"]`. Multiple wires share the same source port — the
+  substrate doesn't need distinct output ports for this case; the
+  wire identity does the work.
+- `FanoutBody` declares slot `["in0"]` and an `onRun` that fires
+  only when slot is `filled` AND **every** outgoing wire returns
+  `canAccept`. On fire: consume once, load the same value on each
+  outgoing wire.
+- Update `TopologyRoot` to pass an array of `outWireRefs` to
+  `FanoutBody`.
 
 ## Topology under test
 
-Two inputs feeding one join feeding a readgate:
-
-  `srcA → join.a` (cohort 0)
-  `srcB → join.b` (cohort 0)
-  `join.out → gate.in0` (cohort 1)
+  `src → fanout.in0` (cohort 0)
+  `fanout.out → gateA.in0` (cohort 1)
+  `fanout.out → gateB.in0` (cohort 1)
 
 ## Contract assertions
 
-1. parseSpec: both input wires are cohort 0; join's outgoing wire
-   is cohort 1.
-2. After one `step`, the cursor is at 1 — both cohort-0 wires
-   arrived, both join slots are/were filled, and the join's
-   outgoing wire is now parked-on-gate at cohort 1 (readgate
-   button still not armed).
-3. After a second `step`, the readgate slot fills (button armed).
-4. **Asymmetric case (recommended):** queue only `srcA`. After one
-   step, slot `a` is `filled` but slot `b` is `empty`; the join
-   does NOT emit. After a later step where `srcB` produces, the
-   join finally fires. This is the firing-rule guarantee — the
-   join is the first node where this matters.
+1. parseSpec: both fan-out wires get cohort 1; the input wire is
+   cohort 0.
+2. After two `step`s, both readgate buttons arm (both slots filled
+   with the same value).
+3. **Backpressure-asymmetry case:** consume `gateA`'s slot but
+   leave `gateB`'s filled. Re-arm the source with another input
+   value and step. The fan-out must NOT emit until `gateB`'s slot
+   is also empty — i.e. `canAccept` is conjunctive across all
+   outgoing wires. Verify the upstream slot stays `filled` and no
+   pulse appears on either output wire.
 
 ## Latent hazards
 
-- `Node.fill` re-invokes `onRun` on the destination only. If wire
-  `a` arrives first, `onRun` runs but `b` is still empty → no-op.
-  When `b` arrives, `onRun` runs again and now fires. Verify the
-  test asserts the "first arrival does nothing" intermediate state.
-- The join's outgoing wire is cohort 1 even when both inputs
-  arrive in the same step. Park-on-gate semantics must hold —
-  emission happens during cohort 0's run; the wire transitions to
-  `in-flight` but `complete()` sees cohort 1 not yet released and
-  subscribes. Mirrors the relay path.
+- The "all-canAccept" rule means partial emission is forbidden. If
+  one downstream is full, the fan-out parks; if it emits to A and
+  then sees B full, you have a duplicate-delivery hazard later.
+  Atomic check-then-load in a single `onRun` body is the only safe
+  shape — the test must exercise the parked path.
+- Cohort assignment already handles this: each outgoing wire
+  inherits `max(predecessors of fanout) + 1` independently, so
+  multiple outputs all sit at the same cohort. No spec.ts change
+  expected.
 
 ## Housekeeping (carry forward)
 

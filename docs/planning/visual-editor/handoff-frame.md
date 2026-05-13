@@ -38,10 +38,9 @@
 ## Open branches
 
   - `main` — production trunk; check `git log` for tip.
-  - `task/substrate-slot-in-node` — this branch. First code
-    commit landed (31c6cdb): slot-in-node primitives in place,
-    contract tests green. Next commit is the cohort gate +
-    registry.
+  - `task/substrate-slot-in-node` — this branch. Tip `79ede00`:
+    input, relay, join, readgate kinds all live with contract
+    tests (123/123 green). Next commit is the fan-out node.
   - `task/in0-readgate-emission-ack` — parked. **Auto-retire
     signal hit** (first green contract test on the new substrate
     is now in 31c6cdb); deletion still needs explicit user

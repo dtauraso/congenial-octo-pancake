@@ -9,8 +9,8 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — open task: add a
-     2-input join node so multi-slot firing rules are exercised on
-     the new substrate.
+     fan-out (distribute) node so one source can feed multiple
+     destinations under the slot-in-node substrate.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — forever-loop substrate background; layered with the resolved
      slot-in-node model.
@@ -21,28 +21,29 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-13, end of session):
 
-  **Active branch:** `task/substrate-slot-in-node`. Commit 3 of the
-  slot-in-node series landed and pushed (`1ca6f9f`) — relay node +
-  multi-cohort chain end-to-end. On top of the cohort gate +
-  cursor driver (`5c68b67`) this session added:
+  **Active branch:** `task/substrate-slot-in-node`. Commit 4 of the
+  slot-in-node series landed and pushed (`79ede00`) — 2-input join
+  node. On top of the relay + multi-cohort chain (`1ca6f9f`) this
+  session added:
 
   - [spec.ts](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts)
-    — `relay` kind registered in `NODE_KIND_PORTS` with `inputs:
-    ["in0"]`, `outputs: ["out"]`.
+    — `join` kind registered in `NODE_KIND_PORTS` with `inputs:
+    ["a", "b"]`, `outputs: ["out"]`.
   - [node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
-    — `RelayBody`. Its `onRun` drains the `in0` slot to the
-    outgoing wire when `wire.canAccept`. Because `Node.fill`
-    re-invokes `onRun`, wire-arrival immediately triggers emission
-    without waiting for the next driver pass.
+    — `JoinBody`. `onRun` fires only when both slots are `filled`
+    AND `outWire.canAccept`; consumes both and emits `[va, vb]`.
+    Re-entrancy from `Node.fill` is what makes the firing rule
+    fire as soon as the second slot arrives.
   - [TopologyRoot.tsx](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx)
-    — dispatches the `relay` kind to `RelayBody`.
-  - [r-topology-chain.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-chain.test.tsx)
-    — 3 tests: parseSpec assigns w1=0/w2=1; one step parks w2 on
-    the gate (readgate slot still empty, button not armed); a
-    second step releases cohort 1 and the slot fills.
+    — dispatches the `join` kind to `JoinBody`.
+  - [r-topology-join.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-join.test.tsx)
+    — 3 tests: parseSpec assigns wA=wB=0/wOut=1; asymmetric case
+    (only srcA queued) never fires the join, readgate stays empty;
+    both queued → two steps deliver wOut at cohort 1 and arm the
+    readgate button.
 
   **Gates at handoff:** `tsc --noEmit` clean. `npx vitest run` →
-  120 passing across 20 files. `npm run check:loc` clean.
+  123 passing across 21 files. `npm run check:loc` clean.
   `check-substrate-vocab.mjs` still stale (targets `substrate/`,
   the live dir is `substrate-r/`) — fix queued.
 
@@ -55,25 +56,26 @@ State at handoff (2026-05-13, end of session):
   carries a modification that pre-dates the slot-in-node work; not
   touched again.
 
-  **Commits this session:** `1ca6f9f` substrate: relay node +
-  multi-cohort chain (pushed).
+  **Commits this session:** `79ede00` substrate: 2-input join node
+  (pushed).
 
 ## Dev-loop
 
 Read [MODEL.md](../../../MODEL.md) +
-[RelayBody](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
-and the chain test
-([r-topology-chain.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-chain.test.tsx)).
-Next code change: a 2-input join node — see
+[JoinBody](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
+and the join test
+([r-topology-join.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-join.test.tsx)).
+Next code change: a fan-out (distribute) node — see
 [handoff-next-task.md](handoff-next-task.md).
 
 ## Next move
 
 See [handoff-next-task.md](handoff-next-task.md). The next concrete
-step is to add a `join` kind (slots `a`, `b`; output `out`) whose
-firing rule requires both slots `filled`, then a contract test
-demonstrating that the join doesn't emit until both predecessor
-cohorts have arrived.
+step is to add a `fanout` kind (slot `in0`; one source port driving
+multiple outgoing wires) whose firing rule requires every outgoing
+wire's `canAccept` to be true, then a contract test for the
+asymmetric backpressure case (one downstream consumes, the other
+holds full).
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to
