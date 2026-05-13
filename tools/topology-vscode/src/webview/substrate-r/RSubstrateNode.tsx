@@ -110,13 +110,22 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
           />
         )}
         {kind === "relay" && (
-          <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} />
+          <RelayBody
+            nodeRef={nodeRef}
+            outWireRef={outWireRef}
+            slotId={inputs[0]?.name}
+          />
         )}
         {kind === "join" && (
-          <JoinBody nodeRef={nodeRef} outWireRef={outWireRef} />
+          <JoinBody
+            nodeRef={nodeRef}
+            outWireRef={outWireRef}
+            slotAId={inputs[0]?.name}
+            slotBId={inputs[1]?.name}
+          />
         )}
         {kind === "readgate" && (
-          <ReadGateBody nodeRef={nodeRef} />
+          <ReadGateBody nodeRef={nodeRef} slotId={inputs[0]?.name} />
         )}
       </div>
       {data?.sublabel && <div style={{ fontSize: 9, opacity: 0.7 }}>{data.sublabel}</div>}

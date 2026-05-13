@@ -35,57 +35,61 @@ export function InputBody({
 }
 
 export function RelayBody({
-  nodeRef, outWireRef,
+  nodeRef, outWireRef, slotId = "in0",
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
+  slotId?: string;
 }) {
   const run = useCallback(() => {
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
-    if (node.slotPhase("in0") !== "filled") return;
+    if (node.slotPhase(slotId) !== "filled") return;
     if (!wire.canAccept) return;
-    const value = node.consume("in0");
+    const value = node.consume(slotId);
     wire.load(value);
-  }, [nodeRef, outWireRef]);
+  }, [nodeRef, outWireRef, slotId]);
 
-  return <Node ref={nodeRef} slots={["in0"]} onRun={run} />;
+  return <Node ref={nodeRef} slots={[slotId]} onRun={run} />;
 }
 
 export function JoinBody({
-  nodeRef, outWireRef,
+  nodeRef, outWireRef, slotAId = "a", slotBId = "b",
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
+  slotAId?: string;
+  slotBId?: string;
 }) {
   const run = useCallback(() => {
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
-    if (node.slotPhase("a") !== "filled") return;
-    if (node.slotPhase("b") !== "filled") return;
+    if (node.slotPhase(slotAId) !== "filled") return;
+    if (node.slotPhase(slotBId) !== "filled") return;
     if (!wire.canAccept) return;
-    const va = node.consume("a");
-    const vb = node.consume("b");
+    const va = node.consume(slotAId);
+    const vb = node.consume(slotBId);
     wire.load([va, vb]);
-  }, [nodeRef, outWireRef]);
+  }, [nodeRef, outWireRef, slotAId, slotBId]);
 
-  return <Node ref={nodeRef} slots={["a", "b"]} onRun={run} />;
+  return <Node ref={nodeRef} slots={[slotAId, slotBId]} onRun={run} />;
 }
 
 export function ReadGateBody({
-  nodeRef,
+  nodeRef, slotId = "in0",
 }: {
   nodeRef: RefObject<NodeHandle | null>;
+  slotId?: string;
 }) {
   return (
     <>
-      <Node ref={nodeRef} slots={["in0"]} />
+      <Node ref={nodeRef} slots={[slotId]} />
       <ManualTakeButton
         nodeRef={nodeRef}
-        slotId="in0"
-        onConsume={() => nodeRef.current?.requestConsume("in0")}
+        slotId={slotId}
+        onConsume={() => nodeRef.current?.requestConsume(slotId)}
       />
     </>
   );
