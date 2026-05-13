@@ -122,7 +122,7 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [phase.kind, arcLength, complete]);
+  }, [phase.kind, arcLength, pathD, complete]);
 
   return (
     <g>
