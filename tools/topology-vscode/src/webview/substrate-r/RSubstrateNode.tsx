@@ -15,7 +15,7 @@ import type { WireHandle } from "./Wire";
 import { InputBody, ReadGateBody, RelayBody, JoinBody } from "./node-kinds";
 import { useRegistry } from "./registry";
 
-interface PortDef { name: string; kind: EdgeKind }
+interface PortDef { name: string; kind: EdgeKind; side?: "left" | "right" }
 
 interface RSubstrateNodeData {
   type?: string;
@@ -82,24 +82,36 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
         boxSizing: "border-box",
       }}
     >
-      {inputs.map((p, i) => (
-        <Handle
-          key={`in-${p.name}`}
-          id={p.name}
-          type="target"
-          position={Position.Left}
-          style={handleStyle("left", ((i + 1) * 100) / (inputs.length + 1), KIND_COLORS[p.kind] ?? "#888")}
-        />
-      ))}
-      {outputs.map((p, i) => (
-        <Handle
-          key={`out-${p.name}`}
-          id={p.name}
-          type="source"
-          position={Position.Right}
-          style={handleStyle("right", ((i + 1) * 100) / (outputs.length + 1), KIND_COLORS[p.kind] ?? "#888")}
-        />
-      ))}
+      {(() => {
+        const leftIns = inputs.filter((p) => (p.side ?? "left") === "left");
+        const rightIns = inputs.filter((p) => p.side === "right");
+        const leftOuts = outputs.filter((p) => p.side === "left");
+        const rightOuts = outputs.filter((p) => (p.side ?? "right") === "right");
+        const leftPorts = [...leftIns, ...leftOuts];
+        const rightPorts = [...rightIns, ...rightOuts];
+        return (
+          <>
+            {leftPorts.map((p, i) => (
+              <Handle
+                key={`l-${p.name}`}
+                id={p.name}
+                type={inputs.includes(p) ? "target" : "source"}
+                position={Position.Left}
+                style={handleStyle("left", ((i + 1) * 100) / (leftPorts.length + 1), KIND_COLORS[p.kind] ?? "#888")}
+              />
+            ))}
+            {rightPorts.map((p, i) => (
+              <Handle
+                key={`r-${p.name}`}
+                id={p.name}
+                type={inputs.includes(p) ? "target" : "source"}
+                position={Position.Right}
+                style={handleStyle("right", ((i + 1) * 100) / (rightPorts.length + 1), KIND_COLORS[p.kind] ?? "#888")}
+              />
+            ))}
+          </>
+        );
+      })()}
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         <span style={{ fontWeight: 500 }}>{data?.label ?? id}</span>
         {kind === "input" && (
@@ -125,7 +137,7 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
           />
         )}
         {kind === "readgate" && (
-          <ReadGateBody nodeRef={nodeRef} slotId={inputs[0]?.name} />
+          <ReadGateBody nodeRef={nodeRef} slotIds={inputs.map((p) => p.name)} />
         )}
       </div>
       {data?.sublabel && <div style={{ fontSize: 9, opacity: 0.7 }}>{data.sublabel}</div>}

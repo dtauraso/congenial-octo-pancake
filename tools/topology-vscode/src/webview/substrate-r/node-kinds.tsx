@@ -5,14 +5,14 @@
 // no ack — the wire returns to empty on arrival under its own
 // machinery.
 //
-// ReadGate: declares slot "in0". Manual-gate destination — onRun is a
-// no-op; the slot fills when the wire arrives, and the button consumes
-// the slot on click. No downstream emission in this commit.
+// ReadGate: variable-arity AND. Declares slots ports.inputs (N >= 1).
+// Manual-gate destination — onRun is a no-op; each slot fills when its
+// wire arrives. The single take button is armed only when ALL slots
+// are "filled", and a click consumes every slot.
 
-import { useCallback, useRef, type RefObject } from "react";
-import { Node, type NodeHandle } from "./Node";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { Node, type NodeHandle, type SlotPhase } from "./Node";
 import type { WireHandle } from "./Wire";
-import { ManualTakeButton } from "./ManualTakeButton";
 
 export function InputBody({
   nodeRef, outWireRef, initialQueue,
@@ -78,19 +78,62 @@ export function JoinBody({
 }
 
 export function ReadGateBody({
-  nodeRef, slotId = "in0",
+  nodeRef, slotIds,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
-  slotId?: string;
+  slotIds: string[];
 }) {
+  const slots = slotIds.length > 0 ? slotIds : ["in0"];
+  const key = slots.join("|");
+  const [phases, setPhases] = useState<SlotPhase[]>(() => slots.map(() => "empty"));
+
+  useEffect(() => {
+    const handle = nodeRef.current;
+    if (!handle) return;
+    setPhases(slots.map((s) => handle.slotPhase(s)));
+    const unsubs = slots.map((s, i) =>
+      handle.subscribeSlot(s, (p) =>
+        setPhases((prev) => {
+          if (prev[i] === p) return prev;
+          const next = prev.slice();
+          next[i] = p;
+          return next;
+        }),
+      ),
+    );
+    return () => { for (const u of unsubs) u(); };
+  }, [nodeRef, key]);
+
+  const armed = phases.length === slots.length && phases.every((p) => p === "filled");
+  const onConsume = useCallback(() => {
+    const handle = nodeRef.current;
+    if (!handle) return;
+    for (const s of slots) handle.requestConsume(s);
+  }, [nodeRef, key]);
+
   return (
     <>
-      <Node ref={nodeRef} slots={[slotId]} />
-      <ManualTakeButton
-        nodeRef={nodeRef}
-        slotId={slotId}
-        onConsume={() => nodeRef.current?.requestConsume(slotId)}
-      />
+      <Node ref={nodeRef} slots={slots} />
+      <button
+        type="button"
+        disabled={!armed}
+        onClick={armed ? onConsume : undefined}
+        data-armed={armed ? "true" : "false"}
+        data-input-id={slots.join(",")}
+        style={{
+          marginLeft: 6,
+          padding: "1px 6px",
+          fontSize: 11,
+          lineHeight: 1.2,
+          background: "#fff",
+          border: "1px solid #333",
+          borderRadius: 3,
+          cursor: armed ? "pointer" : "default",
+          opacity: armed ? 1 : 0.5,
+        }}
+      >
+        ⌫
+      </button>
     </>
   );
 }

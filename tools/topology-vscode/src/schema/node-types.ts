@@ -16,6 +16,12 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     outputs: [{ name: "out", kind: "chain" }],
     shape: "rect", fill: "#e0e0e0", stroke: "#666", width: 80, height: 60,
   },
+  Relay: {
+    role: "relay",
+    inputs: [{ name: "in0", kind: "chain" }],
+    outputs: [{ name: "out", kind: "chain" }],
+    shape: "rect", fill: "#e8f5e9", stroke: "#2e7d32", width: 70, height: 40,
+  },
   ReadLatch: {
     role: "latch",
     inputs: [{ name: "in", kind: "chain" }, { name: "release", kind: "release" }],

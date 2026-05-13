@@ -87,8 +87,8 @@ export function specToFlow(
         shape: def?.shape ?? "rect",
         width,
         height,
-        inputs: def?.inputs ?? [],
-        outputs: def?.outputs ?? [],
+        inputs: n.inputs ?? def?.inputs ?? [],
+        outputs: n.outputs ?? def?.outputs ?? [],
         // Round-trip node.state so initial dx/dy (and any other handler-state
         // seed) survives spec → flow → spec. Runner overwrites world.state
         // from initWorld; the spec field is the seed, not the live value.

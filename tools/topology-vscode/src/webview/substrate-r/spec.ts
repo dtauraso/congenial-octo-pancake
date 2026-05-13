@@ -23,7 +23,13 @@ export function nodePorts(node: RNodeSpec): KindPorts {
   const defaults = NODE_KIND_PORTS[node.kind];
   const inputs = node.ports?.inputs ?? defaults.inputs;
   const outputs = node.ports?.outputs ?? defaults.outputs;
-  if (inputs.length !== defaults.inputs.length) {
+  // readgate is variable-arity (AND over N input slots, N >= 1). All
+  // other kinds enforce fixed arity matching their defaults.
+  if (node.kind === "readgate") {
+    if (inputs.length < 1) {
+      throw new Error(`nodePorts: ${node.id} (readgate) needs at least one input slot`);
+    }
+  } else if (inputs.length !== defaults.inputs.length) {
     throw new Error(`nodePorts: ${node.id} (${node.kind}) input arity ${inputs.length} ≠ ${defaults.inputs.length}`);
   }
   if (outputs.length !== defaults.outputs.length) {

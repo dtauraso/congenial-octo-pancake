@@ -9,9 +9,10 @@ This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
   1. [handoff-next-task.md](handoff-next-task.md) — open task:
-     non-`in0` readgate contract test landed at `42c9ec9`; next is
-     multi-hop in the editor (relay/join) and the optional mid-flight
-     `pathD`-change pulse-progress test.
+     ReadGate is now an N-slot AND on both paths and the live editor
+     has a 2-input AND rig; next is locking the editor AND in a
+     contract test, then a real multi-hop with `Relay` fed by a
+     third Input.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — forever-loop substrate background; layered with the resolved
      slot-in-node model.
@@ -20,27 +21,41 @@ Read them in this order on a fresh session:
 
 ---
 
-State at handoff (2026-05-13, end of session):
+State at handoff (2026-05-13, mid-session):
 
-  **Active branch:** `task/substrate-slot-in-node`. Tip `42c9ec9`.
-  Editor pulse path is now locked by a contract test for a non-`in0`
-  readgate slot, closing the landing-rule drift between the editor
-  and test paths. Session commits since last handoff:
+  **Active branch:** `task/substrate-slot-in-node`. Tip is the
+  variable-arity readgate landing (commit message:
+  "substrate: variable-arity readgate + per-instance port overrides").
+  Session moves since the prior tip `42c9ec9`:
 
-  - `42c9ec9` substrate: lock editor pulse path with non-in0
-    readgate contract test. Added per-node `ports` override on
-    `RNodeSpec`; `parseSpec` validates against the effective ports;
-    `TopologyRoot.NodeView` now threads `ports.inputs[i]` into
-    relay/join/readgate bodies — matching `RSubstrateNode` on the
-    editor path. New test `r-topology-readgate-port` covers
-    `input → readgate` via slot `"chainIn"` and a parseSpec
-    rejection case.
+  - `readgate` arity relaxed to N ≥ 1 in
+    [spec.ts](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts);
+    other kinds still fixed.
+  - `ReadGateBody` rewritten for AND semantics over N slots — one
+    button, armed only when every slot is `filled`, consumes all on
+    click. `ManualTakeButton` is now used only by `r-node` tests.
+  - Both dispatch paths
+    ([TopologyRoot](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx),
+    [RSubstrateNode](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateNode.tsx))
+    pass the full inputs array to `ReadGateBody`.
+  - Editor `Node` gains per-instance `inputs?` / `outputs?` Port
+    overrides, parsed and validated end-to-end; `spec-to-flow`
+    projects them into React Flow `data.inputs` / `data.outputs`.
+  - `Port` gains optional `side?: "left" | "right"`;
+    `RSubstrateNode` groups handles by effective side. Demonstrated
+    by `i1` declaring `outputs: [{ side: "left" }]` in the live rig.
+  - `Relay` registered in
+    [node-types.ts](../../../tools/topology-vscode/src/schema/node-types.ts)
+    — it was missing, which is why a fresh `Relay` node rendered
+    with no handles and silently swallowed its outgoing edge.
+  - Live rig: [topology.json](../../../topology.json) has `in08` and
+    `i1` (both `Input` for now — "i1 is a source for now") feeding
+    `readGate1.chainIn` and `chainIn2`. Visual sublabel on `i1`
+    still says "Relay"; rename via the editor inspector when
+    convenient.
 
-  Prior session tip was `05f0f5d` (RAF restart on `pathD` change)
-  and `ef5db1a` (slot-id threading on the editor path).
-
-  **Gates at handoff:** tsc clean, 125/125 vitest (+2 from the new
-  contract test), `check:loc` clean. Open housekeeping unchanged:
+  **Gates at handoff:** tsc clean, 125/125 vitest, `check:loc`
+  clean, `out/webview.js` rebuilt. Open housekeeping unchanged:
   `check-substrate-vocab.mjs` stale (`substrate/` → `substrate-r/`);
   `task/in0-readgate-emission-ack` past retire (needs user sign-off
   to delete).
@@ -53,16 +68,15 @@ primitive landing rule", and the three primitive files:
 [RSubstrateEdge.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateEdge.tsx),
 [node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx).
 After any substrate-r edit, run `npm run build` — vitest/tsc
-alone don't refresh `out/webview.js`, and a stale bundle is what
-made the "no pulse after reload" symptom appear before `ef5db1a`.
+alone don't refresh `out/webview.js`.
 
 ## Next move
 
-See [handoff-next-task.md](handoff-next-task.md). Lock the fixed
-editor pulse path in a contract test (a readgate whose schema
-input port is not `"in0"`), then extend to multi-hop (relay,
-join). If any case parks, capture the failing topology as a
-contract test before fixing.
+See [handoff-next-task.md](handoff-next-task.md). Lock the 2-slot
+AND in a contract test through the editor's React Flow path, then
+swap `i1` to a real `Relay` fed by a third Input so the multi-hop
+path is exercised end-to-end. Capture any parking topology as a
+failing test before fixing.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to

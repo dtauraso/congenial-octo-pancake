@@ -18,6 +18,13 @@ export const EDGE_KINDS: readonly EdgeKind[] = [
   "pointer", "and-out", "edge-connection", "inhibit-in", "any",
 ];
 
-export type Port = { name: string; kind: EdgeKind; required?: boolean };
+export type Port = {
+  name: string;
+  kind: EdgeKind;
+  required?: boolean;
+  // Visual placement override. Inputs default to the left side, outputs
+  // to the right; setting `side` flips an individual port.
+  side?: "left" | "right";
+};
 export type StateValue = string | number;
 export type ArrowStyle = "filled" | "open";
