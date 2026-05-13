@@ -8,7 +8,7 @@ import { Wire, type WireHandle } from "./Wire";
 import { type NodeHandle } from "./Node";
 import { useTickDriver } from "./useTickDriver";
 import { parseSpec, nodePorts, type RTopologySpec, type RNodeSpec } from "./spec";
-import { InputBody, RelayBody, JoinBody, ReadGateBody } from "./node-kinds";
+import { InputBody, RelayBody, JoinBody, ReadGateBody, ChainInhibitorBody } from "./node-kinds";
 
 export interface TopologyRootProps {
   spec: RTopologySpec;
@@ -46,6 +46,9 @@ function NodeView({
   }
   if (node.kind === "relay") {
     return <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={ports.inputs[0]} />;
+  }
+  if (node.kind === "chaininhibitor") {
+    return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={ports.inputs[0]} />;
   }
   if (node.kind === "join") {
     return (

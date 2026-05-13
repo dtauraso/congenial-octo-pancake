@@ -17,10 +17,7 @@
     },
     {
       "id": "i1",
-      "type": "Input",
-      "data": {
-        "init": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-      },
+      "type": "ChainInhibitor",
       "outputs": [
         { "name": "out", "kind": "chain", "side": "left" }
       ]
