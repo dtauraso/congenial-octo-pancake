@@ -1,55 +1,48 @@
-# Next task: verify source → wire → destination pulse in the editor
+# Next task: lock the editor pulse path in a contract test, extend to relay/join
 
-**Branch:** `task/substrate-slot-in-node`.
-**Status:** Editor path now dispatches all four kinds
-(input/relay/join/readgate) and threads cohort + gate from the
-registry into `<Wire>`. Tip `fd7ad63`. Gates green: tsc clean,
-123/123 tests, `check:loc` clean.
+**Branch:** `task/substrate-slot-in-node`. Tip `ef5db1a`.
+**Status:** Editor pulse verified live for input → readgate. Slot-id
+mismatch fixed: bodies now take slot ids as props, RSubstrateNode
+threads `data.inputs[i].name` from the schema. Gates green: tsc
+clean, 123/123 tests, `check:loc` clean.
 
-## The verification target
+## What just landed
 
-A pulse loaded at a source node travels its outgoing wire and
-arrives at the destination's slot — driven from the editor, not
-just from a contract test. Same correctness target as the prior
-handoff, but now actually reachable.
+The `ef5db1a` fix: `ReadGateBody`/`RelayBody`/`JoinBody` accept
+`slotId` (and `slotAId`/`slotBId` for join) as props with defaults
+preserving the contract-test literals (`"in0"`, `"a"`, `"b"`).
+`RSubstrateNode` passes `inputs[i].name` from the schema's
+node-types. Before this fix, the editor's readgate declared its
+slot as `"in0"` while the wire arrived with `destSlotId =
+"chainIn"`, so `Wire.canAccept` threw inside the driver's `run()`
+loop and no pulse ever started.
 
-## What to do
+## Next moves (pick in order of friction)
 
-1. Open the editor. Load a topology with at least an input node
-   and a readgate (and ideally a relay or join in between).
-2. Click `step` on the transport. The driver releases the current
-   cohort; cohort-0 wires animate, complete, fill their dest slot.
-   For multi-hop topologies, step again for each cohort.
-3. Confirm at each hop: pulse animates, arrives, destination's
-   slot phase becomes `filled`, downstream node's `onRun` fires,
-   next wire loads. Readgate's manual-take button arms when its
-   slot is `filled`.
-4. If any case parks (pulse stops at a wire and stays, or a slot
-   never fills), capture the failing topology + step sequence as
-   a contract test under `test/contracts/r-topology-*.test.tsx`
-   **before** fixing. The contract test is what locks in the
-   regression.
+1. **Lock the regression.** Add a contract test that reproduces
+   the editor scenario: a readgate whose schema input port is
+   *not* `"in0"` (e.g. `"chainIn"`). Today's tests only cover the
+   `"in0"` default. The contract test goes under
+   `test/contracts/r-topology-*.test.tsx`. This is what catches
+   any future regression of the slot-id thread.
+2. **Multi-hop in the editor.** Drop a relay between input and
+   readgate (or a join with two inputs) and step through. Confirm
+   cohort 0 fires, then cohort 1, etc., and the readgate's ⌫ arms
+   only after the final pulse arrives.
+3. **If it parks anywhere**, capture the failing topology as a
+   contract test *before* fixing.
 
-## What "working" means here
+## Suspect zones if multi-hop parks
 
-After N `step`s (N = number of cohorts in the topology), every
-destination slot reachable from a primed input carries the value
-that was loaded. No fossil pulses left over from prior edits, no
-stuck `consumed` state, no relay/join silently dead-ending.
-
-## Suspect zones if it parks
-
-- Cohort math: `assignCohortsForEdges` is parseSpec-free, so kind
-  drift can't break it, but it does assume a DAG. A cycle hits
-  the `visiting` guard and returns 0, which may not be what you
-  want.
+- Cohort math: `assignCohortsForEdges` is parseSpec-free but
+  assumes a DAG. A cycle hits the `visiting` guard and returns 0.
 - Driver advance: `useTickDriver.advance` watches the current
-  cohort's wires for `empty`; if a wire never returns to empty
-  (e.g. destination slot stays `filled` because no body consumes
-  it), the cursor never advances.
+  cohort's wires for `empty`; if a destination slot stays
+  `filled` because no body consumes it, the cursor never
+  advances.
 - A new kind whose `*Body` was added to `node-kinds.tsx` and
   `TopologyRoot` but not to `RSubstrateNode` — exactly the drift
-  CLAUDE.md's new landing rule prohibits.
+  CLAUDE.md's landing rule prohibits.
 
 ## Housekeeping (carry forward)
 
@@ -57,8 +50,10 @@ stuck `consumed` state, no relay/join silently dead-ending.
   `substrate-r/`).
 - Flag `task/in0-readgate-emission-ack` for user-approved
   deletion.
-- Pre-existing `topology.view.json` working-tree diff still
-  untouched.
+- Remember to `npm run build` after substrate-r edits — the
+  webview bundle is not rebuilt on tsc/vitest alone, and a stale
+  `out/webview.js` is what made the prior "no pulse after
+  reload" symptom appear.
 
 ## ALWAYS clause
 
