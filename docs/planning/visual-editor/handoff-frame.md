@@ -38,11 +38,14 @@
 ## Open branches
 
   - `main` — production trunk; check `git log` for tip.
-  - `task/substrate-slot-in-node` — this branch. Model promoted
-    (MODEL.md authoritative); ready to start first code commit.
-  - `task/in0-readgate-emission-ack` — parked; reference for the
-    old shape. **Do not merge, do not delete** until first green
-    contract test on the new substrate (auto-retire signal).
+  - `task/substrate-slot-in-node` — this branch. First code
+    commit landed (31c6cdb): slot-in-node primitives in place,
+    contract tests green. Next commit is the cohort gate +
+    registry.
+  - `task/in0-readgate-emission-ack` — parked. **Auto-retire
+    signal hit** (first green contract test on the new substrate
+    is now in 31c6cdb); deletion still needs explicit user
+    sign-off per branch-hygiene rules. Flag at next opportunity.
 
 Branch hygiene: no merge to main without explicit sign-off. Delete
 merged branches without re-asking. Force-push needs sign-off.

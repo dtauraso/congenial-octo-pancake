@@ -8,13 +8,12 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-next-task.md](handoff-next-task.md) — open task:
-     first code touch landing slot-on-node + wire-bound-slot-id
-     in the substrate. Model promotion is already done.
+  1. [handoff-next-task.md](handoff-next-task.md) — open task: the
+     global play/pause gate + cohort registry (commit 2 of the
+     slot-in-node series). First code commit already landed.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — forever-loop substrate background; layered with the resolved
-     slot-in-node model (slots owned by nodes, wire-bound slot id,
-     self-scheduling + global gate, cohort-indexed step).
+     slot-in-node model.
   3. [handoff-frame.md](handoff-frame.md) — conceptual frame,
      working mode, open branches, housekeeping.
 
@@ -22,47 +21,57 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-13, end of session):
 
-  **Active branch:** `task/substrate-slot-in-node`. Promotion
-  complete at commit 5f9ad30 (pushed): [MODEL.md](../../../MODEL.md)
-  is now the authoritative slot-in-node model;
-  `MODEL-revised-draft.md` deleted; [CLAUDE.md](../../../CLAUDE.md)
-  "Latch + AND gate backpressure pattern" section replaced with the
-  slot-phase backpressure description + cohort stepping pointer.
-  SVG diagrams under
-  [diagrams/model-revised-draft/](../../../diagrams/model-revised-draft/)
-  are unchanged and remain the canonical visuals. **No substrate
-  code touched yet.**
+  **Active branch:** `task/substrate-slot-in-node`. First code
+  commit landed at 31c6cdb (pushed): wire reducer is
+  `empty | in-flight` only; slot lives on the destination
+  [Node](../../../tools/topology-vscode/src/webview/substrate-r/Node.tsx)
+  with `fill` / `consume` / `slotPhase` / `subscribeSlot` /
+  `requestConsume`; each
+  [Wire](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)
+  carries a construction-time `(destNodeRef, destSlotId)` binding
+  and, on RAF arrival, calls `dest.fill(slotId, v)` before
+  returning to empty;
+  [parseSpec](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts)
+  rejects wires whose `target.port` isn't a declared slot on the
+  destination kind; `ManualTakeButton` observes node slot phase
+  via `subscribeSlot`. `take` / `ack` paths retired. Contract
+  tests rewritten and green.
 
-  **Memories updated.**
-  - `project_ack_is_wire_state` — retired (file deleted, MEMORY.md
-    index entry removed). The wire has no ack under the resolved
-    model; backpressure lives in the slot's empty/filled state.
-  - `feedback_clear_button_armed_only_when_loaded` — rewritten to
-    slot-phase vocabulary (`armed = slotPhase === "filled"`,
-    `dest.slotPhase(slotId)`); MEMORY.md index entry updated.
+  **Gates at commit time:** `tsc --noEmit` clean. `npx vitest run`
+  → 109 tests passing (4 substrate contract files: wire phase,
+  node, tick driver, topology smoke). `npm run check:loc` →
+  no offenders. `check-substrate-vocab.mjs` still reports
+  "substrate/ directory not present" — its path target is stale
+  (actual dir is `substrate-r/`); fix is queued, not in scope here.
 
-  **Pre-existing uncommitted diff:** `topology.view.json` carries a
-  modification that pre-dated this session — not part of the
-  promotion commit. Leave it alone unless a future session has a
-  reason to touch it.
+  **Auto-retire signal hit:** per
+  [handoff-frame.md](handoff-frame.md), `task/in0-readgate-
+  emission-ack` was held "until first green contract test on the
+  new substrate." That condition is now met. Branch deletion still
+  needs explicit user sign-off (destructive shared-state action);
+  flag at the next opportunity.
 
-  **Gates:** model + docs changes only; no code, so no
-  build/tsc/vitest run. LOC ✓. `check-substrate-vocab.mjs` reports
-  "substrate/ directory not present; vocab check skipped."
+  **Pre-existing uncommitted diff:** `topology.view.json` still
+  carries a modification that pre-dated the slot-in-node work; it
+  was not part of 31c6cdb and was left alone again. Leave it
+  unless a future session has a reason to touch it.
 
 ## Dev-loop
 
-Read [MODEL.md](../../../MODEL.md) + diagrams under
-[diagrams/model-revised-draft/](../../../diagrams/model-revised-draft/).
-The model is authoritative now. Start code: first touch lands the
-slot-on-node + wire-bound-slot-id substrate change. Gate + cohort
-registry can come in a second commit.
+Read [MODEL.md](../../../MODEL.md) + the slot-in-node
+[Node](../../../tools/topology-vscode/src/webview/substrate-r/Node.tsx)
+and
+[Wire](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx).
+Next code change: introduce the global play/pause gate + cohort
+registry so cohort N is released on a single observable axis
+(random-access step). See
+[handoff-next-task.md](handoff-next-task.md).
 
 ## Next move
 
 See [handoff-next-task.md](handoff-next-task.md). The next concrete
-step is the first code commit: slot on destination node, wire
-carries `(value, bound slot id)`, arrival writes the named slot.
+step is the cohort gate: cohort assigned at wire-time
+(max predecessor cohort + 1), gate releases cohort N only.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to
