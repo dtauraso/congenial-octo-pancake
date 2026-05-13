@@ -8,9 +8,10 @@ read this file first (no chat history needed) and proceed.
 This handoff is split across sibling files (LOC budget, ≤100 each).
 Read them in this order on a fresh session:
 
-  1. [handoff-next-task.md](handoff-next-task.md) — open task: add a
-     fan-out (distribute) node so one source can feed multiple
-     destinations under the slot-in-node substrate.
+  1. [handoff-next-task.md](handoff-next-task.md) — open task:
+     verify the source → wire → destination pulse behavior still
+     works under the slot-in-node substrate (regression check).
+     Fan-out is deferred.
   2. [handoff-substrate-iteration.md](handoff-substrate-iteration.md)
      — forever-loop substrate background; layered with the resolved
      slot-in-node model.
@@ -65,17 +66,17 @@ Read [MODEL.md](../../../MODEL.md) +
 [JoinBody](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
 and the join test
 ([r-topology-join.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-join.test.tsx)).
-Next code change: a fan-out (distribute) node — see
+Next step is verification, not a new primitive — see
 [handoff-next-task.md](handoff-next-task.md).
 
 ## Next move
 
 See [handoff-next-task.md](handoff-next-task.md). The next concrete
-step is to add a `fanout` kind (slot `in0`; one source port driving
-multiple outgoing wires) whose firing rule requires every outgoing
-wire's `canAccept` to be true, then a contract test for the
-asymmetric backpressure case (one downstream consumes, the other
-holds full).
+step is to verify that the source → wire → destination pulse
+behavior working pre-slot-in-node still works now. Drive the editor
+against existing topologies, confirm pulses flow end-to-end, and
+capture any regression as a contract test before fixing. Fan-out
+(1→N distribute) is deferred.
 
 ALWAYS — at end of session, overwrite this file (and the sibling
 `handoff-*.md` files) with a freshly-rendered prompt tailored to

@@ -1,74 +1,44 @@
-# Next task: fan-out / distribute node (commit 5 of slot-in-node)
+# Next task: verify source → wire → destination pulse behavior
 
 **Branch:** `task/substrate-slot-in-node`.
-**Status:** join landed at `79ede00`. Topology `srcA, srcB → join →
-readgate` runs end-to-end. Multi-slot firing rule (coincidence) is
-proven. Gates green: tsc clean, 123/123 tests, `check:loc` clean.
+**Status:** join landed at `79ede00`. Relay + multi-cohort chain at
+`1ca6f9f`. Gates green: tsc clean, 123/123 tests, `check:loc` clean.
 
-The next missing primitive is fan-out: one source emitting onto
-multiple wires (one input slot, ≥2 output wires). Until it lands,
-the substrate can't express any topology where one value drives two
-or more destinations — needed for lateral inhibition, distribute,
-and any AND-tree reduction.
+Fan-out (1→N distribute) is **deferred** — skipped from this branch.
+The substrate currently dispatches one wire per output port (see
+`findWireForOutput` in
+[TopologyRoot.tsx](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx)),
+and that's accepted as the working shape for now.
 
-## What to read
+## The verification target
 
-1. [MODEL.md](../../../MODEL.md) — slot phases, firing rules, and
-   the rule that emission requires all targeted output wires to be
-   `canAccept`.
-2. [Node.tsx](../../../tools/topology-vscode/src/webview/substrate-r/Node.tsx)
-   — slot API; no change expected.
-3. [node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
-   — `RelayBody` and `JoinBody` are the templates. Fan-out is a
-   relay with N outgoing wire refs instead of one.
-4. [TopologyRoot.tsx](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx)
-   — `findWireForOutput` returns one wire id; fan-out needs the
-   plural variant (collect every wire whose `source.nodeId/port`
-   matches).
+The same pulse behavior that worked before the slot-in-node rewrite
+must still work now. Concretely: a value loaded at a source node
+must travel along its outgoing wire and arrive at the destination's
+slot exactly as it did under the old latch + AND-gate substrate.
+No regression in the basic source → wire → destination path.
 
-## Target shape
+## What to do
 
-- Register `fanout` in `NODE_KIND_PORTS` with `inputs: ["in0"]` and
-  outputs `["out"]`. Multiple wires share the same source port — the
-  substrate doesn't need distinct output ports for this case; the
-  wire identity does the work.
-- `FanoutBody` declares slot `["in0"]` and an `onRun` that fires
-  only when slot is `filled` AND **every** outgoing wire returns
-  `canAccept`. On fire: consume once, load the same value on each
-  outgoing wire.
-- Update `TopologyRoot` to pass an array of `outWireRefs` to
-  `FanoutBody`.
+1. Run the editor against the existing demo topologies and confirm
+   pulses flow end-to-end. Drive the source, step the cohorts,
+   watch the readgate arm.
+2. Cross-check the contract test suite already covers the
+   regressions you'd want — relay
+   ([r-topology-relay test](../../../tools/topology-vscode/test/contracts))
+   and join
+   ([r-topology-join.test.tsx](../../../tools/topology-vscode/test/contracts/r-topology-join.test.tsx))
+   together exercise the source → wire → destination pulse for
+   single-input and 2-input destinations.
+3. If any topology that worked pre-slot-in-node now misbehaves,
+   capture the failing case as a contract test before fixing.
 
-## Topology under test
+## What "working" means here
 
-  `src → fanout.in0` (cohort 0)
-  `fanout.out → gateA.in0` (cohort 1)
-  `fanout.out → gateB.in0` (cohort 1)
-
-## Contract assertions
-
-1. parseSpec: both fan-out wires get cohort 1; the input wire is
-   cohort 0.
-2. After two `step`s, both readgate buttons arm (both slots filled
-   with the same value).
-3. **Backpressure-asymmetry case:** consume `gateA`'s slot but
-   leave `gateB`'s filled. Re-arm the source with another input
-   value and step. The fan-out must NOT emit until `gateB`'s slot
-   is also empty — i.e. `canAccept` is conjunctive across all
-   outgoing wires. Verify the upstream slot stays `filled` and no
-   pulse appears on either output wire.
-
-## Latent hazards
-
-- The "all-canAccept" rule means partial emission is forbidden. If
-  one downstream is full, the fan-out parks; if it emits to A and
-  then sees B full, you have a duplicate-delivery hazard later.
-  Atomic check-then-load in a single `onRun` body is the only safe
-  shape — the test must exercise the parked path.
-- Cohort assignment already handles this: each outgoing wire
-  inherits `max(predecessors of fanout) + 1` independently, so
-  multiple outputs all sit at the same cohort. No spec.ts change
-  expected.
+A pulse loaded at the source produces, after the expected number
+of `step`s (= number of cohorts), a `filled` slot at the
+destination carrying the same value. No extra steps, no dropped
+pulse, no stuck `consumed` state.
 
 ## Housekeeping (carry forward)
 
