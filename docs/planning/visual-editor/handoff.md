@@ -12,27 +12,43 @@ than keeping one slightly-larger doc.
 
 ---
 
-## State at handoff (2026-05-14, cohort retirement)
+## State at handoff (2026-05-14, end-of-session)
 
-**Active branch:** `task/substrate-slot-in-node`.
+**Active branch:** `task/substrate-slot-in-node`. Tip `aa8acc4`,
+pushed to origin.
 Working tree: `topology.view.json` (pre-existing, unrelated).
-117/117 vitest green, tsc clean, `check:loc` clean, vocab clean.
+117/117 vitest green, tsc clean, `check:loc` clean, vocab clean,
+build refreshed.
 
-**This session: cohort machinery retired from the substrate.**
-The cohort gate, cursor, and lap-label infrastructure were removed.
-The legacy all-wires-empty round-close is restored. Design rationale
-preserved in
-[docs/planning/cohort-future-feature.md](../../../docs/planning/cohort-future-feature.md).
+**This session shipped two coupled changes in one commit:**
 
-**Substrate-layer pause was implemented** in a prior session:
-pause is a property of **wire advancement** (RAF + delivery), not of
-the cohort cursor. Each wire reads `pauseAxis.paused` in its RAF loop
-and freezes in place; `halt/resume` flip the axis.
+1. **Substrate-layer pause** — pause is now a property of wire
+   advancement, not of the cohort cursor. New
+   [pause-axis.ts](../../../tools/topology-vscode/src/webview/substrate-r/pause-axis.ts)
+   primitive; every wire's RAF reads `pauseAxis.paused`, freezes
+   `pulsePos`/`distanceCovered`, and rebases `simStart` on resume.
+   `useTickDriver.halt/resume` flip the axis. Plumbed through both
+   `TopologyRoot` and `RSubstrateEdge` (substrate landing rule).
 
-**Carried from last session:**
-- Live re-verify of resume-mode cycle: **DONE** (user confirmed).
+2. **Cohort retired** — with pause clarified, the cohort gate,
+   cursor, and lap-label machinery were removed as anticipatory
+   infrastructure for self-sustaining mode (not yet implemented).
+   Round-close is back to "all wires empty"; step is one round,
+   atomic w.r.t. pause (captures `wasPaused`, clears it, advances,
+   re-pauses at round-close). Design intent preserved in
+   [docs/planning/cohort-future-feature.md](../../../docs/planning/cohort-future-feature.md).
 
-**Open architectural items (carried from last session):**
+Files deleted: `cohort-gate.ts`, `cohort-assign.ts`,
+`CohortAssigner.tsx`, plus 2 cohort-specific test files. Net ~−250
+LOC across the change.
+
+**Live editor verification: NOT YET DONE.** Tests are green but the
+user has not exercised pause/step/resume in the live editor since
+the change. Next session should open the editor, drive pulses, press
+pause mid-flight, confirm all in-flight wires freeze uniformly,
+press step / resume, confirm pulses continue from frozen position.
+
+**Open architectural items (carried):**
 - **R4** (small follow-up):
   [RSubstrateEdge.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateEdge.tsx)
   imports `dashForKind` and `markerEndUrl` from `../rf/`; substrate
@@ -45,12 +61,11 @@ and freezes in place; `halt/resume` flip the axis.
 
 ## Next move
 
-1. **Cohort retired** — `cohort-gate.ts`, `cohort-assign.ts`,
-   `CohortAssigner.tsx` deleted; cohort field removed from
-   `RWireSpec`; `assignCohorts` removed from `spec.ts`; registry
-   stripped of `setCohorts`/`getWireCohort`; all cohort-referencing
-   tests deleted or rewritten. See
-   [docs/planning/cohort-future-feature.md](../../../docs/planning/cohort-future-feature.md).
+1. **Live verify pause/step/resume in the editor.** Required before
+   merge — tests passing isn't enough; the substrate-landing rule
+   says the editor path is part of landing. Drive a pulse, pause
+   mid-flight, confirm all in-flight wires freeze, resume, confirm
+   continuation from frozen position.
 2. **Retire ChainInhibitor's `⇢` debug button.** ChainInhibitor is
    not a source. Its only legitimate emit is "consume my slot and
    forward that value." The `⇢` button bypasses the slot and loads
@@ -60,7 +75,7 @@ and freezes in place; `halt/resume` flip the axis.
 3. **Housekeeping carry.** Flag `task/in0-readgate-emission-ack`
    for user-approved deletion (auto-retire signal hit — first green
    contract test landed in `31c6cdb`).
-4. **Offer merge to `main`** after (2)–(3) are clean.
+4. **Offer merge to `main`** after (1)–(3) are clean.
 
 ## Conceptual frame
 
@@ -78,8 +93,9 @@ and freezes in place; `halt/resume` flip the axis.
 - **Decentralized, not distributed.** "Decentralized" = no center
   exists, the property is genuinely local. "Distributed" = the
   center is reconstructed from pieces, which is what most
-  coordinator-shaped designs do under a different name. Resolved
-  tick = edge cohort is genuinely decentralized.
+  coordinator-shaped designs do under a different name. Pause-axis
+  is genuinely decentralized: each wire's RAF reads the axis
+  locally, no central scheduler consulted.
 
 ## Working mode
 
