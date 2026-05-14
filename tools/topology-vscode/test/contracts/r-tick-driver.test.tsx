@@ -5,8 +5,8 @@
 // node model the wire returns to empty on arrive, not on consume).
 // halt prevents auto-advance; step advances even when halted.
 
-import { describe, it, expect, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from "vitest";
+import { renderHook, act, cleanup } from "@testing-library/react";
 import type { RefObject } from "react";
 import { useTickDriver } from "../../src/webview/substrate-r/useTickDriver";
 import type { WireHandle } from "../../src/webview/substrate-r/Wire";
@@ -41,6 +41,22 @@ function makeMockNode(onRun?: () => void): NodeHandle {
 function ref<T>(v: T): RefObject<T | null> {
   return { current: v } as RefObject<T | null>;
 }
+
+// useTickDriver's fast-path schedules `requestAnimationFrame(advance)`
+// after a cohort with no animating wires. The tests assert state
+// synchronously inside act() and don't depend on that RAF firing —
+// but if it does fire after happy-dom tears down between test files,
+// React's scheduler tries to use `window` and crashes. Stub RAF to a
+// no-op so no callback survives the test. cleanup() between tests
+// unmounts each hook so refs/subscribers don't accumulate either.
+let rafStub: { restore(): void };
+beforeAll(() => {
+  const orig = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = (() => 0) as typeof requestAnimationFrame;
+  rafStub = { restore: () => { globalThis.requestAnimationFrame = orig; } };
+});
+afterAll(() => { rafStub.restore(); });
+afterEach(() => { cleanup(); });
 
 describe("useTickDriver", () => {
   it("starts at tick 0, not halted", () => {
