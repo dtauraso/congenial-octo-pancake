@@ -2,8 +2,8 @@
 
 ## Substrate model — read first
 
-Before changing anything in `tools/topology-vscode/src/substrate/`, the
-wire primitive, or anything that schedules/orders work, read
+Before changing anything in `tools/topology-vscode/src/webview/substrate-r/`,
+the wire primitive, or anything that schedules/orders work, read
 [MODEL.md](MODEL.md). It pins the substrate model and the banned
 vocabulary that signals drift. If your reasoning uses banned
 vocabulary, you are in the wrong frame — stop and re-derive from the

@@ -1,22 +1,17 @@
 #!/usr/bin/env node
-// Scans tools/topology-vscode/src/substrate/ for banned vocabulary that
-// signals the AI (or a human) has drifted from the substrate model.
-// See MODEL.md at repo root.
+// Scans tools/topology-vscode/src/webview/substrate-r/ for banned
+// vocabulary that signals the AI (or a human) has drifted from the
+// substrate model. See MODEL.md at repo root.
 //
 // Exits non-zero on any hit. Wire into CI / pre-commit as desired.
-//
-// Note: the old substrate at src/substrate/ has been deleted as part of
-// the collapse-to-one-layer rewrite; this script's target directory no
-// longer exists. Replacement vocab discipline for the new React-resident
-// substrate at src/webview/substrate-r/ is a separate follow-up.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
-const ROOT = new URL("../src/substrate/", import.meta.url).pathname;
+const ROOT = new URL("../src/webview/substrate-r/", import.meta.url).pathname;
 
 if (!existsSync(ROOT)) {
-  console.log("substrate/ directory not present; vocab check skipped.");
+  console.log("substrate-r/ directory not present; vocab check skipped.");
   process.exit(0);
 }
 
@@ -66,7 +61,7 @@ for (const file of walk(ROOT)) {
 }
 
 if (hits > 0) {
-  console.error(`\n${hits} banned-vocabulary hit(s) in substrate/. See MODEL.md.`);
+  console.error(`\n${hits} banned-vocabulary hit(s) in substrate-r/. See MODEL.md.`);
   process.exit(1);
 }
 console.log("substrate vocabulary clean.");
