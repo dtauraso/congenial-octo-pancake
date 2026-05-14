@@ -28,7 +28,6 @@ const EXCLUDE_PATH_FRAGMENTS = [
 // to these and any files split off from them (sibling files in the same
 // directory prefix).
 const INCLUDED_MD_PREFIXES = [
-  "docs/planning/visual-editor/session-log",
   "docs/planning/visual-editor/audits",
   "docs/planning/visual-editor/handoff",
 ];

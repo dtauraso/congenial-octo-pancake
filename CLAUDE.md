@@ -116,7 +116,7 @@ Project memory lives in `memory/` at the repo root. Files:
 
 - **Trigger threshold:** any source file ≥ **200 LOC** must be refactored.
 - **Refactor target:** split until every resulting file is ≤ **100 LOC**.
-- Applies to TypeScript (`.ts`, `.tsx`) **and** the three CLAUDE.md-directed Markdown reads that grow over time: [session-log.md](docs/planning/visual-editor/session-log.md), [audits.md](docs/planning/visual-editor/audits.md), [handoff.md](docs/planning/visual-editor/handoff.md). Same rule applies to any files split off from them (sibling `<name>-<suffix>.md` in the same dir, or files under a `<name>/` subdir). Go, other Markdown, JSON, fixtures, and generated files are exempt — the rule is motivated by the topology-vscode webview/sim growing past 500 LOC and by those three docs being mandated reads, and the Go side has different cohesion conventions.
+- Applies to TypeScript (`.ts`, `.tsx`) **and** two CLAUDE.md-directed Markdown reads that grow over time: [audits.md](docs/planning/visual-editor/audits.md) and [handoff.md](docs/planning/visual-editor/handoff.md). Same rule applies to any files split off from them. Go, other Markdown, JSON, fixtures, and generated files are exempt. `session-log.md` is exempt: it is append-only and not a mandated read; keeping it as one bounded file beats fragmenting it across many small files that bloat grep output.
 - The rule is **always active**, including mid-design and mid-debug. If you finish an unrelated change and notice the file is now over 200, refactor in a follow-up commit before moving on.
 - Run `npm run check:loc` (in `tools/topology-vscode/`) to list offenders. The script is the source of truth — keep this rule and the script in sync.
 
