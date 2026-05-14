@@ -15,11 +15,11 @@ now exempt from the LOC rule (see CLAUDE.md "File size budget").
 
 ## State at handoff (2026-05-13, end-of-session)
 
-**Active branch:** `task/substrate-slot-in-node`. Tip `e2c5418` (plus
-this organizational follow-up). Working tree has one pre-existing
-modification to `topology.view.json` (unrelated to this session's
-work). 126/126 vitest green, tsc clean, `check:loc` clean,
-`out/webview.js` rebuilt.
+**Active branch:** `task/substrate-slot-in-node`. Tip `638b50b`.
+Working tree has one pre-existing modification to
+`topology.view.json` (unrelated to this session's work). 126/126
+vitest green, tsc clean, `check:loc` clean, `out/webview.js`
+rebuilt.
 
 **Substrate model changed this session.** Cohort is now
 observation-only (a label on wires for the scrub cursor); delivery
@@ -37,8 +37,33 @@ the substrate-r ghost path in CLAUDE.md and the vocab script, added
 a Bash hygiene section. Top-level `docs/planning/visual-editor/`
 went from 26 entries to 8 live docs + 3 subdirs.
 
-**Audit 19 follow-up (this commit).** Re-merged the handoff split,
+**Audit 19 follow-up (`d8fc5c0`).** Re-merged the handoff split,
 pruned duplicated model prose now pointed at MODEL.md.
+
+**TS architecture audit follow-up (`638b50b`).** R1+R2+R3 from the
+arch audit landed: `toRNodeKind` validator in
+[spec.ts](../../../tools/topology-vscode/src/webview/substrate-r/spec.ts)
+funnels all PascalCase→lowercase translation through one place; the
+dual `if (kind === …)` chains in
+[TopologyRoot.tsx](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx)
+and
+[RSubstrateNode.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateNode.tsx)
+became `switch` blocks with `never` exhaustiveness — the "two-paths
+landing rule" is now type-system enforced (compile error if a new
+`RNodeKind` is not covered in both sites). Aspirational entries in
+[schema/node-types.ts](../../../tools/topology-vscode/src/schema/node-types.ts)
+labeled palette-only so they aren't mistaken for runtime kinds.
+
+**Open architectural items (watch / small):**
+- **R4** (small follow-up):
+  [RSubstrateEdge.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateEdge.tsx)
+  imports `dashForKind` and `markerEndUrl` from `../rf/`; substrate
+  should not depend up the stack. Move helpers down into
+  `substrate-r/edge-style.ts`.
+- **R5** (watch-only):
+  [app.tsx](../../../tools/topology-vscode/src/webview/rf/app.tsx)
+  (146 LOC, 21 imports) is the highest-coupling file; flag for
+  decomposition next time it's edited.
 
 ## Next move
 
