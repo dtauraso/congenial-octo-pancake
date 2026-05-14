@@ -2,19 +2,25 @@
 // styling per node type. `kind` values must match SVG edge classes
 // from docs/svg-style-guide.md §5.
 //
-// IMPLEMENTED kinds (have a substrate runtime in substrate-r/, can be
-// simulated): Input, Relay, ReadGate, ChainInhibitor, and "Join" via
-// the substrate (no NODE_TYPES entry yet).
-//
-// ASPIRATIONAL kinds (palette entries only — no substrate runtime,
-// will drop into the editor but not animate): Generic, ReadLatch,
-// InhibitRightGate, DetectorLatch, StreakBreakDetector, StreakDetector,
-// AndGate, PatternAnd, SyncGate, EdgeNode, Partition. The runtime
-// allow-list is RNodeKind in webview/substrate-r/spec.ts; toRNodeKind
-// rejects any string not in it. Keep this comment in sync when adding
-// or implementing a kind.
+// Entries split into IMPLEMENTED (have a substrate runtime, animate)
+// and ASPIRATIONAL (palette-only, will drop but not fire). Membership
+// is executable, not prose — see RUNTIME_IMPLEMENTED_KINDS below.
+// Runtime allow-list lives in RNodeKind / toRNodeKind
+// (webview/substrate-r/spec.ts); this set mirrors it in PascalCase.
 
 import type { NodeTypeDef } from "./types-graph";
+
+// PascalCase mirror of RNodeKind (webview/substrate-r/spec.ts). A
+// kind in this set has a substrate runtime and will animate; a kind
+// in NODE_TYPES but NOT in this set is palette-only. Keep in sync
+// with spec.ts; toRNodeKind enforces the lowercase form at runtime.
+export const RUNTIME_IMPLEMENTED_KINDS: ReadonlySet<string> = new Set([
+  "Input",
+  "Relay",
+  "Join",
+  "ReadGate",
+  "ChainInhibitor",
+]);
 
 export const NODE_TYPES: Record<string, NodeTypeDef> = {
   Generic: {

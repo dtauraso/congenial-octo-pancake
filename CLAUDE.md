@@ -93,7 +93,7 @@ docs, and the auto-memory dir, costing tokens and time.
 ## Workflow
 
 - **Commit and push freely on task branches.** Per-commit sign-off is no longer required (relaxed post-v0; editing or reverting committed code is cheap). Sign-off IS still required for: merging a task branch into `main`, force-pushes, branch deletion, dependency removal, and any other destructive or shared-state action called out in the system prompt's "Executing actions with care" section.
-- Build and run before reporting a change as ready; verify output matches previous run. If verification fails, fix forward or revert — don't leave broken state on the branch.
+- Build and run before reporting a change as ready; verify output matches previous run. If verification fails, fix forward or revert — don't leave broken state on the branch. **`tsc --noEmit` and vitest alone do not refresh `out/webview.js`** — if a TS change needs to be exercised in the live editor, run `npm run build` (the Stop hook does this automatically; manual subagent verifications do not).
 - One logical change per commit.
 - Push each commit to the current task branch.
 - **Cost markers:** only record a `($N.NN)` cost marker on a commit (or bundle of commits) when the work was sized at **≥$5 expected** beforehand. Sub-$5 work lands without a marker. Bundle small commits into ≥$5 chunks for marker purposes. Pre-v0 sub-$5 markers stay as historical record but are no longer the convention.
