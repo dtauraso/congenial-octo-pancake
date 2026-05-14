@@ -87,29 +87,12 @@ as part of the same commit, not a follow-up.
 
 Build order: get the disruption/response machinery solid first, then add the self-cycling layer on top.
 
-## Node types
+## Node kinds
 
-| Directory | Role |
-|-----------|------|
-| `InputNode/` | Feeds values into the chain |
-| `ReadLatchNode/` | Holds input until readGate fires |
-| `ChainInhibitorNode/` | Cascades data, suppresses neighbors |
-| `LatchNode/` / `SyncLatchNode/` | General latches |
-| `EdgeNode/` | XOR contrast detector between adjacent inhibitors |
-| `StreakDetector/` | Detects same-sign runs (-1,-1 or 1,1) |
-| `StreakBreakDetector/` | Detects sign changes (1,-1 or -1,1) |
-| `AndGateNode/` | Logical AND over multiple input signals |
-| `SyncGateNode/` | AND gate controlling latch release |
-| `ReadGateNode/` | AND gate controlling readLatch release |
-| `PartitionNode/` | Defines a timing window |
-| `DistributeNode/` | Branches/spawns timelines |
-| `TransferInhibitorNode/` | Moves partition endpoint refs along chain |
-| `InhibitorNode/` | Base inhibitor |
-| `CascadeAndGateNode/` | Legacy — replaced by latch+gate+ack pattern |
-
-## Diagrams
-
-`diagrams/topology-chain-cascade.svg` — current reference diagram showing the latch + AND gate backpressure topology for a two-inhibitor chain. All lines are orthogonal (snake-routed).
+Active node kinds live under
+`tools/topology-vscode/src/webview/substrate-r/`. See `node-kinds.tsx`
+and siblings for the current registry; the per-kind role is documented
+on the kind itself rather than duplicated here.
 
 ## SVG output
 
