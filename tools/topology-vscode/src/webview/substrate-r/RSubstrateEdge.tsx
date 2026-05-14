@@ -4,10 +4,8 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useStore, type EdgeProps } from "reactflow";
-import { Wire, type WireHandle } from "./Wire";
+import { Wire, type WireHandle, buildEdgePathD, edgeMidpoint, EdgeLabels, type EdgeRoute } from "./Wire";
 import { useRegistry } from "./registry";
-import { buildEdgePathD, edgeMidpoint, type EdgeRoute } from "./edge-path";
-import { EdgeLabels } from "./EdgeLabels";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind } from "../../schema";
 import { dashForKind } from "../rf/edge-style";
 import { markerEndUrl } from "../rf/MarkerDefs";

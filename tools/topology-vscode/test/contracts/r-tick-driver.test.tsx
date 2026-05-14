@@ -11,7 +11,7 @@ import type { RefObject } from "react";
 import { useTickDriver } from "../../src/webview/substrate-r/useTickDriver";
 import type { WireHandle } from "../../src/webview/substrate-r/Wire";
 import type { NodeHandle } from "../../src/webview/substrate-r/Node";
-import type { Phase } from "../../src/webview/substrate-r/wire-phase";
+import type { Phase } from "../../src/webview/substrate-r/Wire";
 
 function makeMockWire(): WireHandle & { __setPhase(p: Phase): void } {
   const listeners = new Set<(p: Phase) => void>();

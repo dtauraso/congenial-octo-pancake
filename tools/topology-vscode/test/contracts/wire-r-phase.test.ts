@@ -6,7 +6,7 @@ import {
   initialPhase,
   wirePhaseReducer,
   type Phase,
-} from "../../src/webview/substrate-r/wire-phase";
+} from "../../src/webview/substrate-r/Wire";
 
 describe("wirePhaseReducer", () => {
   it("starts empty", () => {
