@@ -12,71 +12,48 @@ than keeping one slightly-larger doc.
 
 ---
 
-## State at handoff (2026-05-13, end-of-session)
+## State at handoff (2026-05-14, end-of-session)
 
-**Active branch:** `task/substrate-slot-in-node`. Tip `38f9e12`.
-Working tree has one pre-existing modification to
-`topology.view.json` (unrelated to this session's work). 126/126
-vitest green with **0 stray errors** (down from 3 noise lines per
-run), tsc clean, `check:loc` clean, vocab check clean, `out/webview.js`
-rebuilt.
+**Active branch:** `task/substrate-slot-in-node`. Tip `24de543`.
+Working tree: `topology.view.json` (pre-existing, unrelated),
+`memory/MEMORY.md` (new memory link), untracked
+`memory/feedback_specify_substrate_layer_first.md` and
+`docs/planning/visual-editor/diagrams/pause-as-substrate-property.svg`.
+126/126 vitest green, tsc clean, `check:loc` clean, vocab clean.
 
-**This session: code-smell audit + audit 20 (new).** Two sweeps
-landed back-to-back:
+**This session: diagnosis + spec for substrate-layer pause.** No
+code landed. The user observed that the play/pause button only
+visibly halts `in0→readGate`. Traced the cause:
 
-**Sweep 1 — substrate code-smell audit** (commits `e932b0a`,
-`b8cdab9`):
-- Retired `"feedback-ack"` from the `EdgeKind` union and the `"ack"`
-  output ports from `ReadLatch` / `ChainInhibitor` (palette) /
-  `DetectorLatch`. Type-driven retirement: dropping it from the
-  union surfaced every site (schema, colors, palette options,
-  EdgeLabels render branch). The `↻`-prefix / bold-weight ack
-  visual is gone.
-- Documented the asymmetry in `useTickDriver.advance()`: fast path
-  uses RAF as an idle throttle; slow path uses `queueMicrotask` as a
-  re-entrancy guard. Was flagged by the audit as a substrate-pacing
-  leak; investigation confirmed it isn't (pacing lives in wire RAFs).
+- `driver.halt()` only freezes the **cohort cursor**, not wires
+  ([useTickDriver.ts:88](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts#L88)).
+- In-flight wires keep their RAF and keep delivering
+  ([Wire.tsx:142](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx#L142)).
+- The cohort gate's `released` set is **monotonic** — `release(n)`
+  only adds
+  ([cohort-gate.ts:21-28](../../../tools/topology-vscode/src/webview/substrate-r/cohort-gate.ts#L21-L28)).
+  After one lap of the cycle, every wire's cohort is permanently in
+  `released`, so the gate has no remaining authority over cohorts
+  1+. Only fresh cohort-0 loads (in0→readGate) park.
 
-**Sweep 2 — audit 20 (AI usage leak)** added and run (commits
-`fad49f9`, `2b3e495`, `5e29622`, `6ac8ed6`, `38f9e12`). New audit
-category lives at
-[audits/20-ai-usage-leak.md](audits/20-ai-usage-leak.md); ran a
-first pass against the repo and resolved every finding:
+**Why this shape happened:** pause was specified only at the visible
+layer ("pause button"); the substrate-layer question ("what does a
+wire do when paused?") was left implicit, and the implementation
+reached for the nearest global axis (the cursor) to fill it. New
+feedback memory:
+[feedback_specify_substrate_layer_first.md](../../../memory/feedback_specify_substrate_layer_first.md)
+— generalizes [[substrate-vs-coordinator-bias]] into a workflow
+rule about *when* the bias strikes (at under-specified substrate
+slots).
 
-- **#1–3, #14 (per-turn fixed tax).** CLAUDE.md "Core concepts" and
-  "Backpressure pattern" sections (~40 LOC) duplicated MODEL.md;
-  collapsed to a one-paragraph pointer. Deleted
-  `memory/project_backpressure_pattern.md` (described retired
-  `readGate`/`syncGate`/`detectorLatchAck` wiring as live).
-- **#4 (per-turn vocab noise).** `scripts/check-substrate-vocab.mjs`
-  now honors `// vocab-ok: <reason>` per-line opt-out. Tagged the
-  legitimate visual-layer uses in `Wire.tsx` and `useTickDriver.ts`.
-  Vocab check now reports clean instead of 7 false positives.
-- **#5 (per-test teardown noise).** Stubbed `requestAnimationFrame`
-  to a no-op in `test/contracts/r-tick-driver.test.tsx` and added
-  `afterEach(cleanup)`. The driver's fast-path RAF was firing after
-  happy-dom teardown between test files. Errors went 3 → 0.
-- **#6 + #7 (memory index).** Split MEMORY.md into **Background**
-  (stable workflow/hygiene rules, skim once) and **Active**
-  (project/substrate state, re-verify against code).
-- **#9 + #10 (settings).** Pruned stale SVG-grep one-offs from
-  `settings.local.json`; added `npx --no-install tsc`, `git push`,
-  `git log`, `git diff`, `git merge` to `settings.json` allowlist.
-- **#11 (registry duplication).** Added
-  `RUNTIME_IMPLEMENTED_KINDS: ReadonlySet<string>` to
-  `schema/node-types.ts` — PascalCase mirror of `RNodeKind`.
-  Readers can now derive "will this kind animate?" from code, not
-  from the prose comment.
-- **#12 (stop-hook).** `scripts/stop-checks.sh` now skips
-  `npm run build` when only `test/` files changed, or when
-  `out/webview.js` is already newer than every bundled TS file.
-- **#13 (verification doc).** CLAUDE.md workflow note: `tsc
-  --noEmit` and vitest alone do not refresh `out/webview.js`.
-- **#15 (memory overlap).** Consolidated
-  `feedback_substrate_visual_pacer.md` into
-  `feedback_substrate_vs_coordinator_bias.md` as a second concrete
-  failure mode; the visual_pacer file referenced retired
-  pre-slot-in-node mechanics (`joinLoop`, `awaitReady`, `ackWire`).
+**Spec for the fix** lives in the new diagram
+[diagrams/pause-as-substrate-property.svg](diagrams/pause-as-substrate-property.svg):
+pause is a property of **wire advancement** (RAF + delivery), not of
+the cohort cursor. Lifting it from one wire to the substrate makes
+it compose with self-sustaining loops.
+
+**Carried from last session:**
+- Live re-verify of resume-mode cycle: **DONE** (user confirmed).
 
 **Open architectural items (carried from last session):**
 - **R4** (small follow-up):
@@ -91,13 +68,32 @@ first pass against the repo and resolved every finding:
 
 ## Next move
 
-1. **Live re-verify the cycle.** Reload the webview against
-   `topology.json` and confirm that in resume mode the
-   readGate1 ↔ i0 ↔ i1 cycle still pulses continuously, now with
-   each hop visibly animating along one wire at a time. Press i1's
-   `⇢` and confirm one pulse on i1→readGate (not an instant
-   topology-wide cascade). Verification was originally done under
-   the old delivery model and needs redoing.
+1. **Implement substrate-layer pause** per
+   [diagrams/pause-as-substrate-property.svg](diagrams/pause-as-substrate-property.svg).
+   Sketch:
+   - Add a `paused` axis to the substrate — an observable bool with
+     `subscribe(cb)`. Could fold into `cohort-gate.ts` or live as a
+     sibling `pause-axis.ts`. Decide based on whether anything else
+     wants it; default to sibling file to keep the gate's
+     monotonic-released invariant clean.
+   - `Wire.tsx`: the RAF step reads `paused`. When true, stop
+     advancing `distanceCovered` and freeze `pulsePos`. On resume,
+     recompute `simStart` so the pulse continues from where it
+     stopped. `deliverIfPending` / `tryFinalize` also gated on
+     `paused` — endpoint-reached wires stay frozen at endpoint
+     until resume.
+   - `useTickDriver.halt/resume` flip the axis (in addition to
+     halting cursor advancement).
+   - Plumb the axis through `TopologyRoot` → `RSubstrateEdge`
+     (substrate landing rule: both test path and editor path).
+   - Contract test in `r-tick-driver.test.tsx`: pulsePos stable
+     across pause; resume continues from saved position; delivery
+     deferred until resume.
+   - **Substrate-layer spec to commit to up front (per the new
+     feedback memory):** a wire under pause is a clock that has
+     stopped reading its own time source. No central authority is
+     consulted. Each wire stops itself when the axis observably
+     reads true.
 2. **Retire ChainInhibitor's `⇢` debug button.** ChainInhibitor is
    not a source. Its only legitimate emit is "consume my slot and
    forward that value." The `⇢` button bypasses the slot and loads
