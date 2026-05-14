@@ -82,10 +82,7 @@ as part of the same commit, not a follow-up.
 
 ## Two modes, same machinery
 
-- **Self-sustaining mode:** Partitions cycle through hierarchical data continuously — already running, already bound.
-- **Disruption mode:** External input perturbs the running system, causing data cascades, XOR contrast changes, and lateral inhibition conflicts.
-
-Build order: get the disruption/response machinery solid first, then add the self-cycling layer on top.
+Disruption mode (external input perturbs the running system) is built first; self-sustaining mode (partitions cycling continuously) layers on top.
 
 ## Node kinds
 
