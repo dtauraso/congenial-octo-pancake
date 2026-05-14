@@ -20,47 +20,12 @@ Lateral inhibition, contrast detection, and competitive binding are implemented 
 
 The long-term goal is constant-time equality, multiplication, and set membership using the same topology.
 
-## Core concepts
+## Core concepts and backpressure
 
-**Inhibitor chain** — data cascades forward through ChainInhibitorNodes. Each inhibitor can suppress neighboring timelines via lateral inhibition, so only the strongest matching timeline claims input.
-
-**Edge nodes (XOR)** — detect contrast between adjacent inhibitors. Fire when input aligns with a partition's timing window.
-
-**Partition nodes** — define timing windows. When contrast is detected, the winning partition suppresses other timelines.
-
-**AND gate tree** — reduces per-inhibitor signals up the hierarchy. AND gates serve three roles:
-1. Reduction within a partition (all inhibitors matched → one signal up)
-2. Cross-timeline equality detection (two hierarchies traversed same distance → AND fires)
-3. Set membership (small timing delay variant)
-
-**Lateral inhibition** — ensures only one timeline claims each input. Neighbors get suppressed so binding works cleanly.
-
-## Backpressure pattern (slot-in-node)
-
-Backpressure is intrinsic to the substrate, not a latch+AND-gate
-construction. Under the slot-in-node model:
-
-- Each input slot on a destination node has phase
-  `empty | filled(v) | consumed`.
-- A source node holds off loading until the destination slot it
-  targets reads `empty`, via `dest.slotPhase(slotId)` through its
-  output reference. No second wire, no ack edge, no AND-gate
-  release.
-- The destination's firing rule consumes its slot
-  (`filled(v) → consumed → empty`) when its precondition holds; that
-  alone re-opens the slot for the next load.
-
-Stepping is cohort-indexed self-scheduling: nodes fire when
-preconditions hold, gated by one global play/pause. Cohort N is
-assigned at wire-time; the gate releases cohort N only — random-
-access stepping over the cohort axis. See [MODEL.md](MODEL.md)
-("Ticks and stepping") and
-[diagrams/model-revised-draft/14-step-budget.svg](diagrams/model-revised-draft/14-step-budget.svg).
-
-The prior latch + AND-gate wiring (`readGate`, `syncGate`,
-`detectorLatchAck`) is retired — it modeled backpressure as plumbing
-because the old wire fused delivery with parked state. With the
-slot owned by the node, the plumbing dissolves.
+Both live in [MODEL.md](MODEL.md): the inhibitor chain, edge nodes,
+partition nodes, AND-gate tree, lateral inhibition, slot-in-node
+backpressure, and cohort-indexed stepping. The "Substrate model"
+pointer at the top of this file is the only entry point you need.
 
 ## Substrate primitive landing rule
 
