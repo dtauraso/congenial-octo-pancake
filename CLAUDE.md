@@ -105,12 +105,9 @@ does not touch SVGs, skip it.
 
 ## Memory
 
-Project memory lives in `memory/` at the repo root. Files:
-- `memory/project_architecture.md` — system design and big-picture goals
-- `memory/project_backpressure_pattern.md` — latch + AND gate backpressure wiring
-- `memory/project_sustained_activity.md` — self-cycling particle design direction
-- `memory/user_background.md` — user context and working style
-- `memory/feedback_open_files.md` — tooling preferences
+Project memory lives in `memory/` at the repo root, one file per
+memory (auto-memory naming convention: `project_*`, `feedback_*`,
+`user_*`). `memory/MEMORY.md` is the index.
 
 ## File size budget
 
@@ -119,6 +116,17 @@ Project memory lives in `memory/` at the repo root. Files:
 - Applies to TypeScript (`.ts`, `.tsx`) **and** two CLAUDE.md-directed Markdown reads that grow over time: [audits.md](docs/planning/visual-editor/audits.md) and [handoff.md](docs/planning/visual-editor/handoff.md). Same rule applies to any files split off from them. Go, other Markdown, JSON, fixtures, and generated files are exempt. `session-log.md` is exempt: it is append-only and not a mandated read; keeping it as one bounded file beats fragmenting it across many small files that bloat grep output.
 - The rule is **always active**, including mid-design and mid-debug. If you finish an unrelated change and notice the file is now over 200, refactor in a follow-up commit before moving on.
 - Run `npm run check:loc` (in `tools/topology-vscode/`) to list offenders. The script is the source of truth — keep this rule and the script in sync.
+
+## Bash hygiene (keep AI round-trips snappy)
+
+Bash output goes straight into the AI's context. Wide-fan commands
+return hundreds of irrelevant matches from `node_modules/`, planning
+docs, and the auto-memory dir, costing tokens and time.
+
+- **`grep`**: always scope. For code, use `--include="*.ts" --include="*.tsx"`. For repo-wide searches, exclude noise: `--exclude-dir={node_modules,out,.git,handoff-archive,memory,docs/planning/visual-editor/audits}`.
+- **`find`**: never run `find .` unguarded — `tools/topology-vscode/node_modules/` has multi-MB files. Use `-not -path "*/node_modules/*" -not -path "*/out/*" -not -path "*/.git/*"` or just scope to a specific subtree.
+- **`ls`**: prefer a specific subdir over wide listings; pipe to `head` if you only need a sample.
+- Planning docs (`docs/planning/visual-editor/`, `memory/`, `audits/`) contain domain vocabulary — grep them only when the question is about *planning state*, not when looking for code.
 
 ## Workflow
 
