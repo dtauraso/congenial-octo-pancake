@@ -1,15 +1,13 @@
 // @vitest-environment happy-dom
 //
-// Multi-cohort chain: Input → Relay → ReadGate. wire1 is cohort 0,
-// wire2 is cohort 1. Cohort is an observation axis — it labels which
-// lap a wire belongs to but does not gate substrate delivery.
-// Delivery happens when a wire's pulse animation arrives, so the
-// chain propagates one hop per RAF arrival, not all at once on load.
+// Chain: Input → Relay → ReadGate. With the legacy all-wires round-close,
+// one step walks the chain to quiescence: all nodes fire, all wires
+// complete, then the round closes in a single step.
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { TopologyRoot } from "../../src/webview/substrate-r/TopologyRoot";
-import { parseSpec, type RTopologySpec } from "../../src/webview/substrate-r/spec";
+import type { RTopologySpec } from "../../src/webview/substrate-r/spec";
 
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 beforeEach(() => { vi.useFakeTimers(); });
@@ -49,15 +47,7 @@ function makeChain(queue: unknown[]): RTopologySpec {
 
 function flushRaf() { act(() => { vi.advanceTimersByTime(50); }); }
 
-describe("multi-cohort chain (Input → Relay → ReadGate)", () => {
-  it("parseSpec assigns w1=cohort 0, w2=cohort 1", () => {
-    const spec = parseSpec(makeChain([7]));
-    const w1 = spec.wires.find((w) => w.id === "w1")!;
-    const w2 = spec.wires.find((w) => w.id === "w2")!;
-    expect(w1.cohort).toBe(0);
-    expect(w2.cohort).toBe(1);
-  });
-
+describe("chain (Input → Relay → ReadGate)", () => {
   it("step + arrivals propagate the chain hop by hop; readgate fills", () => {
     const { getByTestId, container } = render(
       <TopologyRoot spec={makeChain([7])} haltedOnMount />,
@@ -66,10 +56,8 @@ describe("multi-cohort chain (Input → Relay → ReadGate)", () => {
 
     act(() => { fireEvent.click(getByTestId("step")); });
     flushRaf();
+    flushRaf();
     expect(getByTestId("tick").textContent).toBe("tick: 1");
-
-    flushRaf();
-    flushRaf();
 
     const btn = container.querySelector('[data-input-id="in0"]')!;
     expect(btn.getAttribute("data-armed")).toBe("true");

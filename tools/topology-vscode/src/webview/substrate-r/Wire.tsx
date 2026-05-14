@@ -3,21 +3,19 @@
 //
 // Two clocks run side-by-side and neither overrides the other:
 //
-//   • Substrate delivery (dest.fill) is gate-driven. On load, the
-//     value is staged; on `gate.release(cohort)` (or immediately at
-//     load if the cohort is already released), the wire writes the
-//     value into the destination slot. Delivered once per load.
+//   • Substrate delivery (dest.fill) happens on animation completion.
+//     The wire calls dest.fill(slotId, v) once per load.
 //
 //   • Visual animation is RAF-driven. The pulse travels along the
-//     path at a fixed speed. Reaching the endpoint does not deliver;
-//     it only marks the animation as done.
+//     path at a fixed speed. Reaching the endpoint marks animation
+//     done and triggers delivery.
 //
-//   • Phase transition `in-flight → empty` happens once both clocks
-//     have closed: animation done AND substrate delivered. That is
-//     when the wire is observably ready for the next load.
+//   • Phase transition `in-flight → empty` happens once the animation
+//     clock has closed. That is when the wire is observably ready
+//     for the next load.
 //
-// `complete()` on the handle is a synchronous "force-finish both
-// clocks" hook used by tests.
+// `complete()` on the handle is a synchronous "force-finish" hook
+// used by tests.
 
 import {
   forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState,
@@ -25,7 +23,7 @@ import {
 } from "react";
 import { type Action, type Phase, initialPhase, wirePhaseReducer } from "./wire-phase";
 import type { NodeHandle } from "./Node";
-import type { CohortGate } from "./cohort-gate";
+import type { PauseAxis } from "./pause-axis";
 
 const PULSE_SPEED_PX_PER_MS = 0.08;
 
@@ -34,7 +32,6 @@ export interface WireHandle {
   complete(): void;
   readonly phase: Phase;
   readonly canAccept: boolean;
-  readonly cohort: number;
   subscribePhase(listener: (phase: Phase) => void): () => void;
 }
 
@@ -46,12 +43,11 @@ export interface WireProps {
   markerEnd?: string;
   destNodeRef: RefObject<NodeHandle | null>;
   destSlotId: string;
-  cohort?: number;
-  gate?: CohortGate;
+  pauseAxis?: PauseAxis;
 }
 
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
-  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, cohort = 0, gate }, ref,
+  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis }, ref,
 ) {
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
@@ -99,7 +95,6 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     load,
     complete,
     get phase() { return phaseRef.current; },
-    get cohort() { return cohort; },
     get canAccept() {
       if (phaseRef.current.kind !== "empty") return false;
       const dest = destNodeRef.current;
@@ -110,7 +105,7 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
       phaseListenersRef.current.add(listener);
       return () => { phaseListenersRef.current.delete(listener); };
     },
-  }), [load, complete, destNodeRef, destSlotId, cohort]);
+  }), [load, complete, destNodeRef, destSlotId]);
 
   const distanceCoveredRef = useRef(0);
   const pathRef = useRef<SVGPathElement>(null);
@@ -125,10 +120,11 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     const path = pathRef.current;
     if (!path) return;
     const measuredLen = arcLength ?? path.getTotalLength();
-    const simStart = // vocab-ok: visual pulse animation, not substrate scheduling
+    let simStart = // vocab-ok: visual pulse animation, not substrate scheduling
       performance.now() - distanceCoveredRef.current / PULSE_SPEED_PX_PER_MS; // vocab-ok: visual layer
     let raf = 0;
     const step = () => {
+      if (pauseAxis?.paused) return;
       const elapsed = performance.now() - simStart; // vocab-ok: visual layer
       const distance = Math.min(elapsed * PULSE_SPEED_PX_PER_MS, measuredLen);
       distanceCoveredRef.current = distance;
@@ -141,9 +137,17 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
       }
       raf = requestAnimationFrame(step); // vocab-ok: visual layer
     };
+    const unsub = pauseAxis?.subscribe((p) => {
+      if (!p) {
+        // Rebase sim clock so pulse continues from where it stopped
+        simStart = performance.now() - distanceCoveredRef.current / PULSE_SPEED_PX_PER_MS; // vocab-ok: visual layer
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(step); // vocab-ok: visual layer
+      }
+    });
     raf = requestAnimationFrame(step); // vocab-ok: visual layer
-    return () => cancelAnimationFrame(raf);
-  }, [phase.kind, arcLength, pathD, tryFinalize]);
+    return () => { cancelAnimationFrame(raf); unsub?.(); };
+  }, [phase.kind, arcLength, pathD, tryFinalize, pauseAxis]);
 
   return (
     <g>

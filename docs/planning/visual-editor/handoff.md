@@ -12,45 +12,22 @@ than keeping one slightly-larger doc.
 
 ---
 
-## State at handoff (2026-05-14, end-of-session)
+## State at handoff (2026-05-14, cohort retirement)
 
-**Active branch:** `task/substrate-slot-in-node`. Tip `24de543`.
-Working tree: `topology.view.json` (pre-existing, unrelated),
-`memory/MEMORY.md` (new memory link), untracked
-`memory/feedback_specify_substrate_layer_first.md` and
-`docs/planning/visual-editor/diagrams/pause-as-substrate-property.svg`.
-126/126 vitest green, tsc clean, `check:loc` clean, vocab clean.
+**Active branch:** `task/substrate-slot-in-node`.
+Working tree: `topology.view.json` (pre-existing, unrelated).
+117/117 vitest green, tsc clean, `check:loc` clean, vocab clean.
 
-**This session: diagnosis + spec for substrate-layer pause.** No
-code landed. The user observed that the play/pause button only
-visibly halts `in0→readGate`. Traced the cause:
+**This session: cohort machinery retired from the substrate.**
+The cohort gate, cursor, and lap-label infrastructure were removed.
+The legacy all-wires-empty round-close is restored. Design rationale
+preserved in
+[docs/planning/cohort-future-feature.md](../../../docs/planning/cohort-future-feature.md).
 
-- `driver.halt()` only freezes the **cohort cursor**, not wires
-  ([useTickDriver.ts:88](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts#L88)).
-- In-flight wires keep their RAF and keep delivering
-  ([Wire.tsx:142](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx#L142)).
-- The cohort gate's `released` set is **monotonic** — `release(n)`
-  only adds
-  ([cohort-gate.ts:21-28](../../../tools/topology-vscode/src/webview/substrate-r/cohort-gate.ts#L21-L28)).
-  After one lap of the cycle, every wire's cohort is permanently in
-  `released`, so the gate has no remaining authority over cohorts
-  1+. Only fresh cohort-0 loads (in0→readGate) park.
-
-**Why this shape happened:** pause was specified only at the visible
-layer ("pause button"); the substrate-layer question ("what does a
-wire do when paused?") was left implicit, and the implementation
-reached for the nearest global axis (the cursor) to fill it. New
-feedback memory:
-[feedback_specify_substrate_layer_first.md](../../../memory/feedback_specify_substrate_layer_first.md)
-— generalizes [[substrate-vs-coordinator-bias]] into a workflow
-rule about *when* the bias strikes (at under-specified substrate
-slots).
-
-**Spec for the fix** lives in the new diagram
-[diagrams/pause-as-substrate-property.svg](diagrams/pause-as-substrate-property.svg):
+**Substrate-layer pause was implemented** in a prior session:
 pause is a property of **wire advancement** (RAF + delivery), not of
-the cohort cursor. Lifting it from one wire to the substrate makes
-it compose with self-sustaining loops.
+the cohort cursor. Each wire reads `pauseAxis.paused` in its RAF loop
+and freezes in place; `halt/resume` flip the axis.
 
 **Carried from last session:**
 - Live re-verify of resume-mode cycle: **DONE** (user confirmed).
@@ -68,32 +45,12 @@ it compose with self-sustaining loops.
 
 ## Next move
 
-1. **Implement substrate-layer pause** per
-   [diagrams/pause-as-substrate-property.svg](diagrams/pause-as-substrate-property.svg).
-   Sketch:
-   - Add a `paused` axis to the substrate — an observable bool with
-     `subscribe(cb)`. Could fold into `cohort-gate.ts` or live as a
-     sibling `pause-axis.ts`. Decide based on whether anything else
-     wants it; default to sibling file to keep the gate's
-     monotonic-released invariant clean.
-   - `Wire.tsx`: the RAF step reads `paused`. When true, stop
-     advancing `distanceCovered` and freeze `pulsePos`. On resume,
-     recompute `simStart` so the pulse continues from where it
-     stopped. `deliverIfPending` / `tryFinalize` also gated on
-     `paused` — endpoint-reached wires stay frozen at endpoint
-     until resume.
-   - `useTickDriver.halt/resume` flip the axis (in addition to
-     halting cursor advancement).
-   - Plumb the axis through `TopologyRoot` → `RSubstrateEdge`
-     (substrate landing rule: both test path and editor path).
-   - Contract test in `r-tick-driver.test.tsx`: pulsePos stable
-     across pause; resume continues from saved position; delivery
-     deferred until resume.
-   - **Substrate-layer spec to commit to up front (per the new
-     feedback memory):** a wire under pause is a clock that has
-     stopped reading its own time source. No central authority is
-     consulted. Each wire stops itself when the axis observably
-     reads true.
+1. **Cohort retired** — `cohort-gate.ts`, `cohort-assign.ts`,
+   `CohortAssigner.tsx` deleted; cohort field removed from
+   `RWireSpec`; `assignCohorts` removed from `spec.ts`; registry
+   stripped of `setCohorts`/`getWireCohort`; all cohort-referencing
+   tests deleted or rewritten. See
+   [docs/planning/cohort-future-feature.md](../../../docs/planning/cohort-future-feature.md).
 2. **Retire ChainInhibitor's `⇢` debug button.** ChainInhibitor is
    not a source. Its only legitimate emit is "consume my slot and
    forward that value." The `⇢` button bypasses the slot and loads
@@ -103,7 +60,7 @@ it compose with self-sustaining loops.
 3. **Housekeeping carry.** Flag `task/in0-readgate-emission-ack`
    for user-approved deletion (auto-retire signal hit — first green
    contract test landed in `31c6cdb`).
-4. **Offer merge to `main`** after (1)–(3) are clean.
+4. **Offer merge to `main`** after (2)–(3) are clean.
 
 ## Conceptual frame
 

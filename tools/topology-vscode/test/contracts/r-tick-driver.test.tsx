@@ -116,6 +116,23 @@ describe("useTickDriver", () => {
     expect(runs.mock.calls.length).toBeGreaterThan(before);
   });
 
+  it("halt() flips pauseAxis.paused; resume() flips it back", () => {
+    const { result } = renderHook(() => useTickDriver({ nodeRefs: [], wireRefs: [] }));
+    expect(result.current.pauseAxis.paused).toBe(false);
+    act(() => { result.current.halt(); });
+    expect(result.current.pauseAxis.paused).toBe(true);
+    act(() => { result.current.resume(); });
+    expect(result.current.pauseAxis.paused).toBe(false);
+  });
+
+  it("step() does not clear pauseAxis when paused", () => {
+    const n = makeMockNode();
+    const { result } = renderHook(() => useTickDriver({ nodeRefs: [ref(n)], wireRefs: [] }));
+    act(() => { result.current.halt(); result.current.step(); });
+    expect(result.current.pauseAxis.paused).toBe(true);
+    expect(result.current.tick).toBe(1);
+  });
+
   it("step is a no-op while a round is in flight", () => {
     const w = makeMockWire();
     let didLoad = false;

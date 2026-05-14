@@ -4,7 +4,6 @@ import { LegendPanel } from "../LegendPanel";
 import { MarkerDefs } from "../MarkerDefs";
 import { NodePalette } from "../NodePalette";
 import { spec } from "../../state";
-import { CohortAssigner } from "../../substrate-r/CohortAssigner";
 import { AlignGuides } from "./AlignGuides";
 import { EdgeContextMenu } from "./EdgeContextMenu";
 import { EDGE_TYPES, RF_NODE_TYPES } from "./_constants";
@@ -56,7 +55,6 @@ export function AppView(p: AppViewProps) {
         <Background gap={24} />
         <Controls />
         <MiniMap pannable zoomable />
-        <CohortAssigner />
       </ReactFlow>
       <AlignGuides guides={p.guides} />
       <MarkerDefs />

@@ -101,14 +101,13 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
       <svg width={600} height={200} data-testid="topology-svg">
         {validated.wires.map((wire) => (
           <Wire
-            key={`${wire.id}:${wire.target.nodeId}:${wire.target.port}:${wire.cohort ?? 0}:${wire.pathD}`}
+            key={`${wire.id}:${wire.target.nodeId}:${wire.target.port}:${wire.pathD}`}
             ref={wireRefs.get(wire.id)!}
             pathD={wire.pathD}
             arcLength={wire.arcLength}
             destNodeRef={nodeRefs.get(wire.target.nodeId)!}
             destSlotId={wire.target.port}
-            cohort={wire.cohort ?? 0}
-            gate={driver.gate}
+            pauseAxis={driver.pauseAxis}
           />
         ))}
       </svg>

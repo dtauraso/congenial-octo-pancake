@@ -3,6 +3,7 @@
 // Readgate with an `out` port emits `1` on its output wire when all
 // slots fill and the wire can accept. Pins the firing rule needed to
 // close the readGate → i0 → i1 → readGate cycle without manual clicks.
+// With the legacy all-wires round-close, one step walks the full chain.
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
@@ -48,18 +49,15 @@ function spec(): RTopologySpec {
 function flushRaf() { act(() => { vi.advanceTimersByTime(50); }); }
 
 describe("readgate emits 1 on out wire when armed", () => {
-  it("two steps: g1 auto-emits, g2 slot fills without manual click", () => {
+  it("one step: g1 auto-emits, g2 slot fills without manual click", () => {
     const { getByTestId, container } = render(
       <TopologyRoot spec={spec()} haltedOnMount />,
     );
 
     act(() => { fireEvent.click(getByTestId("step")); });
     flushRaf();
-    expect(getByTestId("tick").textContent).toBe("tick: 1");
-
-    act(() => { fireEvent.click(getByTestId("step")); });
     flushRaf();
-    expect(getByTestId("tick").textContent).toBe("tick: 2");
+    expect(getByTestId("tick").textContent).toBe("tick: 1");
 
     const buttons = container.querySelectorAll('[data-input-id="in0"]');
     const g2Btn = buttons[buttons.length - 1];

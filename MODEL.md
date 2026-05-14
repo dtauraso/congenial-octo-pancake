@@ -60,7 +60,7 @@ directly, not through wire phase.
 
 ## Ticks and stepping
 
-A tick is one cohort of edges that had activity at the same moment —
+A tick is one round of edges that had activity at the same moment —
 see [diagrams/model-revised-draft/13-tick-as-edge-cohort.svg](diagrams/model-revised-draft/13-tick-as-edge-cohort.svg).
 The tick is observable in the edges themselves, not stored on any
 node. Counting ticks is counting the simultaneity layers of a
@@ -71,12 +71,16 @@ walker, no coordinator, no global ID, and no node-side bookkeeping.
 fire when their preconditions hold; a single global gate halts or
 starts every node at once. No central walker.
 
-**Cohort enumeration is the step axis.** The regular animation loop
-assigns each wire its cohort number at wire-time (max predecessor
-cohort + 1), maintaining a cohort → wires registry as a side product
-of normal wiring — see [diagrams/model-revised-draft/14-step-budget.svg](diagrams/model-revised-draft/14-step-budget.svg).
-"Step N" is a pure lookup: the gate releases only wires tagged cohort
-N. Random-access stepping over the cohort axis.
+**Round-close is all-wires-empty.** The driver runs every node's
+`run()`, then waits for all wires to return to `empty`. Tick
+increments at each round-close.
+
+**Cohort-indexed stepping (future feature, deferred).** The cohort
+lap-label machinery was retired in v0 — it had no live consumer and
+its monotonic-released-set design was a known foot-gun. See
+[docs/planning/cohort-future-feature.md](docs/planning/cohort-future-feature.md)
+for the preserved design intent and conditions for re-deriving it
+when self-sustaining mode is implemented.
 
 ## Firing rule and slot writes
 
@@ -111,8 +115,7 @@ not abort it.
   the slot is `filled(v)`) — see [diagrams/model-revised-draft/05-q3-slot-visual-depiction.svg](diagrams/model-revised-draft/05-q3-slot-visual-depiction.svg).
   Manually-gated nodes render a take affordance whose click invokes
   the firing rule with the user-gate satisfied.
-- **Global gate** halts or starts every node at once. Cohort registry
-  maps step N → wires tagged cohort N.
+- **Global gate** halts or starts every node at once via the pause axis.
 - **Bridge surface** carries spec I/O only — `ready`, `spec`, `view`,
   `save`, `view-save`, optionally `topogen-status`. Nothing about
   ticks, phases, animation, or controls crosses.
@@ -143,7 +146,7 @@ describe the current substrate.
 
 ## Allowed vocabulary
 
-- tick (ordinal = edge cohort), round, step, cohort
+- tick (ordinal = round count), round, step
 - empty, in-flight(v), filled(v), consumed
 - halt, resume, snap, global gate
 - arc length, pulse speed, in-flight traversal time (the one permitted

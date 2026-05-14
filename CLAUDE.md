@@ -24,7 +24,7 @@ The long-term goal is constant-time equality, multiplication, and set membership
 
 Both live in [MODEL.md](MODEL.md): the inhibitor chain, edge nodes,
 partition nodes, AND-gate tree, lateral inhibition, slot-in-node
-backpressure, and cohort-indexed stepping. The "Substrate model"
+backpressure, and round-close stepping. The "Substrate model"
 pointer at the top of this file is the only entry point you need.
 
 ## Substrate primitive landing rule

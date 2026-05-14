@@ -68,16 +68,18 @@ describe("TopologyRoot end-to-end (spec-driven)", () => {
     );
     act(() => { fireEvent.click(getByTestId("step")); });
     flushRaf();
+    expect(getByTestId("tick").textContent).toBe("tick: 1");
     const btn = container.querySelector('[data-input-id="in0"]')!;
     expect(btn.getAttribute("data-armed")).toBe("true");
     act(() => { fireEvent.click(btn); });
-    expect(getByTestId("tick").textContent).toBe("tick: 1");
+    expect(btn.getAttribute("data-armed")).toBe("false");
 
     act(() => { fireEvent.click(getByTestId("step")); });
     flushRaf();
+    expect(getByTestId("tick").textContent).toBe("tick: 2");
     expect(btn.getAttribute("data-armed")).toBe("true");
     act(() => { fireEvent.click(btn); });
-    expect(getByTestId("tick").textContent).toBe("tick: 2");
+    expect(btn.getAttribute("data-armed")).toBe("false");
   });
 
   it("queue exhaustion: step with empty queue advances tick (no-op round)", () => {

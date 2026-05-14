@@ -64,9 +64,6 @@ export interface RWireSpec {
   target: { nodeId: string; port: string };
   pathD: string;
   arcLength: number;
-  // Assigned by parseSpec: cohort = max(predecessor cohorts) + 1,
-  // 0 for wires whose source node has no incoming wires.
-  cohort?: number;
 }
 
 export interface RTopologySpec {
@@ -108,22 +105,5 @@ export function parseSpec(spec: RTopologySpec): RTopologySpec {
       );
     }
   }
-  assignCohorts(spec);
   return spec;
-}
-
-function assignCohorts(spec: RTopologySpec): void {
-  // Cohort is assigned at wire-time (MODEL.md): each wire's cohort is
-  // max(cohorts of its source node's already-assigned incoming wires)
-  // + 1, or 0 if none. Iterating in spec-array order = wire-creation
-  // order, so back-edges that close a cycle land last and pick up the
-  // highest cohort naturally — no DAG requirement.
-  const incomingAssignedByNode = new Map<string, number[]>();
-  for (const w of spec.wires) {
-    const priors = incomingAssignedByNode.get(w.source.nodeId) ?? [];
-    w.cohort = priors.length === 0 ? 0 : Math.max(...priors) + 1;
-    const destPriors = incomingAssignedByNode.get(w.target.nodeId) ?? [];
-    destPriors.push(w.cohort);
-    incomingAssignedByNode.set(w.target.nodeId, destPriors);
-  }
 }
