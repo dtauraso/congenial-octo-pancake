@@ -4,7 +4,6 @@
 export type EdgeKind =
   | "chain"
   | "signal"
-  | "feedback-ack"
   | "release"
   | "streak"
   | "pointer"
@@ -14,7 +13,7 @@ export type EdgeKind =
   | "any";
 
 export const EDGE_KINDS: readonly EdgeKind[] = [
-  "chain", "signal", "feedback-ack", "release", "streak",
+  "chain", "signal", "release", "streak",
   "pointer", "and-out", "edge-connection", "inhibit-in", "any",
 ];
 

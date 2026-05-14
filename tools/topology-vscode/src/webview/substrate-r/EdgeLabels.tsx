@@ -1,12 +1,9 @@
-import type { EdgeKind } from "../../schema";
-
 export function EdgeLabels({
-  mid, label, valueLabel, kind, stroke,
+  mid, label, valueLabel, stroke,
 }: {
   mid: { x: number; y: number } | null;
   label?: string;
   valueLabel?: string;
-  kind: EdgeKind;
   stroke: string;
 }) {
   if (!mid || (!label && !valueLabel)) return null;
@@ -18,12 +15,12 @@ export function EdgeLabels({
           y={mid.y - 6}
           textAnchor="middle"
           fontSize={12}
-          fontWeight={kind === "feedback-ack" ? 600 : 300}
+          fontWeight={300}
           fill="#111"
           stroke="none"
           pointerEvents="none"
         >
-          {kind === "feedback-ack" ? `↻ ${label}` : label}
+          {label}
         </text>
       )}
       {valueLabel && (

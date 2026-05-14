@@ -12,6 +12,6 @@ export const RF_NODE_TYPES = { animated: RSubstrateNode, fold: FoldNode, note: N
 export const ALIGN_TOL = 4;
 
 export const EDGE_KIND_OPTIONS: EdgeKind[] = [
-  "chain", "signal", "feedback-ack", "release", "streak",
+  "chain", "signal", "release", "streak",
   "pointer", "and-out", "edge-connection", "inhibit-in", "any",
 ];

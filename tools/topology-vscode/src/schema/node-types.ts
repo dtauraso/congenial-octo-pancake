@@ -37,7 +37,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
   ReadLatch: {
     role: "latch",
     inputs: [{ name: "in", kind: "chain" }, { name: "release", kind: "release" }],
-    outputs: [{ name: "out", kind: "chain" }, { name: "ack", kind: "feedback-ack" }],
+    outputs: [{ name: "out", kind: "chain" }],
     shape: "rect", fill: "#e0f7fa", stroke: "#00838f", width: 90, height: 50,
     defaultProps: { delay: 1 },
   },
@@ -48,7 +48,6 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
       { name: "inhibitOut", kind: "inhibit-in" },
       { name: "readNew", kind: "edge-connection" },
       { name: "out", kind: "chain" },
-      { name: "ack", kind: "feedback-ack" },
     ],
     shape: "rect", fill: "#fff3e0", stroke: "#e65100", width: 90, height: 60,
   },
@@ -61,7 +60,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
   DetectorLatch: {
     role: "latch",
     inputs: [{ name: "in", kind: "chain" }, { name: "release", kind: "release" }],
-    outputs: [{ name: "out", kind: "chain" }, { name: "ack", kind: "feedback-ack" }],
+    outputs: [{ name: "out", kind: "chain" }],
     shape: "rect", fill: "#e0f7fa", stroke: "#00838f", width: 90, height: 50,
     defaultProps: { delay: 1 },
   },

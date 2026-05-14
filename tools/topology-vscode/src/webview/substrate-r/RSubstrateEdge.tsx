@@ -77,7 +77,6 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
         mid={mid}
         label={data?.label}
         valueLabel={data?.valueLabel}
-        kind={kind}
         stroke={stroke}
       />
     </>
