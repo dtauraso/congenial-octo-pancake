@@ -59,6 +59,9 @@ export function useTickDriver(config: TickDriverConfig): TickDriverHandle {
       inFlightRef.current = false;
       cursorRef.current = cohort + 1;
       setTick(cohort + 1);
+      // Idle throttle: no wires animated this cohort, so nothing paid
+      // frame time. RAF caps the spin rate so an idle topology can't
+      // burn cohorts faster than the display refresh.
       if (!haltedRef.current) requestAnimationFrame(advance);
       return;
     }
@@ -73,6 +76,10 @@ export function useTickDriver(config: TickDriverConfig): TickDriverHandle {
       inFlightRef.current = false;
       cursorRef.current = cohort + 1;
       setTick(cohort + 1);
+      // Re-entrancy guard: check() is called synchronously from a
+      // wire's phase subscriber. Yield once so the current stack
+      // unwinds before advance() runs again. Pacing was already paid
+      // by the wire RAF that just arrived — no RAF needed here.
       if (!haltedRef.current) queueMicrotask(advance);
     };
     for (const w of cohortWires) unsubs.push(w.subscribePhase(check));
