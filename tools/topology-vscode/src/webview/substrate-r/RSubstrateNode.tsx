@@ -9,11 +9,13 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { Handle, Position, useStore, type NodeProps } from "reactflow";
+import type * as React from "react";
 import { KIND_COLORS, type EdgeKind } from "../../schema";
 import type { NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
 import { InputBody, ReadGateBody, RelayBody, JoinBody, ChainInhibitorBody } from "./node-kinds";
 import { useRegistry } from "./registry";
+import { toRNodeKind, type RNodeKind } from "./spec";
 
 interface PortDef { name: string; kind: EdgeKind; side?: "left" | "right" }
 
@@ -31,6 +33,37 @@ interface RSubstrateNodeData {
   nodeData?: { init?: unknown[] };
 }
 
+interface BodyRenderCtx {
+  nodeRef: React.RefObject<NodeHandle | null>;
+  outWireRef: React.RefObject<WireHandle | null>;
+  inputs: PortDef[];
+  initialQueue: unknown[];
+}
+
+// Exhaustive switch on the validated RNodeKind. Mirror any new RNodeKind
+// here AND in TopologyRoot.tsx — `never` check below makes a missing case
+// a compile error so the editor path can't silently rot.
+function renderBodyFor(kind: RNodeKind | undefined, ctx: BodyRenderCtx): React.ReactNode {
+  if (!kind) return null;
+  const { nodeRef, outWireRef, inputs, initialQueue } = ctx;
+  switch (kind) {
+    case "input":
+      return <InputBody nodeRef={nodeRef} outWireRef={outWireRef} initialQueue={initialQueue} />;
+    case "relay":
+      return <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={inputs[0]?.name} />;
+    case "chaininhibitor":
+      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={inputs[0]?.name} />;
+    case "join":
+      return <JoinBody nodeRef={nodeRef} outWireRef={outWireRef} slotAId={inputs[0]?.name} slotBId={inputs[1]?.name} />;
+    case "readgate":
+      return <ReadGateBody nodeRef={nodeRef} slotIds={inputs.map((p) => p.name)} outWireRef={outWireRef} />;
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
 function handleStyle(side: "left" | "right", pct: number, color: string): React.CSSProperties {
   return {
     [side]: -5,
@@ -44,7 +77,7 @@ function handleStyle(side: "left" | "right", pct: number, color: string): React.
 
 export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
   const { id, data, selected } = props;
-  const kind = (data?.type ?? "").toLowerCase();
+  const kind = toRNodeKind(data?.type);
   const nodeRef = useRef<NodeHandle | null>(null);
   const registry = useRegistry();
 
@@ -114,38 +147,7 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
       })()}
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         <span style={{ fontWeight: 500 }}>{data?.label ?? id}</span>
-        {kind === "input" && (
-          <InputBody
-            nodeRef={nodeRef}
-            outWireRef={outWireRef}
-            initialQueue={data?.nodeData?.init ?? []}
-          />
-        )}
-        {kind === "relay" && (
-          <RelayBody
-            nodeRef={nodeRef}
-            outWireRef={outWireRef}
-            slotId={inputs[0]?.name}
-          />
-        )}
-        {kind === "chaininhibitor" && (
-          <ChainInhibitorBody
-            nodeRef={nodeRef}
-            outWireRef={outWireRef}
-            slotId={inputs[0]?.name}
-          />
-        )}
-        {kind === "join" && (
-          <JoinBody
-            nodeRef={nodeRef}
-            outWireRef={outWireRef}
-            slotAId={inputs[0]?.name}
-            slotBId={inputs[1]?.name}
-          />
-        )}
-        {kind === "readgate" && (
-          <ReadGateBody nodeRef={nodeRef} slotIds={inputs.map((p) => p.name)} outWireRef={outWireRef} />
-        )}
+        {renderBodyFor(kind, { nodeRef, outWireRef, inputs, initialQueue: data?.nodeData?.init ?? [] })}
       </div>
       {data?.sublabel && <div style={{ fontSize: 9, opacity: 0.7 }}>{data.sublabel}</div>}
     </div>

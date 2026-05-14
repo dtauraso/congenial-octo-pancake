@@ -8,6 +8,21 @@
 
 export type RNodeKind = "input" | "relay" | "join" | "readgate" | "chaininhibitor";
 
+// Canonical kind id form is lowercase. Editor schema (schema/node-types.ts)
+// uses PascalCase for human-readable type labels; toRNodeKind narrows a
+// possibly-PascalCase string from React Flow node.data into the runtime
+// kind enum or `undefined` if not a substrate-implemented kind.
+export function toRNodeKind(s: string | undefined): RNodeKind | undefined {
+  switch ((s ?? "").toLowerCase()) {
+    case "input": return "input";
+    case "relay": return "relay";
+    case "join": return "join";
+    case "readgate": return "readgate";
+    case "chaininhibitor": return "chaininhibitor";
+    default: return undefined;
+  }
+}
+
 export interface RNodeSpec {
   id: string;
   kind: RNodeKind;

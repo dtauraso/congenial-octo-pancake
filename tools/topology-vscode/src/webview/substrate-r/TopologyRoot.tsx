@@ -35,35 +35,24 @@ function NodeView({
   const outWireRef = outWireId
     ? wireRefs.get(outWireId)!
     : { current: null } as RefObject<WireHandle | null>;
-  if (node.kind === "input") {
-    return (
-      <InputBody
-        nodeRef={nodeRef}
-        outWireRef={outWireRef}
-        initialQueue={node.props?.queue ?? []}
-      />
-    );
+  // Exhaustive switch — `never` check below makes a missing case a
+  // compile error. Mirror any new RNodeKind here AND in RSubstrateNode.tsx.
+  switch (node.kind) {
+    case "input":
+      return <InputBody nodeRef={nodeRef} outWireRef={outWireRef} initialQueue={node.props?.queue ?? []} />;
+    case "relay":
+      return <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={ports.inputs[0]} />;
+    case "chaininhibitor":
+      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={ports.inputs[0]} />;
+    case "join":
+      return <JoinBody nodeRef={nodeRef} outWireRef={outWireRef} slotAId={ports.inputs[0]} slotBId={ports.inputs[1]} />;
+    case "readgate":
+      return <ReadGateBody nodeRef={nodeRef} slotIds={ports.inputs} outWireRef={outWireRef} />;
+    default: {
+      const _exhaustive: never = node.kind;
+      return _exhaustive;
+    }
   }
-  if (node.kind === "relay") {
-    return <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={ports.inputs[0]} />;
-  }
-  if (node.kind === "chaininhibitor") {
-    return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={ports.inputs[0]} />;
-  }
-  if (node.kind === "join") {
-    return (
-      <JoinBody
-        nodeRef={nodeRef}
-        outWireRef={outWireRef}
-        slotAId={ports.inputs[0]}
-        slotBId={ports.inputs[1]}
-      />
-    );
-  }
-  if (node.kind === "readgate") {
-    return <ReadGateBody nodeRef={nodeRef} slotIds={ports.inputs} outWireRef={outWireRef} />;
-  }
-  return null;
 }
 
 export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {

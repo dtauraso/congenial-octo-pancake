@@ -1,6 +1,18 @@
 // Node-type registry. Single source of truth for ports and visual
 // styling per node type. `kind` values must match SVG edge classes
 // from docs/svg-style-guide.md §5.
+//
+// IMPLEMENTED kinds (have a substrate runtime in substrate-r/, can be
+// simulated): Input, Relay, ReadGate, ChainInhibitor, and "Join" via
+// the substrate (no NODE_TYPES entry yet).
+//
+// ASPIRATIONAL kinds (palette entries only — no substrate runtime,
+// will drop into the editor but not animate): Generic, ReadLatch,
+// InhibitRightGate, DetectorLatch, StreakBreakDetector, StreakDetector,
+// AndGate, PatternAnd, SyncGate, EdgeNode, Partition. The runtime
+// allow-list is RNodeKind in webview/substrate-r/spec.ts; toRNodeKind
+// rejects any string not in it. Keep this comment in sync when adding
+// or implementing a kind.
 
 import type { NodeTypeDef } from "./types-graph";
 
