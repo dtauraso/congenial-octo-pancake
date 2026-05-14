@@ -32,6 +32,7 @@ Index of audit categories. Each audit lives in its own file under [`audits/`](au
 - [17. Test quality](audits/17-test-quality.md)
 - [18. Dependency freshness and supply chain](audits/18-dependency-freshness-and-supply-chain.md)
 - [19. Reading-trip economy](audits/19-reading-trip-economy.md)
+- [20. AI usage leak](audits/20-ai-usage-leak.md)
 
 ## Adding new audit categories
 
