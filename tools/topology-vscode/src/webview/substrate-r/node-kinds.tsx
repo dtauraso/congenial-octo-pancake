@@ -1,21 +1,15 @@
-// Node-kind implementations under the slot-in-node substrate.
+// Node-kind implementations under the slot-in-node substrate. All
+// kinds live in one file so the Node concept is one read, not five.
 //
 // Input: each run() checks `outWire.canAccept` (wire empty AND dest
 // slot empty) and loads the next queue value if so. No subscription,
 // no ack — the wire returns to empty on arrival under its own
 // machinery.
-//
-// ChainInhibitorBody / ReadGateBody live in sibling files to keep
-// each file under the LOC budget.
 
-import { useCallback, useRef, type RefObject, type ReactNode } from "react";
-import { Node, type NodeHandle } from "./Node";
+import { useCallback, useEffect, useRef, useState, type RefObject, type ReactNode } from "react";
+import { Node, type NodeHandle, type SlotPhase } from "./Node";
 import type { WireHandle } from "./Wire";
 import type { RNodeKind } from "./spec";
-import { ChainInhibitorBody } from "./node-kinds-chain-inhibitor";
-import { ReadGateBody } from "./node-kinds-readgate";
-
-export { ChainInhibitorBody, ReadGateBody };
 
 export interface KindBodyCtx {
   nodeRef: RefObject<NodeHandle | null>;
@@ -108,4 +102,133 @@ export function JoinBody({
   }, [nodeRef, outWireRef, slotAId, slotBId]);
 
   return <Node ref={nodeRef} slots={[slotAId, slotBId]} onRun={run} />;
+}
+
+// ChainInhibitor: consumes its slot and forwards on tick when the
+// out wire can accept. The manual ⇢ button is a debug aid emitting
+// a literal `1` when the out wire is free.
+
+export function ChainInhibitorBody({
+  nodeRef, outWireRef, slotId = "in",
+}: {
+  nodeRef: RefObject<NodeHandle | null>;
+  outWireRef: RefObject<WireHandle | null>;
+  slotId?: string;
+}) {
+  const [canEmit, setCanEmit] = useState(false);
+
+  const run = useCallback(() => {
+    const node = nodeRef.current;
+    const wire = outWireRef.current;
+    if (!node || !wire) return;
+    setCanEmit(wire.canAccept);
+    if (node.slotPhase(slotId) !== "filled") return;
+    if (!wire.canAccept) return;
+    const value = node.consume(slotId);
+    wire.load(value);
+  }, [nodeRef, outWireRef, slotId]);
+
+  const onEmit = useCallback(() => {
+    const wire = outWireRef.current;
+    if (!wire || !wire.canAccept) return;
+    wire.load(1);
+    setCanEmit(false);
+  }, [outWireRef]);
+
+  return (
+    <>
+      <Node ref={nodeRef} slots={[slotId]} onRun={run} />
+      <button
+        type="button"
+        disabled={!canEmit}
+        onClick={canEmit ? onEmit : undefined}
+        data-armed={canEmit ? "true" : "false"}
+        data-emit-id={slotId}
+        style={kindButtonStyle(canEmit)}
+      >
+        ⇢
+      </button>
+    </>
+  );
+}
+
+// ReadGate: variable-arity AND. When the instance declares an `out`
+// port, the firing rule auto-consumes all slots and loads `1` on the
+// out wire each tick the AND is satisfied. The ⌫ button is a manual
+// consume kept for the no-out-wire case (debug / contract use).
+
+export function ReadGateBody({
+  nodeRef, slotIds, outWireRef,
+}: {
+  nodeRef: RefObject<NodeHandle | null>;
+  slotIds: string[];
+  outWireRef?: RefObject<WireHandle | null>;
+}) {
+  const slots = slotIds.length > 0 ? slotIds : ["in0"];
+  const key = slots.join("|");
+  const [phases, setPhases] = useState<SlotPhase[]>(() => slots.map(() => "empty"));
+
+  const run = useCallback(() => {
+    const handle = nodeRef.current;
+    const wire = outWireRef?.current;
+    if (!handle || !wire) return;
+    if (!slots.every((s) => handle.slotPhase(s) === "filled")) return;
+    if (!wire.canAccept) return;
+    for (const s of slots) handle.consume(s);
+    wire.load(1);
+  }, [nodeRef, outWireRef, key]);
+
+  useEffect(() => {
+    const handle = nodeRef.current;
+    if (!handle) return;
+    setPhases(slots.map((s) => handle.slotPhase(s)));
+    const unsubs = slots.map((s, i) =>
+      handle.subscribeSlot(s, (p) =>
+        setPhases((prev) => {
+          if (prev[i] === p) return prev;
+          const next = prev.slice();
+          next[i] = p;
+          return next;
+        }),
+      ),
+    );
+    return () => { for (const u of unsubs) u(); };
+  }, [nodeRef, key]);
+
+  const armed = phases.length === slots.length && phases.every((p) => p === "filled");
+  const onConsume = useCallback(() => {
+    const handle = nodeRef.current;
+    if (!handle) return;
+    for (const s of slots) handle.requestConsume(s);
+  }, [nodeRef, key]);
+
+  return (
+    <>
+      <Node ref={nodeRef} slots={slots} onRun={run} />
+      <button
+        type="button"
+        disabled={!armed}
+        onClick={armed ? onConsume : undefined}
+        data-armed={armed ? "true" : "false"}
+        data-input-id={slots.join(",")}
+        style={kindButtonStyle(armed)}
+      >
+        ⌫
+      </button>
+    </>
+  );
+}
+
+function kindButtonStyle(armed: boolean) {
+  return {
+    marginLeft: 6,
+    padding: "1px 6px",
+    fontSize: 11,
+    lineHeight: 1.2,
+    background: "#fff",
+    border: "1px solid #333",
+    borderRadius: 3,
+    cursor: armed ? "pointer" : "default",
+    opacity: armed ? 1 : 0.5,
+  } as const;
 }
