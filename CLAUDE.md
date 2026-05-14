@@ -149,11 +149,7 @@ be a fresh model with no transcript.
 
 ## Posture (post-v0)
 
-The visual editor reached v0 (see [docs/planning/visual-editor-plan.md](docs/planning/visual-editor-plan.md)). Going forward:
-
-- **Friction-driven, not phase-driven.** New work is justified by friction surfaced during real-world editor use, logged in [docs/planning/visual-editor/session-log.md](docs/planning/visual-editor/session-log.md). Per-phase plans are dormant unless friction patterns revive them.
-- **Audit registry** at [docs/planning/visual-editor/audits.md](docs/planning/visual-editor/audits.md) describes the kinds of audits that exist (CI-backed, human-driven, AI-driven). Read it before proposing audit-style work.
-- **Working mode:** user drives the editor and narrates observations; assistant logs to session-log.md and makes changes; debug sessions between user and assistant as needed.
+Visual editor reached v0. New work is friction-driven, not phase-driven (per-phase plans are archived under `docs/planning/visual-editor/archive/`); justify changes from real-world editor use logged in [session-log.md](docs/planning/visual-editor/session-log.md). Audit kinds (CI-backed, human-driven, AI-driven) live in [audits.md](docs/planning/visual-editor/audits.md) — read it before proposing audit-style work. Working mode: user drives the editor and narrates; assistant logs and makes changes.
 
 ## Model routing
 
