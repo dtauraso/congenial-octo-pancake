@@ -73,14 +73,15 @@
     <text class="note" x="600" y="309" font-weight="300" fill="#666" stroke="none">absorbs 5 prior files.</text>
   </g>
 
-  <g id="file-axis" data-role="concept-file" data-concept="axis">
+  <g id="file-axis-driver" data-role="concept-file" data-concept="axis-driver">
     <rect class="file-box-axis" x="40" y="360" width="320" height="160" rx="8"/>
-    <text class="file-name" x="200" y="390" text-anchor="middle" font-weight="600" fill="#7b1fa2" stroke="none">axis.ts</text>
-    <text class="contains-label" x="60" y="418" font-weight="400" fill="#222" stroke="none">contains:</text>
-    <text class="contains-label" x="60" y="436" font-weight="300" fill="#444" stroke="none">  • global pause axis (halt/resume/snap)</text>
-    <text class="contains-label" x="60" y="454" font-weight="300" fill="#444" stroke="none">  • round-close observation (all-wires-empty)</text>
-    <text class="contains-label" x="60" y="472" font-weight="300" fill="#444" stroke="none">  • step semantics</text>
-    <text class="note" x="60" y="500" font-weight="300" fill="#666" stroke="none">absorbs 2 prior files (after audit confirms driver collapses).</text>
+    <text class="file-name" x="200" y="385" text-anchor="middle" font-weight="600" fill="#7b1fa2" stroke="none">pause-axis.ts  +  useTickDriver.ts</text>
+    <text class="contains-label" x="60" y="408" font-weight="400" fill="#222" stroke="none">two files, two concepts (audit-confirmed):</text>
+    <text class="contains-label" x="60" y="426" font-weight="300" fill="#444" stroke="none">  • pause-axis: decentralized halt/resume gate</text>
+    <text class="contains-label" x="60" y="444" font-weight="300" fill="#444" stroke="none">  • useTickDriver: round-walk + tick count + step</text>
+    <text class="note" x="60" y="475" font-weight="300" fill="#666" stroke="none">Model names both: "self-scheduling nodes</text>
+    <text class="note" x="60" y="492" font-weight="300" fill="#666" stroke="none">+ one global play/pause gate." Driver uses axis;</text>
+    <text class="note" x="60" y="509" font-weight="300" fill="#666" stroke="none">they don't collapse — distinct concepts.</text>
   </g>
 
   <g id="file-spec" data-role="concept-file" data-concept="spec">

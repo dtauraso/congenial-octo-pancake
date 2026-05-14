@@ -14,39 +14,52 @@ than keeping one slightly-larger doc.
 
 ## State at handoff (2026-05-14, end-of-session)
 
-**Active branch:** `task/substrate-slot-in-node`. Tip `aa8acc4`,
-pushed to origin.
+**Active branch:** `task/substrate-slot-in-node`. Pushed.
 Working tree: `topology.view.json` (pre-existing, unrelated).
-117/117 vitest green, tsc clean, `check:loc` clean, vocab clean,
-build refreshed.
+117/117 vitest green, tsc clean, `check:loc` clean, vocab clean.
 
-**This session shipped two coupled changes in one commit:**
+**This session shipped the concept-bounded substrate refactor.**
+substrate-r/ went from 16 files → 11; the Wire concept and the
+Node-kinds concept are each one file again. Plan and rationale in
+[diagrams/refactor-concept-bounded/](../../../diagrams/refactor-concept-bounded/).
 
-1. **Substrate-layer pause** — pause is now a property of wire
-   advancement, not of the cohort cursor. New
-   [pause-axis.ts](../../../tools/topology-vscode/src/webview/substrate-r/pause-axis.ts)
-   primitive; every wire's RAF reads `pauseAxis.paused`, freezes
-   `pulsePos`/`distanceCovered`, and rebases `simStart` on resume.
-   `useTickDriver.halt/resume` flip the axis. Plumbed through both
-   `TopologyRoot` and `RSubstrateEdge` (substrate landing rule).
+Commits:
+- `6967904` — plan diagrams (3 SVGs) for the refactor.
+- `6925cb3` — phase 1: shared `renderKindBody` switch in
+  `node-kinds.tsx`; both `TopologyRoot` and `RSubstrateNode` call it.
+  Kind-mirroring fork gone.
+- `6c2ac9a` — phase 2a: merged `node-kinds-readgate.tsx` +
+  `node-kinds-chain-inhibitor.tsx` into `node-kinds.tsx` (234 LOC).
+  Carved substrate-r/ out of the LOC budget in `check-loc.mjs` and
+  CLAUDE.md (substance is concept-bounded, not byte-bounded).
+- `869df39` — phase 2b: merged `wire-phase.ts` + `edge-path.ts` +
+  `EdgeLabels.tsx` into `Wire.tsx` (311 LOC). To follow a pulse, open
+  one file.
 
-2. **Cohort retired** — with pause clarified, the cohort gate,
-   cursor, and lap-label machinery were removed as anticipatory
-   infrastructure for self-sustaining mode (not yet implemented).
-   Round-close is back to "all wires empty"; step is one round,
-   atomic w.r.t. pause (captures `wasPaused`, clears it, advances,
-   re-pauses at round-close). Design intent preserved in
-   [docs/planning/cohort-future-feature.md](../../../docs/planning/cohort-future-feature.md).
+**Phase 2c (driver+axis audit) — kept separate.** `pause-axis.ts`
+and `useTickDriver.ts` look mergeable but are two distinct model
+concepts ("self-scheduling nodes + one global play/pause gate" —
+the model names both). Driver uses axis; they don't collapse. SVG
+[02-target-concept-bounded.svg](../../../diagrams/refactor-concept-bounded/02-target-concept-bounded.svg)
+updated to reflect this audit finding.
 
-Files deleted: `cohort-gate.ts`, `cohort-assign.ts`,
-`CohortAssigner.tsx`, plus 2 cohort-specific test files. Net ~−250
-LOC across the change.
+**Phase 2d (RSubstrate*/TopologyRoot full collapse) — deferred.**
+These three files (`TopologyRoot.tsx`, `RSubstrateNode.tsx`,
+`RSubstrateEdge.tsx`) serve genuinely different rendering contexts:
+plain SVG harness for contract tests vs React Flow handles/store for
+the editor. The substantive dedup (the kind switch) is done. Further
+collapse risks deleting context-specific behavior. Revisit if the
+editor anomaly (below) turns out to involve one of these wrappers.
 
-**Live editor verification: NOT YET DONE.** Tests are green but the
-user has not exercised pause/step/resume in the live editor since
-the change. Next session should open the editor, drive pulses, press
-pause mid-flight, confirm all in-flight wires freeze uniformly,
-press step / resume, confirm pulses continue from frozen position.
+**Phase 3 done.** CLAUDE.md "Substrate primitive landing rule"
+narrowed: node kinds are now auto-landed via the shared switch; the
+rule covers only wire props and registry/driver plumbing. Memory
+`feedback-substrate-landing-requires-editor-path` and MEMORY.md
+index entry updated to match.
+
+**Live editor verification:** pause/step/resume confirmed working
+by user. Something else extra happened during verification (not
+described) — flagged for next session to investigate.
 
 **Open architectural items (carried):**
 - **R4** (small follow-up):
@@ -61,17 +74,16 @@ press step / resume, confirm pulses continue from frozen position.
 
 ## Next move
 
-1. **Live verify pause/step/resume in the editor.** Required before
-   merge — tests passing isn't enough; the substrate-landing rule
-   says the editor path is part of landing. Drive a pulse, pause
-   mid-flight, confirm all in-flight wires freeze, resume, confirm
-   continuation from frozen position.
+1. **The editor anomaly.** User reported "something extra happened"
+   during pause verification that isn't pause-related. Ask the user
+   to describe it; reproduce; decide whether to fix on this branch
+   or split a `task/<short-kebab>` for it.
 2. **Retire ChainInhibitor's `⇢` debug button.** ChainInhibitor is
    not a source. Its only legitimate emit is "consume my slot and
    forward that value." The `⇢` button bypasses the slot and loads
    a literal `1`, giving a non-source node source powers. Remove
-   from
-   [node-kinds-chain-inhibitor.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds-chain-inhibitor.tsx).
+   from [node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
+   (ChainInhibitorBody now lives there, post-merge).
 3. **Housekeeping carry.** Flag `task/in0-readgate-emission-ack`
    for user-approved deletion (auto-retire signal hit — first green
    contract test landed in `31c6cdb`).
@@ -88,14 +100,18 @@ press step / resume, confirm pulses continue from frozen position.
   they're lossy compressions of the actual phenomenon. The
   substrate rebuild rejects projection: visuals before logic,
   transitions before snapshots, motion before structure.
+- **Concept-bounded code, not layer-bounded.** Layered decomposition
+  (types here, geometry there, dispatch elsewhere) is a human cache
+  strategy that costs machine readers re-projection on every read.
+  substrate-r/ files are concept-bounded — one file per model
+  concept (Node, Wire, Slot, Axis, Driver). See
+  [diagrams/refactor-concept-bounded/](../../../diagrams/refactor-concept-bounded/).
 - **Snapshot + motion as a pair.** chan-wire (snapshot) +
   chan-anim (motion).
 - **Decentralized, not distributed.** "Decentralized" = no center
-  exists, the property is genuinely local. "Distributed" = the
-  center is reconstructed from pieces, which is what most
-  coordinator-shaped designs do under a different name. Pause-axis
-  is genuinely decentralized: each wire's RAF reads the axis
-  locally, no central scheduler consulted.
+  exists, the property is genuinely local. Pause-axis is genuinely
+  decentralized: each wire's RAF reads the axis locally, no central
+  scheduler consulted.
 
 ## Working mode
 
@@ -125,17 +141,14 @@ merged branches without re-asking. Force-push needs sign-off.
 
 ## Dev-loop
 
-Read [MODEL.md](../../../MODEL.md), CLAUDE.md's "Substrate
-primitive landing rule", the three primitive files
-([RSubstrateNode.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateNode.tsx),
-[RSubstrateEdge.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateEdge.tsx),
-[node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
-+ siblings), and
-[Wire.tsx](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)
-for the decoupled-clocks model. After any substrate-r edit, run
-`npm run build` — vitest/tsc alone don't refresh `out/webview.js`
-(stop-hook does this, but only when bundled TS changed and the
-output is older than the input).
+Read [MODEL.md](../../../MODEL.md), CLAUDE.md's narrowed "Substrate
+primitive landing rule", and the two concept-bounded primitive files
+([node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
+for kinds, [Wire.tsx](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)
+for the wire concept). After any substrate-r edit, run `npm run
+build` — vitest/tsc alone don't refresh `out/webview.js` (stop-hook
+does this, but only when bundled TS changed and the output is older
+than the input).
 
 Cwd for tsc/tests/check:loc/build: `tools/topology-vscode/` (Bash
 resets cwd — chain `cd` or use absolute paths). Stop hook active:

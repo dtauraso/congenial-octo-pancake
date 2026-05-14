@@ -27,23 +27,24 @@ partition nodes, AND-gate tree, lateral inhibition, slot-in-node
 backpressure, and round-close stepping. The "Substrate model"
 pointer at the top of this file is the only entry point you need.
 
-## Substrate primitive landing rule
+## Substrate primitive landing rule (narrowed)
 
-A substrate primitive (new node kind, new wire prop, new gate, new
-driver behavior) is **not landed** until it is dispatched on **both**
-paths:
+**Node kinds:** auto-landed. `renderKindBody` in `node-kinds.tsx` is
+the single dispatch — both `TopologyRoot` (tests) and `RSubstrateNode`
+(editor) call it. Adding a kind = one switch case + the `RNodeKind`
+type in `spec.ts`. No second path to forget.
 
-1. **Test path:** `TopologyRoot` and its contract tests under
-   `test/contracts/r-topology-*.test.tsx`.
-2. **Editor path:** `RSubstrateNode` (for node kinds) and/or
-   `RSubstrateEdge` (for wire props), and whatever registry/driver
-   plumbing the kind needs to actually fire in the live editor.
+**Wire props and registry/driver plumbing:** still need both paths.
+`RSubstrateEdge` threads wire props from the React Flow store into
+`<Wire>`; `TopologyRoot` threads them from the validated spec. A new
+wire prop must be added in both places (or in a shared helper) in the
+same commit, otherwise the editor diverges silently from the model.
 
-If you add a kind to `node-kinds.tsx` and a `TopologyRoot` dispatch
-without also adding the `RSubstrateNode` dispatch, the editor will
-silently rot while tests stay green. The handoff's "verify pulses in
-the editor" step is impossible in that state. Treat editor dispatch
-as part of the same commit, not a follow-up.
+History: this rule used to cover node kinds too, after a series of
+half-landings during the slot-in-node work (memory:
+`feedback-substrate-landing-requires-editor-path`). The shared
+`renderKindBody` switch (concept-bounded refactor) eliminated that
+scope; the rule now covers only the remaining fork.
 
 ## Two modes, same machinery
 
