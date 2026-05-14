@@ -22,29 +22,42 @@ Read them in this order on a fresh session:
 
 State at handoff (2026-05-13, end-of-session):
 
-  **Active branch:** `task/substrate-slot-in-node`. Tip `44406cd`.
-  Working tree clean. 126/126 vitest green, tsc clean,
-  `check:loc` clean, `out/webview.js` rebuilt.
+  **Active branch:** `task/substrate-slot-in-node`. Tip `dfbfe73`.
+  Working tree has one pre-existing modification to
+  `topology.view.json` (unrelated to this session's work). 126/126
+  vitest green, tsc clean, `check:loc` clean, `out/webview.js`
+  rebuilt.
 
-  **Substrate model just changed.** Cohort is now observation-only
-  (a label on wires for the scrub cursor) and delivery happens at
-  RAF arrival, not at load. Net effect: a single `wire.load` no
-  longer cascades synchronously through the topology — each hop
-  costs one wire animation. See commit `44406cd` and
-  [handoff-next-task.md](handoff-next-task.md) for the two user
-  clarifications that drove the change.
+  **Substrate model changed earlier this session.** Cohort is now
+  observation-only (a label on wires for the scrub cursor) and
+  delivery happens at RAF arrival, not at load. Net effect: a
+  single `wire.load` no longer cascades synchronously through the
+  topology — each hop costs one wire animation. See commit
+  `44406cd` and [handoff-next-task.md](handoff-next-task.md) for
+  the two user clarifications that drove the change.
 
-  **Needs live re-verify.** The earlier cycle verification was
-  under the old model. Reload the webview and confirm the cycle
-  still pulses end-to-end in resume mode, with each hop visibly
+  **Housekeeping pass landed (organizational, not substrate).**
+  8 commits on top of `44406cd` reduce repo bloat that was costing
+  AI bash round-trips: collapsed 24-file `session-log/` into one
+  file, archived 11 historical handoff splits + 14 phase-plan
+  docs, trimmed CLAUDE.md back under 200 LOC, fixed the
+  substrate-r ghost path in CLAUDE.md and the vocab script, and
+  added a Bash hygiene section to CLAUDE.md (grep / find / ls
+  scope rules). Net: top-level `docs/planning/visual-editor/` went
+  from 26 entries to 8 live docs + 3 subdirs.
+
+  **Needs live re-verify.** The cycle verification was under the
+  old model. Reload the webview and confirm the cycle still
+  pulses end-to-end in resume mode, with each hop visibly
   animating along one wire at a time.
 
   **What's open:** retire ChainInhibitor's `⇢` button (a non-source
-  node shouldn't be able to originate values). Housekeeping carries
-  — fix `scripts/check-substrate-vocab.mjs` path
-  (`substrate/` → `substrate-r/`), flag
-  `task/in0-readgate-emission-ack` for user-approved deletion.
-  Then offer merge to `main`.
+  node shouldn't be able to originate values). Tune the banned-vocab
+  list in `scripts/check-substrate-vocab.mjs` — it now scans
+  substrate-r/ correctly but inherits banned terms (rAF,
+  performance.now, simStart) that are legitimate under the
+  decoupled-clocks model. Flag `task/in0-readgate-emission-ack`
+  for user-approved deletion. Then offer merge to `main`.
 
 ## Dev-loop
 

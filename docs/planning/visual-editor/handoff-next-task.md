@@ -1,6 +1,6 @@
 # Next task: confirm per-hop propagation; then housekeeping
 
-**Branch:** `task/substrate-slot-in-node`. Tip `44406cd`.
+**Branch:** `task/substrate-slot-in-node`. Tip `dfbfe73`.
 **Status:** 126/126 vitest green, tsc clean, LOC clean, build fresh.
 Needs live re-verification — the substrate model just changed.
 
@@ -49,11 +49,38 @@ not one synchronous step).
    the slot and loads a literal `1`, giving a non-source node source
    powers. Remove from
    [node-kinds-chain-inhibitor.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds-chain-inhibitor.tsx).
-3. **Housekeeping carries.** Fix
-   `scripts/check-substrate-vocab.mjs` path
-   (`substrate/` → `substrate-r/`). Flag
-   `task/in0-readgate-emission-ack` for user-approved deletion.
+3. **Housekeeping carries.** Flag `task/in0-readgate-emission-ack`
+   for user-approved deletion. Tune the banned-vocab list in
+   `scripts/check-substrate-vocab.mjs` for substrate-r (the path is
+   now fixed and the script reports 7 hits in Wire.tsx /
+   useTickDriver.ts that are legitimate under the decoupled-clocks
+   model — the list inherited from the old substrate needs revising).
 4. **Offer merge to `main`** after (1)–(3) are clean.
+
+## What landed in housekeeping pass (this session)
+
+Branch is now 8 commits ahead of where the previous handoff captured
+state. The substrate code did not change; the work was repo
+organization to make AI bash round-trips snappier:
+
+- `26d666d` substrate-r ghost path fix in CLAUDE.md and
+  `check-substrate-vocab.mjs` (was pointing at the deleted
+  `src/substrate/`).
+- `aad97bb` trimmed CLAUDE.md under the 200-LOC ceiling (dropped
+  retired Node types table + Diagrams section).
+- `e5f7d66` moved 11 historical `handoff-*.md` siblings into
+  `handoff-archive/`. Only handoff.md + the 3 current splits remain
+  at top level.
+- `8baf2e2` collapsed 24-file `session-log/` into a single
+  `session-log.md`; exempted it from the LOC rule
+  (it is append-only and not a mandated read).
+- `7777f64` added a Bash hygiene section to CLAUDE.md (grep / find /
+  ls scope rules) and trimmed the stale 5-file Memory list.
+- `dc26acf` archived 14 historical planning docs (phase-1..9,
+  industry-pattern-audit, risk-and-effort, testing-strategy) under
+  `archive/`.
+- `e6c1789` + `dfbfe73` compressed "Two modes" and "Posture" sections
+  in CLAUDE.md to stay under 200 LOC.
 
 ## ALWAYS clause
 
