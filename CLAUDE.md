@@ -110,7 +110,7 @@ memory (auto-memory naming convention: `project_*`, `feedback_*`,
 
 - **Trigger threshold:** any source file ≥ **200 LOC** must be refactored.
 - **Refactor target:** split until every resulting file is ≤ **100 LOC**.
-- Applies to TypeScript (`.ts`, `.tsx`) **and** two CLAUDE.md-directed Markdown reads that grow over time: [audits.md](docs/planning/visual-editor/audits.md) and [handoff.md](docs/planning/visual-editor/handoff.md). Same rule applies to any files split off from them. Go, other Markdown, JSON, fixtures, and generated files are exempt. `session-log.md` is exempt: it is append-only and not a mandated read; keeping it as one bounded file beats fragmenting it across many small files that bloat grep output.
+- Applies to TypeScript (`.ts`, `.tsx`) **and** [audits.md](docs/planning/visual-editor/audits.md) (CLAUDE.md-directed read that grows over time). Same rule applies to any files split off from it. Go, other Markdown, JSON, fixtures, and generated files are exempt. `session-log.md` and `handoff.md` are exempt: a fresh AI session must read handoff.md end-to-end, and splitting it into siblings (the prior approach) forced sequential reads of 3-4 files, which audit 19 found costs more than reading one slightly-larger doc. Keep handoff.md under ~200 LOC as a soft target via editorial pruning, not by splitting.
 - The rule is **always active**, including mid-design and mid-debug. If you finish an unrelated change and notice the file is now over 200, refactor in a follow-up commit before moving on.
 - Run `npm run check:loc` (in `tools/topology-vscode/`) to list offenders. The script is the source of truth — keep this rule and the script in sync.
 
