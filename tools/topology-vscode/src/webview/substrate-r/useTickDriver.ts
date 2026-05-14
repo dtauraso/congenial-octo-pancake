@@ -62,7 +62,7 @@ export function useTickDriver(config: TickDriverConfig): TickDriverHandle {
       // Idle throttle: no wires animated this cohort, so nothing paid
       // frame time. RAF caps the spin rate so an idle topology can't
       // burn cohorts faster than the display refresh.
-      if (!haltedRef.current) requestAnimationFrame(advance);
+      if (!haltedRef.current) requestAnimationFrame(advance); // vocab-ok: idle throttle, not substrate scheduling
       return;
     }
 

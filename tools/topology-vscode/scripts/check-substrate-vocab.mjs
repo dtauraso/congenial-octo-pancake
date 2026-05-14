@@ -50,6 +50,10 @@ for (const file of walk(ROOT)) {
   const text = readFileSync(file, "utf8");
   const lines = text.split("\n");
   lines.forEach((line, i) => {
+    // Explicit per-line opt-out for legitimate visual-layer uses
+    // (wire RAF, pulse animation, etc). Reason must follow the
+    // marker so the exemption stays auditable.
+    if (/\bvocab-ok:/.test(line)) return;
     for (const re of BANNED) {
       if (re.test(line)) {
         const rel = relative(process.cwd(), file);

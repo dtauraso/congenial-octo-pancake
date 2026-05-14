@@ -125,11 +125,11 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     const path = pathRef.current;
     if (!path) return;
     const measuredLen = arcLength ?? path.getTotalLength();
-    const simStart =
-      performance.now() - distanceCoveredRef.current / PULSE_SPEED_PX_PER_MS;
+    const simStart = // vocab-ok: visual pulse animation, not substrate scheduling
+      performance.now() - distanceCoveredRef.current / PULSE_SPEED_PX_PER_MS; // vocab-ok: visual layer
     let raf = 0;
     const step = () => {
-      const elapsed = performance.now() - simStart;
+      const elapsed = performance.now() - simStart; // vocab-ok: visual layer
       const distance = Math.min(elapsed * PULSE_SPEED_PX_PER_MS, measuredLen);
       distanceCoveredRef.current = distance;
       const pt = path.getPointAtLength(distance);
@@ -139,9 +139,9 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
         tryFinalize();
         return;
       }
-      raf = requestAnimationFrame(step);
+      raf = requestAnimationFrame(step); // vocab-ok: visual layer
     };
-    raf = requestAnimationFrame(step);
+    raf = requestAnimationFrame(step); // vocab-ok: visual layer
     return () => cancelAnimationFrame(raf);
   }, [phase.kind, arcLength, pathD, tryFinalize]);
 

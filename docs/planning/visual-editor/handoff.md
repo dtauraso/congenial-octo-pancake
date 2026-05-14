@@ -82,11 +82,9 @@ labeled palette-only so they aren't mistaken for runtime kinds.
    [node-kinds-chain-inhibitor.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds-chain-inhibitor.tsx).
 3. **Housekeeping carries.** Flag `task/in0-readgate-emission-ack`
    for user-approved deletion (auto-retire signal hit — first green
-   contract test landed in `31c6cdb`). Tune the banned-vocab list
-   in `scripts/check-substrate-vocab.mjs`: it inherits banned terms
-   (rAF, `performance.now`, `simStart`) that are legitimate under
-   the decoupled-clocks model — reports 7 hits in Wire.tsx /
-   useTickDriver.ts that should not be flagged.
+   contract test landed in `31c6cdb`). (Vocab false positives in
+   Wire.tsx / useTickDriver.ts: resolved via `// vocab-ok:` opt-out
+   convention; script now reports clean.)
 4. **Offer merge to `main`** after (1)–(3) are clean.
 
 ## Conceptual frame
