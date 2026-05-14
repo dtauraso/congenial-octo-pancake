@@ -8,7 +8,7 @@ import { Wire, type WireHandle } from "./Wire";
 import { type NodeHandle } from "./Node";
 import { useTickDriver } from "./useTickDriver";
 import { parseSpec, nodePorts, type RTopologySpec, type RNodeSpec } from "./spec";
-import { InputBody, RelayBody, JoinBody, ReadGateBody, ChainInhibitorBody } from "./node-kinds";
+import { renderKindBody } from "./node-kinds";
 
 export interface TopologyRootProps {
   spec: RTopologySpec;
@@ -35,24 +35,12 @@ function NodeView({
   const outWireRef = outWireId
     ? wireRefs.get(outWireId)!
     : { current: null } as RefObject<WireHandle | null>;
-  // Exhaustive switch — `never` check below makes a missing case a
-  // compile error. Mirror any new RNodeKind here AND in RSubstrateNode.tsx.
-  switch (node.kind) {
-    case "input":
-      return <InputBody nodeRef={nodeRef} outWireRef={outWireRef} initialQueue={node.props?.queue ?? []} />;
-    case "relay":
-      return <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={ports.inputs[0]} />;
-    case "chaininhibitor":
-      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={ports.inputs[0]} />;
-    case "join":
-      return <JoinBody nodeRef={nodeRef} outWireRef={outWireRef} slotAId={ports.inputs[0]} slotBId={ports.inputs[1]} />;
-    case "readgate":
-      return <ReadGateBody nodeRef={nodeRef} slotIds={ports.inputs} outWireRef={outWireRef} />;
-    default: {
-      const _exhaustive: never = node.kind;
-      return _exhaustive;
-    }
-  }
+  return renderKindBody(node.kind, {
+    nodeRef,
+    outWireRef,
+    slotIds: ports.inputs,
+    initialQueue: (node.props?.queue ?? []) as unknown[],
+  });
 }
 
 export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
