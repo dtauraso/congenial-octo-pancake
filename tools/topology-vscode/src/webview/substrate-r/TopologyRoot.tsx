@@ -103,6 +103,7 @@ function TopologyRoot({ spec, haltedOnMount }, ref) {
             pauseAxis={driver.pauseAxis}
             traceId={wire.id}
             seed={wire.seed}
+            value={wire.value}
           />
         ))}
       </svg>
