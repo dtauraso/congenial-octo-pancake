@@ -91,6 +91,7 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
             destSlotId={wire.target.port}
             pauseAxis={driver.pauseAxis}
             traceId={wire.id}
+            seed={wire.seed}
           />
         ))}
       </svg>

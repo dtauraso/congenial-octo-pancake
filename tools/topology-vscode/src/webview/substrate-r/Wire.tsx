@@ -182,10 +182,11 @@ export interface WireProps {
   destSlotId: string;
   pauseAxis?: PauseAxis;
   traceId?: string;
+  seed?: unknown;
 }
 
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
-  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId }, ref,
+  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId, seed }, ref,
 ) {
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
@@ -264,6 +265,11 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
       return () => { acceptListenersRef.current.delete(listener); };
     },
   }), [load, complete, destNodeRef, destSlotId, notifyCanAccept]);
+
+  useEffect(() => {
+    if (seed !== undefined) load(seed);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount-only: prime the wire once
 
   const distanceCoveredRef = useRef(0);
   const pathRef = useRef<SVGPathElement>(null);

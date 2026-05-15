@@ -64,6 +64,7 @@ export interface RWireSpec {
   target: { nodeId: string; port: string };
   pathD: string;
   arcLength: number;
+  seed?: unknown;
 }
 
 export interface RTopologySpec {
