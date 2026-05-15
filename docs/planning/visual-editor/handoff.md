@@ -49,12 +49,9 @@ wiring), not a per-wire knob. See `memory/feedback_uniform_pulse_speed.md`.
 
 ## Open items
 
-- `subscribeFanoutConvergence` is not yet consumed by C1 — a future
-  task could use it to tighten C1's weakened single-winner exclusion
-  contract.
-- C1 single-winner exclusion remains accepted as a weakened contract
-  from a prior session; revisit only if a future task needs true
-  mutual exclusion.
+None. The two prior threads (fanout-convergence wiring into C1, and
+C1 single-winner exclusion tightening) are explicitly deferred —
+revisit only if a future task surfaces a concrete need.
 
 ## Conceptual frame
 
