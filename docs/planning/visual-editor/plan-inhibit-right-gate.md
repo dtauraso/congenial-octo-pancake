@@ -81,7 +81,7 @@ See `plan-inhibit-right-gate-firing.svg` for the two-round slot-phase trace.
 
 ## Risks / Open Questions
 
-1. **`ChainInhibitorBody` second output wire.** The body currently holds one `outWireRef`. Threading a second `outWireRef` for `inhibitOut` may require changing `KindBodyCtx.outWireRef` to an array, or adding a named `outWireRefs` map. This is the only non-mechanical decision in the plan — resolve before writing the `ChainInhibitorBody` change.
+1. **`ChainInhibitorBody` second output wire.** ✅ Resolved: `KindBodyCtx.outWireRef` migrated to `outWireRefs: Record<string, RefObject<WireHandle|null>>`, keyed by output port name from `NODE_KIND_PORTS`. The named-map shape scales (per-port names, no positional fragility, symmetric with input slots). Existing single-output bodies read `outWireRefs.out`. Migration committed separately; `ChainInhibitorBody` second handle reads `outWireRefs.inhibitOut` once that port is wired.
 2. **Firing when only L fills (right never sent).** If i1 doesn't fire in a round (e.g. the chain is shorter), `right` stays `empty` — the gate fires on L alone. This is correct per INHIBIT semantics but worth confirming with David against the intended circuit behavior.
 3. **`topology.json` port name `inhibitOut` vs handle name.** `i0` declares `inhibitOut` as an output in `node-types.ts`; the cascade SVG uses it as the fan-out handle. Confirm that `topology.json` edges use `sourceHandle: "inhibitOut"` (not `"out"`) so `parseSpec` doesn't reject the wire.
 

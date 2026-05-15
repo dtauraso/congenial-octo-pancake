@@ -14,7 +14,7 @@ import { postLog } from "../log/post";
 
 export interface KindBodyCtx {
   nodeRef: RefObject<NodeHandle | null>;
-  outWireRef: RefObject<WireHandle | null>;
+  outWireRefs: Record<string, RefObject<WireHandle | null>>;
   slotIds: string[];
   initialQueue: unknown[];
   traceId?: string;
@@ -24,18 +24,18 @@ export interface KindBodyCtx {
 // TopologyRoot (test path) and RSubstrateNode (editor path) call this
 // — there is no second switch to keep in sync.
 export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
-  const { nodeRef, outWireRef, slotIds, initialQueue, traceId } = ctx;
+  const { nodeRef, outWireRefs, slotIds, initialQueue, traceId } = ctx;
   switch (kind) {
     case "input":
-      return <InputBody nodeRef={nodeRef} outWireRef={outWireRef} initialQueue={initialQueue} traceId={traceId} />;
+      return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} initialQueue={initialQueue} traceId={traceId} />;
     case "relay":
-      return <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={slotIds[0]} traceId={traceId} />;
+      return <RelayBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} traceId={traceId} />;
     case "chaininhibitor":
-      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={slotIds[0]} traceId={traceId} />;
+      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} traceId={traceId} />;
     case "join":
-      return <JoinBody nodeRef={nodeRef} outWireRef={outWireRef} slotAId={slotIds[0]} slotBId={slotIds[1]} traceId={traceId} />;
+      return <JoinBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotAId={slotIds[0]} slotBId={slotIds[1]} traceId={traceId} />;
     case "readgate":
-      return <ReadGateBody nodeRef={nodeRef} slotIds={slotIds} outWireRef={outWireRef} traceId={traceId} />;
+      return <ReadGateBody nodeRef={nodeRef} slotIds={slotIds} outWireRef={outWireRefs["out"]} traceId={traceId} />;
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;

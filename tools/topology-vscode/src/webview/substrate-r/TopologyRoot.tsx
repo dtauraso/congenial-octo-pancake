@@ -33,14 +33,16 @@ function NodeView({
   wireRefs: Map<string, RefObject<WireHandle | null>>;
 }) {
   const ports = nodePorts(node);
-  const outPort = ports.outputs[0];
-  const outWireId = outPort ? findWireForOutput(spec, node.id, outPort) : undefined;
-  const outWireRef = outWireId
-    ? wireRefs.get(outWireId)!
-    : { current: null } as RefObject<WireHandle | null>;
+  const outWireRefs: Record<string, RefObject<WireHandle | null>> = {};
+  for (const portName of ports.outputs) {
+    const wireId = findWireForOutput(spec, node.id, portName);
+    outWireRefs[portName] = wireId
+      ? wireRefs.get(wireId)!
+      : { current: null } as RefObject<WireHandle | null>;
+  }
   return renderKindBody(node.kind, {
     nodeRef,
-    outWireRef,
+    outWireRefs,
     slotIds: ports.inputs,
     initialQueue: (node.props?.queue ?? []) as unknown[],
     traceId: node.id,

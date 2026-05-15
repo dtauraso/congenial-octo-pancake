@@ -7,8 +7,9 @@
 // and data.outputs[i]) tinted by KIND_COLORS; body uses data.fill /
 // data.stroke / data.width / data.height per the spec's node-types.ts.
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Handle, Position, useStore, type NodeProps } from "reactflow";
+import { shallow } from "zustand/shallow";
 import type * as React from "react";
 import { KIND_COLORS, type EdgeKind } from "../../schema";
 import type { NodeHandle } from "./Node";
@@ -54,15 +55,24 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
 
   const inputs = data?.inputs ?? [];
   const outputs = data?.outputs ?? [];
-  const firstOutputPort = outputs[0]?.name;
 
-  // Look up outgoing edge id from React Flow's store.
-  const outWireId = useStore((s) => firstOutputPort
-    ? s.edges.find((e) => e.source === id && e.sourceHandle === firstOutputPort)?.id
-    : undefined);
+  // One useStore call returns a map of portName → edgeId for all outputs.
+  const outputEdgeIds = useStore((s) => {
+    const result: Record<string, string | undefined> = {};
+    for (const port of outputs) {
+      result[port.name] = s.edges.find(
+        (e) => e.source === id && e.sourceHandle === port.name
+      )?.id;
+    }
+    return result;
+  }, shallow);
 
   const NULL_REF = useMemo<{ current: WireHandle | null }>(() => ({ current: null }), []);
-  const outWireRef = outWireId ? (registry.getWireRef(outWireId) ?? NULL_REF) : NULL_REF;
+  const outWireRefs: Record<string, RefObject<WireHandle | null>> = {};
+  for (const port of outputs) {
+    const edgeId = outputEdgeIds[port.name];
+    outWireRefs[port.name] = edgeId ? (registry.getWireRef(edgeId) ?? NULL_REF) : NULL_REF;
+  }
 
   const width = data?.width ?? 90;
   const height = data?.height ?? 50;
@@ -118,7 +128,7 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
         <span style={{ fontWeight: 500 }}>{data?.label ?? id}</span>
         {kind && renderKindBody(kind, {
           nodeRef,
-          outWireRef,
+          outWireRefs,
           slotIds: inputs.map((p) => p.name),
           initialQueue: data?.nodeData?.init ?? [],
           traceId: id,
