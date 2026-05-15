@@ -134,7 +134,7 @@ export function specToFlow(
         kind: e.kind,
         sourceHandle: e.sourceHandle,
         targetHandle: e.targetHandle,
-        route: ev?.route,
+        route: ev?.route ?? (e.data as Record<string, unknown> | undefined)?.route as string | undefined,
         lane: e.lane,
         arrowStyle: e.arrowStyle,
         valueLabel: e.valueLabel,

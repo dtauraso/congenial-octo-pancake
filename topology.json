@@ -80,7 +80,8 @@
       "label": "i1ToReadGate",
       "data": {
         "slots": 1,
-        "seed": 1
+        "seed": 1,
+        "route": "below"
       }
     }
   ],
