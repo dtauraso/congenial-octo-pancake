@@ -52,7 +52,6 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     inputs: [{ name: "in", kind: "chain" }],
     outputs: [
       { name: "inhibitOut", kind: "inhibit-in" },
-      { name: "readNew", kind: "edge-connection" },
       { name: "out", kind: "chain" },
     ],
     shape: "rect", fill: "#fff3e0", stroke: "#e65100", width: 90, height: 60,
