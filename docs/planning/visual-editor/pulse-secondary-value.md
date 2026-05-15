@@ -25,6 +25,52 @@ A fresh reader should understand: the secondary value isn't decoration alongside
 the pulse — it is the data path. The pulse remains the control-flow event;
 the secondary value is what node rules transform.
 
+## Worked example: ReadGate → i0 delay
+
+### ReadGate output rule
+
+ReadGate fires when all required slots are filled. Its body inspects how many
+data slots are filled and emits a secondary value accordingly:
+
+- **One slot filled:** emit secondary `0` to its output wire `i0`.
+- **Both slots filled:** emit secondary `1` to `i0`.
+
+This is the first concrete computation rule the secondary-value mechanism
+enables: the node body examines slot-fill state and produces a data value,
+not just a control-flow pulse.
+
+### i0 as a one-round delay buffer
+
+`i0` is a new node kind — a **delay buffer** (or `register`). Its behavior:
+
+1. It holds a secondary value from the previous round.
+2. When a new pulse arrives (filling its input slot), it emits the
+   **previously-held** secondary value to its downstreams (InhibitRight and
+   `i1`), then stores the newly-arrived secondary value for the next round.
+
+This is a one-round shift-register pattern: the outgoing value lags the
+incoming value by one round.
+
+### Why a new node kind, not a mode flag
+
+Today's slot lifecycle is `empty → filled(v) → consumed`. A delay buffer must
+retain a value across rounds and emit it on the next firing — structurally
+distinct from any current kind. A new `register` kind in `node-kinds.tsx` is
+concept-bounded; a generic "slot-retention mode" flag scatters the concept
+across all bodies and makes correctness harder to audit.
+
+### New requirements surfaced by this example
+
+1. **ReadGate body** must inspect slot-fill count and emit `0` or `1` as
+   secondary. The fixed-pulse body becomes a computation rule.
+2. **`register` node kind** added to `node-kinds.tsx` and `RNodeKind` union in
+   `spec.ts`. Its body emits the held secondary value and stores the incoming
+   one.
+3. **e2e fixture** for the ReadGate → i0 chain validates the secondary-value
+   mechanism end-to-end.
+
+---
+
 ## Design decisions
 
 ### 1. Payload shape — tagged object vs 2-tuple
@@ -57,6 +103,9 @@ spec. It is the **anchor point** for any new wire-level field. Adding
 `value?: unknown` here makes the field part of the spec contract; downstream
 files thread it from this single source of truth. No threading happens in this
 step; the field is additive and reversible.
+
+`RNodeKind` (also in `spec.ts`) grows a `"register"` variant for the delay-buffer
+node kind surfaced by the worked example.
 
 ### `Wire.tsx`
 
@@ -104,6 +153,11 @@ structured payload through unchanged). Bodies that care about the secondary
 unpack `.secondary` explicitly. Bodies that only need the primary unpack
 `.primary` and ignore the rest.
 
+The worked example adds two new bodies here: `ReadGateBody` gains a
+slot-fill count rule (emit `0` or `1` as secondary), and a new
+`RegisterBody` implements the delay-buffer pattern — emit the held secondary
+value, then store the incoming secondary for the next round.
+
 ---
 
 ## Threading trace
@@ -117,6 +171,13 @@ unpack `.secondary` explicitly. Bodies that only need the primary unpack
 5. Consumer body calls `node.consume(slotId)`, receives the structured
    payload, and unpacks `.primary` and/or `.secondary` as needed.
 
+### ReadGate → i0 round trace
+
+- **ReadGate fires** (one slot filled): body emits `{ primary: 1, secondary: 0 }` onto wire `i0`.
+- **Wire i0** transitions `empty → in-flight({ primary:1, secondary:0 })`, animates, then fills `i0`-node's input slot.
+- **i0 (register) fires**: body reads the held value (e.g. `null` on first round), emits `{ primary: 1, secondary: null }` to InhibitRight and `i1`, then stores `0` as the new held value.
+- **Next round:** if ReadGate emits secondary `1`, i0 fires and emits `{ secondary: 0 }` — the value from the prior round.
+
 ---
 
 ## Test fixtures at risk
@@ -126,6 +187,7 @@ unpack `.secondary` explicitly. Bodies that only need the primary unpack
 | `e2e/riding-label.spec.ts` | **High** | Asserts `observed!.text === "0"`; will break when the mid-flight label render changes to show a structured payload. Update the assertion when the label rendering changes. |
 | `e2e/substrate-2node.json` / `e2e/substrate-step1.spec.ts` | Low | Phase-only assertions; verify they do not inspect label text. |
 | `e2e/substrate-pause-resume.spec.ts` | Low | Phase-only; safe. |
+| `e2e/readgate-i0-chain.spec.ts` (new) | **Required** | End-to-end fixture validating ReadGate secondary-value emission and i0 delay-buffer shift behavior. |
 
 ---
 
