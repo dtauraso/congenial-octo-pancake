@@ -74,9 +74,6 @@ inhibit edges in place.
 
 No queued task. Open follow-ups (friction-driven, pick when relevant):
 
-- **Tests for InhibitRightGate firing semantics** (plan §Test Plan,
-  deferred from `950eba1`). Vitest unit + a TopologyRoot integration
-  test covering the four truth-table cases.
 - **`readNew` output port on ChainInhibitor.** Schema declares it
   (`node-types.ts`), but `NODE_KIND_PORTS` only lists
   `["inhibitOut", "out"]`. No body-side consumer yet — add when a
@@ -86,7 +83,7 @@ No queued task. Open follow-ups (friction-driven, pick when relevant):
 
 ## Carried items (still open)
 
-- R5 (watch-only): `app.tsx` coupling.
+(none)
 
 ## Conceptual frame
 
