@@ -14,150 +14,107 @@ than keeping one slightly-larger doc.
 
 ## State at handoff (2026-05-14, end-of-session)
 
-**Active branch:** `task/self-scheduling-nodes`. Forked from
-`task/substrate-slot-in-node` after the concept-bounded refactor
-landed. One precursor commit on the new branch (`854359f`) landed the
-trace-logging plumbing that had been sitting unstaged in the working
-tree.
+**Active branch:** `task/self-scheduling-nodes`. Trace-logging
+precursor commit `854359f` is in. No further code changes this
+session — the session settled the model question that was blocking
+the rewrite.
 
-117/117 vitest green and tsc clean at the previous branch tip. The
-new commit only adds optional `traceId` props + `postLog` calls;
-behavior unchanged.
+117/117 vitest green and tsc clean at branch tip.
 
-## Why this branch exists
+## The judgment call — SETTLED this session
 
-User-driven session pinned a substrate bug: a Source node's emission
-cadence is coupled to peer-source pulse arrival even though the
-slot-in-node model says it shouldn't be.
+The driver question was: what is a tick under self-scheduling? The
+session resolved it by **removing the concept**, not redefining it.
 
-**Topology (from [topology.json](../../../topology.json)):**
+User's decisions, in order:
 
-```
-in08 ──► readGate.chainIn
-              │
-              ▼
-        readGate.out ──► i0 ──► i1 ──► readGate.chainIn2
-```
+1. **"remove the tick."** — No tick counter, no tick concept on
+   driver, nodes, or edges. Tick is not a thing in the model.
+2. **"take out step."** — No step button, no step semantics. Driver
+   surface shrinks to `halt` / `resume` + `pauseAxis`.
+3. **"node runs the moment it receives a pulse."** — The phase
+   transition event IS the trigger. No driver poll, no round walk.
+4. **"the run is triggered when the pulse arrives. the node running
+   does not mean it will pulse."** — `run()` is the handler invoked
+   by a pulse-arrival event. Whether `run()` emits is a separate
+   local decision inside `run()` based on its own outgoing
+   preconditions. Running ≠ emitting.
 
-**Observed (from `.probe/webview-log.jsonl`, ts in ms):**
+### What that means concretely
 
-```
-025959  readgate.fire + consume chainIn + consume chainIn2 + load readGate.out
-        ↑ chainIn now empty, in0 wire empty. in0 should fire next round.
-029143  deliver readGate.out → i0 consume → load i0.out
-030859  deliver i0.out → i1 consume → load i1.out->chainIn2
-038242  deliver i1.out → fill chainIn2 → trace.input.fire in08 (FINALLY)
-```
+- **Consumer/relay (relay, join, readgate, chaininhibitor):** input
+  wire arrival fills a slot. The existing `Node.fill()` path already
+  invokes `onRun` ([Node.tsx:64-72](../../../tools/topology-vscode/src/webview/substrate-r/Node.tsx#L64-L72)).
+  This is already pulse-arrival-triggered; nothing new needed for
+  consumers.
+- **Source (input):** has no input wire. Its trigger must be its
+  dest slot transitioning to `empty` (downstream consumed) AND/OR
+  its own outgoing wire transitioning to `empty` (delivered). Source
+  bodies need to subscribe to those phase events and invoke their
+  own `run()` on transition.
+- **Driver:** stops walking. No `for (const r of nodeRefs) r.current?.run()`.
+  No `wires.every(empty)` gate. No `tick` state, no `setTick`, no
+  `step`, no `stepResumeToPaused`. Keeps `halt` / `resume` /
+  `pauseAxis`.
+- **Transport UI:** the ⏭ step button disappears. Only ⏸/▶ remain.
+- **`<span data-testid="tick">`** in TopologyRoot disappears. Tests
+  asserting on tick value disappear or rewrite to assert on
+  observable wire/slot state.
 
-Between ts 025959 (consume) and ts 038242 (in0 fires), in0's `run`
-is not called at all — no `trace.input.skip` either. in0 fires in
-the *same millisecond* as the i1 pulse arrives.
+## Next move — implement the rewrite
 
-**Cause:** [useTickDriver.ts:43-91](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts#L43-L91)
-gates `run()` invocations on a global round-close
-`wires.every(w => w.phase.kind === "empty")`. While the
-readGate→i0→i1→chainIn2 loop has any wire in-flight, no node's
-`run()` is invoked. The driver IS a central walker.
+The model question is settled; the rewrite is mechanical but
+multi-file. Suggested staging:
 
-**Model invariant violated:** [MODEL.md:70-72](../../../MODEL.md#L70-L72)
-says "Driver: self-scheduling nodes + one global play/pause gate.
-Nodes fire when their preconditions hold... No central walker." And
-[MODEL.md:31-39](../../../MODEL.md#L31-L39): "Source node observes
-readiness by reading `dest.slotPhase(slotId)` directly... It is free
-to load again when that returns `empty`." A Source's emission MUST
-NOT depend on peer-source state. Currently it does — transitively
-through the global round-close.
+**Stage 1 — source self-subscription.** Update `InputBody` in
+[node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
+to subscribe to its outgoing wire's phase transitions (to `empty`)
+and invoke its own `run()` on that event. The wire's
+`subscribePhase` API already exists ([useTickDriver.ts:92](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts#L92)).
+Source also needs to invoke `run()` once on mount to fire the
+initial pulse when wire/slot are both empty at start. Verify
+in0/in1 still fire under the existing driver before removing it.
 
-User's stated principle (verbatim): *"in0->readGate pulse firing
-depends on the in0->readGate wire to be empty and the in0->readGate
-slot on readGate to be empty. this process has nothing to do with
-i1."* And: *"both source nodes are allowed to send their pulse when
-each sources slot is empty. a source node does not depend on another
-source node to finish."*
+**Stage 2 — strip the driver.** Rewrite [useTickDriver.ts](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts):
+remove `tick`, `step`, the `wires.every(empty)` round-close, the
+`advance` walker, the RAF idle throttle. Keep `halt`/`resume` and
+`pauseAxis`. Rename the file to `useDriver.ts` or similar — "tick"
+is banned vocabulary now ([MODEL.md](../../../MODEL.md)). Update
+imports in [registry.tsx](../../../tools/topology-vscode/src/webview/substrate-r/registry.tsx)
+and [TopologyRoot.tsx](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx).
 
-The substrate-vs-coordinator bias surfaced again — see
-[memory/feedback_substrate_vs_coordinator_bias.md](../../../memory/feedback_substrate_vs_coordinator_bias.md).
-The global round-close looked like a clean tick definition; it's
-actually a coordinator.
+**Stage 3 — UI cleanup.** Remove the step button from
+[TransportControls.tsx](../../../tools/topology-vscode/src/webview/panels/TimelinePanel/TransportControls.tsx).
+Remove `<span data-testid="tick">` from
+[TopologyRoot.tsx:87](../../../tools/topology-vscode/src/webview/substrate-r/TopologyRoot.tsx#L87).
 
-## Next move — the judgment call (settle BEFORE touching code)
+**Stage 4 — tests.** Find tests that assert on `tick` value or call
+`step()`. Rewrite to assert on wire phase / slot phase / log events
+instead. Many integration tests may simplify — they no longer need
+to coordinate rounds.
 
-The driver rewrite is mechanical once the model question is settled.
-The model question is: **what is a tick under self-scheduling?**
+**Stage 5 — vocab check.** Run `node tools/topology-vscode/scripts/check-substrate-vocab.mjs`.
+"tick" / "step" / "round" should be flagged anywhere they remain in
+substrate-r/.
 
-### Constraints the answer must satisfy
+**Stage 6 — verify the original bug.** The motivating bug: in0's
+emission cadence was coupled to peer-source pulse arrival via the
+global round-close. With the round-close gone, in0 should fire as
+soon as `readGate.chainIn` transitions to empty — regardless of
+where the i1→chainIn2 pulse is. Reproduce the topology in
+[topology.json](../../../topology.json), run, inspect
+`.probe/webview-log.jsonl`. Expected: `trace.input.fire` for in0
+appears within microseconds of `trace.consume` on readGate.chainIn,
+not after the i1→chainIn2 delivery.
 
-1. **Decentralized.** No central walker. No global round-close gate.
-   No node consults a coordinator to decide whether to fire.
-   ([MODEL.md:70-72](../../../MODEL.md#L70-L72))
-2. **Observable in the edges, not stored.** A tick is a property of
-   activity, not a counter on any node or driver.
-   ([MODEL.md:63-68](../../../MODEL.md#L63-L68))
-3. **Source independence.** in0 fires when its own wire is empty AND
-   its own dest slot is empty. Nothing else. No transitive coupling
-   to peer sources through the tick definition.
-4. **Step / pause / resume still work.** The pause axis is the one
-   centralized thing the model allows; step needs to advance
-   "something" by "one tick." If a tick isn't a global round, what
-   does "step" mean?
-
-### Candidate framings (each has a cost)
-
-- **A. Tick = wall-clock frame.** Each RAF frame is a tick.
-  Self-scheduling nodes fire whenever their preconditions hold; the
-  tick counter increments off the frame loop. *Cost:* couples tick
-  semantics to display refresh; "step one tick" advances time, not
-  causality. Loses the "edge cohort" property entirely.
-- **B. Tick = per-edge.** Each edge has its own tick counter,
-  incremented when that edge transitions empty → in-flight. No
-  global tick. *Cost:* "the tick" of the system doesn't exist;
-  step/pause must operate per-edge or per-cascade.
-- **C. Tick = cohort (deferred design).** A tick is a maximal set of
-  edges that fired causally-simultaneously. Observable by walking
-  edge timestamps after the fact. See
-  [docs/planning/cohort-future-feature.md](../cohort-future-feature.md).
-  *Cost:* the original cohort design was retired as a foot-gun; this
-  re-derives it. Step is hard — you can't pre-commit to a cohort
-  boundary, only observe it.
-- **D. Tick = self-scheduling node-fire count.** Each node fires
-  when ready; the tick is the count of fires anywhere. *Cost:*
-  trivially monotonic but meaningless as a causal layer.
-
-The retired cohort design (C) is the one MODEL.md gestures at. The
-question is whether a v1 self-scheduling driver needs a tick
-*concept* at all, or whether tick-counting becomes a post-hoc
-observation layer over a substrate that just runs.
-
-### Step semantics under self-scheduling
-
-Step today = "run one round of run() calls, wait for all wires
-empty, then pause." That definition dies with the global round.
-Re-deriving step means deciding what one unit of advance IS when
-nodes are independently scheduled. Possible framings:
-
-- Step = advance until the next wire transition (any edge).
-- Step = advance until the next node fires (any node).
-- Step = advance until the system reaches the next quiescent state
-  (no in-flight wires anywhere). This is today's round-close but
-  triggered only by step, not by every advance.
-
-The third reproduces today's pause-step UX without making it the
-substrate's heartbeat. Probably the right answer, but flag for user
-review — it's the user-visible contract.
-
-### What "settled" looks like
-
-Before any code change to `useTickDriver`, the next session should
-produce a 5–15-line answer in the handoff (or a sibling doc) of the
-form: "A tick is X. Step means Y. Tick counter lives Z." With those
-three pinned, the rewrite is editable in ~an hour.
-
-**Carried items from prior branch:**
+**Carried items (still open):**
 - R4: substrate-up-the-stack import in `RSubstrateEdge.tsx`
   (`dashForKind`, `markerEndUrl` from `../rf/`).
 - R5 (watch-only): `app.tsx` coupling.
 - Retire `ChainInhibitor`'s `⇢` debug button — not a source, should
-  not have source powers.
+  not have source powers. The self-scheduling rewrite is the right
+  moment: ChainInhibitor's `run()` will be triggered by slot fill;
+  the manual emit button has no place.
 - `task/in0-readgate-emission-ack` parked, auto-retire signal hit,
   awaiting deletion sign-off.
 
@@ -165,16 +122,23 @@ three pinned, the rewrite is editable in ~an hour.
 
 - **Logic state IS visible state.** No render/logic split.
 - **Decentralized, not distributed.** "Decentralized" = no center
-  exists, the property is genuinely local. The current global
-  round-close is a center; the fix removes it.
+  exists, the property is genuinely local. The driver's round-close
+  was a center; removing tick/step removes it.
+- **Pulse arrival IS the trigger.** The phase transition event on
+  an adjacent wire/slot is what invokes `run()`. There is no
+  scheduler. There is no walker. There is no clock.
+- **Running ≠ emitting.** A node `run()` is a handler that may or
+  may not pulse out. Sources can run (slot empties) and decline to
+  pulse (own wire still in-flight, queue empty, etc.). Consumers
+  can run (input arrives) and decline to pulse (out wire blocked,
+  AND-gate not yet satisfied).
 - **Substrate vs coordinator bias.** Channels back-pressure locally;
-  gates back-pressure locally. Coordinator-shaped fixes
-  (round-walkers, global gates, batched ticks) are training-data
-  drift. Industry's default for "schedule N things deterministically"
-  is a walker — wrong for this substrate.
-- **Concept-bounded code, not layer-bounded.** substrate-r/ files are
-  one per model concept. Driver is a concept; if it grows, do not
-  split along technical-role axes.
+  gates back-pressure locally. The tick was a coordinator dressed
+  as a model concept. Industry's default for "schedule N things
+  deterministically" is a walker — wrong for this substrate.
+- **Concept-bounded code, not layer-bounded.** substrate-r/ files
+  are one per model concept. Driver shrinks; do not split along
+  technical-role axes.
 
 ## Working mode
 
@@ -204,11 +168,11 @@ merged branches without re-asking. Force-push needs sign-off.
 
 Read [MODEL.md](../../../MODEL.md), the
 substrate-vs-coordinator memory, and
-[useTickDriver.ts](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts).
-After any substrate-r edit, run `npm run build` —
-vitest/tsc alone don't refresh `out/webview.js` (stop-hook does, but
-only when bundled TS changed and the output is older than the
-input).
+[useTickDriver.ts](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts)
+(soon to be renamed). After any substrate-r edit, run `npm run
+build` — vitest/tsc alone don't refresh `out/webview.js` (stop-hook
+does, but only when bundled TS changed and the output is older than
+the input).
 
 Cwd for tsc/tests/check:loc/build: `tools/topology-vscode/` (Bash
 resets cwd — chain `cd` or use absolute paths). Stop hook active:
