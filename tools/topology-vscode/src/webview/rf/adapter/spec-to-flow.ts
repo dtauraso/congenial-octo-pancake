@@ -139,6 +139,7 @@ export function specToFlow(
         arrowStyle: e.arrowStyle,
         valueLabel: e.valueLabel,
         label: e.label,
+        seed: (e.data as Record<string, unknown> | undefined)?.seed,
         // Simulator-relevant edge data. Carried verbatim so flow-to-spec
         // can put them back; without this round-trip every save through
         // the editor would silently strip backpressure / seeding /

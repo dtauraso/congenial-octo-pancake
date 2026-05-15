@@ -10,30 +10,32 @@ import { useCallback, useEffect, useRef, useState, type RefObject, type ReactNod
 import { Node, type NodeHandle, type SlotPhase } from "./Node";
 import type { WireHandle } from "./Wire";
 import type { RNodeKind } from "./spec";
+import { postLog } from "../log/post";
 
 export interface KindBodyCtx {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
   slotIds: string[];
   initialQueue: unknown[];
+  traceId?: string;
 }
 
 // Single dispatch from validated kind to body component. Both
 // TopologyRoot (test path) and RSubstrateNode (editor path) call this
 // — there is no second switch to keep in sync.
 export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
-  const { nodeRef, outWireRef, slotIds, initialQueue } = ctx;
+  const { nodeRef, outWireRef, slotIds, initialQueue, traceId } = ctx;
   switch (kind) {
     case "input":
-      return <InputBody nodeRef={nodeRef} outWireRef={outWireRef} initialQueue={initialQueue} />;
+      return <InputBody nodeRef={nodeRef} outWireRef={outWireRef} initialQueue={initialQueue} traceId={traceId} />;
     case "relay":
-      return <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={slotIds[0]} />;
+      return <RelayBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={slotIds[0]} traceId={traceId} />;
     case "chaininhibitor":
-      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={slotIds[0]} />;
+      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRef} slotId={slotIds[0]} traceId={traceId} />;
     case "join":
-      return <JoinBody nodeRef={nodeRef} outWireRef={outWireRef} slotAId={slotIds[0]} slotBId={slotIds[1]} />;
+      return <JoinBody nodeRef={nodeRef} outWireRef={outWireRef} slotAId={slotIds[0]} slotBId={slotIds[1]} traceId={traceId} />;
     case "readgate":
-      return <ReadGateBody nodeRef={nodeRef} slotIds={slotIds} outWireRef={outWireRef} />;
+      return <ReadGateBody nodeRef={nodeRef} slotIds={slotIds} outWireRef={outWireRef} traceId={traceId} />;
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -42,31 +44,55 @@ export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
 }
 
 export function InputBody({
-  nodeRef, outWireRef, initialQueue,
+  nodeRef, outWireRef, initialQueue, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
   initialQueue: unknown[];
+  traceId?: string;
 }) {
   const remainingRef = useRef([...initialQueue]);
 
   const run = useCallback(() => {
     const handle = outWireRef.current;
-    if (!handle) return;
-    if (!handle.canAccept) return;
-    if (remainingRef.current.length === 0) return;
-    handle.load(remainingRef.current.shift());
-  }, [outWireRef]);
+    if (!handle) {
+      if (traceId) postLog("trace.input.skip", { node: traceId, reason: "no-wire" });
+      return;
+    }
+    if (!handle.canAccept) {
+      if (traceId) postLog("trace.input.skip", { node: traceId, reason: "wire-blocked", phase: handle.phase.kind });
+      return;
+    }
+    if (remainingRef.current.length === 0) {
+      if (traceId) postLog("trace.input.skip", { node: traceId, reason: "queue-empty" });
+      return;
+    }
+    const v = remainingRef.current.shift();
+    if (traceId) postLog("trace.input.fire", { node: traceId, value: v });
+    handle.load(v);
+  }, [outWireRef, traceId]);
 
-  return <Node ref={nodeRef} onRun={run} />;
+  // Subscribe to canAccept: wire-empty + dest-slot-empty is the trigger
+  // to attempt the next emit. Fire once on mount so an initially-empty
+  // wire+slot releases the first pulse without external driving.
+  useEffect(() => {
+    const handle = outWireRef.current;
+    if (!handle) return;
+    const unsub = handle.subscribeCanAccept(() => run());
+    run();
+    return unsub;
+  }, [outWireRef, run]);
+
+  return <Node ref={nodeRef} onRun={run} traceId={traceId} />;
 }
 
 export function RelayBody({
-  nodeRef, outWireRef, slotId = "in0",
+  nodeRef, outWireRef, slotId = "in0", traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
   slotId?: string;
+  traceId?: string;
 }) {
   const run = useCallback(() => {
     const node = nodeRef.current;
@@ -78,16 +104,17 @@ export function RelayBody({
     wire.load(value);
   }, [nodeRef, outWireRef, slotId]);
 
-  return <Node ref={nodeRef} slots={[slotId]} onRun={run} />;
+  return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
 }
 
 export function JoinBody({
-  nodeRef, outWireRef, slotAId = "a", slotBId = "b",
+  nodeRef, outWireRef, slotAId = "a", slotBId = "b", traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
   slotAId?: string;
   slotBId?: string;
+  traceId?: string;
 }) {
   const run = useCallback(() => {
     const node = nodeRef.current;
@@ -101,55 +128,30 @@ export function JoinBody({
     wire.load([va, vb]);
   }, [nodeRef, outWireRef, slotAId, slotBId]);
 
-  return <Node ref={nodeRef} slots={[slotAId, slotBId]} onRun={run} />;
+  return <Node ref={nodeRef} slots={[slotAId, slotBId]} onRun={run} traceId={traceId} />;
 }
 
-// ChainInhibitor: consumes its slot and forwards on tick when the
-// out wire can accept. The manual ⇢ button is a debug aid emitting
-// a literal `1` when the out wire is free.
+// ChainInhibitor: consumes its slot and forwards when the out wire can accept.
 
 export function ChainInhibitorBody({
-  nodeRef, outWireRef, slotId = "in",
+  nodeRef, outWireRef, slotId = "in", traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
   slotId?: string;
+  traceId?: string;
 }) {
-  const [canEmit, setCanEmit] = useState(false);
-
   const run = useCallback(() => {
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
-    setCanEmit(wire.canAccept);
     if (node.slotPhase(slotId) !== "filled") return;
     if (!wire.canAccept) return;
     const value = node.consume(slotId);
     wire.load(value);
   }, [nodeRef, outWireRef, slotId]);
 
-  const onEmit = useCallback(() => {
-    const wire = outWireRef.current;
-    if (!wire || !wire.canAccept) return;
-    wire.load(1);
-    setCanEmit(false);
-  }, [outWireRef]);
-
-  return (
-    <>
-      <Node ref={nodeRef} slots={[slotId]} onRun={run} />
-      <button
-        type="button"
-        disabled={!canEmit}
-        onClick={canEmit ? onEmit : undefined}
-        data-armed={canEmit ? "true" : "false"}
-        data-emit-id={slotId}
-        style={kindButtonStyle(canEmit)}
-      >
-        ⇢
-      </button>
-    </>
-  );
+  return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
 }
 
 // ReadGate: variable-arity AND. When the instance declares an `out`
@@ -158,11 +160,12 @@ export function ChainInhibitorBody({
 // consume kept for the no-out-wire case (debug / contract use).
 
 export function ReadGateBody({
-  nodeRef, slotIds, outWireRef,
+  nodeRef, slotIds, outWireRef, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   slotIds: string[];
   outWireRef?: RefObject<WireHandle | null>;
+  traceId?: string;
 }) {
   const slots = slotIds.length > 0 ? slotIds : ["in0"];
   const key = slots.join("|");
@@ -172,11 +175,19 @@ export function ReadGateBody({
     const handle = nodeRef.current;
     const wire = outWireRef?.current;
     if (!handle || !wire) return;
-    if (!slots.every((s) => handle.slotPhase(s) === "filled")) return;
-    if (!wire.canAccept) return;
+    const phases = slots.map((s) => handle.slotPhase(s));
+    if (!phases.every((p) => p === "filled")) {
+      if (traceId) postLog("trace.readgate.skip", { node: traceId, reason: "slots-not-filled", phases: Object.fromEntries(slots.map((s, i) => [s, phases[i]])) });
+      return;
+    }
+    if (!wire.canAccept) {
+      if (traceId) postLog("trace.readgate.skip", { node: traceId, reason: "wire-blocked", phase: wire.phase.kind });
+      return;
+    }
+    if (traceId) postLog("trace.readgate.fire", { node: traceId });
     for (const s of slots) handle.consume(s);
     wire.load(1);
-  }, [nodeRef, outWireRef, key]);
+  }, [nodeRef, outWireRef, key, traceId]);
 
   useEffect(() => {
     const handle = nodeRef.current;
@@ -204,7 +215,7 @@ export function ReadGateBody({
 
   return (
     <>
-      <Node ref={nodeRef} slots={slots} onRun={run} />
+      <Node ref={nodeRef} slots={slots} onRun={run} traceId={traceId} />
       <button
         type="button"
         disabled={!armed}

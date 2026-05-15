@@ -1,12 +1,11 @@
 // @vitest-environment happy-dom
 //
 // 2-input join: srcA → join.a, srcB → join.b, join → readgate. The
-// join's firing rule requires both slots filled. With the legacy
-// all-wires round-close, one step is sufficient: when both predecessors
-// deliver in the same step, the join fires and readgate fills.
+// join's firing rule requires both slots filled. Under self-scheduling,
+// both sources fire on mount and deliver concurrently.
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import { act, cleanup, render } from "@testing-library/react";
 import { TopologyRoot } from "../../src/webview/substrate-r/TopologyRoot";
 import type { RTopologySpec } from "../../src/webview/substrate-r/spec";
 
@@ -43,10 +42,7 @@ function flushRaf() { act(() => { vi.advanceTimersByTime(50); }); }
 
 describe("2-input join", () => {
   it("only one predecessor delivers → join never emits; readgate stays empty", () => {
-    const { getByTestId, container } = render(
-      <TopologyRoot spec={makeJoin([1], [])} haltedOnMount />,
-    );
-    act(() => { fireEvent.click(getByTestId("step")); });
+    const { container } = render(<TopologyRoot spec={makeJoin([1], [])} />);
     flushRaf();
     flushRaf();
     const btn = container.querySelector('[data-input-id="in0"]')!;
@@ -54,13 +50,9 @@ describe("2-input join", () => {
   });
 
   it("both predecessors deliver → join fires; readgate fills after arrivals", () => {
-    const { getByTestId, container } = render(
-      <TopologyRoot spec={makeJoin([1], [2])} haltedOnMount />,
-    );
-    act(() => { fireEvent.click(getByTestId("step")); });
+    const { container } = render(<TopologyRoot spec={makeJoin([1], [2])} />);
     flushRaf();
     flushRaf();
-    expect(getByTestId("tick").textContent).toBe("tick: 1");
 
     const btn = container.querySelector('[data-input-id="in0"]')!;
     expect(btn.getAttribute("data-armed")).toBe("true");

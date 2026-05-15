@@ -79,7 +79,8 @@
       "kind": "chain",
       "label": "i1ToReadGate",
       "data": {
-        "slots": 1
+        "slots": 1,
+        "seed": 1
       }
     }
   ],

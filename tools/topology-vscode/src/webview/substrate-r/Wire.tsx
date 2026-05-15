@@ -23,6 +23,7 @@ import {
 import type { RefObject } from "react";
 import type { NodeHandle } from "./Node";
 import type { PauseAxis } from "./pause-axis";
+import { postLog } from "../log/post";
 
 const PULSE_SPEED_PX_PER_MS = 0.08;
 
@@ -165,6 +166,10 @@ export interface WireHandle {
   readonly phase: Phase;
   readonly canAccept: boolean;
   subscribePhase(listener: (phase: Phase) => void): () => void;
+  // Fires whenever a transition could change canAccept: wire phase
+  // changes (load/arrive) or the destination slot transitions. Sources
+  // subscribe to trigger their next emit attempt.
+  subscribeCanAccept(listener: () => void): () => void;
 }
 
 export interface WireProps {
@@ -176,30 +181,40 @@ export interface WireProps {
   destNodeRef: RefObject<NodeHandle | null>;
   destSlotId: string;
   pauseAxis?: PauseAxis;
+  traceId?: string;
+  seed?: unknown;
 }
 
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
-  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis }, ref,
+  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId, seed }, ref,
 ) {
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
   const phaseListenersRef = useRef(new Set<(p: Phase) => void>());
+  const acceptListenersRef = useRef(new Set<() => void>());
+  const destSlotUnsubRef = useRef<(() => void) | null>(null);
   const pendingDeliverRef = useRef(false);
   const animDoneRef = useRef(false);
   const valueRef = useRef<unknown>(undefined);
+
+  const notifyCanAccept = useCallback(() => {
+    for (const fn of acceptListenersRef.current) fn();
+  }, []);
 
   const apply = useCallback((a: Action) => {
     const next = wirePhaseReducer(phaseRef.current, a);
     phaseRef.current = next;
     for (const fn of phaseListenersRef.current) fn(next);
     setPhase(next);
-  }, []);
+    notifyCanAccept();
+  }, [notifyCanAccept]);
 
   const deliverIfPending = useCallback(() => {
     if (!pendingDeliverRef.current) return;
     pendingDeliverRef.current = false;
+    if (traceId) postLog("trace.deliver", { wire: traceId, slot: destSlotId, value: valueRef.current });
     destNodeRef.current?.fill(destSlotId, valueRef.current);
-  }, [destNodeRef, destSlotId]);
+  }, [destNodeRef, destSlotId, traceId]);
 
   const tryFinalize = useCallback(() => {
     if (phaseRef.current.kind !== "in-flight") return;
@@ -210,11 +225,12 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   }, [apply, deliverIfPending]);
 
   const load = useCallback((value: unknown) => {
+    if (traceId) postLog("trace.load", { wire: traceId, value });
     apply({ type: "load", value });
     valueRef.current = value;
     pendingDeliverRef.current = true;
     animDoneRef.current = false;
-  }, [apply]);
+  }, [apply, traceId]);
 
   const complete = useCallback(() => {
     if (phaseRef.current.kind !== "in-flight") return;
@@ -237,7 +253,23 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
       phaseListenersRef.current.add(listener);
       return () => { phaseListenersRef.current.delete(listener); };
     },
-  }), [load, complete, destNodeRef, destSlotId]);
+    subscribeCanAccept(listener) {
+      acceptListenersRef.current.add(listener);
+      // Lazily attach to dest slot transitions on first subscriber.
+      if (!destSlotUnsubRef.current) {
+        const dest = destNodeRef.current;
+        if (dest) {
+          destSlotUnsubRef.current = dest.subscribeSlot(destSlotId, () => notifyCanAccept());
+        }
+      }
+      return () => { acceptListenersRef.current.delete(listener); };
+    },
+  }), [load, complete, destNodeRef, destSlotId, notifyCanAccept]);
+
+  useEffect(() => {
+    if (seed !== undefined) load(seed);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount-only: prime the wire once
 
   const distanceCoveredRef = useRef(0);
   const pathRef = useRef<SVGPathElement>(null);

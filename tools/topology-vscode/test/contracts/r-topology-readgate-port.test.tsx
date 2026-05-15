@@ -39,15 +39,9 @@ function makeSpec(slot: string, queue: unknown[]): RTopologySpec {
 function flushRaf() { act(() => { vi.advanceTimersByTime(50); }); }
 
 describe("readgate with non-in0 schema port", () => {
-  it("step → wire arrives → slot 'chainIn' fills → button arms → consume", () => {
-    const { getByTestId, container } = render(
-      <TopologyRoot spec={makeSpec("chainIn", [42])} haltedOnMount />,
-    );
-    expect(getByTestId("tick").textContent).toBe("tick: 0");
-
-    act(() => { fireEvent.click(getByTestId("step")); });
+  it("wire arrives → slot 'chainIn' fills → button arms → consume", () => {
+    const { container } = render(<TopologyRoot spec={makeSpec("chainIn", [42])} />);
     flushRaf();
-    expect(getByTestId("tick").textContent).toBe("tick: 1");
 
     const btn = container.querySelector('[data-input-id="chainIn"]')!;
     expect(btn).toBeTruthy();
@@ -71,7 +65,7 @@ describe("readgate with non-in0 schema port", () => {
         arcLength: 0,
       }],
     };
-    expect(() => render(<TopologyRoot spec={spec} haltedOnMount />))
+    expect(() => render(<TopologyRoot spec={spec} />))
       .toThrow(/not a slot on readgate/);
   });
 });

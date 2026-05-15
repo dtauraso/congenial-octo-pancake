@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 //
-// End-to-end smoke test for the slot-in-node substrate, driven by an
+// End-to-end smoke test for the self-scheduling substrate, driven by an
 // RTopologySpec. Mounts TopologyRoot with one Input → wire → ReadGate
-// spec and exercises the full cycle (load → in-flight → arrive →
-// slot filled → click → consume → next round).
+// and exercises the full cycle: InputBody self-fires on mount, wire
+// arrives, slot fills, button arms, click consumes, next pulse fires.
 //
 // arcLength=0 so the wire's first RAF tick triggers `complete`,
 // keeping the test deterministic under fake timers.
@@ -44,16 +44,9 @@ function flushRaf() {
 }
 
 describe("TopologyRoot end-to-end (spec-driven)", () => {
-  it("step → wire arrives → slot fills → button arms → click consumes", () => {
-    const { getByTestId, container } = render(
-      <TopologyRoot spec={makeSpec([42])} haltedOnMount />,
-    );
-    expect(getByTestId("tick").textContent).toBe("tick: 0");
-    expect(getByTestId("halted").textContent).toBe("halted");
-
-    act(() => { fireEvent.click(getByTestId("step")); });
+  it("wire arrives → slot fills → button arms → click consumes", () => {
+    const { container } = render(<TopologyRoot spec={makeSpec([42])} />);
     flushRaf();
-    expect(getByTestId("tick").textContent).toBe("tick: 1");
 
     const btn = container.querySelector('[data-input-id="in0"]')!;
     expect(btn.getAttribute("data-armed")).toBe("true");
@@ -62,38 +55,26 @@ describe("TopologyRoot end-to-end (spec-driven)", () => {
     expect(btn.getAttribute("data-armed")).toBe("false");
   });
 
-  it("subsequent step emits next value from the queue", () => {
-    const { getByTestId, container } = render(
-      <TopologyRoot spec={makeSpec([1, 2])} haltedOnMount />,
-    );
-    act(() => { fireEvent.click(getByTestId("step")); });
+  it("subsequent pulse emits next value from the queue", () => {
+    const { container } = render(<TopologyRoot spec={makeSpec([1, 2])} />);
     flushRaf();
-    expect(getByTestId("tick").textContent).toBe("tick: 1");
+
     const btn = container.querySelector('[data-input-id="in0"]')!;
     expect(btn.getAttribute("data-armed")).toBe("true");
-    act(() => { fireEvent.click(btn); });
-    expect(btn.getAttribute("data-armed")).toBe("false");
-
-    act(() => { fireEvent.click(getByTestId("step")); });
+    act(() => { fireEvent.click(btn); }); // consume → slot empties → canAccept fires → next load
     flushRaf();
-    expect(getByTestId("tick").textContent).toBe("tick: 2");
     expect(btn.getAttribute("data-armed")).toBe("true");
     act(() => { fireEvent.click(btn); });
     expect(btn.getAttribute("data-armed")).toBe("false");
   });
 
-  it("queue exhaustion: step with empty queue advances tick (no-op round)", () => {
-    const { getByTestId, container } = render(
-      <TopologyRoot spec={makeSpec([1])} haltedOnMount />,
-    );
-    act(() => { fireEvent.click(getByTestId("step")); });
+  it("queue exhaustion: no pulse after queue is empty", () => {
+    const { container } = render(<TopologyRoot spec={makeSpec([1])} />);
     flushRaf();
-    const btn = container.querySelector('[data-input-id="in0"]')!;
-    act(() => { fireEvent.click(btn); });
-    expect(getByTestId("tick").textContent).toBe("tick: 1");
 
-    act(() => { fireEvent.click(getByTestId("step")); });
-    expect(getByTestId("tick").textContent).toBe("tick: 2");
+    const btn = container.querySelector('[data-input-id="in0"]')!;
+    act(() => { fireEvent.click(btn); }); // consume → canAccept fires → queue empty → no load
+    flushRaf();
     expect(btn.getAttribute("data-armed")).toBe("false");
   });
 });

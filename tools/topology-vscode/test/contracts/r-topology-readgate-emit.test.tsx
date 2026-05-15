@@ -1,12 +1,11 @@
 // @vitest-environment happy-dom
 //
 // Readgate with an `out` port emits `1` on its output wire when all
-// slots fill and the wire can accept. Pins the firing rule needed to
-// close the readGate → i0 → i1 → readGate cycle without manual clicks.
-// With the legacy all-wires round-close, one step walks the full chain.
+// slots fill and the wire can accept. Under self-scheduling, src fires
+// on mount, g1 fills and auto-emits, g2 slot fills without a click.
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import { act, cleanup, render } from "@testing-library/react";
 import { TopologyRoot } from "../../src/webview/substrate-r/TopologyRoot";
 import type { RTopologySpec } from "../../src/webview/substrate-r/spec";
 
@@ -49,15 +48,10 @@ function spec(): RTopologySpec {
 function flushRaf() { act(() => { vi.advanceTimersByTime(50); }); }
 
 describe("readgate emits 1 on out wire when armed", () => {
-  it("one step: g1 auto-emits, g2 slot fills without manual click", () => {
-    const { getByTestId, container } = render(
-      <TopologyRoot spec={spec()} haltedOnMount />,
-    );
-
-    act(() => { fireEvent.click(getByTestId("step")); });
-    flushRaf();
-    flushRaf();
-    expect(getByTestId("tick").textContent).toBe("tick: 1");
+  it("g1 auto-emits, g2 slot fills without manual click", () => {
+    const { container } = render(<TopologyRoot spec={spec()} />);
+    flushRaf(); // w1 arrives → g1 fills and auto-emits on w2
+    flushRaf(); // w2 arrives → g2 slot fills
 
     const buttons = container.querySelectorAll('[data-input-id="in0"]');
     const g2Btn = buttons[buttons.length - 1];
