@@ -237,9 +237,12 @@ export function ReadGateBody({
       if (traceId) postLog("trace.readgate.skip", { node: traceId, reason: "wire-blocked", phase: wire.phase.kind });
       return;
     }
-    if (traceId) postLog("trace.readgate.fire", { node: traceId });
+    if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length });
     for (const s of slots) handle.consume(s);
-    wire.load(1);
+    // Secondary value encodes how many data slots were filled when the
+    // gate fired: 0 for a single-input gate, 1 for a two-or-more-input gate.
+    const secondary = slots.length >= 2 ? 1 : 0;
+    wire.load({ primary: 1, secondary });
   }, [nodeRef, outWireRef, key, traceId]);
 
   return <Node ref={nodeRef} slots={slots} onRun={run} traceId={traceId} />;

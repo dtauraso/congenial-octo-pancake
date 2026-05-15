@@ -37,10 +37,10 @@ export function InhibitRightGateBody({
 
     const wire = outWireRef.current;
     if (wire && !wire.canAccept) return;
-    node.consume(leftSlotId);
+    const leftValue = node.consume(leftSlotId);
     if (wire) {
       if (traceId) postLog("trace.inhibitrightgate.fire", { node: traceId });
-      wire.load(1);
+      wire.load(leftValue);
     } else {
       if (traceId) postLog("trace.inhibitrightgate.skip", { node: traceId, reason: "no-out-wire-drain" });
     }
