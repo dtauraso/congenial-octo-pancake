@@ -23,9 +23,6 @@ interface RSubstrateEdgeData {
   arrowStyle?: ArrowStyle;
   label?: string;
   valueLabel?: string;
-  // Per-wire pulse speed in px/ms. Overrides the global PULSE_SPEED_PX_PER_MS
-  // constant when provided. Mirrors RWireSpec.speed — must be kept in sync.
-  speed?: number;
   seed?: unknown;
 }
 
@@ -73,7 +70,6 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
       <Wire
         ref={wireRef}
         pathD={pathD}
-        speed={data?.speed}
         stroke={stroke}
         strokeDasharray={dash}
         markerEnd={markerEnd}

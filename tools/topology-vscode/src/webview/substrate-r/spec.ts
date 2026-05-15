@@ -65,10 +65,6 @@ export interface RWireSpec {
   target: { nodeId: string; port: string };
   pathD: string;
   arcLength: number;
-  // Per-wire pulse speed in px/ms. Overrides the global PULSE_SPEED_PX_PER_MS
-  // constant when provided. "Inhibit signals travel faster than data signals"
-  // is expressed directly as a model property on the wire, not a workaround.
-  speed?: number;
   seed?: unknown;
 }
 

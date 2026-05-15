@@ -98,7 +98,6 @@ function TopologyRoot({ spec, haltedOnMount }, ref) {
             ref={wireRefs.get(wire.id)!}
             pathD={wire.pathD}
             arcLength={wire.arcLength}
-            speed={wire.speed}
             destNodeRef={nodeRefs.get(wire.target.nodeId)!}
             destSlotId={wire.target.port}
             pauseAxis={driver.pauseAxis}
