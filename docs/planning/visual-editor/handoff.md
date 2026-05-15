@@ -16,28 +16,33 @@ than keeping one slightly-larger doc.
 
 **Active branch:** `main`. All task branches merged and deleted.
 
-Recent commit landed:
+Recent commits landed:
 
-- `remove ⌫ button from ReadGateBody; expose node handles via TopologyRoot ref` (395a2a9)
+- `InputBody queue restart: explicit state machine + [0,1] init data`
 
 111/111 vitest green, tsc clean on main.
 
 ## What was done this session
 
-- **Removed the ⌫ button from `ReadGateBody`:** The button was a
-  manual drain escape hatch for the no-out-wire case. `run()` never
-  depended on it; it only drove `armed` display state. Removed the
-  button, `onConsume`, `phases` state, and the slot subscription
-  machinery — all dead code once the button is gone.
+- **InputBody queue restart:** When the input queue exhausts, the
+  animation now restarts automatically. Implemented as an explicit
+  two-phase state machine (`"draining" | "exhausted"`) in `InputBody`
+  rather than a silent ref mutation inside `run()`.
 
-- **Exposed node handles from `TopologyRoot`:** Added
-  `TopologyRootHandle` interface with `node(id): NodeHandle | null`.
-  `TopologyRoot` is now a `forwardRef` component. Tests that previously
-  used `data-armed` on the button as a slot-phase proxy now call
-  `slotPhase()` directly through the ref.
+  - `run()` is the pure firing rule: only fires when `draining`.
+  - `onCanAccept` is the state machine driver: transitions
+    `exhausted → draining` (refills queue from `initialQueueRef`) then
+    delegates to `run()`.
+  - `initialQueueRef` captures the original queue so `run`'s dep array
+    stays stable.
 
-- **Rewrote five contract tests** to use the ref rather than button
-  DOM attributes: smoke, chain, join, readgate-emit, readgate-port.
+- **Test updated:** "queue exhaustion: slot stays empty" → "queue
+  restart: slot refills after queue drains" — now expects `"filled"`
+  after consuming and flushing RAF.
+
+- **Input init data narrowed:** `topology.json` `in08.data.init`
+  changed from `[0,1,0,1,0,1,0,1,0,1]` to `[0,1]`. The restart
+  behavior makes the long sequence redundant.
 
 ## The model (settled — unchanged)
 

@@ -67,7 +67,7 @@ describe("TopologyRoot end-to-end (spec-driven)", () => {
     expect(gate.slotPhase("in0")).toBe("empty");
   });
 
-  it("queue exhaustion: slot stays empty after queue drains", () => {
+  it("queue restart: slot refills after queue drains", () => {
     const ref = createRef<TopologyRootHandle>();
     render(<TopologyRoot ref={ref} spec={makeSpec([1])} />);
     flushRaf();
@@ -75,6 +75,6 @@ describe("TopologyRoot end-to-end (spec-driven)", () => {
     const gate = ref.current!.node("gate")!;
     act(() => { gate.requestConsume("in0"); });
     flushRaf();
-    expect(gate.slotPhase("in0")).toBe("empty");
+    expect(gate.slotPhase("in0")).toBe("filled");
   });
 });

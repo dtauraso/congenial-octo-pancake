@@ -51,9 +51,15 @@ export function InputBody({
   initialQueue: unknown[];
   traceId?: string;
 }) {
+  const initialQueueRef = useRef(initialQueue);
   const remainingRef = useRef([...initialQueue]);
+  const queuePhaseRef = useRef<"draining" | "exhausted">(
+    initialQueue.length > 0 ? "draining" : "exhausted"
+  );
 
+  // Firing rule: only runs when draining. Does not restart.
   const run = useCallback(() => {
+    if (queuePhaseRef.current !== "draining") return;
     const handle = outWireRef.current;
     if (!handle) {
       if (traceId) postLog("trace.input.skip", { node: traceId, reason: "no-wire" });
@@ -63,25 +69,29 @@ export function InputBody({
       if (traceId) postLog("trace.input.skip", { node: traceId, reason: "wire-blocked", phase: handle.phase.kind });
       return;
     }
-    if (remainingRef.current.length === 0) {
-      if (traceId) postLog("trace.input.skip", { node: traceId, reason: "queue-empty" });
-      return;
-    }
-    const v = remainingRef.current.shift();
+    const v = remainingRef.current.shift()!;
+    if (remainingRef.current.length === 0) queuePhaseRef.current = "exhausted"; // draining → exhausted
     if (traceId) postLog("trace.input.fire", { node: traceId, value: v });
     handle.load(v);
   }, [outWireRef, traceId]);
 
-  // Subscribe to canAccept: wire-empty + dest-slot-empty is the trigger
-  // to attempt the next emit. Fire once on mount so an initially-empty
-  // wire+slot releases the first pulse without external driving.
+  // State machine driver: restarts the queue on canAccept when exhausted,
+  // then delegates to the firing rule.
+  const onCanAccept = useCallback(() => {
+    if (queuePhaseRef.current === "exhausted" && initialQueueRef.current.length > 0) {
+      remainingRef.current = [...initialQueueRef.current];
+      queuePhaseRef.current = "draining"; // exhausted → draining
+    }
+    run();
+  }, [run]);
+
   useEffect(() => {
     const handle = outWireRef.current;
     if (!handle) return;
-    const unsub = handle.subscribeCanAccept(() => run());
-    run();
+    const unsub = handle.subscribeCanAccept(onCanAccept);
+    onCanAccept();
     return unsub;
-  }, [outWireRef, run]);
+  }, [outWireRef, onCanAccept]);
 
   return <Node ref={nodeRef} onRun={run} traceId={traceId} />;
 }
