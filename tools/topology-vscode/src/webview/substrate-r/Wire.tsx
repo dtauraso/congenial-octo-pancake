@@ -160,6 +160,17 @@ export function EdgeLabels({
   );
 }
 
+// Render the in-flight value as a riding label. Structured payloads
+// { primary, secondary } render as "p:s" to show both channels.
+// Plain scalars render as their string form.
+function formatRidingLabel(value: unknown): string {
+  if (value !== null && typeof value === "object" && "primary" in (value as object) && "secondary" in (value as object)) {
+    const v = value as { primary: unknown; secondary: unknown };
+    return `${String(v.primary)}:${String(v.secondary)}`;
+  }
+  return String(value);
+}
+
 export interface WireHandle {
   load(value: unknown): void;
   complete(): void;
@@ -333,8 +344,9 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
             fontSize={10}
             fill={stroke}
             style={{ pointerEvents: "none", userSelect: "none" }}
+            data-testid={traceId ? `riding-label-${traceId}` : undefined}
           >
-            {String(phase.value)}
+            {formatRidingLabel(phase.value)}
           </text>
         </>
       )}
