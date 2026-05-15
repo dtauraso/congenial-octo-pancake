@@ -27,24 +27,36 @@ export function chain(queue: unknown[]): RTopologySpec {
   };
 }
 
-/** Two CI→IRG lanes with cross-wired inhibitOut for lateral cascade (C1). */
+/**
+ * Two CI→IRG lanes with cross-wired inhibitOut for lateral cascade (C1).
+ * Lane A has a direct path; lane B is delayed by an extra relay hop so A
+ * always wins the race. ci_A fires first, sends inhibitOut → irg_B.right
+ * before ci_B.out arrives at irg_B.left. Result: irg_A fires, irg_B silenced.
+ * Each IRG has a downstream readgate so `trace.inhibitrightgate.fire` is emitted.
+ */
 export function lateralCascade(): RTopologySpec {
   return {
     nodes: [
-      { id: "srcA", kind: "input", props: { queue: [1] } },
-      { id: "srcB", kind: "input", props: { queue: [1] } },
-      { id: "ci_A", kind: "chaininhibitor" },
-      { id: "ci_B", kind: "chaininhibitor" },
-      { id: "irg_A", kind: "inhibitrightgate" },
-      { id: "irg_B", kind: "inhibitrightgate" },
+      { id: "srcA",      kind: "input",            props: { queue: [1] } },
+      { id: "srcB",      kind: "input",            props: { queue: [1] } },
+      { id: "delayB",    kind: "relay" },
+      { id: "ci_A",      kind: "chaininhibitor" },
+      { id: "ci_B",      kind: "chaininhibitor" },
+      { id: "irg_A",     kind: "inhibitrightgate" },
+      { id: "irg_B",     kind: "inhibitrightgate" },
+      { id: "gate_A",    kind: "readgate" },
+      { id: "gate_B",    kind: "readgate" },
     ],
     wires: [
-      wire("wA_in",       "srcA",  "out",        "ci_A",  "in"),
-      wire("wB_in",       "srcB",  "out",        "ci_B",  "in"),
-      wire("wA_out",      "ci_A",  "out",        "irg_A", "left"),
-      wire("wB_out",      "ci_B",  "out",        "irg_B", "left"),
-      wire("wA_inhibit",  "ci_A",  "inhibitOut", "irg_B", "right"),
-      wire("wB_inhibit",  "ci_B",  "inhibitOut", "irg_A", "right"),
+      wire("wA_in",       "srcA",   "out",        "ci_A",   "in"),
+      wire("wB_delay",    "srcB",   "out",        "delayB", "in0"),
+      wire("wB_in",       "delayB", "out",        "ci_B",   "in"),
+      wire("wA_out",      "ci_A",   "out",        "irg_A",  "left"),
+      wire("wB_out",      "ci_B",   "out",        "irg_B",  "left"),
+      wire("wA_inhibit",  "ci_A",   "inhibitOut", "irg_B",  "right"),
+      wire("wB_inhibit",  "ci_B",   "inhibitOut", "irg_A",  "right"),
+      wire("wA_irg_out",  "irg_A",  "out",        "gate_A", "in0"),
+      wire("wB_irg_out",  "irg_B",  "out",        "gate_B", "in0"),
     ],
   };
 }
