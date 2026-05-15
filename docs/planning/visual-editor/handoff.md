@@ -14,24 +14,35 @@ than keeping one slightly-larger doc.
 
 ## State at handoff (2026-05-14, end-of-session)
 
-**Active branch:** `main`, clean against `origin/main` (all work
-pushed). No task branch in flight.
+**Active branch:** `task/integrated-substrate-tests` (pushed).
 
-`InhibitRightGate` is landed and working in the live editor — pulses
-flow through the cascade with the lateral inhibit edges in place.
+Integration test suite landed: 6 new test files covering IRG modes
+(A5–A8), CI fan-out (B1–B2), lateral cascade (C1–C2), backpressure
+(D1–D3), and misc contracts (E1, F1, D3-ext). 125 total tests, all
+green.
+
+**Blocker discovered and documented:** C1 single-winner exclusion
+(exactly one IRG fires) is NOT achievable with CI.inhibitOut →
+IRG.right wiring alone. The right-only path drains inhibit, but a
+later-arriving left still fires. To get mutual exclusion, the inhibit
+would need to block the CI from consuming its own input (wired
+upstream of the CI fire rule). C1 test currently asserts only that
+both IRG.right slots end empty (inhibit was consumed). The test
+comment records the topology limitation for user judgment.
 
 ## What was done this session
 
-- **R5 dropped** from carried items. `app.tsx` is fully decomposed
-  (`app/_*` hooks + `AppView`); the legacy `bridge.ts` coupling that
-  R5 was watching for is gone post-React-migration. No action needed.
-- **InhibitRightGate test follow-up dropped** at user direction —
-  the gate is working live; tests deferred indefinitely.
-- **`readNew` schema entry removed** from ChainInhibitor
-  (`node-types.ts`). Was declared as a third output but
-  `NODE_KIND_PORTS` and the body never had it — latent
-  schema/runtime divergence. Re-add when a topology actually
-  needs the new-arrival pulse.
+- **Integration test suite** (`task/integrated-substrate-tests`):
+  Created `test/contracts/_fixtures.ts` and `_harness.ts` with factory
+  helpers and `flushRound`/`makeCapture` utilities.
+  - `r-topology-lateral-cascade.test.tsx` — C1 (both-lanes), C2 (single-lane)
+  - `r-topology-chaininhibitor-fanout.test.tsx` — B1 (fan-out), B2 (seed blocks CI)
+  - `r-topology-inhibitrightgate-modes.test.tsx` — A6, A7, A8
+  - `r-topology-backpressure.test.tsx` — D1, D2, D3
+  - `r-topology-misc.test.tsx` — A5, E1, F1, D3-ext
+- **Substrate finding:** relay only re-runs on input fill, not on
+  out-wire canAccept change. Sequential E1 test uses direct
+  input→readgate path where source subscribes to canAccept.
 
 ## Resolved sign-off decisions (recorded for future kinds)
 
@@ -62,8 +73,11 @@ flow through the cascade with the lateral inhibit edges in place.
 
 ## Next move
 
-No queued task. No open follow-ups. Wait for the user to name the
-next frame.
+Merge `task/integrated-substrate-tests` to `main` (or continue on
+the branch). Address C1 single-winner exclusion: decide whether the
+topology design needs inhibit wired upstream of CI (blocking ci.in
+consumption) rather than downstream to IRG.right. If the circuit
+design changes, update the cascade fixture and remove the TODO comment.
 
 ## Carried items (still open)
 
@@ -94,7 +108,8 @@ See `memory/feedback_substrate_vs_coordinator_bias.md` and
 
 ## Open branches
 
-- `main` — production trunk; only active branch.
+- `main` — production trunk.
+- `task/integrated-substrate-tests` — integration test suite, ready to merge.
 
 Branch hygiene: no merge to main without explicit sign-off. Delete
 merged branches without re-asking. Force-push needs sign-off.

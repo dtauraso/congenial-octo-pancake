@@ -1186,3 +1186,28 @@ difference introduces friction.
 
 
 ---
+
+
+## 2026-05-14 — Integration test suite (task/integrated-substrate-tests)
+
+Implemented the integration test plan from `diagrams/test-plan/`. Created harness
+utilities (`_fixtures.ts`, `_harness.ts`) and 5 new test files covering:
+- IRG modes A5–A8 (left-alone, right-only, both-filled)
+- CI fan-out B1–B2 (lockstep fan-out, seed-blocked CI)
+- Lateral cascade C1–C2 (inhibit drain verified; see blocker below)
+- Backpressure D1–D3 (queue holding, consume release, partial join)
+- Misc E1, F1, D3-ext (sequential drain, wire seed, 3-input partial gate)
+
+**Blocker found:** C1 single-winner mutual exclusion is not achievable with
+CI.inhibitOut → IRG.right. The right-only path drains the inhibit signal, but
+a subsequent left delivery fires anyway. Mutual exclusion requires inhibit
+upstream of CI's own firing decision. Documented in test comment; needs design
+decision.
+
+**Substrate finding:** relay fires only on input fill (fill→onRun). Sequential
+drain via relay requires timer advancement; E1 test uses direct input→readgate
+to observe canAccept-triggered sequential delivery.
+
+125 tests passing, all green.
+
+---
