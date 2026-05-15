@@ -6,7 +6,7 @@
 // parse time — a wire whose target.port does not name a slot on its
 // destination kind is rejected here, not at runtime.
 
-export type RNodeKind = "input" | "relay" | "join" | "readgate" | "chaininhibitor";
+export type RNodeKind = "input" | "relay" | "join" | "readgate" | "chaininhibitor" | "inhibitrightgate";
 
 // Canonical kind id form is lowercase. Editor schema (schema/node-types.ts)
 // uses PascalCase for human-readable type labels; toRNodeKind narrows a
@@ -19,6 +19,7 @@ export function toRNodeKind(s: string | undefined): RNodeKind | undefined {
     case "join": return "join";
     case "readgate": return "readgate";
     case "chaininhibitor": return "chaininhibitor";
+    case "inhibitrightgate": return "inhibitrightgate";
     default: return undefined;
   }
 }
@@ -79,7 +80,8 @@ export const NODE_KIND_PORTS: Record<RNodeKind, KindPorts> = {
   relay:    { inputs: ["in0"], outputs: ["out"] },
   join:     { inputs: ["a", "b"], outputs: ["out"] },
   readgate: { inputs: ["in0"], outputs: [] },
-  chaininhibitor: { inputs: ["in"], outputs: ["out"] },
+  chaininhibitor: { inputs: ["in"], outputs: ["inhibitOut", "out"] },
+  inhibitrightgate: { inputs: ["left", "right"], outputs: ["out"] },
 };
 
 export function parseSpec(spec: RTopologySpec): RTopologySpec {

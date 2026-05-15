@@ -11,6 +11,7 @@ import { Node, type NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
 import type { RNodeKind } from "./spec";
 import { postLog } from "../log/post";
+import { InhibitRightGateBody } from "./inhibit-right-gate";
 
 export interface KindBodyCtx {
   nodeRef: RefObject<NodeHandle | null>;
@@ -31,11 +32,13 @@ export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
     case "relay":
       return <RelayBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} traceId={traceId} />;
     case "chaininhibitor":
-      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} traceId={traceId} />;
+      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} inhibitOutWireRef={outWireRefs["inhibitOut"]} slotId={slotIds[0]} traceId={traceId} />;
     case "join":
       return <JoinBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotAId={slotIds[0]} slotBId={slotIds[1]} traceId={traceId} />;
     case "readgate":
       return <ReadGateBody nodeRef={nodeRef} slotIds={slotIds} outWireRef={outWireRefs["out"]} traceId={traceId} />;
+    case "inhibitrightgate":
+      return <InhibitRightGateBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} leftSlotId={slotIds[0]} rightSlotId={slotIds[1]} traceId={traceId} />;
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -144,10 +147,11 @@ export function JoinBody({
 // ChainInhibitor: consumes its slot and forwards when the out wire can accept.
 
 export function ChainInhibitorBody({
-  nodeRef, outWireRef, slotId = "in", traceId,
+  nodeRef, outWireRef, inhibitOutWireRef, slotId = "in", traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
+  inhibitOutWireRef?: RefObject<WireHandle | null>;
   slotId?: string;
   traceId?: string;
 }) {
@@ -157,9 +161,12 @@ export function ChainInhibitorBody({
     if (!node || !wire) return;
     if (node.slotPhase(slotId) !== "filled") return;
     if (!wire.canAccept) return;
+    const inhibitWire = inhibitOutWireRef?.current;
+    if (inhibitWire && !inhibitWire.canAccept) return;
     const value = node.consume(slotId);
     wire.load(value);
-  }, [nodeRef, outWireRef, slotId]);
+    if (inhibitWire) inhibitWire.load(value);
+  }, [nodeRef, outWireRef, inhibitOutWireRef, slotId]);
 
   return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
 }

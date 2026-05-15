@@ -22,6 +22,7 @@
       "id": "i0",
       "type": "ChainInhibitor",
       "outputs": [
+        { "name": "inhibitOut", "kind": "inhibit-in" },
         { "name": "out", "kind": "chain" }
       ]
     },
@@ -29,7 +30,15 @@
       "id": "i1",
       "type": "ChainInhibitor",
       "outputs": [
+        { "name": "inhibitOut", "kind": "inhibit-in" },
         { "name": "out", "kind": "chain", "side": "left" }
+      ]
+    },
+    {
+      "id": "inhibitRight0",
+      "type": "InhibitRightGate",
+      "outputs": [
+        { "name": "out", "kind": "chain" }
       ]
     }
   ],
@@ -68,6 +77,31 @@
       "label": "i0ToI1",
       "data": {
         "slots": 1
+      }
+    },
+    {
+      "id": "i0.inhibitOut->inhibitRight0.left",
+      "source": "i0",
+      "sourceHandle": "inhibitOut",
+      "target": "inhibitRight0",
+      "targetHandle": "left",
+      "kind": "inhibit-in",
+      "label": "i0InhibitToRight0Left",
+      "data": {
+        "slots": 1
+      }
+    },
+    {
+      "id": "i1.inhibitOut->inhibitRight0.right",
+      "source": "i1",
+      "sourceHandle": "inhibitOut",
+      "target": "inhibitRight0",
+      "targetHandle": "right",
+      "kind": "inhibit-in",
+      "label": "i1InhibitToRight0Right",
+      "data": {
+        "slots": 1,
+        "seed": 1
       }
     },
     {
