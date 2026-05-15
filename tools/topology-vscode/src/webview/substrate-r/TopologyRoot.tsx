@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Wire, type WireHandle } from "./Wire";
 import { type NodeHandle } from "./Node";
-import { useDriver } from "./useDriver";
+import { useHaltControl } from "./useHaltControl";
 import { parseSpec, nodePorts, type RTopologySpec, type RNodeSpec } from "./spec";
 import { renderKindBody } from "./node-kinds";
 
@@ -66,7 +66,7 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
     return next;
   }, [validated.nodes]);
 
-  const driver = useDriver();
+  const driver = useHaltControl();
 
   useEffect(() => {
     if (haltedOnMount) driver.halt();

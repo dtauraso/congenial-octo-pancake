@@ -8,7 +8,7 @@ import {
 } from "react";
 import type { WireHandle } from "./Wire";
 import type { NodeHandle } from "./Node";
-import { useDriver, type DriverHandle } from "./useDriver";
+import { useHaltControl, type DriverHandle } from "./useHaltControl";
 
 interface Registry {
   registerWire(id: string, ref: RefObject<WireHandle | null>): () => void;
@@ -34,7 +34,7 @@ export function SubstrateProvider({ children }: { children: ReactNode }) {
   const [version, setVersion] = useState(0);
   const bump = useCallback(() => setVersion((v) => v + 1), []);
 
-  const driver = useDriver();
+  const driver = useHaltControl();
 
   const registerWire = useCallback(
     (id: string, ref: RefObject<WireHandle | null>) => {

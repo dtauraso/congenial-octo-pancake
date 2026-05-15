@@ -7,8 +7,14 @@ import { useStore, type EdgeProps } from "reactflow";
 import { Wire, type WireHandle, buildEdgePathD, edgeMidpoint, EdgeLabels, type EdgeRoute } from "./Wire";
 import { useRegistry } from "./registry";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind } from "../../schema";
-import { dashForKind } from "../rf/edge-style";
-import { markerEndUrl } from "../rf/MarkerDefs";
+
+function dashForKind(kind: EdgeKind | undefined): string | undefined {
+  return kind === "pointer" ? "4 3" : undefined;
+}
+
+function markerEndUrl(kind: EdgeKind, arrowStyle: ArrowStyle | undefined): string {
+  return `url(#wf-arrow-${arrowStyle === "open" ? "open" : "filled"}-${kind})`;
+}
 
 interface RSubstrateEdgeData {
   kind?: EdgeKind;

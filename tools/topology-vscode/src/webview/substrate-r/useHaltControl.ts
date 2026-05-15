@@ -8,7 +8,7 @@ export interface DriverHandle {
   resume(): void;
 }
 
-export function useDriver(): DriverHandle {
+export function useHaltControl(): DriverHandle {
   const [halted, setHalted] = useState(false);
   const pauseAxisRef = useRef<PauseAxis | null>(null);
   if (!pauseAxisRef.current) pauseAxisRef.current = createPauseAxis();
