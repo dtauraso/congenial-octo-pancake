@@ -14,61 +14,53 @@ than keeping one slightly-larger doc.
 
 ## State at handoff (2026-05-14, end-of-session)
 
-**Active branch:** `main`, clean against `origin/main`. Task branch
-`task/integrated-substrate-tests` was ff-merged and deleted.
+**Active branch:** `task/formalize-control-flow-timing`, pushed to
+origin. Not merged.
 
-Integration test suite landed: 6 new test files covering IRG modes
-(A5–A8), CI fan-out (B1–B2), lateral cascade (C1–C2), backpressure
-(D1–D3), and misc contracts (E1, F1, D3-ext). 125 total tests, all
-green.
+Two of the three additions from `partitioned-launching-fog.md` § "Three
+additions needed to formalize what's already present" landed; one was
+proposed, implemented, then rejected and reverted on user feedback.
 
-Plan visualized as SVG: [diagrams/test-plan/overview.svg](../../../diagrams/test-plan/overview.svg)
-(system-coverage map — all zones green=covered, magenta=C1 headline
-with weakened contract) and
-[diagrams/test-plan/lateral-cascade.svg](../../../diagrams/test-plan/lateral-cascade.svg)
-(C1 two-lane fixture detail; on-canvas note states the weakened
-assertion).
+Commits on the branch (newest first):
 
-**Blocker discovered and documented:** C1 single-winner exclusion
-(exactly one IRG fires) is NOT achievable with CI.inhibitOut →
-IRG.right wiring alone. The right-only path drains inhibit, but a
-later-arriving left still fires. To get mutual exclusion, the inhibit
-would need to block the CI from consuming its own input (wired
-upstream of the CI fire rule). C1 test currently asserts only that
-both IRG.right slots end empty (inhibit was consumed). The test
-comment records the topology limitation for user judgment.
+- `cafdcc7` — revert per-wire speed (see decision below)
+- `9bea44c` — feat: fan-out convergence observable event
+- `33093ca` — feat: per-wire speed prop (reverted by cafdcc7; kept in history)
+- `1e8eeff` — docs: reframe arcLength:0 as visible-duration collapse
 
-## What was done this session
+All 125 contract tests still green; `npm run build` clean.
 
-- **Integration test suite** (`task/integrated-substrate-tests`):
-  Created `test/contracts/_fixtures.ts` and `_harness.ts` with factory
-  helpers and `flushRound`/`makeCapture` utilities.
-  - `r-topology-lateral-cascade.test.tsx` — C1 (both-lanes), C2 (single-lane)
-  - `r-topology-chaininhibitor-fanout.test.tsx` — B1 (fan-out), B2 (seed blocks CI)
-  - `r-topology-inhibitrightgate-modes.test.tsx` — A6, A7, A8
-  - `r-topology-backpressure.test.tsx` — D1, D2, D3
-  - `r-topology-misc.test.tsx` — A5, E1, F1, D3-ext
-- **Substrate finding:** relay only re-runs on input fill, not on
-  out-wire canAccept change. Sequential E1 test uses direct
-  input→readgate path where source subscribes to canAccept.
+## Decision recorded this session: pulse speed is uniform
 
-## Resolved sign-off decisions (recorded for future kinds)
+The analysis doc's §6 argued per-wire `speed` on `RWireSpec` was "the
+strongest single argument" for the control-flow model. Implemented in
+33093ca, then rejected: **pulse speed must be the same for all wires.**
+The control-flow model formalization stands without it. If a future
+task implies heterogeneous timing (e.g., "inhibit arrives first"), the
+mechanism is topology-level (shorter inhibit path, upstream wiring),
+not a per-wire speed knob. See
+`memory/feedback_uniform_pulse_speed.md`.
 
-- **R1 — KindBodyCtx shape:** named map `outWireRefs:
-  Record<string, RefObject<WireHandle|null>>`, keyed by output port
-  name from `NODE_KIND_PORTS`. Scales to N outputs without
-  positional fragility; symmetric with input slots (which are
-  already name-addressed).
-- **R2 — fire-on-L-alone:** correct INHIBIT semantics. When `left`
-  fills and `right` stays empty, the gate emits.
-- **R3 — sourceHandle name:** edges from i0/i1 to inhibitRight0 use
-  `sourceHandle: "inhibitOut"`.
-- **Multi-output firing semantics (ChainInhibitor):** **(A) lockstep
-  fan-out.** Both `out.canAccept` AND `inhibitOut.canAccept`
-  required before firing; one consume, two loads of the same value.
-  Rationale: lateral inhibit must arrive in the same round as the
-  chain pulse so InhibitRightGate's R slot is in the expected
-  phase. (B) opportunistic side-fan would silently drop inhibits.
+The §6 section of `partitioned-launching-fog.md` is now stale — the
+argument it makes was tried and rejected. The rest of the doc is still
+load-bearing for understanding the substrate's two-clock structure and
+why fan-out convergence is the right primitive.
+
+## What landed (the two surviving additions)
+
+- **Fan-out convergence observable event** (`9bea44c`): wire-pair
+  coordinator `subscribeFanoutConvergence` in
+  `substrate-r/fanout-convergence.ts`. Subscribes to both wires of a
+  fan-out via existing `subscribePhase` interface; fires callback
+  once both have completed a paired delivery round. Chose coordinator
+  over new node kind to avoid `parseSpec`/`node-kinds.tsx`/`RNodeKind`
+  churn for what is a pure observability primitive. Makes C1-class
+  exclusion contracts expressible as control-flow events.
+- **arcLength:0 doc reframe** (`1e8eeff`): comments in
+  `test/contracts/_fixtures.ts` and `r-topology-smoke.test.tsx`
+  reframed from "bypass animation" to "collapse visible duration but
+  preserve control-flow event ordering." Test runtime behavior
+  unchanged. Other test files left for the sequenced migration step.
 
 ## The model (settled — unchanged)
 
@@ -81,14 +73,30 @@ comment records the topology limitation for user judgment.
 
 ## Next move
 
-C1 single-winner exclusion: **accepted as weakened contract** for now.
-Test asserts both IRG.right slots end empty (inhibit consumed); the
-TODO comment in the cascade fixture records the topology limitation.
-Revisit only if a future task needs true mutual exclusion — that
-would require wiring inhibit upstream of CI fire (blocking ci.in
-consumption) rather than downstream to IRG.right.
+Decision points for the user on `task/formalize-control-flow-timing`
+before merge:
 
-No task in flight. Wait for the next user-named frame.
+1. **Merge as-is to main?** Two additions landed cleanly (fan-out
+   convergence helper + arcLength:0 doc reframe). Per-wire speed
+   tried and reverted. The doc's planned sequence (1)→(2)→(3)→(4
+   verify)→(5 test migration) collapses to (2)+(3); MODEL.md was not
+   updated this session because the "name the firing rule" step the
+   doc described was paired with per-wire speed.
+2. **Does MODEL.md still need a firing-rule rename** absent per-wire
+   speed? The substrate is already control-flow-paced; the rename
+   was motivated mainly by §6. Worth user judgment whether it earns
+   its own commit.
+3. **Update `partitioned-launching-fog.md`** to strike §6 and revise
+   the Recommendation section, or leave it as a historical record
+   of an argument that was tried and didn't survive contact?
+4. **Sequenced test migration** (step 5 of the doc's plan) is still
+   available as a follow-up frame. The fan-out convergence helper is
+   not yet consumed by C1 — a future task could use it to tighten
+   C1's weakened contract.
+
+C1 single-winner exclusion remains **accepted as weakened contract**
+from the prior session; revisit only if a future task needs true
+mutual exclusion.
 
 ## Carried items (still open)
 

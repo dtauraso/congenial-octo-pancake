@@ -1,5 +1,9 @@
 // Shared spec factories for integration test suite.
 // Each factory returns a valid RTopologySpec ready to pass to TopologyRoot.
+//
+// All wires default to arcLength: 0, which collapses visible duration to one RAF tick
+// while preserving control-flow event ordering. This keeps tests deterministic under
+// fake timers without changing the substrate's timing model.
 
 import type { RTopologySpec, RWireSpec } from "../../src/webview/substrate-r/spec";
 

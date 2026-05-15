@@ -5,8 +5,8 @@
 // and exercises the full cycle: InputBody self-fires on mount, wire
 // arrives, slot fills.
 //
-// arcLength=0 so the wire's first RAF tick triggers `complete`,
-// keeping the test deterministic under fake timers.
+// arcLength=0 collapses visible duration to a single RAF tick,
+// keeping control-flow event ordering deterministic under fake timers.
 
 import { createRef } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";

@@ -94,6 +94,19 @@ One incoming wire per slot id — two wires cannot share a slot, so
 Mis-wiring is caught at parseSpec, not at runtime. No subscription
 layer; slots are passive state.
 
+**Firing as a control-flow event.** A node fires the moment its
+precondition holds — this is a control-flow event, not a scheduled
+callback or a clock interrupt. Delivery (wire → slot) is also a
+control-flow event, triggered by animation completion. Every
+cross-wire hop is gated on the previous wire's delivery event; the
+substrate runs at control-flow pace in production. The production
+cascade is a procession of control-flow events, each paced by wire
+geometry. "Atomic cascade" holds only in tests where `arcLength: 0`
+collapses visible duration to a single RAF tick (the event still
+happens; its visible duration is zero). The speeds in the animation
+layer are observed durations between control-flow events, not
+independent clocks competing for authority.
+
 ## Tick close
 
 A round ends when every wire is `empty` AND every node's firing rule
