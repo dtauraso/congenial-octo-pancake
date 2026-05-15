@@ -40,6 +40,7 @@ function NodeView({
     outWireRef,
     slotIds: ports.inputs,
     initialQueue: (node.props?.queue ?? []) as unknown[],
+    traceId: node.id,
   });
 }
 
@@ -96,6 +97,7 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
             destNodeRef={nodeRefs.get(wire.target.nodeId)!}
             destSlotId={wire.target.port}
             pauseAxis={driver.pauseAxis}
+            traceId={wire.id}
           />
         ))}
       </svg>

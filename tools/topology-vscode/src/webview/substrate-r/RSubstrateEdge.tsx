@@ -69,6 +69,7 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
         destNodeRef={destNodeRef}
         destSlotId={destSlotId}
         pauseAxis={registry.driver.pauseAxis}
+        traceId={id}
       />
       <EdgeLabels
         mid={mid}

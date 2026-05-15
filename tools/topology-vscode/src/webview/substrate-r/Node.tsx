@@ -13,6 +13,7 @@
 import {
   forwardRef, useImperativeHandle, useMemo, useRef,
 } from "react";
+import { postLog } from "../log/post";
 
 export type SlotPhase = "empty" | "filled";
 
@@ -29,6 +30,7 @@ export interface NodeProps {
   slots?: string[];
   onRun?: () => void;
   onConsume?: (slotId: string, value: unknown) => void;
+  traceId?: string;
 }
 
 interface SlotState {
@@ -38,7 +40,7 @@ interface SlotState {
 }
 
 export const Node = forwardRef<NodeHandle, NodeProps>(function Node(
-  { slots = [], onRun, onConsume }, ref,
+  { slots = [], onRun, onConsume, traceId }, ref,
 ) {
   const onRunRef = useRef(onRun);
   onRunRef.current = onRun;
@@ -64,6 +66,7 @@ export const Node = forwardRef<NodeHandle, NodeProps>(function Node(
       if (s.phase !== "empty") throw new Error(`Node: fill ${slotId} while ${s.phase}`);
       s.phase = "filled";
       s.value = value;
+      if (traceId) postLog("trace.fill", { node: traceId, slot: slotId, value });
       for (const l of s.listeners) l("filled");
       onRunRef.current?.();
     },
@@ -73,6 +76,7 @@ export const Node = forwardRef<NodeHandle, NodeProps>(function Node(
       const v = s.value;
       s.phase = "empty";
       s.value = undefined;
+      if (traceId) postLog("trace.consume", { node: traceId, slot: slotId, value: v });
       for (const l of s.listeners) l("empty");
       return v;
     },

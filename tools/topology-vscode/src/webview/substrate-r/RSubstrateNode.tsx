@@ -121,6 +121,7 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
           outWireRef,
           slotIds: inputs.map((p) => p.name),
           initialQueue: data?.nodeData?.init ?? [],
+          traceId: id,
         })}
       </div>
       {data?.sublabel && <div style={{ fontSize: 9, opacity: 0.7 }}>{data.sublabel}</div>}

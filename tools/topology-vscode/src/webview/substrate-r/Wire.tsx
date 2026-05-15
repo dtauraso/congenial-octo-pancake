@@ -23,6 +23,7 @@ import {
 import type { RefObject } from "react";
 import type { NodeHandle } from "./Node";
 import type { PauseAxis } from "./pause-axis";
+import { postLog } from "../log/post";
 
 const PULSE_SPEED_PX_PER_MS = 0.08;
 
@@ -176,10 +177,11 @@ export interface WireProps {
   destNodeRef: RefObject<NodeHandle | null>;
   destSlotId: string;
   pauseAxis?: PauseAxis;
+  traceId?: string;
 }
 
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
-  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis }, ref,
+  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId }, ref,
 ) {
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
@@ -198,8 +200,9 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   const deliverIfPending = useCallback(() => {
     if (!pendingDeliverRef.current) return;
     pendingDeliverRef.current = false;
+    if (traceId) postLog("trace.deliver", { wire: traceId, slot: destSlotId, value: valueRef.current });
     destNodeRef.current?.fill(destSlotId, valueRef.current);
-  }, [destNodeRef, destSlotId]);
+  }, [destNodeRef, destSlotId, traceId]);
 
   const tryFinalize = useCallback(() => {
     if (phaseRef.current.kind !== "in-flight") return;
@@ -210,11 +213,12 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   }, [apply, deliverIfPending]);
 
   const load = useCallback((value: unknown) => {
+    if (traceId) postLog("trace.load", { wire: traceId, value });
     apply({ type: "load", value });
     valueRef.current = value;
     pendingDeliverRef.current = true;
     animDoneRef.current = false;
-  }, [apply]);
+  }, [apply, traceId]);
 
   const complete = useCallback(() => {
     if (phaseRef.current.kind !== "in-flight") return;
