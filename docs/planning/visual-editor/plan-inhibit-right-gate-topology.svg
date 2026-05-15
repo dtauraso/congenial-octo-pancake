@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" font-weight="400" font-family="ui-sans-serif, system-ui, sans-serif">
+
+  <metadata>
+  {
+    "diagram": "plan-inhibit-right-gate-topology",
+    "title": "topology.json: before (top) vs. after (bottom)",
+    "nodes-before": [
+      {"id": "in0",       "role": "input"},
+      {"id": "readGate1", "role": "and-gate"},
+      {"id": "i0",        "role": "inhibitor", "index": 0},
+      {"id": "i1",        "role": "inhibitor", "index": 1},
+      {"id": "join1",     "role": "join", "note": "stray — revert"}
+    ],
+    "nodes-after": [
+      {"id": "in0",           "role": "input"},
+      {"id": "readGate1",     "role": "and-gate"},
+      {"id": "i0",            "role": "inhibitor", "index": 0},
+      {"id": "i1",            "role": "inhibitor", "index": 1},
+      {"id": "inhibitRight0", "role": "inhibit-right-gate"}
+    ],
+    "edges-after": [
+      {"id": "i0ToInhibitRight", "source": "i0", "target": "inhibitRight0", "kind": "inhibit-in", "handle": "inhibitOut"},
+      {"id": "i1ToInhibitRight", "source": "i1", "target": "inhibitRight0", "kind": "inhibit-in", "handle": "inhibitOut"}
+    ]
+  }
+  </metadata>
+
+  <desc>
+BEFORE (top half): 4-node topology with stray join1 node — revert join1 and its two fan-in edges.
+AFTER (bottom half): 5-node topology adding inhibitRight0 (InhibitRightGate, L=1 AND R=0).
+New edges (inhibit-in, pink/crimson): i0.inhibitOut → inhibitRight0.left, i1.inhibitOut → inhibitRight0.right.
+  </desc>
+
+  <style>
+    svg { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 400; }
+    .diagram-bg        { fill: #fafafa; }
+    .section-bg-before { fill: #fff8f8; stroke: #e0b0b0; stroke-width: 1; }
+    .section-bg-after  { fill: #f8fff8; stroke: #a0c8a0; stroke-width: 1; }
+    .section-label     { font-size: 11px; fill: #777; text-anchor: start; }
+
+    .shape-input       { fill: #e0e0e0; stroke: #666;    stroke-width: 2; }
+    .shape-and-gate    { fill: #f3e5f5; stroke: #7b1fa2; stroke-width: 2; }
+    .shape-inhibitor   { fill: #fff3e0; stroke: #e65100; stroke-width: 2; }
+    .shape-inhibit-right { fill: #fce4ec; stroke: #880e4f; stroke-width: 2; }
+    .shape-stray       { fill: #f0f0f0; stroke: #bbb; stroke-width: 2; stroke-dasharray: 5 3; }
+
+    .node-title  { text-anchor: middle; font-size: 12px; }
+    .node-sublabel { text-anchor: middle; font-size: 10px; }
+
+    .chain       { stroke: #333;    stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+    .feedback    { stroke: #7b1fa2; stroke-width: 1.5; fill: none; marker-end: url(#arrow-magenta); }
+    .inhibit-in  { stroke: #880e4f; stroke-width: 1.5; fill: none; marker-end: url(#arrow-pink); }
+    .stray-edge  { stroke: #bbb;    stroke-width: 1.5; fill: none; stroke-dasharray: 5 3; marker-end: url(#arrow-gray); }
+    .revert-note { font-size: 10px; fill: #c62828; text-anchor: middle; }
+    .new-note    { font-size: 10px; fill: #388e3c; text-anchor: middle; }
+    .edge-label  { font-size: 10px; text-anchor: middle; }
+  </style>
+
+  <defs>
+    <marker id="arrow"        markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#333"/></marker>
+    <marker id="arrow-magenta" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#7b1fa2"/></marker>
+    <marker id="arrow-pink"   markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#880e4f"/></marker>
+    <marker id="arrow-gray"   markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#bbb"/></marker>
+  </defs>
+
+  <!-- Background -->
+  <rect class="diagram-bg" x="0" y="0" width="860" height="420" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="22" text-anchor="middle" font-size="14" font-weight="600" fill="#222" stroke="none">topology.json — Before / After</text>
+
+  <!-- ═══════ BEFORE SECTION ═══════ -->
+  <rect class="section-bg-before" x="10" y="35" width="840" height="165" rx="6"/>
+  <text class="section-label" x="20" y="52" font-weight="300" fill="#777" stroke="none">BEFORE — revert join1 + edges i0→join1.a and i1→join1.b</text>
+
+  <!-- in0 -->
+  <g id="before-in0" data-role="input">
+    <rect class="shape-input" x="30" y="80" width="80" height="60" rx="6"/>
+    <text class="node-title" x="70" y="107" font-weight="100" fill="#333" stroke="none">in0</text>
+    <text class="node-sublabel" x="70" y="122" font-weight="100" fill="#555" stroke="none">Input</text>
+  </g>
+
+  <!-- readGate1 -->
+  <g id="before-readGate1" data-role="and-gate">
+    <rect class="shape-and-gate" x="175" y="90" width="80" height="40" rx="6"/>
+    <text class="node-title" x="215" y="113" font-weight="100" fill="#7b1fa2" stroke="none">readGate1</text>
+  </g>
+
+  <!-- i0 -->
+  <g id="before-i0" data-role="inhibitor" data-index="0">
+    <rect class="shape-inhibitor" x="330" y="80" width="90" height="60" rx="6"/>
+    <text class="node-title" x="375" y="105" font-weight="100" fill="#e65100" stroke="none">i0</text>
+    <text class="node-sublabel" x="375" y="120" font-weight="100" fill="#bf360c" stroke="none">ChainInhibitor</text>
+  </g>
+
+  <!-- i1 -->
+  <g id="before-i1" data-role="inhibitor" data-index="1">
+    <rect class="shape-inhibitor" x="500" y="80" width="90" height="60" rx="6"/>
+    <text class="node-title" x="545" y="105" font-weight="100" fill="#e65100" stroke="none">i1</text>
+    <text class="node-sublabel" x="545" y="120" font-weight="100" fill="#bf360c" stroke="none">ChainInhibitor</text>
+  </g>
+
+  <!-- join1 (stray) -->
+  <g id="before-join1" data-role="join">
+    <rect class="shape-stray" x="680" y="85" width="80" height="50" rx="6"/>
+    <text class="node-title" x="720" y="107" font-weight="100" fill="#bbb" stroke="none">join1</text>
+    <text class="node-sublabel" x="720" y="122" font-weight="100" fill="#bbb" stroke="none">stray — revert</text>
+  </g>
+
+  <!-- Before edges -->
+  <g id="before-edge-in0-readGate" data-role="chain"><line class="chain" x1="110" y1="110" x2="173" y2="110"/></g>
+  <g id="before-edge-readGate-i0" data-role="chain"><line class="chain" x1="255" y1="110" x2="328" y2="110"/></g>
+  <g id="before-edge-i0-i1" data-role="chain"><line class="chain" x1="420" y1="110" x2="498" y2="110"/></g>
+  <g id="before-edge-i1-readGate-feedback" data-role="feedback">
+    <path class="feedback" d="M545,80 L545,60 L215,60 L215,88"/>
+    <text class="edge-label" x="380" y="55" font-weight="300" fill="#7b1fa2" stroke="none">↻ i1ToReadGate</text>
+  </g>
+  <!-- stray edges -->
+  <g id="before-stray-i0-join" data-role="stray"><line class="stray-edge" x1="420" y1="120" x2="678" y2="110"/></g>
+  <g id="before-stray-i1-join" data-role="stray"><line class="stray-edge" x1="590" y1="110" x2="678" y2="110"/></g>
+  <text class="revert-note" x="660" y="158" font-weight="300" stroke="none">← revert these</text>
+
+  <!-- ═══════ AFTER SECTION ═══════ -->
+  <rect class="section-bg-after" x="10" y="215" width="840" height="190" rx="6"/>
+  <text class="section-label" x="20" y="232" font-weight="300" fill="#555" stroke="none">AFTER — remove join1; add inhibitRight0 (InhibitRightGate, INHIBIT L=1 R=0)</text>
+
+  <!-- in0 -->
+  <g id="after-in0" data-role="input">
+    <rect class="shape-input" x="30" y="260" width="80" height="60" rx="6"/>
+    <text class="node-title" x="70" y="287" font-weight="100" fill="#333" stroke="none">in0</text>
+    <text class="node-sublabel" x="70" y="302" font-weight="100" fill="#555" stroke="none">Input</text>
+  </g>
+
+  <!-- readGate1 -->
+  <g id="after-readGate1" data-role="and-gate">
+    <rect class="shape-and-gate" x="175" y="270" width="80" height="40" rx="6"/>
+    <text class="node-title" x="215" y="293" font-weight="100" fill="#7b1fa2" stroke="none">readGate1</text>
+  </g>
+
+  <!-- i0 -->
+  <g id="after-i0" data-role="inhibitor" data-index="0">
+    <rect class="shape-inhibitor" x="330" y="258" width="90" height="60" rx="6"/>
+    <text class="node-title" x="375" y="283" font-weight="100" fill="#e65100" stroke="none">i0</text>
+    <text class="node-sublabel" x="375" y="298" font-weight="100" fill="#bf360c" stroke="none">ChainInhibitor</text>
+  </g>
+
+  <!-- i1 -->
+  <g id="after-i1" data-role="inhibitor" data-index="1">
+    <rect class="shape-inhibitor" x="500" y="258" width="90" height="60" rx="6"/>
+    <text class="node-title" x="545" y="283" font-weight="100" fill="#e65100" stroke="none">i1</text>
+    <text class="node-sublabel" x="545" y="298" font-weight="100" fill="#bf360c" stroke="none">ChainInhibitor</text>
+  </g>
+
+  <!-- inhibitRight0 -->
+  <g id="after-inhibitRight0" data-role="inhibit-right-gate">
+    <rect class="shape-inhibit-right" x="660" y="268" width="130" height="40" rx="6"/>
+    <text class="node-title" x="725" y="285" font-weight="100" fill="#880e4f" stroke="none">inhibitRight0</text>
+    <text class="node-sublabel" x="725" y="299" font-weight="100" fill="#880e4f" stroke="none">INHIBIT(L=1,R=0)</text>
+  </g>
+
+  <!-- After chain edges -->
+  <g id="after-edge-in0-readGate" data-role="chain"><line class="chain" x1="110" y1="290" x2="173" y2="290"/></g>
+  <g id="after-edge-readGate-i0" data-role="chain"><line class="chain" x1="255" y1="290" x2="328" y2="290"/></g>
+  <g id="after-edge-i0-i1" data-role="chain"><line class="chain" x1="420" y1="290" x2="498" y2="290"/></g>
+  <g id="after-edge-i1-feedback" data-role="feedback">
+    <path class="feedback" d="M545,258 L545,238 L215,238 L215,268"/>
+    <text class="edge-label" x="380" y="233" font-weight="300" fill="#7b1fa2" stroke="none">↻ i1ToReadGate</text>
+  </g>
+
+  <!-- New inhibit-in fan-out edges -->
+  <g id="after-edge-i0-inhibitRight" data-role="inhibit-in">
+    <path class="inhibit-in" d="M375,318 L375,360 L725,360 L725,310"/>
+    <text class="edge-label" x="550" y="375" font-weight="300" fill="#880e4f" stroke="none">i0ToInhibitRight (inhibit-in)</text>
+  </g>
+  <g id="after-edge-i1-inhibitRight" data-role="inhibit-in">
+    <path class="inhibit-in" d="M590,290 L658,290"/>
+    <text class="edge-label" x="624" y="283" font-weight="300" fill="#880e4f" stroke="none">i1ToInhibitRight</text>
+  </g>
+
+  <text class="new-note" x="725" y="320" font-weight="300" stroke="none">← new node + 2 edges</text>
+
+</svg>

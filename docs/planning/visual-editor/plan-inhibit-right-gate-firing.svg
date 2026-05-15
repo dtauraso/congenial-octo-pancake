@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 380" font-weight="400" font-family="ui-sans-serif, system-ui, sans-serif">
+
+  <metadata>
+  {
+    "diagram": "plan-inhibit-right-gate-firing",
+    "title": "InhibitRightGate firing rule — slot fills, run(), conditional pulse",
+    "nodes": [
+      {"id": "i0",            "role": "inhibitor",         "slot-fills": "right.slot"},
+      {"id": "i1",            "role": "inhibitor",         "slot-fills": "left.slot"},
+      {"id": "inhibitRight0", "role": "inhibit-right-gate","slots": ["left","right"],"output": "out"}
+    ],
+    "states": [
+      {"phase": "A", "label": "i0 fires", "left": "empty", "right": "empty"},
+      {"phase": "B", "label": "i0ToInhibitRight arrives", "left": "empty", "right": "filled(v)"},
+      {"phase": "C", "label": "i1 fires", "left": "empty", "right": "filled(v)"},
+      {"phase": "D", "label": "i1ToInhibitRight arrives → run()", "left": "filled(v)", "right": "filled(v)"},
+      {"phase": "E", "label": "run(): L=1 AND R=0? No (R=1) — no pulse emitted", "left": "consumed", "right": "consumed"},
+      {"phase": "F", "label": "run(): L=1 AND R=0? Yes — pulse out, slots consumed", "left": "consumed", "right": "empty (other round)"}
+    ]
+  }
+  </metadata>
+
+  <desc>
+Timeline (left→right) showing two rounds of inhibitRight0 evaluation.
+Round 1 (top row): both slots fill (L=1, R=1) — gate's L AND NOT R is false, no pulse.
+Round 2 (bottom row): left slot fills (L=1), right slot stays empty (R=0) — gate fires, pulse out.
+Substrate vocabulary: slot fills on wire arrival; run() evaluates; nodes fire (emitting) or skip.
+  </desc>
+
+  <style>
+    svg { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 400; }
+    .diagram-bg    { fill: #fafafa; }
+    .row-bg-no     { fill: #fff8f8; stroke: #e0b0b0; stroke-width: 1; }
+    .row-bg-yes    { fill: #f8fff8; stroke: #a0c8a0; stroke-width: 1; }
+    .slot-empty    { fill: #f5f5f5; stroke: #ccc; stroke-width: 1.5; }
+    .slot-filled   { fill: #fce4ec; stroke: #880e4f; stroke-width: 1.5; }
+    .slot-consumed { fill: #e8f5e9; stroke: #388e3c; stroke-width: 1.5; }
+    .slot-label    { font-size: 10px; text-anchor: middle; }
+    .phase-label   { font-size: 11px; text-anchor: middle; font-weight: 600; }
+    .event-label   { font-size: 10px; text-anchor: middle; }
+    .node-box      { fill: #fce4ec; stroke: #880e4f; stroke-width: 2; }
+    .node-label    { font-size: 11px; text-anchor: middle; font-weight: 600; fill: #880e4f; }
+    .wire-in       { stroke: #880e4f; stroke-width: 1.5; fill: none; marker-end: url(#arrow-pink); }
+    .wire-out      { stroke: #283593; stroke-width: 1.5; fill: none; marker-end: url(#arrow-indigo); }
+    .wire-blocked  { stroke: #ccc;    stroke-width: 1.5; fill: none; stroke-dasharray: 4 3; }
+    .outcome-yes   { font-size: 11px; font-weight: 600; fill: #2e7d32; text-anchor: middle; }
+    .outcome-no    { font-size: 11px; font-weight: 600; fill: #c62828; text-anchor: middle; }
+    .axis-line     { stroke: #bbb; stroke-width: 1; }
+    .axis-tick     { stroke: #bbb; stroke-width: 1; }
+    .title-text    { font-size: 14px; font-weight: 600; fill: #222; text-anchor: middle; }
+    .row-title     { font-size: 11px; font-weight: 600; text-anchor: start; }
+  </style>
+
+  <defs>
+    <marker id="arrow-pink"   markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#880e4f"/></marker>
+    <marker id="arrow-indigo" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#283593"/></marker>
+  </defs>
+
+  <!-- Background -->
+  <rect class="diagram-bg" x="0" y="0" width="820" height="380" rx="8"/>
+  <text class="title-text" x="410" y="24" font-weight="600" fill="#222" stroke="none">InhibitRightGate Firing Rule — Slot Phases and run()</text>
+
+  <!-- ═══════ TIME AXIS ═══════ -->
+  <!-- Phase labels across top -->
+  <text class="phase-label" x="100" y="50" font-weight="600" fill="#333" stroke="none">Phase A</text>
+  <text class="phase-label" x="220" y="50" font-weight="600" fill="#333" stroke="none">Phase B</text>
+  <text class="phase-label" x="340" y="50" font-weight="600" fill="#333" stroke="none">Phase C</text>
+  <text class="phase-label" x="460" y="50" font-weight="600" fill="#333" stroke="none">Phase D</text>
+  <text class="phase-label" x="600" y="50" font-weight="600" fill="#333" stroke="none">Phase E</text>
+
+  <!-- ═══════ ROW 1: Round where R=1 (no fire) ═══════ -->
+  <rect class="row-bg-no" x="10" y="58" width="800" height="135" rx="6"/>
+  <text class="row-title" x="18" y="74" font-weight="600" fill="#c62828" stroke="none">Round 1 — L=1, R=1 → gate does NOT fire</text>
+
+  <!-- Slot indicators for inhibitRight0: left (L) and right (R) -->
+  <!-- Phase A: both empty -->
+  <rect class="slot-empty" x="60" y="85" width="40" height="20" rx="3"/>
+  <text class="slot-label" x="80" y="99" font-weight="300" fill="#999" stroke="none">L: ∅</text>
+  <rect class="slot-empty" x="60" y="110" width="40" height="20" rx="3"/>
+  <text class="slot-label" x="80" y="124" font-weight="300" fill="#999" stroke="none">R: ∅</text>
+  <text class="event-label" x="80" y="148" font-weight="300" fill="#555" stroke="none">i0 fires</text>
+
+  <!-- wire in-flight A→B (right slot) -->
+  <line class="wire-in" x1="105" y1="120" x2="158" y2="120"/>
+
+  <!-- Phase B: R filled -->
+  <rect class="slot-empty"  x="180" y="85"  width="40" height="20" rx="3"/>
+  <text class="slot-label" x="200" y="99" font-weight="300" fill="#999" stroke="none">L: ∅</text>
+  <rect class="slot-filled" x="180" y="110" width="40" height="20" rx="3"/>
+  <text class="slot-label" x="200" y="124" font-weight="300" fill="#880e4f" stroke="none">R: 1</text>
+  <text class="event-label" x="200" y="148" font-weight="300" fill="#555" stroke="none">i0→R arrives</text>
+
+  <!-- i1 fires, wire to L -->
+  <line class="wire-in" x1="225" y1="95" x2="278" y2="95"/>
+
+  <!-- Phase C: R still filled, L now in-flight from i1 -->
+  <rect class="slot-empty"  x="300" y="85"  width="40" height="20" rx="3"/>
+  <text class="slot-label" x="320" y="99" font-weight="300" fill="#999" stroke="none">L: ∅</text>
+  <rect class="slot-filled" x="300" y="110" width="40" height="20" rx="3"/>
+  <text class="slot-label" x="320" y="124" font-weight="300" fill="#880e4f" stroke="none">R: 1</text>
+  <text class="event-label" x="320" y="148" font-weight="300" fill="#555" stroke="none">i1 fires</text>
+
+  <!-- wire arriving at L -->
+  <line class="wire-in" x1="345" y1="95" x2="398" y2="95"/>
+
+  <!-- Phase D: both filled -->
+  <rect class="slot-filled" x="420" y="85"  width="40" height="20" rx="3"/>
+  <text class="slot-label" x="440" y="99" font-weight="300" fill="#880e4f" stroke="none">L: 1</text>
+  <rect class="slot-filled" x="420" y="110" width="40" height="20" rx="3"/>
+  <text class="slot-label" x="440" y="124" font-weight="300" fill="#880e4f" stroke="none">R: 1</text>
+  <text class="event-label" x="440" y="148" font-weight="300" fill="#555" stroke="none">i1→L arrives; run()</text>
+
+  <!-- outcome: no fire -->
+  <text class="outcome-no" x="640" y="100" font-weight="600" stroke="none">L AND NOT R</text>
+  <text class="outcome-no" x="640" y="116" font-weight="600" stroke="none">= 1 AND 0 = false</text>
+  <text class="outcome-no" x="640" y="132" font-weight="600" stroke="none">no pulse emitted</text>
+  <line class="wire-blocked" x1="462" y1="97" x2="600" y2="97"/>
+
+  <!-- ═══════ ROW 2: Round where R=0 (fires) ═══════ -->
+  <rect class="row-bg-yes" x="10" y="205" width="800" height="155" rx="6"/>
+  <text class="row-title" x="18" y="221" font-weight="600" fill="#2e7d32" stroke="none">Round 2 — L=1, R=0 → gate fires, pulse out</text>
+
+  <!-- Phase A: both empty -->
+  <rect class="slot-empty" x="60" y="232" width="40" height="20" rx="3"/>
+  <text class="slot-label" x="80" y="246" font-weight="300" fill="#999" stroke="none">L: ∅</text>
+  <rect class="slot-empty" x="60" y="257" width="40" height="20" rx="3"/>
+  <text class="slot-label" x="80" y="271" font-weight="300" fill="#999" stroke="none">R: ∅</text>
+  <text class="event-label" x="80" y="295" font-weight="300" fill="#555" stroke="none">i0 fires (R=0</text>
+  <text class="event-label" x="80" y="308" font-weight="300" fill="#555" stroke="none">means no i1 pulse)</text>
+
+  <!-- Only L gets a wire this round -->
+  <line class="wire-in" x1="105" y1="242" x2="278" y2="242"/>
+
+  <!-- Phase B skipped — jump straight to L filled (i0 sent to L slot) -->
+  <rect class="slot-filled" x="300" y="232" width="40" height="20" rx="3"/>
+  <text class="slot-label" x="320" y="246" font-weight="300" fill="#880e4f" stroke="none">L: 1</text>
+  <rect class="slot-empty"  x="300" y="257" width="40" height="20" rx="3"/>
+  <text class="slot-label" x="320" y="271" font-weight="300" fill="#999" stroke="none">R: ∅</text>
+  <text class="event-label" x="320" y="295" font-weight="300" fill="#555" stroke="none">i0→L arrives; run()</text>
+  <text class="event-label" x="320" y="308" font-weight="300" fill="#555" stroke="none">(R slot still empty)</text>
+
+  <!-- run() fires: outcome yes -->
+  <line class="wire-out"    x1="342" y1="242" x2="510" y2="242"/>
+
+  <!-- Phase E: both consumed, out wire loaded -->
+  <rect class="slot-consumed" x="530" y="232" width="40" height="20" rx="3"/>
+  <text class="slot-label" x="550" y="246" font-weight="300" fill="#2e7d32" stroke="none">L: ✓</text>
+  <rect class="slot-empty"    x="530" y="257" width="40" height="20" rx="3"/>
+  <text class="slot-label" x="550" y="271" font-weight="300" fill="#999" stroke="none">R: ∅</text>
+  <text class="event-label" x="550" y="295" font-weight="300" fill="#555" stroke="none">L consumed; out</text>
+  <text class="event-label" x="550" y="308" font-weight="300" fill="#555" stroke="none">wire loaded(1)</text>
+
+  <text class="outcome-yes" x="700" y="255" font-weight="600" stroke="none">L AND NOT R</text>
+  <text class="outcome-yes" x="700" y="271" font-weight="600" stroke="none">= 1 AND 1 = true</text>
+  <text class="outcome-yes" x="700" y="287" font-weight="600" stroke="none">pulse out ✓</text>
+
+  <!-- ═══════ SUBSTRATE NOTE ═══════ -->
+  <rect x="10" y="365" width="800" height="10" rx="0" fill="none"/>
+  <text x="410" y="374" font-size="10" text-anchor="middle" font-weight="300" fill="#777" stroke="none">Substrate: wire arrival writes slot (filled); run() evaluates both slots; consuming a slot is a node-local transition (filled → consumed → empty). No central walker.</text>
+
+</svg>

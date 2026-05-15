@@ -14,48 +14,58 @@ than keeping one slightly-larger doc.
 
 ## State at handoff (2026-05-14, end-of-session)
 
-**Active branch:** `main`. All task branches merged and deleted.
+**Active branch:** `main`. No task branch in flight.
 
-Recent commits landed:
-
-- `spec-to-flow: thread data.route fallback; set i1->readGate route=below`
-- `InputBody queue restart: explicit state machine + [0,1] init data`
-
-111/111 vitest green, tsc clean on main.
+`topology.json` is back to the 4-node chain (`in08`, `readGate1`,
+`i0`, `i1`) — a stray `join1` node + 2 edges from a prior session
+were removed this session. 111/111 vitest green, tsc clean.
 
 ## What was done this session
 
-- **Edge route plumbing fix:** `topology.json` edge `data.route` was
-  silently ignored — `spec-to-flow.ts` only read `ev?.route` from
-  `topology.view.json`. Added a fallback so `data.route` is honored
-  when the view doesn't override. Set `route: "below"` on
-  `i1.out->readGate.chainIn2` so the return wire arcs beneath the
-  node row instead of being z-occluded by intervening nodes.
+- **Identified the 5th node** the user wants to add: `InhibitRightGate`
+  (`inhibitRight0` in the cascade), role `inhibit-right-gate`,
+  INHIBIT(L=1, R=0). Source of truth:
+  [diagrams/topology-chain-cascade.svg](../../../diagrams/topology-chain-cascade.svg).
+- **Wrote a landing plan** at
+  [plan-inhibit-right-gate.md](plan-inhibit-right-gate.md) with three
+  sibling SVG diagrams (topology before/after, file-level dispatch
+  map, slot-phase firing trace).
+- **Reverted** stray `join1` work from `topology.json`. View file had
+  no `join1` entry.
 
 ## The model (settled — unchanged)
 
-- **No tick.** No tick counter, no tick concept on driver, nodes, or edges.
+- **No tick.** No tick counter, no tick concept.
 - **No step.** Driver surface is `halt` / `resume` + `pauseAxis`.
 - **Node runs the moment canAccept fires.** Wire-empty + dest-slot-empty
-  is the trigger. No driver poll, no round walk.
-- **Running ≠ emitting.** `run()` is a handler that may or may not
-  pulse out depending on local preconditions.
-- **`useHaltControl`** is a halt-control, not a coordinator.
+  is the trigger.
+- **Running ≠ emitting.** `run()` is a handler; pulsing out depends
+  on local preconditions.
+
+## Next move
+
+Implement `InhibitRightGate` per
+[plan-inhibit-right-gate.md](plan-inhibit-right-gate.md). The plan
+covers: `spec.ts` registration, new concept-bounded
+`substrate-r/inhibit-right-gate.tsx`, `renderKindBody` case,
+`ChainInhibitor` second-output handle, and `topology.json` +
+`topology.view.json` additions for `inhibitRight0`.
+
+**One open judgment call** before writing code (see plan §Risks):
+`ChainInhibitorBody` currently holds one `outWireRef`. Threading a
+second ref for the `inhibitOut` fan-out requires deciding whether
+`KindBodyCtx.outWireRef` becomes an array, a named map, or a second
+named field. Resolve with David before the substrate edit lands.
 
 ## Carried items (still open)
 
 - R5 (watch-only): `app.tsx` coupling.
 
-## Next move
-
-No task branch in flight. Drive from session-log friction as usual.
-
 ## Conceptual frame
 
 - **Logic state IS visible state.** No render/logic split.
 - **Decentralized, not distributed.** No center exists.
-- **canAccept IS the trigger.** Wire-empty + dest-slot-empty invokes
-  `run()`. No scheduler, no walker, no clock.
+- **canAccept IS the trigger.** No scheduler, no walker, no clock.
 - **Running ≠ emitting.** Sources can run and decline to pulse.
 - **Concept-bounded code, not layer-bounded.**
 
@@ -65,7 +75,8 @@ No task branch in flight. Drive from session-log friction as usual.
 - Don't offer "next options" menus proactively. Wait for the user to
   name the next frame.
 - When designing fixes, first ask: what does the Go side do?
-- Use Claude Code as a fabricator, not a co-designer.
+- Delegate executor work to haiku/sonnet subagents; reserve main
+  Opus session for judgment.
 
 See `memory/feedback_substrate_vs_coordinator_bias.md` and
 `memory/feedback_visual_first_default.md`.
