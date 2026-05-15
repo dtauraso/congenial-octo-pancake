@@ -4,9 +4,10 @@
 // join's firing rule requires both slots filled. Under self-scheduling,
 // both sources fire on mount and deliver concurrently.
 
+import { createRef } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
-import { TopologyRoot } from "../../src/webview/substrate-r/TopologyRoot";
+import { TopologyRoot, type TopologyRootHandle } from "../../src/webview/substrate-r/TopologyRoot";
 import type { RTopologySpec } from "../../src/webview/substrate-r/spec";
 
 afterEach(() => { cleanup(); vi.useRealTimers(); });
@@ -42,19 +43,18 @@ function flushRaf() { act(() => { vi.advanceTimersByTime(50); }); }
 
 describe("2-input join", () => {
   it("only one predecessor delivers → join never emits; readgate stays empty", () => {
-    const { container } = render(<TopologyRoot spec={makeJoin([1], [])} />);
+    const ref = createRef<TopologyRootHandle>();
+    render(<TopologyRoot ref={ref} spec={makeJoin([1], [])} />);
     flushRaf();
     flushRaf();
-    const btn = container.querySelector('[data-input-id="in0"]')!;
-    expect(btn.getAttribute("data-armed")).toBe("false");
+    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("empty");
   });
 
   it("both predecessors deliver → join fires; readgate fills after arrivals", () => {
-    const { container } = render(<TopologyRoot spec={makeJoin([1], [2])} />);
+    const ref = createRef<TopologyRootHandle>();
+    render(<TopologyRoot ref={ref} spec={makeJoin([1], [2])} />);
     flushRaf();
     flushRaf();
-
-    const btn = container.querySelector('[data-input-id="in0"]')!;
-    expect(btn.getAttribute("data-armed")).toBe("true");
+    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
   });
 });

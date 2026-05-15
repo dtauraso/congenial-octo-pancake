@@ -2,12 +2,16 @@
 // stable wire/node refs, and binds each wire to its destination
 // (destNodeRef + destSlotId) at construction.
 
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, type RefObject } from "react";
 import { Wire, type WireHandle } from "./Wire";
 import { type NodeHandle } from "./Node";
 import { useHaltControl } from "./useHaltControl";
 import { parseSpec, nodePorts, type RTopologySpec, type RNodeSpec } from "./spec";
 import { renderKindBody } from "./node-kinds";
+
+export interface TopologyRootHandle {
+  node(id: string): NodeHandle | null;
+}
 
 export interface TopologyRootProps {
   spec: RTopologySpec;
@@ -43,7 +47,8 @@ function NodeView({
   });
 }
 
-export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
+export const TopologyRoot = forwardRef<TopologyRootHandle, TopologyRootProps>(
+function TopologyRoot({ spec, haltedOnMount }, ref) {
   const validated = useMemo(() => parseSpec(spec), [spec]);
   const wireRefsRef = useRef<Map<string, RefObject<WireHandle | null>>>(new Map());
   const nodeRefsRef = useRef<Map<string, RefObject<NodeHandle | null>>>(new Map());
@@ -65,6 +70,10 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
     nodeRefsRef.current = next;
     return next;
   }, [validated.nodes]);
+
+  useImperativeHandle(ref, () => ({
+    node: (id) => nodeRefs.get(id)?.current ?? null,
+  }));
 
   const driver = useHaltControl();
 
@@ -106,4 +115,4 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
       ))}
     </div>
   );
-}
+});

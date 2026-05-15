@@ -3,14 +3,15 @@
 // End-to-end smoke test for the self-scheduling substrate, driven by an
 // RTopologySpec. Mounts TopologyRoot with one Input → wire → ReadGate
 // and exercises the full cycle: InputBody self-fires on mount, wire
-// arrives, slot fills, button arms, click consumes, next pulse fires.
+// arrives, slot fills.
 //
 // arcLength=0 so the wire's first RAF tick triggers `complete`,
 // keeping the test deterministic under fake timers.
 
+import { createRef } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render } from "@testing-library/react";
-import { TopologyRoot } from "../../src/webview/substrate-r/TopologyRoot";
+import { act, cleanup, render } from "@testing-library/react";
+import { TopologyRoot, type TopologyRootHandle } from "../../src/webview/substrate-r/TopologyRoot";
 import type { RTopologySpec } from "../../src/webview/substrate-r/spec";
 
 afterEach(() => { cleanup(); vi.useRealTimers(); });
@@ -44,37 +45,36 @@ function flushRaf() {
 }
 
 describe("TopologyRoot end-to-end (spec-driven)", () => {
-  it("wire arrives → slot fills → button arms → click consumes", () => {
-    const { container } = render(<TopologyRoot spec={makeSpec([42])} />);
+  it("wire arrives → slot fills", () => {
+    const ref = createRef<TopologyRootHandle>();
+    render(<TopologyRoot ref={ref} spec={makeSpec([42])} />);
     flushRaf();
 
-    const btn = container.querySelector('[data-input-id="in0"]')!;
-    expect(btn.getAttribute("data-armed")).toBe("true");
-
-    act(() => { fireEvent.click(btn); });
-    expect(btn.getAttribute("data-armed")).toBe("false");
+    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
   });
 
-  it("subsequent pulse emits next value from the queue", () => {
-    const { container } = render(<TopologyRoot spec={makeSpec([1, 2])} />);
+  it("subsequent pulse fills slot again after consume", () => {
+    const ref = createRef<TopologyRootHandle>();
+    render(<TopologyRoot ref={ref} spec={makeSpec([1, 2])} />);
     flushRaf();
 
-    const btn = container.querySelector('[data-input-id="in0"]')!;
-    expect(btn.getAttribute("data-armed")).toBe("true");
-    act(() => { fireEvent.click(btn); }); // consume → slot empties → canAccept fires → next load
+    const gate = ref.current!.node("gate")!;
+    expect(gate.slotPhase("in0")).toBe("filled");
+    act(() => { gate.requestConsume("in0"); });
     flushRaf();
-    expect(btn.getAttribute("data-armed")).toBe("true");
-    act(() => { fireEvent.click(btn); });
-    expect(btn.getAttribute("data-armed")).toBe("false");
+    expect(gate.slotPhase("in0")).toBe("filled");
+    act(() => { gate.requestConsume("in0"); });
+    expect(gate.slotPhase("in0")).toBe("empty");
   });
 
-  it("queue exhaustion: no pulse after queue is empty", () => {
-    const { container } = render(<TopologyRoot spec={makeSpec([1])} />);
+  it("queue exhaustion: slot stays empty after queue drains", () => {
+    const ref = createRef<TopologyRootHandle>();
+    render(<TopologyRoot ref={ref} spec={makeSpec([1])} />);
     flushRaf();
 
-    const btn = container.querySelector('[data-input-id="in0"]')!;
-    act(() => { fireEvent.click(btn); }); // consume → canAccept fires → queue empty → no load
+    const gate = ref.current!.node("gate")!;
+    act(() => { gate.requestConsume("in0"); });
     flushRaf();
-    expect(btn.getAttribute("data-armed")).toBe("false");
+    expect(gate.slotPhase("in0")).toBe("empty");
   });
 });

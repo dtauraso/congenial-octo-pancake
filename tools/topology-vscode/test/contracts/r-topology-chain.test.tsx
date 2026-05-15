@@ -4,9 +4,10 @@
 // fires when its input arrives. Input fires on mount, relay fires when
 // w1 arrives, readgate slot fills when w2 arrives.
 
+import { createRef } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render } from "@testing-library/react";
-import { TopologyRoot } from "../../src/webview/substrate-r/TopologyRoot";
+import { act, cleanup, render } from "@testing-library/react";
+import { TopologyRoot, type TopologyRootHandle } from "../../src/webview/substrate-r/TopologyRoot";
 import type { RTopologySpec } from "../../src/webview/substrate-r/spec";
 
 afterEach(() => { cleanup(); vi.useRealTimers(); });
@@ -49,14 +50,11 @@ function flushRaf() { act(() => { vi.advanceTimersByTime(50); }); }
 
 describe("chain (Input → Relay → ReadGate)", () => {
   it("arrivals propagate the chain hop by hop; readgate fills", () => {
-    const { container } = render(<TopologyRoot spec={makeChain([7])} />);
+    const ref = createRef<TopologyRootHandle>();
+    render(<TopologyRoot ref={ref} spec={makeChain([7])} />);
     flushRaf(); // w1 arrives → relay fires
     flushRaf(); // w2 arrives → readgate slot fills
 
-    const btn = container.querySelector('[data-input-id="in0"]')!;
-    expect(btn.getAttribute("data-armed")).toBe("true");
-
-    act(() => { fireEvent.click(btn); });
-    expect(btn.getAttribute("data-armed")).toBe("false");
+    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
   });
 });

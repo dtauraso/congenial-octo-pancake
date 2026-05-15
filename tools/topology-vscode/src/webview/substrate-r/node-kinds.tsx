@@ -6,8 +6,8 @@
 // no ack — the wire returns to empty on arrival under its own
 // machinery.
 
-import { useCallback, useEffect, useRef, useState, type RefObject, type ReactNode } from "react";
-import { Node, type NodeHandle, type SlotPhase } from "./Node";
+import { useCallback, useEffect, useRef, type RefObject, type ReactNode } from "react";
+import { Node, type NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
 import type { RNodeKind } from "./spec";
 import { postLog } from "../log/post";
@@ -169,7 +169,6 @@ export function ReadGateBody({
 }) {
   const slots = slotIds.length > 0 ? slotIds : ["in0"];
   const key = slots.join("|");
-  const [phases, setPhases] = useState<SlotPhase[]>(() => slots.map(() => "empty"));
 
   const run = useCallback(() => {
     const handle = nodeRef.current;
@@ -189,57 +188,5 @@ export function ReadGateBody({
     wire.load(1);
   }, [nodeRef, outWireRef, key, traceId]);
 
-  useEffect(() => {
-    const handle = nodeRef.current;
-    if (!handle) return;
-    setPhases(slots.map((s) => handle.slotPhase(s)));
-    const unsubs = slots.map((s, i) =>
-      handle.subscribeSlot(s, (p) =>
-        setPhases((prev) => {
-          if (prev[i] === p) return prev;
-          const next = prev.slice();
-          next[i] = p;
-          return next;
-        }),
-      ),
-    );
-    return () => { for (const u of unsubs) u(); };
-  }, [nodeRef, key]);
-
-  const armed = phases.length === slots.length && phases.every((p) => p === "filled");
-  const onConsume = useCallback(() => {
-    const handle = nodeRef.current;
-    if (!handle) return;
-    for (const s of slots) handle.requestConsume(s);
-  }, [nodeRef, key]);
-
-  return (
-    <>
-      <Node ref={nodeRef} slots={slots} onRun={run} traceId={traceId} />
-      <button
-        type="button"
-        disabled={!armed}
-        onClick={armed ? onConsume : undefined}
-        data-armed={armed ? "true" : "false"}
-        data-input-id={slots.join(",")}
-        style={kindButtonStyle(armed)}
-      >
-        ⌫
-      </button>
-    </>
-  );
-}
-
-function kindButtonStyle(armed: boolean) {
-  return {
-    marginLeft: 6,
-    padding: "1px 6px",
-    fontSize: 11,
-    lineHeight: 1.2,
-    background: "#fff",
-    border: "1px solid #333",
-    borderRadius: 3,
-    cursor: armed ? "pointer" : "default",
-    opacity: armed ? 1 : 0.5,
-  } as const;
+  return <Node ref={nodeRef} slots={slots} onRun={run} traceId={traceId} />;
 }
