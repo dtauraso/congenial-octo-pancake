@@ -16,30 +16,28 @@ than keeping one slightly-larger doc.
 
 **Active branch:** `main`. All task branches merged and deleted.
 
-Recent merges landed:
+Recent commit landed:
 
-- `task/substrate-slot-in-node` → `main`
-- `task/self-scheduling-nodes` → `main` (carries R4 cleanup +
-  `useHaltControl` rename)
+- `remove ⌫ button from ReadGateBody; expose node handles via TopologyRoot ref` (395a2a9)
 
 111/111 vitest green, tsc clean on main.
 
 ## What was done this session
 
-**Carry items from self-scheduling-nodes:**
+- **Removed the ⌫ button from `ReadGateBody`:** The button was a
+  manual drain escape hatch for the no-out-wire case. `run()` never
+  depended on it; it only drove `armed` display state. Removed the
+  button, `onConsume`, `phases` state, and the slot subscription
+  machinery — all dead code once the button is gone.
 
-- **R4 import cleanup:** `RSubstrateEdge.tsx` imported `dashForKind`
-  and `markerEndUrl` from `../rf/`, pulling substrate-r up the stack.
-  Both are tiny pure functions; inlined them directly in
-  `RSubstrateEdge.tsx` and removed the rf imports.
+- **Exposed node handles from `TopologyRoot`:** Added
+  `TopologyRootHandle` interface with `node(id): NodeHandle | null`.
+  `TopologyRoot` is now a `forwardRef` component. Tests that previously
+  used `data-armed` on the button as a slot-phase proxy now call
+  `slotPhase()` directly through the ref.
 
-- **`useDriver` → `useHaltControl` rename:** File renamed to
-  `useHaltControl.ts`, function renamed, all call sites updated
-  (registry.tsx, TopologyRoot.tsx, test/contracts/r-driver.test.tsx).
-  Old file deleted.
-
-**Merges:** Both task branches landed on main, parked branch
-`task/in0-readgate-emission-ack` deleted.
+- **Rewrote five contract tests** to use the ref rather than button
+  DOM attributes: smoke, chain, join, readgate-emit, readgate-port.
 
 ## The model (settled — unchanged)
 
