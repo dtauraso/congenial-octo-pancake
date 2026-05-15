@@ -24,7 +24,7 @@
       {
         "id": "C1",
         "status": "headline",
-        "description": "Exactly one lane fires. Which lane wins is render-order dependent — the diagram annotates a representative outcome (A fires, B drains silent), not a deterministic guarantee.",
+        "description": "Covered with WEAKENED contract: asserts both IRG.right slots end empty (cross-inhibit was consumed). The diagram shows a representative single-winner outcome (A fires, B drains), but the topology cannot enforce single-winner exclusion with downstream-only inhibit wiring — a late-arriving L can still fire after R is drained.",
         "asserts": "exactly-one-lane-fires"
       }
     ]
@@ -36,7 +36,7 @@ in_A, in_B        — input nodes; each produces one value into its lane
 ci_A, ci_B        — chaininhibitor; lockstep fan-out: out (to same-lane IRG.left) + inhibitOut (to opposite-lane IRG.right)
 irg_A, irg_B      — inhibitrightgate; fires on L-alone; drains silent when R arrives first or simultaneously
 cross-wires       — ci_A.inhibitOut→irg_B.right (dashed orange); ci_B.inhibitOut→irg_A.right (dashed orange)
-C1 zone           — HEADLINE: asserts exactly one lane fires; which lane is render-order dependent
+C1 zone           — HEADLINE: covered with WEAKENED contract — asserts both IRG.right slots end empty (inhibit consumed)
   </desc>
 
   <style>
@@ -235,12 +235,12 @@ C1 zone           — HEADLINE: asserts exactly one lane fires; which lane is re
 
   <g id="annotation-render-order" data-role="annotation">
     <rect x="840" y="80" width="240" height="100" rx="4" class="behavior-note-bg"/>
-    <text x="960" y="98" font-size="11" fill="#f57f17" stroke="none" text-anchor="middle" font-weight="bold">Render-order note</text>
-    <text x="848" y="114" font-size="10" fill="#f57f17" stroke="none" text-anchor="start">Which lane wins depends on</text>
-    <text x="848" y="128" font-size="10" fill="#f57f17" stroke="none" text-anchor="start">goroutine scheduling order.</text>
-    <text x="848" y="142" font-size="10" fill="#f57f17" stroke="none" text-anchor="start">The assertion is exactly ONE</text>
-    <text x="848" y="156" font-size="10" fill="#f57f17" stroke="none" text-anchor="start">lane fires — not which one.</text>
-    <text x="848" y="170" font-size="10" fill="#f57f17" stroke="none" text-anchor="start">(A-fires shown as example.)</text>
+    <text x="960" y="98" font-size="11" fill="#f57f17" stroke="none" text-anchor="middle" font-weight="bold">Weakened contract</text>
+    <text x="848" y="114" font-size="10" fill="#f57f17" stroke="none" text-anchor="start">Downstream-only inhibit drains</text>
+    <text x="848" y="128" font-size="10" fill="#f57f17" stroke="none" text-anchor="start">IRG.right but cannot block a late</text>
+    <text x="848" y="142" font-size="10" fill="#f57f17" stroke="none" text-anchor="start">L from firing. Test asserts only:</text>
+    <text x="848" y="156" font-size="10" fill="#f57f17" stroke="none" text-anchor="start">both IRG.right slots end empty</text>
+    <text x="848" y="170" font-size="10" fill="#f57f17" stroke="none" text-anchor="start">(inhibit consumed) — not 1-winner.</text>
   </g>
 
   <!-- ═══════════════════════════════════════════════════════════ -->

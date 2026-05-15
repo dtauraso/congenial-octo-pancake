@@ -23,11 +23,11 @@ Integration test suite landed: 6 new test files covering IRG modes
 green.
 
 Plan visualized as SVG: [diagrams/test-plan/overview.svg](../../../diagrams/test-plan/overview.svg)
-(system-coverage map with scenario overlay zones — green=covered,
-orange=missing-at-plan-time, magenta=C1 headline) and
+(system-coverage map — all zones green=covered, magenta=C1 headline
+with weakened contract) and
 [diagrams/test-plan/lateral-cascade.svg](../../../diagrams/test-plan/lateral-cascade.svg)
-(C1 two-lane fixture detail). The "missing" overlay reflects plan
-state, not current state — all orange zones are now landed.
+(C1 two-lane fixture detail; on-canvas note states the weakened
+assertion).
 
 **Blocker discovered and documented:** C1 single-winner exclusion
 (exactly one IRG fires) is NOT achievable with CI.inhibitOut →
@@ -81,11 +81,14 @@ comment records the topology limitation for user judgment.
 
 ## Next move
 
-Merge `task/integrated-substrate-tests` to `main` (or continue on
-the branch). Address C1 single-winner exclusion: decide whether the
-topology design needs inhibit wired upstream of CI (blocking ci.in
-consumption) rather than downstream to IRG.right. If the circuit
-design changes, update the cascade fixture and remove the TODO comment.
+C1 single-winner exclusion: **accepted as weakened contract** for now.
+Test asserts both IRG.right slots end empty (inhibit consumed); the
+TODO comment in the cascade fixture records the topology limitation.
+Revisit only if a future task needs true mutual exclusion — that
+would require wiring inhibit upstream of CI fire (blocking ci.in
+consumption) rather than downstream to IRG.right.
+
+No task in flight. Wait for the next user-named frame.
 
 ## Carried items (still open)
 
@@ -117,7 +120,6 @@ See `memory/feedback_substrate_vs_coordinator_bias.md` and
 ## Open branches
 
 - `main` — production trunk.
-- `task/integrated-substrate-tests` — integration test suite, ready to merge.
 
 Branch hygiene: no merge to main without explicit sign-off. Delete
 merged branches without re-asking. Force-push needs sign-off.
