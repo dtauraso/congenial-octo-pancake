@@ -14,85 +14,72 @@ than keeping one slightly-larger doc.
 
 ## State at handoff (2026-05-14, end-of-session)
 
-**Active branch:** `task/self-scheduling-nodes`. The driver rewrite is
-complete. Commits in:
+**Active branch:** `task/self-scheduling-nodes`. All stages complete.
+Commits in:
 
 - `854359f` — trace-logging precursor
 - `4508bdc` — InputBody subscribes to outWire canAccept
 - `04e861e` — strip tick/step driver; nodes fire on their own triggers
+- `f17a5dd` — retire ChainInhibitor debug button
+- `3caf866` — wire seed prop primes inhibitor loop on mount
 
 111/111 vitest green, tsc clean, vocab clean at branch tip.
 
 ## What was done this session
 
-Stages 1–5 of the rewrite:
+**Stage 6 — bug verified** (3caf866):
 
-1. **InputBody self-subscription** (4508bdc): subscribes to
-   `outWire.canAccept`; fires `run()` once on mount.
-2. **Driver stripped** (04e861e): `useTickDriver` deleted; replaced by
-   `useDriver` (halt/resume/pauseAxis only, no walker, no tick, no
-   step). `registry.tsx` and `TopologyRoot.tsx` updated.
-3. **UI cleanup** (04e861e): step button removed from
-   `TransportControls.tsx`; tick span removed from `TopologyRoot.tsx`.
-4. **Tests rewritten** (04e861e): `r-tick-driver.test.tsx` deleted;
-   replaced by `r-driver.test.tsx` (halt/resume/pauseAxis contract).
-   Topology integration tests rewritten to assert on wire/slot phase
-   instead of tick value. `haltedOnMount` removed from test renders.
-5. **Vocab check** (04e861e): "self-schedule" and "pulse-arrival"
-   comments fixed. Vocab clean.
+The AND-gate loop (`readGate → i0 → i1 → readGate.chainIn2`) had no
+initial pulse on fresh load, so readGate never fired. Fixed by adding
+a `seed` prop to `Wire`: on mount, if `seed !== undefined`, the wire
+calls `load(seed)` once. The `i1.out->readGate.chainIn2` edge in
+`topology.json` carries `"seed": 1` in its `data` block.
 
-## The model (settled last session — unchanged)
+Threading path: `topology.json data.seed` → `spec-to-flow` hoists it
+to top-level edge data → `RSubstrateEdgeData.seed` → `Wire seed` prop.
+`RWireSpec` and `TopologyRoot` carry it for the test path too.
 
-- **No tick.** No tick counter, no tick concept on driver, nodes, or
-  edges.
+**Bug confirmed fixed:** log shows `readgate.fire` → `consume(chainIn)`
+→ `input.fire` all at the same timestamp. In08 fires the instant
+readGate consumes chainIn — independent of the i1→chainIn2 return
+pulse (which arrives ~5ms later). Decoupling is verified.
+
+## The model (settled — unchanged)
+
+- **No tick.** No tick counter, no tick concept on driver, nodes, or edges.
 - **No step.** Driver surface is `halt` / `resume` + `pauseAxis`.
 - **Node runs the moment canAccept fires.** Wire-empty + dest-slot-empty
   is the trigger. No driver poll, no round walk.
 - **Running ≠ emitting.** `run()` is a handler that may or may not
   pulse out depending on local preconditions.
-- **`useDriver`** exists solely to implement the user-facing halt/resume
-  toggle. It is a halt-control, not a coordinator. The name "driver" is
-  a misnomer; a rename to `useHaltControl` was noted but not done.
-
-## Next move — Stage 6: verify the original bug
-
-The motivating bug: in0's emission cadence was coupled to peer-source
-pulse arrival via the global round-close. With the round-close gone,
-in0 should fire as soon as `readGate.chainIn` transitions to empty —
-regardless of where the i1→chainIn2 pulse is.
-
-Reproduce the topology in
-[topology.json](../../../topology.json), run the editor, inspect
-`.probe/webview-log.jsonl`. Expected: `trace.input.fire` for in0
-appears within microseconds of `trace.consume` on readGate.chainIn,
-not after the i1→chainIn2 delivery.
+- **`useDriver`** is a halt-control, not a coordinator. Rename to
+  `useHaltControl` noted, not done.
 
 ## Carried items (still open)
 
 - R4: substrate-up-the-stack import in `RSubstrateEdge.tsx`
   (`dashForKind`, `markerEndUrl` from `../rf/`).
 - R5 (watch-only): `app.tsx` coupling.
-- Retire `ChainInhibitor`'s `⇢` debug button — not a source, should
-  not have source powers. Self-scheduling rewrite is the right moment:
-  ChainInhibitor's `run()` is triggered by slot fill; the manual emit
-  button has no place.
 - `useDriver` rename to `useHaltControl` — noted, not done.
-- `task/in0-readgate-emission-ack` parked, auto-retire signal hit,
-  awaiting deletion sign-off.
+- `task/in0-readgate-emission-ack` — parked, awaiting deletion sign-off.
+
+## Next move
+
+Branch is complete. Candidates for next session:
+
+- Merge `task/substrate-slot-in-node` → `main`, then
+  `task/self-scheduling-nodes` → `main` (needs explicit sign-off).
+- Delete `task/in0-readgate-emission-ack` (needs sign-off).
+- Carry items above (R4 import cleanup, `useHaltControl` rename).
 
 ## Conceptual frame
 
 - **Logic state IS visible state.** No render/logic split.
-- **Decentralized, not distributed.** No center exists. The tick/step
-  was a coordinator; it is gone.
-- **canAccept IS the trigger.** Wire-empty + dest-slot-empty on an
-  adjacent wire is what invokes `run()`. No scheduler. No walker. No
-  clock.
-- **Running ≠ emitting.** Sources can run (canAccept fires) and decline
-  to pulse (queue empty). Consumers can run (input arrives) and decline
-  to pulse (out wire blocked, AND-gate not satisfied).
-- **Concept-bounded code, not layer-bounded.** substrate-r/ files are
-  one per model concept.
+- **Decentralized, not distributed.** No center exists.
+- **canAccept IS the trigger.** Wire-empty + dest-slot-empty invokes
+  `run()`. No scheduler, no walker, no clock.
+- **Running ≠ emitting.** Sources can run and decline to pulse.
+- **Concept-bounded code, not layer-bounded.**
 
 ## Working mode
 
@@ -108,10 +95,9 @@ See `memory/feedback_substrate_vs_coordinator_bias.md` and
 ## Open branches
 
 - `main` — production trunk.
-- `task/substrate-slot-in-node` — concept-bounded refactor landed;
-  parent of the current branch. Eligible for merge to main once
-  self-scheduling work concludes.
-- `task/self-scheduling-nodes` — this branch.
+- `task/substrate-slot-in-node` — eligible for merge to main.
+- `task/self-scheduling-nodes` — this branch; eligible for merge
+  once `task/substrate-slot-in-node` lands.
 - `task/in0-readgate-emission-ack` — parked, deletion needs sign-off.
 
 Branch hygiene: no merge to main without explicit sign-off. Delete
@@ -119,12 +105,9 @@ merged branches without re-asking. Force-push needs sign-off.
 
 ## Dev-loop
 
-Read [MODEL.md](../../../MODEL.md) and
-[useDriver.ts](../../../tools/topology-vscode/src/webview/substrate-r/useDriver.ts)
-(the halt-control; soon to be renamed). After any substrate-r edit,
-run `npm run build` — vitest/tsc alone don't refresh `out/webview.js`
-(stop-hook does, but only when bundled TS changed and output is older
-than input).
+After any substrate-r edit, run `npm run build` — vitest/tsc alone
+don't refresh `out/webview.js` (stop-hook does, but only when bundled
+TS changed and output is older than input).
 
 Cwd for tsc/tests/check:loc/build: `tools/topology-vscode/`.
 
