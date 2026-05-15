@@ -14,12 +14,20 @@ than keeping one slightly-larger doc.
 
 ## State at handoff (2026-05-14, end-of-session)
 
-**Active branch:** `task/integrated-substrate-tests` (pushed).
+**Active branch:** `main`, clean against `origin/main`. Task branch
+`task/integrated-substrate-tests` was ff-merged and deleted.
 
 Integration test suite landed: 6 new test files covering IRG modes
 (A5–A8), CI fan-out (B1–B2), lateral cascade (C1–C2), backpressure
 (D1–D3), and misc contracts (E1, F1, D3-ext). 125 total tests, all
 green.
+
+Plan visualized as SVG: [diagrams/test-plan/overview.svg](../../../diagrams/test-plan/overview.svg)
+(system-coverage map with scenario overlay zones — green=covered,
+orange=missing-at-plan-time, magenta=C1 headline) and
+[diagrams/test-plan/lateral-cascade.svg](../../../diagrams/test-plan/lateral-cascade.svg)
+(C1 two-lane fixture detail). The "missing" overlay reflects plan
+state, not current state — all orange zones are now landed.
 
 **Blocker discovered and documented:** C1 single-winner exclusion
 (exactly one IRG fires) is NOT achievable with CI.inhibitOut →
