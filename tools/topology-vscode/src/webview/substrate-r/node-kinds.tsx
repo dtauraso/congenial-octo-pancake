@@ -39,6 +39,8 @@ export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
       return <ReadGateBody nodeRef={nodeRef} slotIds={slotIds} outWireRef={outWireRefs["out"]} traceId={traceId} />;
     case "inhibitrightgate":
       return <InhibitRightGateBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} leftSlotId={slotIds[0]} rightSlotId={slotIds[1]} traceId={traceId} />;
+    case "register":
+      return <RegisterBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} traceId={traceId} />;
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -167,6 +169,41 @@ export function ChainInhibitorBody({
     wire.load(value);
     if (inhibitWire) inhibitWire.load(value);
   }, [nodeRef, outWireRef, inhibitOutWireRef, slotId]);
+
+  return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
+}
+
+// Register (delay buffer): emits the held secondary value when a pulse
+// arrives, then stores the incoming secondary for the next round.
+// This is a one-round shift-register pattern.
+
+export function RegisterBody({
+  nodeRef, outWireRef, slotId = "in0", traceId,
+}: {
+  nodeRef: RefObject<NodeHandle | null>;
+  outWireRef?: RefObject<WireHandle | null>;
+  slotId?: string;
+  traceId?: string;
+}) {
+  const heldRef = useRef<unknown>(null);
+
+  const run = useCallback(() => {
+    const node = nodeRef.current;
+    const wire = outWireRef?.current;
+    if (!node || !wire) return;
+    if (node.slotPhase(slotId) !== "filled") return;
+    if (!wire.canAccept) return;
+    const incoming = node.consume(slotId) as { primary: unknown; secondary: unknown } | unknown;
+    const incomingSecondary = incoming !== null && typeof incoming === "object" && "secondary" in (incoming as object)
+      ? (incoming as { primary: unknown; secondary: unknown }).secondary
+      : incoming;
+    const incomingPrimary = incoming !== null && typeof incoming === "object" && "primary" in (incoming as object)
+      ? (incoming as { primary: unknown; secondary: unknown }).primary
+      : 1;
+    const emitted = heldRef.current;
+    heldRef.current = incomingSecondary;
+    wire.load({ primary: incomingPrimary, secondary: emitted });
+  }, [nodeRef, outWireRef, slotId]);
 
   return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
 }
