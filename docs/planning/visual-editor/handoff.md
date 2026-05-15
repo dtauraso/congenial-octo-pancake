@@ -12,31 +12,43 @@ than keeping one slightly-larger doc.
 
 ---
 
-## State at handoff (2026-05-14, post-merge)
+## State at handoff (2026-05-15)
 
-**Active branch:** `main` — no task branch in flight.
+**Active branch:** `task/pulse-secondary-value` — all 5 plan commits landed.
 
-`task/formalize-control-flow-timing` merged to main at `c485461`
-and was deleted. All 125 tests green; build clean.
+Branch is **not yet merged to main**. Do not merge without explicit sign-off.
 
-## What landed (task/formalize-control-flow-timing)
+## What landed (task/pulse-secondary-value)
 
-- `1e8eeff` — docs: reframe arcLength:0 as visible-duration collapse
-  in test fixtures
-- `9bea44c` — feat: fan-out convergence observable event
-  (`subscribeFanoutConvergence` in `substrate-r/fanout-convergence.ts`)
-- `cafdcc7` — revert per-wire speed (tried and rejected; see decision below)
-- `6f8fef1` — docs(model): name firing rule as control-flow event in MODEL.md
-- `01bdfaf` — docs(planning): mark §6 of `partitioned-launching-fog.md`
-  as tried-and-rejected; "Three additions" list updated
+- `spec.ts`: added `"register"` to `RNodeKind`, `value?: unknown` to
+  `RWireSpec`, and `register: { inputs: ["in0"], outputs: ["out"] }` to
+  `NODE_KIND_PORTS`.
+- `Wire.tsx`: added `value?: unknown` prop; seed mount effect emits
+  structured `{primary: seed, secondary: value}` when both present;
+  `formatRidingLabel` helper (`p:s` format for structured values);
+  `data-testid` on riding-label text element.
+- `TopologyRoot.tsx` + `RSubstrateEdge.tsx`: wire `value` prop threaded
+  through both test path and editor path (same commit — landing rule).
+- `spec-to-flow.ts`: `value` field round-tripped in edge data.
+- `node-kinds.tsx`: `ReadGateBody` emits `{primary:1, secondary}` where
+  `secondary = slots.length >= 2 ? 1 : 0`; `RegisterBody` (new) is a
+  one-round delay buffer — emits held secondary on fire, stores incoming.
+- `inhibit-right-gate.tsx`: relay-style transparent forwarding of `leftValue`.
+- `e2e/riding-label.spec.ts` + `e2e/fixtures/riding-label.json`: updated
+  for RAF (not WAAPI) delivery; fixture has real input queue; assertion
+  expects `"7"`.
+- `test/contracts/r-topology-readgate-register.test.tsx` (new): two
+  contract tests — Register round-1 emits null; ReadGate→Register chain
+  end-to-end.
 
-## Decision recorded: pulse speed is uniform
+All 127 tests green; build clean; tsc --noEmit clean.
 
-Per-wire `speed` on `RWireSpec` was implemented and immediately
-reverted on user feedback. Pulse speed is uniform across all wires.
-If future work implies heterogeneous timing (e.g., inhibit arrives
-first), the mechanism is topology-level (shorter path, upstream
-wiring), not a per-wire knob. See `memory/feedback_uniform_pulse_speed.md`.
+## Open items
+
+- No Playwright e2e for ReadGate→Register chain (plan step 5 mentioned
+  one; skipped because contract tests cover the semantics and the e2e
+  harness needs a running extension host). Revisit if a concrete need arises.
+- `task/pulse-secondary-value` awaits merge sign-off from David.
 
 ## The model (settled)
 
@@ -46,12 +58,9 @@ wiring), not a per-wire knob. See `memory/feedback_uniform_pulse_speed.md`.
   is the trigger — this is the named control-flow event.
 - **Running ≠ emitting.** `run()` is a handler; pulsing out depends
   on local preconditions.
-
-## Open items
-
-None. The two prior threads (fanout-convergence wiring into C1, and
-C1 single-winner exclusion tightening) are explicitly deferred —
-revisit only if a future task surfaces a concrete need.
+- **Secondary value** is the data channel on a pulse; primary is the
+  control-flow event signal. ReadGate encodes slot-count in secondary
+  (0 for 1-slot, 1 for 2+). Register is a one-round shift-register.
 
 ## Conceptual frame
 
@@ -74,6 +83,7 @@ revisit only if a future task surfaces a concrete need.
 ## Open branches
 
 - `main` — production trunk, active.
+- `task/pulse-secondary-value` — complete, awaiting merge sign-off.
 
 Branch hygiene: no merge to main without explicit sign-off. Delete
 merged branches without re-asking. Force-push needs sign-off.
