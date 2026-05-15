@@ -80,31 +80,77 @@ The substrate-vs-coordinator bias surfaced again — see
 The global round-close looked like a clean tick definition; it's
 actually a coordinator.
 
-## Next move
+## Next move — the judgment call (settle BEFORE touching code)
 
-**Single concrete step (per CLAUDE.md substrate posture):** redesign
-the driver so each node self-schedules on its own preconditions, not
-on a global wire-quiescence gate.
+The driver rewrite is mechanical once the model question is settled.
+The model question is: **what is a tick under self-scheduling?**
 
-Sketch (NOT a plan to execute without user sign-off):
+### Constraints the answer must satisfy
 
-- Drop the all-wires-empty round-close from `useTickDriver`.
-- Each node's `run()` is invoked when its preconditions could have
-  changed: source → its own out-wire phase or dest slot transitioning
-  to empty (via `subscribePhase` / `subscribeSlot`); consumer/gate →
-  any of its slots transitioning to filled.
-- Pause axis (one global play/pause gate) stays — it's the only
-  centralized thing the model allows.
-- Tick definition needs re-derivation: [MODEL.md:63-68](../../../MODEL.md#L63-L68)
-  defines a tick as "one round of edges that had activity at the same
-  moment" — observable in the edges, not stored. The current driver
-  collapses this onto wall-clock round-close, which is wrong. Open
-  question: how is a tick counted under self-scheduling?
+1. **Decentralized.** No central walker. No global round-close gate.
+   No node consults a coordinator to decide whether to fire.
+   ([MODEL.md:70-72](../../../MODEL.md#L70-L72))
+2. **Observable in the edges, not stored.** A tick is a property of
+   activity, not a counter on any node or driver.
+   ([MODEL.md:63-68](../../../MODEL.md#L63-L68))
+3. **Source independence.** in0 fires when its own wire is empty AND
+   its own dest slot is empty. Nothing else. No transitive coupling
+   to peer sources through the tick definition.
+4. **Step / pause / resume still work.** The pause axis is the one
+   centralized thing the model allows; step needs to advance
+   "something" by "one tick." If a tick isn't a global round, what
+   does "step" mean?
 
-**Before touching code:** sit with the model. Re-read MODEL.md and
-the substrate-vs-coordinator memory. The tick-redefinition is the
-judgment call — get that right before mechanically rewriting the
-driver.
+### Candidate framings (each has a cost)
+
+- **A. Tick = wall-clock frame.** Each RAF frame is a tick.
+  Self-scheduling nodes fire whenever their preconditions hold; the
+  tick counter increments off the frame loop. *Cost:* couples tick
+  semantics to display refresh; "step one tick" advances time, not
+  causality. Loses the "edge cohort" property entirely.
+- **B. Tick = per-edge.** Each edge has its own tick counter,
+  incremented when that edge transitions empty → in-flight. No
+  global tick. *Cost:* "the tick" of the system doesn't exist;
+  step/pause must operate per-edge or per-cascade.
+- **C. Tick = cohort (deferred design).** A tick is a maximal set of
+  edges that fired causally-simultaneously. Observable by walking
+  edge timestamps after the fact. See
+  [docs/planning/cohort-future-feature.md](../cohort-future-feature.md).
+  *Cost:* the original cohort design was retired as a foot-gun; this
+  re-derives it. Step is hard — you can't pre-commit to a cohort
+  boundary, only observe it.
+- **D. Tick = self-scheduling node-fire count.** Each node fires
+  when ready; the tick is the count of fires anywhere. *Cost:*
+  trivially monotonic but meaningless as a causal layer.
+
+The retired cohort design (C) is the one MODEL.md gestures at. The
+question is whether a v1 self-scheduling driver needs a tick
+*concept* at all, or whether tick-counting becomes a post-hoc
+observation layer over a substrate that just runs.
+
+### Step semantics under self-scheduling
+
+Step today = "run one round of run() calls, wait for all wires
+empty, then pause." That definition dies with the global round.
+Re-deriving step means deciding what one unit of advance IS when
+nodes are independently scheduled. Possible framings:
+
+- Step = advance until the next wire transition (any edge).
+- Step = advance until the next node fires (any node).
+- Step = advance until the system reaches the next quiescent state
+  (no in-flight wires anywhere). This is today's round-close but
+  triggered only by step, not by every advance.
+
+The third reproduces today's pause-step UX without making it the
+substrate's heartbeat. Probably the right answer, but flag for user
+review — it's the user-visible contract.
+
+### What "settled" looks like
+
+Before any code change to `useTickDriver`, the next session should
+produce a 5–15-line answer in the handoff (or a sibling doc) of the
+form: "A tick is X. Step means Y. Tick counter lives Z." With those
+three pinned, the rewrite is editable in ~an hour.
 
 **Carried items from prior branch:**
 - R4: substrate-up-the-stack import in `RSubstrateEdge.tsx`
