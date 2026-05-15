@@ -1,12 +1,11 @@
 // TopologyRoot: orchestrator. Validates the spec via parseSpec, builds
-// stable wire/node refs, binds each wire to its destination
-// (destNodeRef + destSlotId) at construction, and runs the tick
-// driver across them.
+// stable wire/node refs, and binds each wire to its destination
+// (destNodeRef + destSlotId) at construction.
 
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Wire, type WireHandle } from "./Wire";
 import { type NodeHandle } from "./Node";
-import { useTickDriver } from "./useTickDriver";
+import { useDriver } from "./useDriver";
 import { parseSpec, nodePorts, type RTopologySpec, type RNodeSpec } from "./spec";
 import { renderKindBody } from "./node-kinds";
 
@@ -67,11 +66,7 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
     return next;
   }, [validated.nodes]);
 
-  const driverConfig = useMemo(() => ({
-    nodeRefs: Array.from(nodeRefs.values()),
-    wireRefs: Array.from(wireRefs.values()),
-  }), [nodeRefs, wireRefs]);
-  const driver = useTickDriver(driverConfig);
+  const driver = useDriver();
 
   useEffect(() => {
     if (haltedOnMount) driver.halt();
@@ -83,8 +78,6 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
         <button onClick={driver.halt} data-testid="halt">halt</button>
         <button onClick={driver.resume} data-testid="resume">resume</button>
-        <button onClick={driver.step} data-testid="step">step</button>
-        <span data-testid="tick">tick: {driver.tick}</span>
         <span data-testid="halted">{driver.halted ? "halted" : "running"}</span>
       </div>
       <svg width={600} height={200} data-testid="topology-svg">

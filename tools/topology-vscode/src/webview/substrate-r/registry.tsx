@@ -1,7 +1,6 @@
 // Substrate registry context. Each <RSubstrateEdge> registers its
 // <Wire>'s ref by edge id; each <RSubstrateNode> registers its <Node>'s
-// ref by node id. The provider runs useTickDriver across the
-// currently-registered refs.
+// ref by node id. The provider exposes the driver (halt/resume/pauseAxis).
 
 import {
   createContext, useCallback, useContext, useMemo, useRef, useState,
@@ -9,14 +8,14 @@ import {
 } from "react";
 import type { WireHandle } from "./Wire";
 import type { NodeHandle } from "./Node";
-import { useTickDriver, type TickDriverHandle } from "./useTickDriver";
+import { useDriver, type DriverHandle } from "./useDriver";
 
 interface Registry {
   registerWire(id: string, ref: RefObject<WireHandle | null>): () => void;
   registerNode(id: string, ref: RefObject<NodeHandle | null>): () => void;
   getWireRef(id: string): RefObject<WireHandle | null> | undefined;
   getNodeRef(id: string): RefObject<NodeHandle | null> | undefined;
-  driver: TickDriverHandle;
+  driver: DriverHandle;
 }
 
 const Ctx = createContext<Registry | null>(null);
@@ -35,17 +34,7 @@ export function SubstrateProvider({ children }: { children: ReactNode }) {
   const [version, setVersion] = useState(0);
   const bump = useCallback(() => setVersion((v) => v + 1), []);
 
-  const nodeRefs = useMemo(
-    () => Array.from(nodeMapRef.current.values()),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [version],
-  );
-  const wireRefs = useMemo(
-    () => Array.from(wireMapRef.current.values()),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [version],
-  );
-  const driver = useTickDriver({ nodeRefs, wireRefs });
+  const driver = useDriver();
 
   const registerWire = useCallback(
     (id: string, ref: RefObject<WireHandle | null>) => {

@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 //
-// Chain: Input → Relay → ReadGate. With the legacy all-wires round-close,
-// one step walks the chain to quiescence: all nodes fire, all wires
-// complete, then the round closes in a single step.
+// Chain: Input → Relay → ReadGate. Under self-scheduling, each node
+// fires when its input arrives. Input fires on mount, relay fires when
+// w1 arrives, readgate slot fills when w2 arrives.
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
@@ -48,16 +48,10 @@ function makeChain(queue: unknown[]): RTopologySpec {
 function flushRaf() { act(() => { vi.advanceTimersByTime(50); }); }
 
 describe("chain (Input → Relay → ReadGate)", () => {
-  it("step + arrivals propagate the chain hop by hop; readgate fills", () => {
-    const { getByTestId, container } = render(
-      <TopologyRoot spec={makeChain([7])} haltedOnMount />,
-    );
-    expect(getByTestId("tick").textContent).toBe("tick: 0");
-
-    act(() => { fireEvent.click(getByTestId("step")); });
-    flushRaf();
-    flushRaf();
-    expect(getByTestId("tick").textContent).toBe("tick: 1");
+  it("arrivals propagate the chain hop by hop; readgate fills", () => {
+    const { container } = render(<TopologyRoot spec={makeChain([7])} />);
+    flushRaf(); // w1 arrives → relay fires
+    flushRaf(); // w2 arrives → readgate slot fills
 
     const btn = container.querySelector('[data-input-id="in0"]')!;
     expect(btn.getAttribute("data-armed")).toBe("true");

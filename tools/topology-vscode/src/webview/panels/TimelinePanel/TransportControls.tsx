@@ -1,5 +1,5 @@
-// Play / pause / step against the in-webview substrate driver.
-// Reads halted state and calls halt/resume/step directly via the
+// Play / pause against the in-webview substrate driver.
+// Reads halted state and calls halt/resume directly via the
 // SubstrateProvider context — no postMessage.
 
 import { useRegistry } from "../../substrate-r/registry";
@@ -11,9 +11,6 @@ export function TransportControls({ label }: { label: string }) {
     if (paused) driver.resume();
     else driver.halt();
   };
-  const onStep = () => {
-    driver.step();
-  };
   return (
     <>
       <button
@@ -23,14 +20,6 @@ export function TransportControls({ label }: { label: string }) {
         onClick={onPlayPause}
       >
         {paused ? "▶" : "⏸"}
-      </button>
-      <button
-        type="button"
-        className="timeline-step"
-        title="step one event"
-        onClick={onStep}
-      >
-        ⏭
       </button>
       <span className="timeline-time">{label}</span>
     </>

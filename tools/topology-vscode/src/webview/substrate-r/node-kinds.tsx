@@ -72,10 +72,9 @@ export function InputBody({
     handle.load(v);
   }, [outWireRef, traceId]);
 
-  // Self-schedule: pulse-arrival on the outgoing wire (or downstream
-  // consume freeing the dest slot) is the trigger to attempt the next
-  // emit. Also fire once on mount so an initially-empty wire+slot
-  // releases the first pulse without external driving.
+  // Subscribe to canAccept: wire-empty + dest-slot-empty is the trigger
+  // to attempt the next emit. Fire once on mount so an initially-empty
+  // wire+slot releases the first pulse without external driving.
   useEffect(() => {
     const handle = outWireRef.current;
     if (!handle) return;

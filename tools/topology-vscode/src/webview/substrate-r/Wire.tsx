@@ -168,7 +168,7 @@ export interface WireHandle {
   subscribePhase(listener: (phase: Phase) => void): () => void;
   // Fires whenever a transition could change canAccept: wire phase
   // changes (load/arrive) or the destination slot transitions. Sources
-  // use this to self-schedule on pulse-arrival.
+  // subscribe to trigger their next emit attempt.
   subscribeCanAccept(listener: () => void): () => void;
 }
 
