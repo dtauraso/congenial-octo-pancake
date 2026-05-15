@@ -131,9 +131,7 @@ export function JoinBody({
   return <Node ref={nodeRef} slots={[slotAId, slotBId]} onRun={run} traceId={traceId} />;
 }
 
-// ChainInhibitor: consumes its slot and forwards on tick when the
-// out wire can accept. The manual ⇢ button is a debug aid emitting
-// a literal `1` when the out wire is free.
+// ChainInhibitor: consumes its slot and forwards when the out wire can accept.
 
 export function ChainInhibitorBody({
   nodeRef, outWireRef, slotId = "in", traceId,
@@ -143,41 +141,17 @@ export function ChainInhibitorBody({
   slotId?: string;
   traceId?: string;
 }) {
-  const [canEmit, setCanEmit] = useState(false);
-
   const run = useCallback(() => {
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
-    setCanEmit(wire.canAccept);
     if (node.slotPhase(slotId) !== "filled") return;
     if (!wire.canAccept) return;
     const value = node.consume(slotId);
     wire.load(value);
   }, [nodeRef, outWireRef, slotId]);
 
-  const onEmit = useCallback(() => {
-    const wire = outWireRef.current;
-    if (!wire || !wire.canAccept) return;
-    wire.load(1);
-    setCanEmit(false);
-  }, [outWireRef]);
-
-  return (
-    <>
-      <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />
-      <button
-        type="button"
-        disabled={!canEmit}
-        onClick={canEmit ? onEmit : undefined}
-        data-armed={canEmit ? "true" : "false"}
-        data-emit-id={slotId}
-        style={kindButtonStyle(canEmit)}
-      >
-        ⇢
-      </button>
-    </>
-  );
+  return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
 }
 
 // ReadGate: variable-arity AND. When the instance declares an `out`
