@@ -7,6 +7,24 @@ Pulses currently carry one value — `seed` from `RWireSpec`. The goal is a
 slot pipeline, observable by both the wire (mid-flight label) and the
 destination slot (consumer body).
 
+## Purpose: transformed data flow
+
+The secondary value is the mechanism for transporting **transformed data** from
+a node across a wire to the next node. The primary value is the control-flow
+event signal (per MODEL.md) — it triggers the pulse and governs timing. The
+secondary value is the **data channel** node bodies compute over.
+
+Each node may emit a different secondary value than it received, based on that
+node's rules. Today most bodies (RelayBody, etc.) simply forward the consumed
+value — their rule is the identity transformation. Once secondary-value
+transformation is in scope, node bodies become the locus of computation: each
+kind's rule defines how the outgoing secondary relates to the incoming secondary
+(and possibly to other filled slots).
+
+A fresh reader should understand: the secondary value isn't decoration alongside
+the pulse — it is the data path. The pulse remains the control-flow event;
+the secondary value is what node rules transform.
+
 ## Design decisions
 
 ### 1. Payload shape — tagged object vs 2-tuple
