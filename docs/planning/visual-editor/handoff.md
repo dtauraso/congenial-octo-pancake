@@ -14,34 +14,24 @@ than keeping one slightly-larger doc.
 
 ## State at handoff (2026-05-14, end-of-session)
 
-**Active branch:** `main`. No task branch in flight. 5 commits ahead
-of `origin/main` (not pushed).
+**Active branch:** `main`, clean against `origin/main` (all work
+pushed). No task branch in flight.
 
-`InhibitRightGate` is **landed and working in the live editor** —
-pulses confirmed flowing through the cascade with the new lateral
-inhibit edges in place.
+`InhibitRightGate` is landed and working in the live editor — pulses
+flow through the cascade with the lateral inhibit edges in place.
 
 ## What was done this session
 
-1. **SVG plan diagrams updated** (`fb8f80a`) to surface sign-off
-   decisions and the multi-output shape: DECISION badges on
-   topology/firing SVGs (R2, R3); three side-by-side option panels
-   for Risk 1 (KindBodyCtx shape) on the dispatch SVG.
-2. **`KindBodyCtx` migrated to named map** (`8ddd331`):
-   `outWireRef: RefObject<...>` → `outWireRefs: Record<string,
-   RefObject<...>>`. Both wire-prop fork sites updated
-   (`TopologyRoot.tsx` and `RSubstrateNode.tsx`).
-3. **InhibitRightGate landed** (`950eba1`): new
-   `substrate-r/inhibit-right-gate.tsx`, `spec.ts` registration,
-   `renderKindBody` dispatch case, `chaininhibitor` outputs extended
-   to `["inhibitOut", "out"]`, ChainInhibitorBody updated for
-   lockstep fan-out (option (A)), `topology.json` + `topology.view.json`
-   add `inhibitRight0` with two new `inhibit-in` edges.
-4. **Deadlock fix** (`b6b1b33`): the gate's body bailed before
-   draining `left` when (a) no out wire was connected or (b) both
-   slots were filled. Lockstep fan-out then froze i0. Rewrote `run()`
-   against the full INHIBIT(L=1,R=0) truth table; `left` always
-   drains when warranted, emit is conditional.
+- **R5 dropped** from carried items. `app.tsx` is fully decomposed
+  (`app/_*` hooks + `AppView`); the legacy `bridge.ts` coupling that
+  R5 was watching for is gone post-React-migration. No action needed.
+- **InhibitRightGate test follow-up dropped** at user direction —
+  the gate is working live; tests deferred indefinitely.
+- **`readNew` schema entry removed** from ChainInhibitor
+  (`node-types.ts`). Was declared as a third output but
+  `NODE_KIND_PORTS` and the body never had it — latent
+  schema/runtime divergence. Re-add when a topology actually
+  needs the new-arrival pulse.
 
 ## Resolved sign-off decisions (recorded for future kinds)
 
@@ -72,14 +62,8 @@ inhibit edges in place.
 
 ## Next move
 
-No queued task. Open follow-ups (friction-driven, pick when relevant):
-
-- **`readNew` output port on ChainInhibitor.** Schema declares it
-  (`node-types.ts`), but `NODE_KIND_PORTS` only lists
-  `["inhibitOut", "out"]`. No body-side consumer yet — add when a
-  topology actually uses it, otherwise leave dormant.
-- **Push 5 unpushed commits to `origin/main`** when you're ready
-  (`fb8f80a`, `8ddd331`, `950eba1`, `b6b1b33`, plus this handoff).
+No queued task. No open follow-ups. Wait for the user to name the
+next frame.
 
 ## Carried items (still open)
 
