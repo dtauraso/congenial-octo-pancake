@@ -202,8 +202,16 @@ export function RegisterBody({
       : 1;
     const emitted = heldRef.current;
     heldRef.current = incomingSecondary;
+    if (traceId) postLog("trace.register.fire", { node: traceId, emitted, incoming: incomingSecondary });
     wire.load({ primary: incomingPrimary, secondary: emitted });
   }, [nodeRef, outWireRef, slotId]);
+
+  // Re-try run when the output wire becomes available (backpressure release).
+  useEffect(() => {
+    const wire = outWireRef?.current;
+    if (!wire) return;
+    return wire.subscribeCanAccept(run);
+  }, [outWireRef, run]);
 
   return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
 }
