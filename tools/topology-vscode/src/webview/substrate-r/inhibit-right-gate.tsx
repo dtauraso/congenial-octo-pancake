@@ -18,22 +18,32 @@ export function InhibitRightGateBody({
 }) {
   const run = useCallback(() => {
     const node = nodeRef.current;
-    const wire = outWireRef.current;
     if (!node) return;
+    const leftFilled = node.slotPhase(leftSlotId) === "filled";
+    const rightFilled = node.slotPhase(rightSlotId) === "filled";
 
-    if (node.slotPhase(rightSlotId) === "filled") {
+    if (leftFilled && rightFilled) {
+      node.consume(leftSlotId);
       node.consume(rightSlotId);
-      if (traceId) postLog("trace.inhibitrightgate.skip", { node: traceId, reason: "right-inhibited" });
+      if (traceId) postLog("trace.inhibitrightgate.skip", { node: traceId, reason: "both-filled" });
       return;
     }
+    if (rightFilled) {
+      node.consume(rightSlotId);
+      if (traceId) postLog("trace.inhibitrightgate.skip", { node: traceId, reason: "right-only" });
+      return;
+    }
+    if (!leftFilled) return;
 
-    if (!wire) return;
-    if (node.slotPhase(leftSlotId) !== "filled") return;
-    if (!wire.canAccept) return;
-
+    const wire = outWireRef.current;
+    if (wire && !wire.canAccept) return;
     node.consume(leftSlotId);
-    if (traceId) postLog("trace.inhibitrightgate.fire", { node: traceId });
-    wire.load(1);
+    if (wire) {
+      if (traceId) postLog("trace.inhibitrightgate.fire", { node: traceId });
+      wire.load(1);
+    } else {
+      if (traceId) postLog("trace.inhibitrightgate.skip", { node: traceId, reason: "no-out-wire-drain" });
+    }
   }, [nodeRef, outWireRef, leftSlotId, rightSlotId, traceId]);
 
   return <Node ref={nodeRef} slots={[leftSlotId, rightSlotId]} onRun={run} traceId={traceId} />;
