@@ -18,31 +18,19 @@ than keeping one slightly-larger doc.
 
 Recent commits landed:
 
+- `spec-to-flow: thread data.route fallback; set i1->readGate route=below`
 - `InputBody queue restart: explicit state machine + [0,1] init data`
 
 111/111 vitest green, tsc clean on main.
 
 ## What was done this session
 
-- **InputBody queue restart:** When the input queue exhausts, the
-  animation now restarts automatically. Implemented as an explicit
-  two-phase state machine (`"draining" | "exhausted"`) in `InputBody`
-  rather than a silent ref mutation inside `run()`.
-
-  - `run()` is the pure firing rule: only fires when `draining`.
-  - `onCanAccept` is the state machine driver: transitions
-    `exhausted → draining` (refills queue from `initialQueueRef`) then
-    delegates to `run()`.
-  - `initialQueueRef` captures the original queue so `run`'s dep array
-    stays stable.
-
-- **Test updated:** "queue exhaustion: slot stays empty" → "queue
-  restart: slot refills after queue drains" — now expects `"filled"`
-  after consuming and flushing RAF.
-
-- **Input init data narrowed:** `topology.json` `in08.data.init`
-  changed from `[0,1,0,1,0,1,0,1,0,1]` to `[0,1]`. The restart
-  behavior makes the long sequence redundant.
+- **Edge route plumbing fix:** `topology.json` edge `data.route` was
+  silently ignored — `spec-to-flow.ts` only read `ev?.route` from
+  `topology.view.json`. Added a fallback so `data.route` is honored
+  when the view doesn't override. Set `route: "below"` on
+  `i1.out->readGate.chainIn2` so the return wire arcs beneath the
+  node row instead of being z-occluded by intervening nodes.
 
 ## The model (settled — unchanged)
 
