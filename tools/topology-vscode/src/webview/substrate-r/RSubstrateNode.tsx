@@ -9,13 +9,15 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { Handle, Position, useStore, type NodeProps } from "reactflow";
+import type * as React from "react";
 import { KIND_COLORS, type EdgeKind } from "../../schema";
 import type { NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
-import { InputBody, ReadGateBody } from "./node-kinds";
+import { renderKindBody } from "./node-kinds";
 import { useRegistry } from "./registry";
+import { toRNodeKind } from "./spec";
 
-interface PortDef { name: string; kind: EdgeKind }
+interface PortDef { name: string; kind: EdgeKind; side?: "left" | "right" }
 
 interface RSubstrateNodeData {
   type?: string;
@@ -44,7 +46,7 @@ function handleStyle(side: "left" | "right", pct: number, color: string): React.
 
 export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
   const { id, data, selected } = props;
-  const kind = (data?.type ?? "").toLowerCase();
+  const kind = toRNodeKind(data?.type);
   const nodeRef = useRef<NodeHandle | null>(null);
   const registry = useRegistry();
 
@@ -52,19 +54,14 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
 
   const inputs = data?.inputs ?? [];
   const outputs = data?.outputs ?? [];
-  const firstInputPort = inputs[0]?.name;
   const firstOutputPort = outputs[0]?.name;
 
-  // Look up incoming/outgoing edge ids from React Flow's store.
-  const inWireId = useStore((s) => firstInputPort
-    ? s.edges.find((e) => e.target === id && e.targetHandle === firstInputPort)?.id
-    : undefined);
+  // Look up outgoing edge id from React Flow's store.
   const outWireId = useStore((s) => firstOutputPort
     ? s.edges.find((e) => e.source === id && e.sourceHandle === firstOutputPort)?.id
     : undefined);
 
   const NULL_REF = useMemo<{ current: WireHandle | null }>(() => ({ current: null }), []);
-  const inWireRef = inWireId ? (registry.getWireRef(inWireId) ?? NULL_REF) : NULL_REF;
   const outWireRef = outWireId ? (registry.getWireRef(outWireId) ?? NULL_REF) : NULL_REF;
 
   const width = data?.width ?? 90;
@@ -87,36 +84,44 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
         boxSizing: "border-box",
       }}
     >
-      {inputs.map((p, i) => (
-        <Handle
-          key={`in-${p.name}`}
-          id={p.name}
-          type="target"
-          position={Position.Left}
-          style={handleStyle("left", ((i + 1) * 100) / (inputs.length + 1), KIND_COLORS[p.kind] ?? "#888")}
-        />
-      ))}
-      {outputs.map((p, i) => (
-        <Handle
-          key={`out-${p.name}`}
-          id={p.name}
-          type="source"
-          position={Position.Right}
-          style={handleStyle("right", ((i + 1) * 100) / (outputs.length + 1), KIND_COLORS[p.kind] ?? "#888")}
-        />
-      ))}
+      {(() => {
+        const leftIns = inputs.filter((p) => (p.side ?? "left") === "left");
+        const rightIns = inputs.filter((p) => p.side === "right");
+        const leftOuts = outputs.filter((p) => p.side === "left");
+        const rightOuts = outputs.filter((p) => (p.side ?? "right") === "right");
+        const leftPorts = [...leftIns, ...leftOuts];
+        const rightPorts = [...rightIns, ...rightOuts];
+        return (
+          <>
+            {leftPorts.map((p, i) => (
+              <Handle
+                key={`l-${p.name}`}
+                id={p.name}
+                type={inputs.includes(p) ? "target" : "source"}
+                position={Position.Left}
+                style={handleStyle("left", ((i + 1) * 100) / (leftPorts.length + 1), KIND_COLORS[p.kind] ?? "#888")}
+              />
+            ))}
+            {rightPorts.map((p, i) => (
+              <Handle
+                key={`r-${p.name}`}
+                id={p.name}
+                type={inputs.includes(p) ? "target" : "source"}
+                position={Position.Right}
+                style={handleStyle("right", ((i + 1) * 100) / (rightPorts.length + 1), KIND_COLORS[p.kind] ?? "#888")}
+              />
+            ))}
+          </>
+        );
+      })()}
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         <span style={{ fontWeight: 500 }}>{data?.label ?? id}</span>
-        {kind === "input" && (
-          <InputBody
-            nodeRef={nodeRef}
-            outWireRef={outWireRef}
-            initialQueue={data?.nodeData?.init ?? []}
-          />
-        )}
-        {kind === "readgate" && (
-          <ReadGateBody nodeRef={nodeRef} inWireRef={inWireRef} />
-        )}
+        {kind && renderKindBody(kind, {
+          nodeRef,
+          outWireRef,
+          slotIds: inputs.map((p) => p.name),
+          initialQueue: data?.nodeData?.init ?? [],
+        })}
       </div>
       {data?.sublabel && <div style={{ fontSize: 9, opacity: 0.7 }}>{data.sublabel}</div>}
     </div>

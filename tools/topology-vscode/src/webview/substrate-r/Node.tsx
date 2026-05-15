@@ -1,54 +1,96 @@
-// <Node>: substrate's node primitive realized as a render-less imperative
-// component. Exposes run() (called by the tick driver) and
-// requestTake(inputId) (called by host-rendered manual-take affordances).
-// Visual rendering of the take button lives in the host node component
-// so it can sit in the same HTML/SVG layer as the node body.
+// <Node>: substrate's node primitive. Owns input slots — each slot is
+// passive state on the destination node, not on the wire arriving at
+// it. Slots are declared by id at mount time and start `empty`.
+//
+// Slot phases recognized in this commit: "empty" | "filled". The
+// model's "consumed" intermediate is collapsed into consume()'s atomic
+// filled→empty for now (no observable difference yet).
+//
+// onRun is invoked by the tick driver each round and (per the model)
+// re-invoked whenever a slot is written, so auto destinations can fire
+// without waiting for the next round walk.
 
 import {
-  forwardRef, useImperativeHandle, useRef, type RefObject,
+  forwardRef, useImperativeHandle, useMemo, useRef,
 } from "react";
-import type { WireHandle } from "./Wire";
+
+export type SlotPhase = "empty" | "filled";
 
 export interface NodeHandle {
   run(): void;
-  requestTake(inputId: string): void;
-}
-
-export interface NodeInputDescriptor {
-  id: string;
-  wireRef: RefObject<WireHandle | null>;
-  manualTake?: boolean;
-}
-
-export interface NodeOutputDescriptor {
-  id: string;
-  wireRef: RefObject<WireHandle | null>;
+  fill(slotId: string, value: unknown): void;
+  consume(slotId: string): unknown;
+  slotPhase(slotId: string): SlotPhase;
+  subscribeSlot(slotId: string, cb: (p: SlotPhase) => void): () => void;
+  requestConsume(slotId: string): void;
 }
 
 export interface NodeProps {
-  inputs?: NodeInputDescriptor[];
-  outputs?: NodeOutputDescriptor[];
+  slots?: string[];
   onRun?: () => void;
+  onConsume?: (slotId: string, value: unknown) => void;
+}
+
+interface SlotState {
+  phase: SlotPhase;
+  value: unknown;
+  listeners: Set<(p: SlotPhase) => void>;
 }
 
 export const Node = forwardRef<NodeHandle, NodeProps>(function Node(
-  { inputs = [], onRun }, ref,
+  { slots = [], onRun, onConsume }, ref,
 ) {
   const onRunRef = useRef(onRun);
   onRunRef.current = onRun;
+  const onConsumeRef = useRef(onConsume);
+  onConsumeRef.current = onConsume;
 
-  const requestTake = (inputId: string) => {
-    const input = inputs.find((i) => i.id === inputId);
-    if (!input) return;
-    const handle = input.wireRef.current;
-    if (!handle) return;
-    if (handle.phase.kind !== "loaded") return;
-    handle.take();
+  const slotMap = useMemo(() => {
+    const m = new Map<string, SlotState>();
+    for (const id of slots) m.set(id, { phase: "empty", value: undefined, listeners: new Set() });
+    return m;
+  }, [slots.join("|")]);
+
+  const get = (slotId: string): SlotState => {
+    const s = slotMap.get(slotId);
+    if (!s) throw new Error(`Node: unknown slot ${slotId}`);
+    return s;
   };
 
   useImperativeHandle(ref, () => ({
     run: () => onRunRef.current?.(),
-    requestTake,
+    fill(slotId, value) {
+      const s = get(slotId);
+      if (s.phase !== "empty") throw new Error(`Node: fill ${slotId} while ${s.phase}`);
+      s.phase = "filled";
+      s.value = value;
+      for (const l of s.listeners) l("filled");
+      onRunRef.current?.();
+    },
+    consume(slotId) {
+      const s = get(slotId);
+      if (s.phase !== "filled") throw new Error(`Node: consume ${slotId} while ${s.phase}`);
+      const v = s.value;
+      s.phase = "empty";
+      s.value = undefined;
+      for (const l of s.listeners) l("empty");
+      return v;
+    },
+    slotPhase: (slotId) => get(slotId).phase,
+    subscribeSlot(slotId, cb) {
+      const s = get(slotId);
+      s.listeners.add(cb);
+      return () => { s.listeners.delete(cb); };
+    },
+    requestConsume(slotId) {
+      const s = get(slotId);
+      if (s.phase !== "filled") return;
+      const v = s.value;
+      s.phase = "empty";
+      s.value = undefined;
+      for (const l of s.listeners) l("empty");
+      onConsumeRef.current?.(slotId, v);
+    },
   }));
 
   return null;

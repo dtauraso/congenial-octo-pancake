@@ -28,6 +28,11 @@ export type Node = {
   spec?: NodeSpec;
   notes?: string;
   data?: unknown;
+  // Per-instance port override. When present, supersedes
+  // NODE_TYPES[type].inputs/outputs. Used for variable-arity kinds
+  // (e.g. ReadGate, an AND over N input slots).
+  inputs?: Port[];
+  outputs?: Port[];
 };
 
 export type Edge = {

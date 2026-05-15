@@ -55,10 +55,12 @@ export function validatePorts(s: Spec): void {
     if (!dst) { issues.push(`edge ${e.id}: unknown target ${e.target}`); continue; }
     const srcDef = NODE_TYPES[src.type];
     const dstDef = NODE_TYPES[dst.type];
-    if (srcDef && e.sourceHandle && !srcDef.outputs.some((p) => p.name === e.sourceHandle)) {
+    const srcOutputs = src.outputs ?? srcDef?.outputs;
+    const dstInputs = dst.inputs ?? dstDef?.inputs;
+    if (srcOutputs && e.sourceHandle && !srcOutputs.some((p) => p.name === e.sourceHandle)) {
       issues.push(`edge ${e.id}: ${src.type} has no output port "${e.sourceHandle}"`);
     }
-    if (dstDef && e.targetHandle && !dstDef.inputs.some((p) => p.name === e.targetHandle)) {
+    if (dstInputs && e.targetHandle && !dstInputs.some((p) => p.name === e.targetHandle)) {
       issues.push(`edge ${e.id}: ${dst.type} has no input port "${e.targetHandle}"`);
     }
     if (e.targetHandle) {
@@ -69,9 +71,10 @@ export function validatePorts(s: Spec): void {
   }
   for (const n of s.nodes) {
     const def = NODE_TYPES[n.type];
-    if (!def) continue;
+    const inputs = n.inputs ?? def?.inputs;
+    if (!inputs) continue;
     const wired = wiredInputs.get(n.id) ?? new Set<string>();
-    for (const p of def.inputs) {
+    for (const p of inputs) {
       if (p.required && !wired.has(p.name)) {
         issues.push(
           `node ${n.id} (${n.type}): required input "${p.name}" has no incoming edge`,

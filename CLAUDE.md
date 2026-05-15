@@ -2,8 +2,8 @@
 
 ## Substrate model — read first
 
-Before changing anything in `tools/topology-vscode/src/substrate/`, the
-wire primitive, or anything that schedules/orders work, read
+Before changing anything in `tools/topology-vscode/src/webview/substrate-r/`,
+the wire primitive, or anything that schedules/orders work, read
 [MODEL.md](MODEL.md). It pins the substrate model and the banned
 vocabulary that signals drift. If your reasoning uses banned
 vocabulary, you are in the wrong frame — stop and re-derive from the
@@ -20,70 +20,42 @@ Lateral inhibition, contrast detection, and competitive binding are implemented 
 
 The long-term goal is constant-time equality, multiplication, and set membership using the same topology.
 
-## Core concepts
+## Core concepts and backpressure
 
-**Inhibitor chain** — data cascades forward through ChainInhibitorNodes. Each inhibitor can suppress neighboring timelines via lateral inhibition, so only the strongest matching timeline claims input.
+Both live in [MODEL.md](MODEL.md): the inhibitor chain, edge nodes,
+partition nodes, AND-gate tree, lateral inhibition, slot-in-node
+backpressure, and round-close stepping. The "Substrate model"
+pointer at the top of this file is the only entry point you need.
 
-**Edge nodes (XOR)** — detect contrast between adjacent inhibitors. Fire when input aligns with a partition's timing window.
+## Substrate primitive landing rule (narrowed)
 
-**Partition nodes** — define timing windows. When contrast is detected, the winning partition suppresses other timelines.
+**Node kinds:** auto-landed. `renderKindBody` in `node-kinds.tsx` is
+the single dispatch — both `TopologyRoot` (tests) and `RSubstrateNode`
+(editor) call it. Adding a kind = one switch case + the `RNodeKind`
+type in `spec.ts`. No second path to forget.
 
-**AND gate tree** — reduces per-inhibitor signals up the hierarchy. AND gates serve three roles:
-1. Reduction within a partition (all inhibitors matched → one signal up)
-2. Cross-timeline equality detection (two hierarchies traversed same distance → AND fires)
-3. Set membership (small timing delay variant)
+**Wire props and registry/driver plumbing:** still need both paths.
+`RSubstrateEdge` threads wire props from the React Flow store into
+`<Wire>`; `TopologyRoot` threads them from the validated spec. A new
+wire prop must be added in both places (or in a shared helper) in the
+same commit, otherwise the editor diverges silently from the model.
 
-**Lateral inhibition** — ensures only one timeline claims each input. Neighbors get suppressed so binding works cleanly.
-
-## Latch + AND gate backpressure pattern
-
-Prevents channel overwrite in the pipeline. Each pipeline segment:
-
-```
-source → readLatch → inhibitor → detectorLatch → inhibitor → ...
-```
-
-Each latch holds one value and releases only when its controlling AND gate fires. The AND gate waits for:
-1. Detectors (sbd, sd) finished processing the current value
-2. Downstream latch ack (next pipeline slot is free)
-
-**Concrete wiring:**
-- `readGate = AND(in0Ready, detectorLatchAck)` → releases `readLatch`
-- `syncGate = AND(sbd0Done, sd0Done)` → releases `detectorLatch`
-- Each `detectorLatch` acks the gate controlling the previous latch
-
-See `docs/latch-backpressure.md` for the full cycle description.
+History: this rule used to cover node kinds too, after a series of
+half-landings during the slot-in-node work (memory:
+`feedback-substrate-landing-requires-editor-path`). The shared
+`renderKindBody` switch (concept-bounded refactor) eliminated that
+scope; the rule now covers only the remaining fork.
 
 ## Two modes, same machinery
 
-- **Self-sustaining mode:** Partitions cycle through hierarchical data continuously — already running, already bound.
-- **Disruption mode:** External input perturbs the running system, causing data cascades, XOR contrast changes, and lateral inhibition conflicts.
+Disruption mode (external input perturbs the running system) is built first; self-sustaining mode (partitions cycling continuously) layers on top.
 
-Build order: get the disruption/response machinery solid first, then add the self-cycling layer on top.
+## Node kinds
 
-## Node types
-
-| Directory | Role |
-|-----------|------|
-| `InputNode/` | Feeds values into the chain |
-| `ReadLatchNode/` | Holds input until readGate fires |
-| `ChainInhibitorNode/` | Cascades data, suppresses neighbors |
-| `LatchNode/` / `SyncLatchNode/` | General latches |
-| `EdgeNode/` | XOR contrast detector between adjacent inhibitors |
-| `StreakDetector/` | Detects same-sign runs (-1,-1 or 1,1) |
-| `StreakBreakDetector/` | Detects sign changes (1,-1 or -1,1) |
-| `AndGateNode/` | Logical AND over multiple input signals |
-| `SyncGateNode/` | AND gate controlling latch release |
-| `ReadGateNode/` | AND gate controlling readLatch release |
-| `PartitionNode/` | Defines a timing window |
-| `DistributeNode/` | Branches/spawns timelines |
-| `TransferInhibitorNode/` | Moves partition endpoint refs along chain |
-| `InhibitorNode/` | Base inhibitor |
-| `CascadeAndGateNode/` | Legacy — replaced by latch+gate+ack pattern |
-
-## Diagrams
-
-`diagrams/topology-chain-cascade.svg` — current reference diagram showing the latch + AND gate backpressure topology for a two-inhibitor chain. All lines are orthogonal (snake-routed).
+Active node kinds live under
+`tools/topology-vscode/src/webview/substrate-r/`. See `node-kinds.tsx`
+and siblings for the current registry; the per-kind role is documented
+on the kind itself rather than duplicated here.
 
 ## SVG output
 
@@ -96,25 +68,34 @@ does not touch SVGs, skip it.
 
 ## Memory
 
-Project memory lives in `memory/` at the repo root. Files:
-- `memory/project_architecture.md` — system design and big-picture goals
-- `memory/project_backpressure_pattern.md` — latch + AND gate backpressure wiring
-- `memory/project_sustained_activity.md` — self-cycling particle design direction
-- `memory/user_background.md` — user context and working style
-- `memory/feedback_open_files.md` — tooling preferences
+Project memory lives in `memory/` at the repo root, one file per
+memory (auto-memory naming convention: `project_*`, `feedback_*`,
+`user_*`). `memory/MEMORY.md` is the index.
 
 ## File size budget
 
 - **Trigger threshold:** any source file ≥ **200 LOC** must be refactored.
 - **Refactor target:** split until every resulting file is ≤ **100 LOC**.
-- Applies to TypeScript (`.ts`, `.tsx`) **and** the three CLAUDE.md-directed Markdown reads that grow over time: [session-log.md](docs/planning/visual-editor/session-log.md), [audits.md](docs/planning/visual-editor/audits.md), [handoff.md](docs/planning/visual-editor/handoff.md). Same rule applies to any files split off from them (sibling `<name>-<suffix>.md` in the same dir, or files under a `<name>/` subdir). Go, other Markdown, JSON, fixtures, and generated files are exempt — the rule is motivated by the topology-vscode webview/sim growing past 500 LOC and by those three docs being mandated reads, and the Go side has different cohesion conventions.
+- Applies to TypeScript (`.ts`, `.tsx`) **and** [audits.md](docs/planning/visual-editor/audits.md) (CLAUDE.md-directed read that grows over time). Same rule applies to any files split off from it. Go, other Markdown, JSON, fixtures, and generated files are exempt. `session-log.md` and `handoff.md` are exempt: a fresh AI session must read handoff.md end-to-end, and splitting it into siblings (the prior approach) forced sequential reads of 3-4 files, which audit 19 found costs more than reading one slightly-larger doc. Keep handoff.md under ~200 LOC as a soft target via editorial pruning, not by splitting.
+- **Substance carve-out:** [tools/topology-vscode/src/webview/substrate-r/](tools/topology-vscode/src/webview/substrate-r/) is exempt. These files are concept-bounded — one file per model concept (Node, Wire, Slot, Axis). Splitting them along technical-role axes (type / geometry / animation / dispatch) fragments the concept across files and forces re-projection on every read. The byte budget targets *medium* files (editor wrapper, app shell, utilities); it is the wrong rule for *substance* code. See [diagrams/refactor-concept-bounded/](diagrams/refactor-concept-bounded/) for rationale.
 - The rule is **always active**, including mid-design and mid-debug. If you finish an unrelated change and notice the file is now over 200, refactor in a follow-up commit before moving on.
 - Run `npm run check:loc` (in `tools/topology-vscode/`) to list offenders. The script is the source of truth — keep this rule and the script in sync.
+
+## Bash hygiene (keep AI round-trips snappy)
+
+Bash output goes straight into the AI's context. Wide-fan commands
+return hundreds of irrelevant matches from `node_modules/`, planning
+docs, and the auto-memory dir, costing tokens and time.
+
+- **`grep`**: always scope. For code, use `--include="*.ts" --include="*.tsx"`. For repo-wide searches, exclude noise: `--exclude-dir={node_modules,out,.git,handoff-archive,memory,docs/planning/visual-editor/audits}`.
+- **`find`**: never run `find .` unguarded — `tools/topology-vscode/node_modules/` has multi-MB files. Use `-not -path "*/node_modules/*" -not -path "*/out/*" -not -path "*/.git/*"` or just scope to a specific subtree.
+- **`ls`**: prefer a specific subdir over wide listings; pipe to `head` if you only need a sample.
+- Planning docs (`docs/planning/visual-editor/`, `memory/`, `audits/`) contain domain vocabulary — grep them only when the question is about *planning state*, not when looking for code.
 
 ## Workflow
 
 - **Commit and push freely on task branches.** Per-commit sign-off is no longer required (relaxed post-v0; editing or reverting committed code is cheap). Sign-off IS still required for: merging a task branch into `main`, force-pushes, branch deletion, dependency removal, and any other destructive or shared-state action called out in the system prompt's "Executing actions with care" section.
-- Build and run before reporting a change as ready; verify output matches previous run. If verification fails, fix forward or revert — don't leave broken state on the branch.
+- Build and run before reporting a change as ready; verify output matches previous run. If verification fails, fix forward or revert — don't leave broken state on the branch. **`tsc --noEmit` and vitest alone do not refresh `out/webview.js`** — if a TS change needs to be exercised in the live editor, run `npm run build` (the Stop hook does this automatically; manual subagent verifications do not).
 - One logical change per commit.
 - Push each commit to the current task branch.
 - **Cost markers:** only record a `($N.NN)` cost marker on a commit (or bundle of commits) when the work was sized at **≥$5 expected** beforehand. Sub-$5 work lands without a marker. Bundle small commits into ≥$5 chunks for marker purposes. Pre-v0 sub-$5 markers stay as historical record but are no longer the convention.
@@ -135,11 +116,7 @@ be a fresh model with no transcript.
 
 ## Posture (post-v0)
 
-The visual editor reached v0 (see [docs/planning/visual-editor-plan.md](docs/planning/visual-editor-plan.md)). Going forward:
-
-- **Friction-driven, not phase-driven.** New work is justified by friction surfaced during real-world editor use, logged in [docs/planning/visual-editor/session-log.md](docs/planning/visual-editor/session-log.md). Per-phase plans are dormant unless friction patterns revive them.
-- **Audit registry** at [docs/planning/visual-editor/audits.md](docs/planning/visual-editor/audits.md) describes the kinds of audits that exist (CI-backed, human-driven, AI-driven). Read it before proposing audit-style work.
-- **Working mode:** user drives the editor and narrates observations; assistant logs to session-log.md and makes changes; debug sessions between user and assistant as needed.
+Visual editor reached v0. New work is friction-driven, not phase-driven (per-phase plans are archived under `docs/planning/visual-editor/archive/`); justify changes from real-world editor use logged in [session-log.md](docs/planning/visual-editor/session-log.md). Audit kinds (CI-backed, human-driven, AI-driven) live in [audits.md](docs/planning/visual-editor/audits.md) — read it before proposing audit-style work. Working mode: user drives the editor and narrates; assistant logs and makes changes.
 
 ## Model routing
 

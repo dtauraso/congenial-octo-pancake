@@ -22,13 +22,18 @@ const EXCLUDE_PATH_FRAGMENTS = [
   "/.vscode-test/",
   "/__fixtures__/",
   "/test-fixtures/",
+  // Substance carve-out: substrate-r/ files are concept-bounded, not
+  // byte-bounded. See CLAUDE.md "File size budget" — the budget targets
+  // medium files (editor wrapper, app shell), not the substrate primitives
+  // that encode the model. Fragmenting them costs more in reading-trips
+  // than it saves in file size.
+  "/substrate-r/",
 ];
 
 // CLAUDE.md-directed reads that grow over time. The 200/100 rule extends
 // to these and any files split off from them (sibling files in the same
 // directory prefix).
 const INCLUDED_MD_PREFIXES = [
-  "docs/planning/visual-editor/session-log",
   "docs/planning/visual-editor/audits",
   "docs/planning/visual-editor/handoff",
 ];

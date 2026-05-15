@@ -1,8 +1,26 @@
 // Node-type registry. Single source of truth for ports and visual
 // styling per node type. `kind` values must match SVG edge classes
 // from docs/svg-style-guide.md §5.
+//
+// Entries split into IMPLEMENTED (have a substrate runtime, animate)
+// and ASPIRATIONAL (palette-only, will drop but not fire). Membership
+// is executable, not prose — see RUNTIME_IMPLEMENTED_KINDS below.
+// Runtime allow-list lives in RNodeKind / toRNodeKind
+// (webview/substrate-r/spec.ts); this set mirrors it in PascalCase.
 
 import type { NodeTypeDef } from "./types-graph";
+
+// PascalCase mirror of RNodeKind (webview/substrate-r/spec.ts). A
+// kind in this set has a substrate runtime and will animate; a kind
+// in NODE_TYPES but NOT in this set is palette-only. Keep in sync
+// with spec.ts; toRNodeKind enforces the lowercase form at runtime.
+export const RUNTIME_IMPLEMENTED_KINDS: ReadonlySet<string> = new Set([
+  "Input",
+  "Relay",
+  "Join",
+  "ReadGate",
+  "ChainInhibitor",
+]);
 
 export const NODE_TYPES: Record<string, NodeTypeDef> = {
   Generic: {
@@ -16,10 +34,16 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     outputs: [{ name: "out", kind: "chain" }],
     shape: "rect", fill: "#e0e0e0", stroke: "#666", width: 80, height: 60,
   },
+  Relay: {
+    role: "relay",
+    inputs: [{ name: "in0", kind: "chain" }],
+    outputs: [{ name: "out", kind: "chain" }],
+    shape: "rect", fill: "#e8f5e9", stroke: "#2e7d32", width: 70, height: 40,
+  },
   ReadLatch: {
     role: "latch",
     inputs: [{ name: "in", kind: "chain" }, { name: "release", kind: "release" }],
-    outputs: [{ name: "out", kind: "chain" }, { name: "ack", kind: "feedback-ack" }],
+    outputs: [{ name: "out", kind: "chain" }],
     shape: "rect", fill: "#e0f7fa", stroke: "#00838f", width: 90, height: 50,
     defaultProps: { delay: 1 },
   },
@@ -30,7 +54,6 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
       { name: "inhibitOut", kind: "inhibit-in" },
       { name: "readNew", kind: "edge-connection" },
       { name: "out", kind: "chain" },
-      { name: "ack", kind: "feedback-ack" },
     ],
     shape: "rect", fill: "#fff3e0", stroke: "#e65100", width: 90, height: 60,
   },
@@ -43,7 +66,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
   DetectorLatch: {
     role: "latch",
     inputs: [{ name: "in", kind: "chain" }, { name: "release", kind: "release" }],
-    outputs: [{ name: "out", kind: "chain" }, { name: "ack", kind: "feedback-ack" }],
+    outputs: [{ name: "out", kind: "chain" }],
     shape: "rect", fill: "#e0f7fa", stroke: "#00838f", width: 90, height: 50,
     defaultProps: { delay: 1 },
   },

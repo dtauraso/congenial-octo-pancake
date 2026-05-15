@@ -1,6 +1,7 @@
 // Parsers for Node, Edge, NodeSpec, SpecSegment.
 
 import { EDGE_KINDS } from "./types";
+import type { Port } from "./types";
 import type {
   Edge,
   Node,
@@ -18,6 +19,21 @@ import {
   stateMap,
   str,
 } from "./parse-primitives";
+
+function parsePort(v: unknown, path: string): Port {
+  const o = obj(v, path);
+  const out: Port = {
+    name: str(o.name, `${path}.name`),
+    kind: oneOf(o.kind, EDGE_KINDS, `${path}.kind`),
+  };
+  if (o.required !== undefined) out.required = bool(o.required, `${path}.required`);
+  if (o.side !== undefined) out.side = oneOf(o.side, ["left", "right"] as const, `${path}.side`);
+  return out;
+}
+
+function parsePorts(v: unknown, path: string): Port[] {
+  return arr(v, path).map((p, i) => parsePort(p, `${path}[${i}]`));
+}
 
 function parseSpecSegment(v: unknown, path: string): SpecSegment {
   const o = obj(v, path);
@@ -46,6 +62,8 @@ export function parseNode(v: unknown, path: string): Node {
     spec: opt(o.spec, (x) => parseNodeSpec(x, `${path}.spec`)),
     notes: opt(o.notes, (x) => str(x, `${path}.notes`)),
     data: o.data,
+    inputs: opt(o.inputs, (x) => parsePorts(x, `${path}.inputs`)),
+    outputs: opt(o.outputs, (x) => parsePorts(x, `${path}.outputs`)),
   };
 }
 

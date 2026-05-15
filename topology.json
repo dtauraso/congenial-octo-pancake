@@ -9,7 +9,28 @@
     },
     {
       "id": "readGate1",
-      "type": "ReadGate"
+      "type": "ReadGate",
+      "inputs": [
+        { "name": "chainIn", "kind": "chain" },
+        { "name": "chainIn2", "kind": "chain" }
+      ],
+      "outputs": [
+        { "name": "out", "kind": "chain" }
+      ]
+    },
+    {
+      "id": "i0",
+      "type": "ChainInhibitor",
+      "outputs": [
+        { "name": "out", "kind": "chain" }
+      ]
+    },
+    {
+      "id": "i1",
+      "type": "ChainInhibitor",
+      "outputs": [
+        { "name": "out", "kind": "chain", "side": "left" }
+      ]
     }
   ],
   "edges": [
@@ -21,6 +42,42 @@
       "targetHandle": "chainIn",
       "kind": "chain",
       "label": "inputToReadGate",
+      "data": {
+        "slots": 1
+      }
+    },
+    {
+      "id": "readGate.out->i0.in",
+      "source": "readGate1",
+      "sourceHandle": "out",
+      "target": "i0",
+      "targetHandle": "in",
+      "kind": "chain",
+      "label": "readGateToI0",
+      "data": {
+        "slots": 1
+      }
+    },
+    {
+      "id": "i0.out->i1.in",
+      "source": "i0",
+      "sourceHandle": "out",
+      "target": "i1",
+      "targetHandle": "in",
+      "kind": "chain",
+      "label": "i0ToI1",
+      "data": {
+        "slots": 1
+      }
+    },
+    {
+      "id": "i1.out->readGate.chainIn2",
+      "source": "i1",
+      "sourceHandle": "out",
+      "target": "readGate1",
+      "targetHandle": "chainIn2",
+      "kind": "chain",
+      "label": "i1ToReadGate",
       "data": {
         "slots": 1
       }

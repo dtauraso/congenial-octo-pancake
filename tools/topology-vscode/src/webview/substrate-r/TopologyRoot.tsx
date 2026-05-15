@@ -1,23 +1,18 @@
-// TopologyRoot: orchestrator for the new substrate. Builds the wire
-// and node tree from an RTopologySpec, runs useTickDriver across all
-// of them, and exposes halt/resume/step controls.
+// TopologyRoot: orchestrator. Validates the spec via parseSpec, builds
+// stable wire/node refs, binds each wire to its destination
+// (destNodeRef + destSlotId) at construction, and runs the tick
+// driver across them.
 
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Wire, type WireHandle } from "./Wire";
 import { type NodeHandle } from "./Node";
 import { useTickDriver } from "./useTickDriver";
-import type { RTopologySpec, RNodeSpec } from "./spec";
-import { InputBody, ReadGateBody } from "./node-kinds";
+import { parseSpec, nodePorts, type RTopologySpec, type RNodeSpec } from "./spec";
+import { renderKindBody } from "./node-kinds";
 
 export interface TopologyRootProps {
   spec: RTopologySpec;
   haltedOnMount?: boolean;
-}
-
-function findWireForInput(
-  spec: RTopologySpec, nodeId: string, port: string,
-): string | undefined {
-  return spec.wires.find((w) => w.target.nodeId === nodeId && w.target.port === port)?.id;
 }
 
 function findWireForOutput(
@@ -34,51 +29,42 @@ function NodeView({
   nodeRef: RefObject<NodeHandle | null>;
   wireRefs: Map<string, RefObject<WireHandle | null>>;
 }) {
-  if (node.kind === "input") {
-    const outWireId = findWireForOutput(spec, node.id, "out");
-    const outWireRef = outWireId
-      ? wireRefs.get(outWireId)!
-      : { current: null } as RefObject<WireHandle | null>;
-    return (
-      <InputBody
-        nodeRef={nodeRef}
-        outWireRef={outWireRef}
-        initialQueue={node.props?.queue ?? []}
-      />
-    );
-  }
-  if (node.kind === "readgate") {
-    const inWireId = findWireForInput(spec, node.id, "in0");
-    const inWireRef = inWireId
-      ? wireRefs.get(inWireId)!
-      : { current: null } as RefObject<WireHandle | null>;
-    return <ReadGateBody nodeRef={nodeRef} inWireRef={inWireRef} />;
-  }
-  return null;
+  const ports = nodePorts(node);
+  const outPort = ports.outputs[0];
+  const outWireId = outPort ? findWireForOutput(spec, node.id, outPort) : undefined;
+  const outWireRef = outWireId
+    ? wireRefs.get(outWireId)!
+    : { current: null } as RefObject<WireHandle | null>;
+  return renderKindBody(node.kind, {
+    nodeRef,
+    outWireRef,
+    slotIds: ports.inputs,
+    initialQueue: (node.props?.queue ?? []) as unknown[],
+  });
 }
 
 export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
-  // Stable refs per id, recreated only when ids change.
+  const validated = useMemo(() => parseSpec(spec), [spec]);
   const wireRefsRef = useRef<Map<string, RefObject<WireHandle | null>>>(new Map());
   const nodeRefsRef = useRef<Map<string, RefObject<NodeHandle | null>>>(new Map());
 
   const wireRefs = useMemo(() => {
     const next = new Map<string, RefObject<WireHandle | null>>();
-    for (const w of spec.wires) {
+    for (const w of validated.wires) {
       next.set(w.id, wireRefsRef.current.get(w.id) ?? { current: null });
     }
     wireRefsRef.current = next;
     return next;
-  }, [spec.wires]);
+  }, [validated.wires]);
 
   const nodeRefs = useMemo(() => {
     const next = new Map<string, RefObject<NodeHandle | null>>();
-    for (const n of spec.nodes) {
+    for (const n of validated.nodes) {
       next.set(n.id, nodeRefsRef.current.get(n.id) ?? { current: null });
     }
     nodeRefsRef.current = next;
     return next;
-  }, [spec.nodes]);
+  }, [validated.nodes]);
 
   const driverConfig = useMemo(() => ({
     nodeRefs: Array.from(nodeRefs.values()),
@@ -88,7 +74,6 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
 
   useEffect(() => {
     if (haltedOnMount) driver.halt();
-    // one-shot mount behavior
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -102,20 +87,23 @@ export function TopologyRoot({ spec, haltedOnMount }: TopologyRootProps) {
         <span data-testid="halted">{driver.halted ? "halted" : "running"}</span>
       </div>
       <svg width={600} height={200} data-testid="topology-svg">
-        {spec.wires.map((wire) => (
+        {validated.wires.map((wire) => (
           <Wire
-            key={wire.id}
+            key={`${wire.id}:${wire.target.nodeId}:${wire.target.port}:${wire.pathD}`}
             ref={wireRefs.get(wire.id)!}
             pathD={wire.pathD}
             arcLength={wire.arcLength}
+            destNodeRef={nodeRefs.get(wire.target.nodeId)!}
+            destSlotId={wire.target.port}
+            pauseAxis={driver.pauseAxis}
           />
         ))}
       </svg>
-      {spec.nodes.map((node) => (
+      {validated.nodes.map((node) => (
         <NodeView
           key={node.id}
           node={node}
-          spec={spec}
+          spec={validated}
           nodeRef={nodeRefs.get(node.id)!}
           wireRefs={wireRefs}
         />

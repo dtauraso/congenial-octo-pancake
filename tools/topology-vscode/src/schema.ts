@@ -7,5 +7,5 @@
 export * from "./schema/types";
 export * from "./schema/types-graph";
 export { KIND_COLORS } from "./schema/colors";
-export { NODE_TYPES } from "./schema/node-types";
+export { NODE_TYPES, RUNTIME_IMPLEMENTED_KINDS } from "./schema/node-types";
 export { parseSpec } from "./schema/parse-spec";
