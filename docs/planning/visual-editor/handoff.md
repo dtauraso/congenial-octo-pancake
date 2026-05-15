@@ -14,104 +14,121 @@ than keeping one slightly-larger doc.
 
 ## State at handoff (2026-05-14, end-of-session)
 
-**Active branch:** `task/substrate-slot-in-node`. Pushed.
-Working tree: `topology.view.json` (pre-existing, unrelated).
-117/117 vitest green, tsc clean, `check:loc` clean, vocab clean.
+**Active branch:** `task/self-scheduling-nodes`. Forked from
+`task/substrate-slot-in-node` after the concept-bounded refactor
+landed. One precursor commit on the new branch (`854359f`) landed the
+trace-logging plumbing that had been sitting unstaged in the working
+tree.
 
-**This session shipped the concept-bounded substrate refactor.**
-substrate-r/ went from 16 files → 11; the Wire concept and the
-Node-kinds concept are each one file again. Plan and rationale in
-[diagrams/refactor-concept-bounded/](../../../diagrams/refactor-concept-bounded/).
+117/117 vitest green and tsc clean at the previous branch tip. The
+new commit only adds optional `traceId` props + `postLog` calls;
+behavior unchanged.
 
-Commits:
-- `6967904` — plan diagrams (3 SVGs) for the refactor.
-- `6925cb3` — phase 1: shared `renderKindBody` switch in
-  `node-kinds.tsx`; both `TopologyRoot` and `RSubstrateNode` call it.
-  Kind-mirroring fork gone.
-- `6c2ac9a` — phase 2a: merged `node-kinds-readgate.tsx` +
-  `node-kinds-chain-inhibitor.tsx` into `node-kinds.tsx` (234 LOC).
-  Carved substrate-r/ out of the LOC budget in `check-loc.mjs` and
-  CLAUDE.md (substance is concept-bounded, not byte-bounded).
-- `869df39` — phase 2b: merged `wire-phase.ts` + `edge-path.ts` +
-  `EdgeLabels.tsx` into `Wire.tsx` (311 LOC). To follow a pulse, open
-  one file.
+## Why this branch exists
 
-**Phase 2c (driver+axis audit) — kept separate.** `pause-axis.ts`
-and `useTickDriver.ts` look mergeable but are two distinct model
-concepts ("self-scheduling nodes + one global play/pause gate" —
-the model names both). Driver uses axis; they don't collapse. SVG
-[02-target-concept-bounded.svg](../../../diagrams/refactor-concept-bounded/02-target-concept-bounded.svg)
-updated to reflect this audit finding.
+User-driven session pinned a substrate bug: a Source node's emission
+cadence is coupled to peer-source pulse arrival even though the
+slot-in-node model says it shouldn't be.
 
-**Phase 2d (RSubstrate*/TopologyRoot full collapse) — deferred.**
-These three files (`TopologyRoot.tsx`, `RSubstrateNode.tsx`,
-`RSubstrateEdge.tsx`) serve genuinely different rendering contexts:
-plain SVG harness for contract tests vs React Flow handles/store for
-the editor. The substantive dedup (the kind switch) is done. Further
-collapse risks deleting context-specific behavior. Revisit if the
-editor anomaly (below) turns out to involve one of these wrappers.
+**Topology (from [topology.json](../../../topology.json)):**
 
-**Phase 3 done.** CLAUDE.md "Substrate primitive landing rule"
-narrowed: node kinds are now auto-landed via the shared switch; the
-rule covers only wire props and registry/driver plumbing. Memory
-`feedback-substrate-landing-requires-editor-path` and MEMORY.md
-index entry updated to match.
+```
+in08 ──► readGate.chainIn
+              │
+              ▼
+        readGate.out ──► i0 ──► i1 ──► readGate.chainIn2
+```
 
-**Live editor verification:** pause/step/resume confirmed working
-by user. Something else extra happened during verification (not
-described) — flagged for next session to investigate.
+**Observed (from `.probe/webview-log.jsonl`, ts in ms):**
 
-**Open architectural items (carried):**
-- **R4** (small follow-up):
-  [RSubstrateEdge.tsx](../../../tools/topology-vscode/src/webview/substrate-r/RSubstrateEdge.tsx)
-  imports `dashForKind` and `markerEndUrl` from `../rf/`; substrate
-  should not depend up the stack. Move helpers down into
-  `substrate-r/edge-style.ts`.
-- **R5** (watch-only):
-  [app.tsx](../../../tools/topology-vscode/src/webview/rf/app.tsx)
-  (146 LOC, 21 imports) is the highest-coupling file; flag for
-  decomposition next time it's edited.
+```
+025959  readgate.fire + consume chainIn + consume chainIn2 + load readGate.out
+        ↑ chainIn now empty, in0 wire empty. in0 should fire next round.
+029143  deliver readGate.out → i0 consume → load i0.out
+030859  deliver i0.out → i1 consume → load i1.out->chainIn2
+038242  deliver i1.out → fill chainIn2 → trace.input.fire in08 (FINALLY)
+```
+
+Between ts 025959 (consume) and ts 038242 (in0 fires), in0's `run`
+is not called at all — no `trace.input.skip` either. in0 fires in
+the *same millisecond* as the i1 pulse arrives.
+
+**Cause:** [useTickDriver.ts:43-91](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts#L43-L91)
+gates `run()` invocations on a global round-close
+`wires.every(w => w.phase.kind === "empty")`. While the
+readGate→i0→i1→chainIn2 loop has any wire in-flight, no node's
+`run()` is invoked. The driver IS a central walker.
+
+**Model invariant violated:** [MODEL.md:70-72](../../../MODEL.md#L70-L72)
+says "Driver: self-scheduling nodes + one global play/pause gate.
+Nodes fire when their preconditions hold... No central walker." And
+[MODEL.md:31-39](../../../MODEL.md#L31-L39): "Source node observes
+readiness by reading `dest.slotPhase(slotId)` directly... It is free
+to load again when that returns `empty`." A Source's emission MUST
+NOT depend on peer-source state. Currently it does — transitively
+through the global round-close.
+
+User's stated principle (verbatim): *"in0->readGate pulse firing
+depends on the in0->readGate wire to be empty and the in0->readGate
+slot on readGate to be empty. this process has nothing to do with
+i1."* And: *"both source nodes are allowed to send their pulse when
+each sources slot is empty. a source node does not depend on another
+source node to finish."*
+
+The substrate-vs-coordinator bias surfaced again — see
+[memory/feedback_substrate_vs_coordinator_bias.md](../../../memory/feedback_substrate_vs_coordinator_bias.md).
+The global round-close looked like a clean tick definition; it's
+actually a coordinator.
 
 ## Next move
 
-1. **The editor anomaly.** User reported "something extra happened"
-   during pause verification that isn't pause-related. Ask the user
-   to describe it; reproduce; decide whether to fix on this branch
-   or split a `task/<short-kebab>` for it.
-2. **Retire ChainInhibitor's `⇢` debug button.** ChainInhibitor is
-   not a source. Its only legitimate emit is "consume my slot and
-   forward that value." The `⇢` button bypasses the slot and loads
-   a literal `1`, giving a non-source node source powers. Remove
-   from [node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
-   (ChainInhibitorBody now lives there, post-merge).
-3. **Housekeeping carry.** Flag `task/in0-readgate-emission-ack`
-   for user-approved deletion (auto-retire signal hit — first green
-   contract test landed in `31c6cdb`).
-4. **Offer merge to `main`** after (1)–(3) are clean.
+**Single concrete step (per CLAUDE.md substrate posture):** redesign
+the driver so each node self-schedules on its own preconditions, not
+on a global wire-quiescence gate.
+
+Sketch (NOT a plan to execute without user sign-off):
+
+- Drop the all-wires-empty round-close from `useTickDriver`.
+- Each node's `run()` is invoked when its preconditions could have
+  changed: source → its own out-wire phase or dest slot transitioning
+  to empty (via `subscribePhase` / `subscribeSlot`); consumer/gate →
+  any of its slots transitioning to filled.
+- Pause axis (one global play/pause gate) stays — it's the only
+  centralized thing the model allows.
+- Tick definition needs re-derivation: [MODEL.md:63-68](../../../MODEL.md#L63-L68)
+  defines a tick as "one round of edges that had activity at the same
+  moment" — observable in the edges, not stored. The current driver
+  collapses this onto wall-clock round-close, which is wrong. Open
+  question: how is a tick counted under self-scheduling?
+
+**Before touching code:** sit with the model. Re-read MODEL.md and
+the substrate-vs-coordinator memory. The tick-redefinition is the
+judgment call — get that right before mechanically rewriting the
+driver.
+
+**Carried items from prior branch:**
+- R4: substrate-up-the-stack import in `RSubstrateEdge.tsx`
+  (`dashForKind`, `markerEndUrl` from `../rf/`).
+- R5 (watch-only): `app.tsx` coupling.
+- Retire `ChainInhibitor`'s `⇢` debug button — not a source, should
+  not have source powers.
+- `task/in0-readgate-emission-ack` parked, auto-retire signal hit,
+  awaiting deletion sign-off.
 
 ## Conceptual frame
 
-- **Logic state IS visible state.** No render/logic split. Every
-  primitive is specified as visible-state-transition rules; data
-  shape is derived from the visual, not the other way around. See
-  [memory/feedback_visual_first_default.md](../../../memory/feedback_visual_first_default.md).
-- **The industry's projection bias.** Static abstractions get
-  privileged because they're tractable for symbolic reasoners;
-  they're lossy compressions of the actual phenomenon. The
-  substrate rebuild rejects projection: visuals before logic,
-  transitions before snapshots, motion before structure.
-- **Concept-bounded code, not layer-bounded.** Layered decomposition
-  (types here, geometry there, dispatch elsewhere) is a human cache
-  strategy that costs machine readers re-projection on every read.
-  substrate-r/ files are concept-bounded — one file per model
-  concept (Node, Wire, Slot, Axis, Driver). See
-  [diagrams/refactor-concept-bounded/](../../../diagrams/refactor-concept-bounded/).
-- **Snapshot + motion as a pair.** chan-wire (snapshot) +
-  chan-anim (motion).
+- **Logic state IS visible state.** No render/logic split.
 - **Decentralized, not distributed.** "Decentralized" = no center
-  exists, the property is genuinely local. Pause-axis is genuinely
-  decentralized: each wire's RAF reads the axis locally, no central
-  scheduler consulted.
+  exists, the property is genuinely local. The current global
+  round-close is a center; the fix removes it.
+- **Substrate vs coordinator bias.** Channels back-pressure locally;
+  gates back-pressure locally. Coordinator-shaped fixes
+  (round-walkers, global gates, batched ticks) are training-data
+  drift. Industry's default for "schedule N things deterministically"
+  is a walker — wrong for this substrate.
+- **Concept-bounded code, not layer-bounded.** substrate-r/ files are
+  one per model concept. Driver is a concept; if it grows, do not
+  split along technical-role axes.
 
 ## Working mode
 
@@ -120,35 +137,32 @@ described) — flagged for next session to investigate.
   to name the next frame.
 - When designing fixes, first ask: what does the Go side do?
   Channels back-pressure locally; gates back-pressure locally.
-  Coordinator-shaped fixes are training-data drift.
 - Use Claude Code as a fabricator, not a co-designer.
-- Do not collapse temporal phenomena into static snapshots without
-  keeping a separate temporal view alongside.
 
 See `memory/feedback_substrate_vs_coordinator_bias.md` and
 `memory/feedback_visual_first_default.md`.
 
 ## Open branches
 
-- `main` — production trunk; check `git log` for tip.
-- `task/substrate-slot-in-node` — this branch (see state above).
-- `task/in0-readgate-emission-ack` — parked, auto-retire signal
-  hit. Deletion needs explicit user sign-off per branch-hygiene
-  rules.
+- `main` — production trunk.
+- `task/substrate-slot-in-node` — concept-bounded refactor landed;
+  parent of the current branch. Eligible for merge to main once
+  self-scheduling work concludes.
+- `task/self-scheduling-nodes` — this branch.
+- `task/in0-readgate-emission-ack` — parked, deletion needs sign-off.
 
 Branch hygiene: no merge to main without explicit sign-off. Delete
 merged branches without re-asking. Force-push needs sign-off.
 
 ## Dev-loop
 
-Read [MODEL.md](../../../MODEL.md), CLAUDE.md's narrowed "Substrate
-primitive landing rule", and the two concept-bounded primitive files
-([node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
-for kinds, [Wire.tsx](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)
-for the wire concept). After any substrate-r edit, run `npm run
-build` — vitest/tsc alone don't refresh `out/webview.js` (stop-hook
-does this, but only when bundled TS changed and the output is older
-than the input).
+Read [MODEL.md](../../../MODEL.md), the
+substrate-vs-coordinator memory, and
+[useTickDriver.ts](../../../tools/topology-vscode/src/webview/substrate-r/useTickDriver.ts).
+After any substrate-r edit, run `npm run build` —
+vitest/tsc alone don't refresh `out/webview.js` (stop-hook does, but
+only when bundled TS changed and the output is older than the
+input).
 
 Cwd for tsc/tests/check:loc/build: `tools/topology-vscode/` (Bash
 resets cwd — chain `cd` or use absolute paths). Stop hook active:
