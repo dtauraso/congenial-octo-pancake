@@ -11,59 +11,74 @@ handoff.md is exempt from the 100-LOC budget.
 
 ## State at handoff (2026-05-16)
 
-**Active branch:** `task/pulse-secondary-value` — 9 commits ahead of main.
-Animation is **working** on the live editor with the current topology.
-Not yet merged. Do not merge without explicit sign-off.
+**Active branch:** none. Work landed on `main` at `041949e`. No task
+branch in flight.
 
-## What's working
+Ring animation is working live in the editor. The `Wire.load` dev
+assertion (throws on in-flight reload) is active and silent on the
+current topology — meaning the working ring is genuinely robust, not
+relying on the prior swallow.
 
-Latest substrate commit: `3815643 feat(chaininhibitor): shift-register
-fanout w/ seed; drop readgate sig guard`.
+## What landed this session
 
-- **ChainInhibitor** as 1-round shift register fanning out to `out`
-  and `inhibitOut`. On in-fill: emit prior held on both wires, store
-  incoming, slot empties. No `canAccept` guards on output wires.
-  Seeded via topology `data.seed` (i0, i1 seeded `0`).
-- **Wire.load** swallows reloads while in-flight
-  (`trace.wire.load.dropped`) — kept as a safety net.
-- **ReadGate** partial fill emits `0`, full fill emits `1` and
-  consumes. `canAccept` is the only emit gate.
-- Ring topology (src → readGate → i0 → i1 → readGate.chainIn2) runs
-  without stalling under the current driver/layout.
+- `9d0cafc` — merged `task/pulse-secondary-value` to main:
+  ChainInhibitor 2abc shift-register fanout, scalar pulse payload,
+  ReadGate's `lastPartialSigRef` guard removed.
+- `2ebe7c3` — `Wire.load` now throws on in-flight reload (was a
+  silent swallow + `trace.wire.load.dropped` log). Dev safety net;
+  no test relied on the swallow.
+- `041949e` / `a532729` — reverts of two unauthorized commits a
+  subagent pushed during a merge task (`3eda027` removed ReadGate's
+  partial-0 emit, `7de6431` rewrote the partial-fill contract test
+  to match). Both contradicted the settled ReadGate spec.
 
 129 tests green; build clean; tsc clean; vocab clean; LOC clean.
 
-## The model (settled)
+## ReadGate spec (settled, do not drift from this)
 
-- **No tick, no step.** Driver: `halt`/`resume` + `pauseAxis`.
-- **canAccept IS the trigger** (wire empty + dest slot empty).
-- **Pulse payload is a scalar.** ReadGate emits `0`/`1`; Register and
-  ChainInhibitor are 1-round shift registers on the scalar.
-- **ChainInhibitor's 2abc rule:** on `in` fill → emit held on both
-  wires, store incoming, slot empty. Atomic, no output preconditions.
+ReadGate is a variable-arity AND with two mutually exclusive rules
+per `run()` invocation:
+
+1. **All N slots filled** → consume all slots, `wire.load(1)`.
+2. **`[0, N-1]` slots filled** → `wire.load(0)`, do nothing else
+   (no consume).
+
+The doc-comment at `node-kinds.tsx:228-231` currently states only
+rule 1. Updating it to include rule 2 is a pending tidy-up.
+
+The partial-0 emit IS part of the spec. A prior investigation (this
+session) framed it as "drift causing 2× amplification per src
+arrival" — that framing was wrong; the user corrected it. Each
+slot-change fires exactly one rule.
+
+## ChainInhibitor 2abc (settled)
+
+On `in` fill: emit held value on both `out` and `inhibitOut` (no
+canAccept guards), store incoming, slot empties. Seed via `data.seed`.
 
 ## Open follow-ups (not urgent)
 
-- The `trace.wire.load.dropped` swallow in Wire.load may be hiding
-  real rate-imbalance bugs. Consider promoting dropped loads to a
-  hard fail in dev (assertion + console.error) now that the editor
-  is debuggable, and see whether the ring still runs.
+- Fix the stale ReadGate doc-comment at `node-kinds.tsx:228-231` to
+  state both rules.
 - Subscription bookkeeping: node bodies still call
-  `subscribeCanAccept` (ChainInhibitor subscribes to both `out` and
-  `inhibitOut`). User has flagged this as substrate concern leaking
-  into nodes. An earlier attempt to move wake into the substrate
-  (`sourceNodeRef` on Wire, direct `.run()` calls) was reverted —
-  revisit only with a clear design, not opportunistically.
-- Merge `task/pulse-secondary-value` into `main` once user signs off.
+  `subscribeCanAccept` (ChainInhibitor on both `out` and
+  `inhibitOut`). User flagged this as substrate concern leaking into
+  nodes. Prior attempt to move wake into the substrate
+  (`sourceNodeRef` on Wire, direct `.run()`) was reverted. Revisit
+  only with a clear design.
+- If a reload-while-in-flight ever fires the dev assertion, that's a
+  real rate-imbalance bug — not something to swallow.
 
 ## Working mode
 
 - Delegate executor work (log walks, mechanical edits) to sonnet/haiku
   subagents. Main session is for judgment.
+- **Verify subagent commits before merging.** A subagent this session
+  picked up an unstaged working-tree edit during a "merge to main"
+  task and pushed it as an extra commit. Check `git log` deltas
+  against the intended diff before pushing to shared branches.
 - Don't propose menus of options when the user is mid-investigation;
   finish the current frame.
-- Verify subagent claims (especially log readings) before acting on
-  them.
 - When the user says "delegate", they want a subagent call, not the
   main session doing the work inline.
 
@@ -77,8 +92,9 @@ Cwd for tsc/tests/check:loc/build: `tools/topology-vscode/`.
 
 ## Open branches
 
-- `main` — production trunk.
-- `task/pulse-secondary-value` — active; working; not merged.
+- `main` — production trunk; at `041949e`; working.
+- `task/pulse-secondary-value` — merged, left intact (per workflow).
+- `task/dropped-load-assert` — merged, left intact.
 
 ## ALWAYS clause
 
