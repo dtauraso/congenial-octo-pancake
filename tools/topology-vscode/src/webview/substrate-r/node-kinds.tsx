@@ -18,6 +18,7 @@ export interface KindBodyCtx {
   outWireRefs: Record<string, RefObject<WireHandle | null>>;
   slotIds: string[];
   initialQueue: unknown[];
+  seed?: unknown;
   traceId?: string;
 }
 
@@ -25,14 +26,14 @@ export interface KindBodyCtx {
 // TopologyRoot (test path) and RSubstrateNode (editor path) call this
 // — there is no second switch to keep in sync.
 export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
-  const { nodeRef, outWireRefs, slotIds, initialQueue, traceId } = ctx;
+  const { nodeRef, outWireRefs, slotIds, initialQueue, seed, traceId } = ctx;
   switch (kind) {
     case "input":
       return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} initialQueue={initialQueue} traceId={traceId} />;
     case "relay":
       return <RelayBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} traceId={traceId} />;
     case "chaininhibitor":
-      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} inhibitOutWireRef={outWireRefs["inhibitOut"]} slotId={slotIds[0]} traceId={traceId} />;
+      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} inhibitOutWireRef={outWireRefs["inhibitOut"]} slotId={slotIds[0]} seed={seed} traceId={traceId} />;
     case "join":
       return <JoinBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotAId={slotIds[0]} slotBId={slotIds[1]} traceId={traceId} />;
     case "readgate":
@@ -75,17 +76,15 @@ export function InputBody({
       return;
     }
     const v = remainingRef.current.shift()!;
-    if (remainingRef.current.length === 0) queuePhaseRef.current = "exhausted"; // draining → exhausted
+    if (remainingRef.current.length === 0) queuePhaseRef.current = "exhausted";
     if (traceId) postLog("trace.input.fire", { node: traceId, value: v });
     handle.load(v);
   }, [outWireRef, traceId]);
 
-  // State machine driver: restarts the queue on canAccept when exhausted,
-  // then delegates to the firing rule.
   const onCanAccept = useCallback(() => {
     if (queuePhaseRef.current === "exhausted" && initialQueueRef.current.length > 0) {
       remainingRef.current = [...initialQueueRef.current];
-      queuePhaseRef.current = "draining"; // exhausted → draining
+      queuePhaseRef.current = "draining";
     }
     run();
   }, [run]);
@@ -146,29 +145,46 @@ export function JoinBody({
   return <Node ref={nodeRef} slots={[slotAId, slotBId]} onRun={run} traceId={traceId} />;
 }
 
-// ChainInhibitor: consumes its slot and forwards when the out wire can accept.
+// ChainInhibitor: shift-register fanout. On in-fill, consume the
+// slot, emit the prior held value on both wires, store the incoming
+// as the new held. Atomic — all preconditions checked before commit.
 
 export function ChainInhibitorBody({
-  nodeRef, outWireRef, inhibitOutWireRef, slotId = "in", traceId,
+  nodeRef, outWireRef, inhibitOutWireRef, slotId = "in", seed, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
   inhibitOutWireRef?: RefObject<WireHandle | null>;
   slotId?: string;
+  seed?: unknown;
   traceId?: string;
 }) {
+  const heldRef = useRef<unknown>(seed ?? null);
+
   const run = useCallback(() => {
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
     if (node.slotPhase(slotId) !== "filled") return;
-    if (!wire.canAccept) return;
     const inhibitWire = inhibitOutWireRef?.current;
-    if (inhibitWire && !inhibitWire.canAccept) return;
-    const value = node.consume(slotId);
-    wire.load(value);
-    if (inhibitWire) inhibitWire.load(value);
+    const incoming = node.consume(slotId);
+    const emitted = heldRef.current;
+    heldRef.current = incoming;
+    wire.load(emitted);
+    if (inhibitWire) inhibitWire.load(emitted);
   }, [nodeRef, outWireRef, inhibitOutWireRef, slotId]);
+
+  useEffect(() => {
+    const wire = outWireRef.current;
+    if (!wire) return;
+    return wire.subscribeCanAccept(run);
+  }, [outWireRef, run]);
+
+  useEffect(() => {
+    const inhibitWire = inhibitOutWireRef?.current;
+    if (!inhibitWire) return;
+    return inhibitWire.subscribeCanAccept(run);
+  }, [inhibitOutWireRef, run]);
 
   return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
 }
@@ -200,7 +216,6 @@ export function RegisterBody({
     wire.load(emitted);
   }, [nodeRef, outWireRef, slotId]);
 
-  // Re-try run when the output wire becomes available (backpressure release).
   useEffect(() => {
     const wire = outWireRef?.current;
     if (!wire) return;
@@ -226,36 +241,22 @@ export function ReadGateBody({
   const slots = slotIds.length > 0 ? slotIds : ["in0"];
   const key = slots.join("|");
 
-  // Track the last-emitted partial-fill signature to avoid re-emit storms.
-  // Stores a sorted string of filled slot IDs, or null if none emitted yet.
-  const lastPartialSigRef = useRef<string | null>(null);
-
   const run = useCallback(() => {
     const handle = nodeRef.current;
     const wire = outWireRef?.current;
     if (!handle || !wire) return;
-    const phases = slots.map((s) => handle.slotPhase(s));
-    const filledSlots = slots.filter((_, i) => phases[i] === "filled");
-    if (filledSlots.length === 0) {
-      if (traceId) postLog("trace.readgate.skip", { node: traceId, reason: "slots-not-filled", phases: Object.fromEntries(slots.map((s, i) => [s, phases[i]])) });
-      return;
-    }
     if (!wire.canAccept) {
       if (traceId) postLog("trace.readgate.skip", { node: traceId, reason: "wire-blocked", phase: wire.phase.kind });
       return;
     }
+    const phases = slots.map((s) => handle.slotPhase(s));
+    const filledSlots = slots.filter((_, i) => phases[i] === "filled");
     const allFilled = filledSlots.length === slots.length;
     if (allFilled) {
-      // Full fire: consume all slots and emit secondary=1.
       if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length });
       for (const s of slots) handle.consume(s);
-      lastPartialSigRef.current = null; // reset so next partial fill emits
       wire.load(1);
     } else {
-      // Partial fill: emit 0 only if filled set changed.
-      const sig = [...filledSlots].sort().join(",");
-      if (sig === lastPartialSigRef.current) return; // no change, skip
-      lastPartialSigRef.current = sig;
       if (traceId) postLog("trace.readgate.partial", { node: traceId, filled: filledSlots.length, of: slots.length });
       wire.load(0);
     }

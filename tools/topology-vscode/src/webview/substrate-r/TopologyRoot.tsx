@@ -45,6 +45,7 @@ function NodeView({
     outWireRefs,
     slotIds: ports.inputs,
     initialQueue: (node.props?.queue ?? []) as unknown[],
+    seed: node.props?.seed,
     traceId: node.id,
   });
 }

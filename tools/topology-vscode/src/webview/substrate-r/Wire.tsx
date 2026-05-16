@@ -231,6 +231,10 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   }, [apply, deliverIfPending]);
 
   const load = useCallback((value: unknown) => {
+    if (phaseRef.current.kind !== "empty") {
+      postLog("trace.wire.load.dropped", { wire: traceId, reason: "in-flight", incoming: value });
+      return;
+    }
     if (traceId) postLog("trace.load", { wire: traceId, value });
     apply({ type: "load", value });
     valueRef.current = value;
