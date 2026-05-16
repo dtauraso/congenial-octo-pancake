@@ -160,6 +160,11 @@ export function EdgeLabels({
   );
 }
 
+// Render the in-flight value as a riding label.
+function formatRidingLabel(value: unknown): string {
+  return String(value);
+}
+
 export interface WireHandle {
   load(value: unknown): void;
   complete(): void;
@@ -183,10 +188,11 @@ export interface WireProps {
   pauseAxis?: PauseAxis;
   traceId?: string;
   seed?: unknown;
+  value?: unknown;
 }
 
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
-  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId, seed }, ref,
+  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId, seed, value }, ref,
 ) {
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
@@ -225,6 +231,10 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   }, [apply, deliverIfPending]);
 
   const load = useCallback((value: unknown) => {
+    if (phaseRef.current.kind !== "empty") {
+      postLog("trace.wire.load.dropped", { wire: traceId, reason: "in-flight", incoming: value });
+      return;
+    }
     if (traceId) postLog("trace.load", { wire: traceId, value });
     apply({ type: "load", value });
     valueRef.current = value;
@@ -267,7 +277,10 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   }), [load, complete, destNodeRef, destSlotId, notifyCanAccept]);
 
   useEffect(() => {
-    if (seed !== undefined) load(seed);
+    if (seed !== undefined) {
+      // value overrides seed if both present; seed is the fallback.
+      load(value !== undefined ? value : seed);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount-only: prime the wire once
 
@@ -333,8 +346,9 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
             fontSize={10}
             fill={stroke}
             style={{ pointerEvents: "none", userSelect: "none" }}
+            data-testid={traceId ? `riding-label-${traceId}` : undefined}
           >
-            {String(phase.value)}
+            {formatRidingLabel(phase.value)}
           </text>
         </>
       )}

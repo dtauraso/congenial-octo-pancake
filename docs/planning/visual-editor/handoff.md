@@ -5,88 +5,112 @@ Live continuation prompt. Schema lives in
 this file is the filled-in current state. A fresh AI session should
 read this file first (no chat history needed) and proceed.
 
-handoff.md is exempt from the 100-LOC budget (per CLAUDE.md "File
-size budget"): a fresh AI session must read it end-to-end, and audit
-19 found that splitting it across siblings cost more reading time
-than keeping one slightly-larger doc.
+handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-14, post-merge)
+## State at handoff (2026-05-16)
 
-**Active branch:** `main` — no task branch in flight.
+**Active branch:** `task/pulse-secondary-value` — 9 commits ahead of main.
+Not yet merged. Do not merge without explicit sign-off.
 
-`task/formalize-control-flow-timing` merged to main at `c485461`
-and was deleted. All 125 tests green; build clean.
+Driving live in the editor right now. Animation behavior is being
+investigated round-by-round; we keep clearing `.probe/webview-log.jsonl`
+between runs and delegating log walks to sonnet subagents.
 
-## What landed (task/formalize-control-flow-timing)
+## What landed this session
 
-- `1e8eeff` — docs: reframe arcLength:0 as visible-duration collapse
-  in test fixtures
-- `9bea44c` — feat: fan-out convergence observable event
-  (`subscribeFanoutConvergence` in `substrate-r/fanout-convergence.ts`)
-- `cafdcc7` — revert per-wire speed (tried and rejected; see decision below)
-- `6f8fef1` — docs(model): name firing rule as control-flow event in MODEL.md
-- `01bdfaf` — docs(planning): mark §6 of `partitioned-launching-fog.md`
-  as tried-and-rejected; "Three additions" list updated
+Latest commit: `3815643 feat(chaininhibitor): shift-register fanout w/
+seed; drop readgate sig guard`. Contents:
 
-## Decision recorded: pulse speed is uniform
+- **ChainInhibitor** is now a 1-round shift register that fans out to
+  both `out` and `inhibitOut`. On in-fill: emit prior held on both
+  wires, store incoming, slot empties. **No `canAccept` guards** on
+  output wires — emit is unconditional once `in` is filled. Seed
+  plumbed via topology `data.seed` (i0 and i1 seeded with `0`).
+- **Wire.load** swallows reloads while in-flight (logs
+  `trace.wire.load.dropped` to `.probe/webview-log.jsonl`) so the editor
+  doesn't crash on ring saturation. The reducer's throw is still in
+  place as a safety net.
+- **ReadGate** `lastPartialSigRef` guard removed. Partial fill emits
+  `0` unconditionally; full fill emits `1` and consumes. `canAccept` is
+  the only emit gate.
+- Tests: split `r-topology-readgate-register.test.tsx` into
+  `r-topology-register.test.tsx` + `r-topology-readgate-partial.test.tsx`
+  (LOC budget). B2 of `r-topology-chaininhibitor-fanout` dropped (its
+  "CI blocks on wire backpressure" premise no longer exists).
 
-Per-wire `speed` on `RWireSpec` was implemented and immediately
-reverted on user feedback. Pulse speed is uniform across all wires.
-If future work implies heterogeneous timing (e.g., inhibit arrives
-first), the mechanism is topology-level (shorter path, upstream
-wiring), not a per-wire knob. See `memory/feedback_uniform_pulse_speed.md`.
+129 tests green; build clean; tsc clean; vocab clean; LOC clean.
+
+## Where the investigation is
+
+User reports animation still stalls. The current diagnosis (across
+several rounds): the topology is a closed feedback ring (src →
+readGate → i0 → i1 → readGate.chainIn2) with 1-slot buffers. Every
+src arrival eventually produces 2 readGate emits (partial 0 + full 1),
+which adds pulses to the ring faster than the ring drains. After ~5
+cycles the ring saturates and deadlocks.
+
+Earlier this session we tried a `pendingRef` buffer (consume + emit
+decoupled) — that pushed saturation a few cycles further but didn't
+eliminate it. User rejected it: "I treated the symptom as the disease."
+We reverted to atomic 2abc and then dropped the canAccept guards.
+
+The wedge now manifests as either (a) `trace.wire.load.dropped` events
+piling up in the log when ChainInhibitor emits onto an in-flight wire,
+or (b) a slot somewhere stays filled and pulses stop arriving. Neither
+has been root-caused on the latest code.
+
+## Open questions / next moves
+
+- Is the right fix a structural change to the topology (break the
+  closed ring, or add explicit buffering at one point), or is there
+  a rule change at one node (ReadGate? ChainInhibitor?) that prevents
+  the per-src-arrival 2-pulse amplification?
+- User has emphasized the substrate should not require subscription
+  bookkeeping. The wake mechanism currently still uses
+  `subscribeCanAccept` from node bodies (with both `out` and
+  `inhibitOut` subscriptions for ChainInhibitor). An earlier attempt
+  to move wake into the substrate (`sourceNodeRef` on Wire, direct
+  `.run()` calls) was reverted — it made things worse.
+- The Wire.load-dropped trace may be papering over real
+  rate-imbalance bugs. Consider whether dropped loads should be
+  surfaced as a hard fail in dev (assertion + console.error) once
+  the editor is debuggable.
 
 ## The model (settled)
 
-- **No tick.** No tick counter, no tick concept.
-- **No step.** Driver surface is `halt` / `resume` + `pauseAxis`.
-- **Node runs the moment canAccept fires.** Wire-empty + dest-slot-empty
-  is the trigger — this is the named control-flow event.
-- **Running ≠ emitting.** `run()` is a handler; pulsing out depends
-  on local preconditions.
-
-## Open items
-
-- `subscribeFanoutConvergence` is not yet consumed by C1 — a future
-  task could use it to tighten C1's weakened single-winner exclusion
-  contract.
-- C1 single-winner exclusion remains accepted as a weakened contract
-  from a prior session; revisit only if a future task needs true
-  mutual exclusion.
-
-## Conceptual frame
-
-- **Logic state IS visible state.** No render/logic split.
-- **Decentralized, not distributed.** No center exists.
-- **canAccept IS the trigger.** No scheduler, no walker, no clock.
-- **Running ≠ emitting.** Sources can run and decline to pulse.
-- **Concept-bounded code, not layer-bounded.**
+- **No tick, no step.** Driver: `halt`/`resume` + `pauseAxis`.
+- **canAccept IS the trigger** (wire empty + dest slot empty).
+- **Pulse payload is a scalar.** ReadGate emits `0`/`1`; Register and
+  ChainInhibitor are 1-round shift registers on the scalar.
+- **ChainInhibitor's 2abc rule (this session's settled spec):** when
+  `in` fills → emit held on both wires, store incoming, slot empty.
+  Atomically, no output-wire preconditions.
 
 ## Working mode
 
-- Don't propose niche bundles. User-named frames stand alone.
-- Don't offer "next options" menus proactively. Wait for the user to
-  name the next frame.
-- When designing fixes, first ask: what does the Go side do?
-- Delegate executor work to haiku/sonnet subagents; reserve main
-  Opus session for judgment.
-- Don't pause for sign-off when the user has already said go.
-
-## Open branches
-
-- `main` — production trunk, active.
-
-Branch hygiene: no merge to main without explicit sign-off. Delete
-merged branches without re-asking. Force-push needs sign-off.
+- Delegate executor work (log walks, mechanical edits) to sonnet/haiku
+  subagents. Main session is for judgment.
+- Don't propose menus of options when the user is mid-investigation;
+  finish the current frame.
+- Verify subagent claims (especially log readings) before acting on
+  them — earlier this session a sonnet agent confidently misread a log.
+- When the user says "delegate", they want a subagent call, not the
+  main session doing the work inline.
 
 ## Dev-loop
 
-After any substrate-r edit, run `npm run build` — vitest/tsc alone
-don't refresh `out/webview.js`.
+After any substrate-r edit: `npm run build` (vitest/tsc don't refresh
+`out/webview.js`). Live log at `.probe/webview-log.jsonl`; clear with
+`: > .probe/webview-log.jsonl` between runs.
 
 Cwd for tsc/tests/check:loc/build: `tools/topology-vscode/`.
+
+## Open branches
+
+- `main` — production trunk.
+- `task/pulse-secondary-value` — active; 9 commits ahead; not merged.
 
 ## ALWAYS clause
 

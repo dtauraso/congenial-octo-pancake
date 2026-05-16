@@ -6,7 +6,7 @@
 // parse time — a wire whose target.port does not name a slot on its
 // destination kind is rejected here, not at runtime.
 
-export type RNodeKind = "input" | "relay" | "join" | "readgate" | "chaininhibitor" | "inhibitrightgate";
+export type RNodeKind = "input" | "relay" | "join" | "readgate" | "chaininhibitor" | "inhibitrightgate" | "register";
 
 // Canonical kind id form is lowercase. Editor schema (schema/node-types.ts)
 // uses PascalCase for human-readable type labels; toRNodeKind narrows a
@@ -20,6 +20,7 @@ export function toRNodeKind(s: string | undefined): RNodeKind | undefined {
     case "readgate": return "readgate";
     case "chaininhibitor": return "chaininhibitor";
     case "inhibitrightgate": return "inhibitrightgate";
+    case "register": return "register";
     default: return undefined;
   }
 }
@@ -27,7 +28,7 @@ export function toRNodeKind(s: string | undefined): RNodeKind | undefined {
 export interface RNodeSpec {
   id: string;
   kind: RNodeKind;
-  props?: { queue?: unknown[] };
+  props?: { queue?: unknown[]; seed?: unknown };
   // Per-node override of NODE_KIND_PORTS. Lets a spec declare e.g. a
   // readgate whose input slot is "chainIn" rather than "in0",
   // matching what the editor schema can produce. Arity must match the
@@ -66,6 +67,7 @@ export interface RWireSpec {
   pathD: string;
   arcLength: number;
   seed?: unknown;
+  value?: unknown;
 }
 
 export interface RTopologySpec {
@@ -82,6 +84,7 @@ export const NODE_KIND_PORTS: Record<RNodeKind, KindPorts> = {
   readgate: { inputs: ["in0"], outputs: [] },
   chaininhibitor: { inputs: ["in"], outputs: ["inhibitOut", "out"] },
   inhibitrightgate: { inputs: ["left", "right"], outputs: ["out"] },
+  register: { inputs: ["in0"], outputs: ["out"] },
 };
 
 export function parseSpec(spec: RTopologySpec): RTopologySpec {

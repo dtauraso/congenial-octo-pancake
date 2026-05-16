@@ -21,6 +21,7 @@
     {
       "id": "i0",
       "type": "ChainInhibitor",
+      "data": { "seed": 0 },
       "outputs": [
         { "name": "inhibitOut", "kind": "inhibit-in" },
         { "name": "out", "kind": "chain" }
@@ -29,6 +30,7 @@
     {
       "id": "i1",
       "type": "ChainInhibitor",
+      "data": { "seed": 0 },
       "outputs": [
         { "name": "inhibitOut", "kind": "inhibit-in" },
         { "name": "out", "kind": "chain", "side": "left" }

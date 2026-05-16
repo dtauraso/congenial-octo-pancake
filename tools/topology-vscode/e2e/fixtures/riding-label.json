@@ -1,6 +1,6 @@
 {
   "nodes": [
-    { "id": "in", "type": "Input", "x": 0, "y": 0 },
+    { "id": "in", "type": "Input", "x": 0, "y": 0, "data": { "init": [7] } },
     { "id": "ci", "type": "ChainInhibitor", "x": 200, "y": 0 },
     { "id": "ci2", "type": "ChainInhibitor", "x": 400, "y": 0 }
   ],
