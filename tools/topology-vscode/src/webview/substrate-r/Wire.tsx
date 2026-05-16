@@ -160,14 +160,8 @@ export function EdgeLabels({
   );
 }
 
-// Render the in-flight value as a riding label. Structured payloads
-// { primary, secondary } render as "p:s" to show both channels.
-// Plain scalars render as their string form.
+// Render the in-flight value as a riding label.
 function formatRidingLabel(value: unknown): string {
-  if (value !== null && typeof value === "object" && "primary" in (value as object) && "secondary" in (value as object)) {
-    const v = value as { primary: unknown; secondary: unknown };
-    return `${String(v.primary)}:${String(v.secondary)}`;
-  }
   return String(value);
 }
 
@@ -280,9 +274,8 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
 
   useEffect(() => {
     if (seed !== undefined) {
-      // When a secondary value is also declared, prime with a structured
-      // payload so the full { primary, secondary } travels from the start.
-      load(value !== undefined ? { primary: seed, secondary: value } : seed);
+      // value overrides seed if both present; seed is the fallback.
+      load(value !== undefined ? value : seed);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount-only: prime the wire once

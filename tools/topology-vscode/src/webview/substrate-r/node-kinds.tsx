@@ -193,17 +193,11 @@ export function RegisterBody({
     if (!node || !wire) return;
     if (node.slotPhase(slotId) !== "filled") return;
     if (!wire.canAccept) return;
-    const incoming = node.consume(slotId) as { primary: unknown; secondary: unknown } | unknown;
-    const incomingSecondary = incoming !== null && typeof incoming === "object" && "secondary" in (incoming as object)
-      ? (incoming as { primary: unknown; secondary: unknown }).secondary
-      : incoming;
-    const incomingPrimary = incoming !== null && typeof incoming === "object" && "primary" in (incoming as object)
-      ? (incoming as { primary: unknown; secondary: unknown }).primary
-      : 1;
+    const incoming = node.consume(slotId);
     const emitted = heldRef.current;
-    heldRef.current = incomingSecondary;
-    if (traceId) postLog("trace.register.fire", { node: traceId, emitted, incoming: incomingSecondary });
-    wire.load({ primary: incomingPrimary, secondary: emitted });
+    heldRef.current = incoming;
+    if (traceId) postLog("trace.register.fire", { node: traceId, emitted, incoming });
+    wire.load(emitted);
   }, [nodeRef, outWireRef, slotId]);
 
   // Re-try run when the output wire becomes available (backpressure release).
@@ -256,14 +250,14 @@ export function ReadGateBody({
       if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length });
       for (const s of slots) handle.consume(s);
       lastPartialSigRef.current = null; // reset so next partial fill emits
-      wire.load({ primary: 1, secondary: 1 });
+      wire.load(1);
     } else {
-      // Partial fill: emit secondary=0 only if filled set changed.
+      // Partial fill: emit 0 only if filled set changed.
       const sig = [...filledSlots].sort().join(",");
       if (sig === lastPartialSigRef.current) return; // no change, skip
       lastPartialSigRef.current = sig;
       if (traceId) postLog("trace.readgate.partial", { node: traceId, filled: filledSlots.length, of: slots.length });
-      wire.load({ primary: 1, secondary: 0 });
+      wire.load(0);
     }
   }, [nodeRef, outWireRef, key, traceId]);
 
