@@ -174,18 +174,6 @@ export function ChainInhibitorBody({
     if (inhibitWire) inhibitWire.load(emitted);
   }, [nodeRef, outWireRef, inhibitOutWireRef, slotId]);
 
-  useEffect(() => {
-    const wire = outWireRef.current;
-    if (!wire) return;
-    return wire.subscribeCanAccept(run);
-  }, [outWireRef, run]);
-
-  useEffect(() => {
-    const inhibitWire = inhibitOutWireRef?.current;
-    if (!inhibitWire) return;
-    return inhibitWire.subscribeCanAccept(run);
-  }, [inhibitOutWireRef, run]);
-
   return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
 }
 
@@ -215,12 +203,6 @@ export function RegisterBody({
     if (traceId) postLog("trace.register.fire", { node: traceId, emitted, incoming });
     wire.load(emitted);
   }, [nodeRef, outWireRef, slotId]);
-
-  useEffect(() => {
-    const wire = outWireRef?.current;
-    if (!wire) return;
-    return wire.subscribeCanAccept(run);
-  }, [outWireRef, run]);
 
   return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
 }
