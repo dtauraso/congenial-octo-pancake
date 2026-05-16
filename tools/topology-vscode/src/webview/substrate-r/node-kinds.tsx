@@ -252,10 +252,14 @@ export function ReadGateBody({
     const phases = slots.map((s) => handle.slotPhase(s));
     const filledSlots = slots.filter((_, i) => phases[i] === "filled");
     const allFilled = filledSlots.length === slots.length;
-    if (!allFilled) return;
-    if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length });
-    for (const s of slots) handle.consume(s);
-    wire.load(1);
+    if (allFilled) {
+      if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length });
+      for (const s of slots) handle.consume(s);
+      wire.load(1);
+    } else {
+      if (traceId) postLog("trace.readgate.partial", { node: traceId, filled: filledSlots.length, of: slots.length });
+      wire.load(0);
+    }
   }, [nodeRef, outWireRef, key, traceId]);
 
   return <Node ref={nodeRef} slots={slots} onRun={run} traceId={traceId} />;
