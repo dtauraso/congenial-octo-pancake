@@ -14,43 +14,40 @@ than keeping one slightly-larger doc.
 
 ## State at handoff (2026-05-15)
 
-**Active branch:** `task/pulse-secondary-value` — all 5 plan commits landed.
+**Active branch:** `task/pulse-secondary-value` — 8 commits ahead of main.
 
 Branch is **not yet merged to main**. Do not merge without explicit sign-off.
 
+Last action this session: removed `primary` field from pulse payloads
+after confirming no code branches on it (always `1`, always forwarded,
+never inspected). Pulses now carry a plain scalar.
+
 ## What landed (task/pulse-secondary-value)
 
-- `spec.ts`: added `"register"` to `RNodeKind`, `value?: unknown` to
-  `RWireSpec`, and `register: { inputs: ["in0"], outputs: ["out"] }` to
-  `NODE_KIND_PORTS`.
-- `Wire.tsx`: added `value?: unknown` prop; seed mount effect emits
-  structured `{primary: seed, secondary: value}` when both present;
-  `formatRidingLabel` helper (`p:s` format for structured values);
-  `data-testid` on riding-label text element.
-- `TopologyRoot.tsx` + `RSubstrateEdge.tsx`: wire `value` prop threaded
-  through both test path and editor path (same commit — landing rule).
-- `spec-to-flow.ts`: `value` field round-tripped in edge data.
-- `node-kinds.tsx`: `ReadGateBody` emits `{primary:1, secondary}` where
-  `secondary` encodes runtime fill completeness (0=partial, 1=complete);
-  partial fires do not consume slots and use a ref-tracked signature to
-  suppress re-emit storms; `RegisterBody` (new) is a one-round delay
-  buffer — emits held secondary on fire, stores incoming.
-- `inhibit-right-gate.tsx`: relay-style transparent forwarding of `leftValue`.
-- `e2e/riding-label.spec.ts` + `e2e/fixtures/riding-label.json`: updated
-  for RAF (not WAAPI) delivery; fixture has real input queue; assertion
-  expects `"7"`.
-- `test/contracts/r-topology-readgate-register.test.tsx` (new): two
-  contract tests — Register round-1 emits null; ReadGate→Register chain
-  end-to-end.
+Commits ahead of main, oldest first:
+- `f7d23a2` spec: add value? to RWireSpec and register to RNodeKind
+- `f6822ed` wire: data-testid + formatRidingLabel
+- `ae7bccd` wire: thread value prop through both test and editor paths
+- `09f5633` kinds: ReadGateBody emits secondary 0/1, relay bodies forward
+- `79f4a8a` contracts: ReadGate→Register chain tests
+- `cec7de0` docs: prior handoff snapshot
+- `155f28f` readgate: secondary encodes fill completeness (0=partial, 1=complete)
+- `d9c971f` **pulse: remove primary field — pulses carry plain scalar**
 
-All 130 tests green; build clean; tsc --noEmit clean.
+Effects of the last commit:
+- `ReadGateBody`: `wire.load(1)` on full fire, `wire.load(0)` on partial.
+- `RegisterBody`: holds and forwards the scalar directly, no unpacking.
+- `Wire.tsx` seed-mount: `load(value ?? seed)` (scalar).
+- `formatRidingLabel`: `String(value)` — single number on the wire.
+- Contract tests assert scalars (`toBe(0)`, `toBe(1)`, `toBeNull()`).
+
+All 130 tests green; build clean; tsc --noEmit clean; substrate vocab clean.
 
 ## Open items
 
-- No Playwright e2e for ReadGate→Register chain (plan step 5 mentioned
-  one; skipped because contract tests cover the semantics and the e2e
-  harness needs a running extension host). Revisit if a concrete need arises.
 - `task/pulse-secondary-value` awaits merge sign-off from David.
+- Working-tree change: `topology.view.json` modified, uncommitted. Pre-existed at session start; not touched.
+- No Playwright e2e for ReadGate→Register chain (skipped earlier; contract tests cover semantics).
 
 ## The model (settled)
 
@@ -60,12 +57,10 @@ All 130 tests green; build clean; tsc --noEmit clean.
   is the trigger — this is the named control-flow event.
 - **Running ≠ emitting.** `run()` is a handler; pulsing out depends
   on local preconditions.
-- **Secondary value** is the data channel on a pulse; primary is the
-  control-flow event signal. ReadGate encodes runtime fill completeness
-  in secondary: 0 = partial fill (some-but-not-all slots filled, no
-  consume), 1 = complete fill (all slots filled, all slots consumed).
-  A single-slot gate always emits secondary=1. Register is a one-round
-  shift-register.
+- **Pulse payload is a scalar.** No primary/secondary structure.
+  The fact that a pulse exists on a wire is itself the control signal;
+  the scalar value is the data. ReadGate emits `1` on full fire, `0` on
+  partial fill (no consume). Register is a one-round shift on the scalar.
 
 ## Conceptual frame
 
@@ -84,6 +79,9 @@ All 130 tests green; build clean; tsc --noEmit clean.
 - Delegate executor work to haiku/sonnet subagents; reserve main
   Opus session for judgment.
 - Don't pause for sign-off when the user has already said go.
+- Verify subagent claims directly when they smell wrong — this session
+  caught a haiku Explore agent giving a confidently-wrong diagnosis of
+  the riding-label issue.
 
 ## Open branches
 
