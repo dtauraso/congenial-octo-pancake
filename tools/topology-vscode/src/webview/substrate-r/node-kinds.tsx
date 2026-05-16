@@ -232,12 +232,17 @@ export function ReadGateBody({
   const slots = slotIds.length > 0 ? slotIds : ["in0"];
   const key = slots.join("|");
 
+  // Track the last-emitted partial-fill signature to avoid re-emit storms.
+  // Stores a sorted string of filled slot IDs, or null if none emitted yet.
+  const lastPartialSigRef = useRef<string | null>(null);
+
   const run = useCallback(() => {
     const handle = nodeRef.current;
     const wire = outWireRef?.current;
     if (!handle || !wire) return;
     const phases = slots.map((s) => handle.slotPhase(s));
-    if (!phases.every((p) => p === "filled")) {
+    const filledSlots = slots.filter((_, i) => phases[i] === "filled");
+    if (filledSlots.length === 0) {
       if (traceId) postLog("trace.readgate.skip", { node: traceId, reason: "slots-not-filled", phases: Object.fromEntries(slots.map((s, i) => [s, phases[i]])) });
       return;
     }
@@ -245,12 +250,21 @@ export function ReadGateBody({
       if (traceId) postLog("trace.readgate.skip", { node: traceId, reason: "wire-blocked", phase: wire.phase.kind });
       return;
     }
-    if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length });
-    for (const s of slots) handle.consume(s);
-    // Secondary value encodes how many data slots were filled when the
-    // gate fired: 0 for a single-input gate, 1 for a two-or-more-input gate.
-    const secondary = slots.length >= 2 ? 1 : 0;
-    wire.load({ primary: 1, secondary });
+    const allFilled = filledSlots.length === slots.length;
+    if (allFilled) {
+      // Full fire: consume all slots and emit secondary=1.
+      if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length });
+      for (const s of slots) handle.consume(s);
+      lastPartialSigRef.current = null; // reset so next partial fill emits
+      wire.load({ primary: 1, secondary: 1 });
+    } else {
+      // Partial fill: emit secondary=0 only if filled set changed.
+      const sig = [...filledSlots].sort().join(",");
+      if (sig === lastPartialSigRef.current) return; // no change, skip
+      lastPartialSigRef.current = sig;
+      if (traceId) postLog("trace.readgate.partial", { node: traceId, filled: filledSlots.length, of: slots.length });
+      wire.load({ primary: 1, secondary: 0 });
+    }
   }, [nodeRef, outWireRef, key, traceId]);
 
   return <Node ref={nodeRef} slots={slots} onRun={run} traceId={traceId} />;

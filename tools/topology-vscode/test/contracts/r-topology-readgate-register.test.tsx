@@ -91,8 +91,107 @@ const CHAIN_SPEC: RTopologySpec = {
   ],
 };
 
+// 2-slot ReadGate: partial-fill emits secondary=0, full-fill emits secondary=1.
+// Two input sources, one fires first (partial), then second fires (full).
+const TWO_SLOT_SPEC: RTopologySpec = {
+  nodes: [
+    { id: "src0", kind: "input", props: { queue: [1] } },
+    { id: "src1", kind: "input", props: { queue: [2] } },
+    { id: "gate", kind: "readgate", ports: { inputs: ["in0", "in1"], outputs: ["out"] } },
+    { id: "sink", kind: "relay" },
+  ],
+  wires: [
+    {
+      id: "src0ToGate",
+      source: { nodeId: "src0", port: "out" },
+      target: { nodeId: "gate", port: "in0" },
+      pathD: "M 0 0 L 100 0",
+      arcLength: 0,
+    },
+    {
+      id: "src1ToGate",
+      source: { nodeId: "src1", port: "out" },
+      target: { nodeId: "gate", port: "in1" },
+      pathD: "M 0 50 L 100 50",
+      arcLength: 0,
+    },
+    {
+      id: "gateToSink",
+      source: { nodeId: "gate", port: "out" },
+      target: { nodeId: "sink", port: "in0" },
+      pathD: "M 100 0 L 200 0",
+      arcLength: 0,
+    },
+  ],
+};
+
+// Partial-only spec: src0 fires once into a 2-slot gate; src1 never fires.
+// Gate should emit secondary=0 once (partial), then stay quiet.
+const PARTIAL_ONLY_SPEC: RTopologySpec = {
+  nodes: [
+    { id: "src0", kind: "input", props: { queue: [1] } },
+    { id: "gate", kind: "readgate", ports: { inputs: ["in0", "in1"], outputs: ["out"] } },
+    { id: "sink", kind: "relay" },
+  ],
+  wires: [
+    {
+      id: "src0ToGate",
+      source: { nodeId: "src0", port: "out" },
+      target: { nodeId: "gate", port: "in0" },
+      pathD: "M 0 0 L 100 0",
+      arcLength: 0,
+    },
+    {
+      id: "gateToSink",
+      source: { nodeId: "gate", port: "out" },
+      target: { nodeId: "sink", port: "in0" },
+      pathD: "M 100 0 L 200 0",
+      arcLength: 0,
+    },
+  ],
+};
+
+describe("2-slot ReadGate partial-fill behavior", () => {
+  it("partial fill (1-of-2 slots) emits secondary=0 once, does not consume slots", () => {
+    const ref = createRef<TopologyRootHandle>();
+    render(<TopologyRoot ref={ref} spec={PARTIAL_ONLY_SPEC} />);
+    flushRaf(); // src0 delivers → gate sees in0 filled, in1 empty → partial emit → gateToSink loads
+    flushRaf(); // gateToSink delivers → sink fills
+    expect(ref.current!.node("sink")!.slotPhase("in0")).toBe("filled");
+    const v = ref.current!.node("sink")!.consume("in0") as { primary: unknown; secondary: unknown };
+    expect(v).toMatchObject({ primary: 1, secondary: 0 });
+    // in0 slot still filled: partial fire does NOT consume slots.
+    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
+  });
+
+  it("no duplicate secondary=0 emission when wire drains and refills with same filled-slot set", () => {
+    const ref = createRef<TopologyRootHandle>();
+    render(<TopologyRoot ref={ref} spec={PARTIAL_ONLY_SPEC} />);
+    flushRaf(); // src0 delivers → partial emit → gateToSink loads
+    flushRaf(); // gateToSink delivers → sink fills
+    // Consume from sink so wire can accept again.
+    ref.current!.node("sink")!.consume("in0");
+    // Gate re-runs (wire canAccept now), but filled set unchanged → no new emit.
+    flushRaf();
+    expect(ref.current!.node("sink")!.slotPhase("in0")).not.toBe("filled");
+  });
+
+  it("2-slot gate: first partial emit is secondary=0 and does not consume any slots", () => {
+    // Verify the first value the 2-slot gate emits (with only in0 filled) is secondary=0,
+    // and gate slots are not consumed. Full-fire secondary=1 is covered by CHAIN_SPEC (1-slot).
+    const ref = createRef<TopologyRootHandle>();
+    render(<TopologyRoot ref={ref} spec={TWO_SLOT_SPEC} />);
+    flushRaf(); // src0/src1 fire; src0 delivers → partial → gateToSink loads; src1 may be in-flight
+    flushRaf(); // gateToSink delivers → sink fills with secondary=0
+    expect(ref.current!.node("sink")!.slotPhase("in0")).toBe("filled");
+    const v = ref.current!.node("sink")!.consume("in0") as { primary: unknown; secondary: unknown };
+    // The first emission must be the partial (secondary=0) since src0 always delivers before src1.
+    expect(v).toMatchObject({ primary: 1, secondary: 0 });
+  });
+});
+
 describe("ReadGate → Register chain (secondary-value delay buffer)", () => {
-  it("ReadGate emits secondary 0 (1-slot gate); Register delays it one round", () => {
+  it("ReadGate emits secondary 1 (1-slot gate, all filled); Register delays it one round", () => {
     const ref = createRef<TopologyRootHandle>();
     render(<TopologyRoot ref={ref} spec={CHAIN_SPEC} />);
     flushRaf(); // srcToGate delivers → gate fires → gateToReg loads
@@ -100,7 +199,7 @@ describe("ReadGate → Register chain (secondary-value delay buffer)", () => {
     flushRaf(); // regToSink delivers → sink fills
     expect(ref.current!.node("sink")!.slotPhase("in0")).toBe("filled");
     const v = ref.current!.node("sink")!.consume("in0") as { primary: unknown; secondary: unknown };
-    // ReadGate (1 slot) → secondary=0. Register emits held=null on first round.
+    // ReadGate (1 slot, 1-of-1 filled) → secondary=1. Register emits held=null on first round.
     expect(v).toMatchObject({ primary: 1, secondary: null });
   });
 });

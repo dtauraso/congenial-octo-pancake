@@ -31,8 +31,10 @@ Branch is **not yet merged to main**. Do not merge without explicit sign-off.
   through both test path and editor path (same commit — landing rule).
 - `spec-to-flow.ts`: `value` field round-tripped in edge data.
 - `node-kinds.tsx`: `ReadGateBody` emits `{primary:1, secondary}` where
-  `secondary = slots.length >= 2 ? 1 : 0`; `RegisterBody` (new) is a
-  one-round delay buffer — emits held secondary on fire, stores incoming.
+  `secondary` encodes runtime fill completeness (0=partial, 1=complete);
+  partial fires do not consume slots and use a ref-tracked signature to
+  suppress re-emit storms; `RegisterBody` (new) is a one-round delay
+  buffer — emits held secondary on fire, stores incoming.
 - `inhibit-right-gate.tsx`: relay-style transparent forwarding of `leftValue`.
 - `e2e/riding-label.spec.ts` + `e2e/fixtures/riding-label.json`: updated
   for RAF (not WAAPI) delivery; fixture has real input queue; assertion
@@ -41,7 +43,7 @@ Branch is **not yet merged to main**. Do not merge without explicit sign-off.
   contract tests — Register round-1 emits null; ReadGate→Register chain
   end-to-end.
 
-All 127 tests green; build clean; tsc --noEmit clean.
+All 130 tests green; build clean; tsc --noEmit clean.
 
 ## Open items
 
@@ -59,8 +61,11 @@ All 127 tests green; build clean; tsc --noEmit clean.
 - **Running ≠ emitting.** `run()` is a handler; pulsing out depends
   on local preconditions.
 - **Secondary value** is the data channel on a pulse; primary is the
-  control-flow event signal. ReadGate encodes slot-count in secondary
-  (0 for 1-slot, 1 for 2+). Register is a one-round shift-register.
+  control-flow event signal. ReadGate encodes runtime fill completeness
+  in secondary: 0 = partial fill (some-but-not-all slots filled, no
+  consume), 1 = complete fill (all slots filled, all slots consumed).
+  A single-slot gate always emits secondary=1. Register is a one-round
+  shift-register.
 
 ## Conceptual frame
 
