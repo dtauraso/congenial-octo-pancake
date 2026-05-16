@@ -232,8 +232,10 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
 
   const load = useCallback((value: unknown) => {
     if (phaseRef.current.kind !== "empty") {
-      postLog("trace.wire.load.dropped", { wire: traceId, reason: "in-flight", incoming: value });
-      return;
+      const payload = { wire: traceId, reason: "in-flight", incoming: value };
+      postLog("trace.wire.load.dropped", payload);
+      console.error("[Wire] dropped reload while in-flight", payload);
+      throw new Error(`[Wire] dropped reload while in-flight: wire=${traceId}`);
     }
     if (traceId) postLog("trace.load", { wire: traceId, value });
     apply({ type: "load", value });
