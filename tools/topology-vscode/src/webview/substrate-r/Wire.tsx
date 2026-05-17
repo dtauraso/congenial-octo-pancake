@@ -347,8 +347,15 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   tryFinalizeRef.current = tryFinalize;
 
   const load = useCallback((v: unknown) => {
-    if (phaseRef.current.kind !== "empty") return; // silent no-op: wire in-flight; body retries next poll
-    if (traceId) postLog("trace.load", { wire: traceId, value: v });
+    const phaseBefore = phaseRef.current.kind;
+    const accepted = phaseBefore === "empty";
+    if (traceId) postLog("trace.load", {
+      wire: traceId,
+      value: v,
+      phaseBefore,
+      accepted,
+    });
+    if (!accepted) return; // silent no-op: wire in-flight; body retries next poll
     apply({ type: "load", value: v });
     valueRef.current = v;
     pendingDeliverRef.current = true;

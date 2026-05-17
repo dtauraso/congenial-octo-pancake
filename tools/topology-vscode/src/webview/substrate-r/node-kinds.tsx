@@ -158,16 +158,25 @@ export function ChainInhibitorBody({
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
-    if (node.slotPhase(slotId) !== "filled") return;
+    if (node.slotPhase(slotId) !== "filled") {
+      if (traceId) postLog("trace.chaininhibitor.skip", { node: traceId, reason: "slot-not-filled" });
+      return;
+    }
     const inhibitWire = inhibitOutWireRef?.current;
     const incoming = node.consume(slotId);
     const emitted = heldRef.current;
     heldRef.current = incoming;
+    if (traceId) postLog("trace.chaininhibitor.fire", {
+      node: traceId,
+      incoming,
+      emitted: emitted === EMPTY ? "EMPTY" : emitted,
+      willEmit: emitted !== EMPTY,
+    });
     if (emitted !== EMPTY) {
       wire.load(emitted);
       if (inhibitWire) inhibitWire.load(emitted);
     }
-  }, [nodeRef, outWireRef, inhibitOutWireRef, slotId]);
+  }, [nodeRef, outWireRef, inhibitOutWireRef, slotId, traceId]);
 
   useEffect(() => {
     let raf = 0;
