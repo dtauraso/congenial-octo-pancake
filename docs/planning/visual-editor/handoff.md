@@ -11,72 +11,66 @@ handoff.md is exempt from the 100-LOC budget.
 
 ## State at handoff (2026-05-16)
 
-**Active branch:** none. Work landed on `main` at `041949e`. No task
-branch in flight.
+**Active branch:** `task/drop-output-wake-from-bodies` — **10 commits
+ahead of origin, unpushed.** Awaiting user spot-check before push.
 
-Ring animation is working live in the editor. The `Wire.load` dev
-assertion (throws on in-flight reload) is active and silent on the
-current topology — meaning the working ring is genuinely robust, not
-relying on the prior swallow.
+Tick-loop redesign landed end-to-end. The substrate's wake model
+changed from event-driven (`Node.fill` synchronously calling `onRun`)
+to RAF-paced polling (each body has its own poll loop that re-evaluates
+its firing rule each frame). The ReadGate ring rate-imbalance bug
+(in-flight `Wire.load` assertion firing on the double-pulse from Rule
+2 + Rule 1) is resolved by `canAccept` naturally gating re-emit on
+the polling cycle. 130/130 tests, tsc/vocab/loc clean.
 
-## What landed this session
+## What landed this session (newest first)
 
-- `9d0cafc` — merged `task/pulse-secondary-value` to main:
-  ChainInhibitor 2abc shift-register fanout, scalar pulse payload,
-  ReadGate's `lastPartialSigRef` guard removed.
-- `2ebe7c3` — `Wire.load` now throws on in-flight reload (was a
-  silent swallow + `trace.wire.load.dropped` log). Dev safety net;
-  no test relied on the swallow.
-- `041949e` / `a532729` — reverts of two unauthorized commits a
-  subagent pushed during a merge task (`3eda027` removed ReadGate's
-  partial-0 emit, `7de6431` rewrote the partial-fill contract test
-  to match). Both contradicted the settled ReadGate spec.
+- `69cfab1` step 9/9 — ReadGate ring regression test, no in-flight assert.
+- `4b1f070` step 8/9 — MODEL.md revised: "firing as control-flow event"
+  clause weakened to allow RAF-paced observation while keeping
+  precondition-gated firing; global gate retargeted from nodes to wire
+  animations.
+- `2a8abb4` step 7/9 — no-op (pause was already wire-layer only).
+- `6cce2d6` step 6/9 — Wire deferred-deliver safety net: arrival into
+  filled slot stays pending instead of throwing.
+- `cbf7fed` step 5/9 — audit only: `onRun` prop kept (NodeHandle.run
+  delegates to it). Step's intent was deletion but a real use exists.
+- `7b0254e` step 4/9 — RAF poll added to Relay, Join, ChainInhibitor,
+  Register, ReadGate, InhibitRightGate bodies.
+- `b093c7d` step 3/9 — removed `onRun` call from `Node.fill`. Tests
+  fail in this commit by design; restored by step 4.
+- `039931f` step 2/9 — removed `subscribeCanAccept` from Wire and
+  InputBody. Two smoke tests gained an extra `flushRaf()` to match
+  the polling model's one-tick refill latency.
+- `9ff4ee5` step 1/9 — RAF poll added to InputBody alongside the
+  existing `subscribeCanAccept` (coexist for one commit, both call
+  the same idempotent run).
+- `525316b` plan + diagrams under
+  [docs/planning/visual-editor/tick-loop-redesign.md](tick-loop-redesign.md)
+  and [diagrams/tick-loop-redesign/](../../../diagrams/tick-loop-redesign/).
 
-129 tests green; build clean; tsc clean; vocab clean; LOC clean.
+## Open follow-ups
 
-## ReadGate spec (settled, do not drift from this)
-
-ReadGate is a variable-arity AND with two mutually exclusive rules
-per `run()` invocation:
-
-1. **All N slots filled** → consume all slots, `wire.load(1)`.
-2. **`[0, N-1]` slots filled** → `wire.load(0)`, do nothing else
-   (no consume).
-
-The doc-comment at `node-kinds.tsx:228-231` currently states only
-rule 1. Updating it to include rule 2 is a pending tidy-up.
-
-The partial-0 emit IS part of the spec. A prior investigation (this
-session) framed it as "drift causing 2× amplification per src
-arrival" — that framing was wrong; the user corrected it. Each
-slot-change fires exactly one rule.
-
-## ChainInhibitor 2abc (settled)
-
-On `in` fill: emit held value on both `out` and `inhibitOut` (no
-canAccept guards), store incoming, slot empties. Seed via `data.seed`.
-
-## Open follow-ups (not urgent)
-
-- Fix the stale ReadGate doc-comment at `node-kinds.tsx:228-231` to
-  state both rules.
-- Subscription bookkeeping: node bodies still call
-  `subscribeCanAccept` (ChainInhibitor on both `out` and
-  `inhibitOut`). User flagged this as substrate concern leaking into
-  nodes. Prior attempt to move wake into the substrate
-  (`sourceNodeRef` on Wire, direct `.run()`) was reverted. Revisit
-  only with a clear design.
-- If a reload-while-in-flight ever fires the dev assertion, that's a
-  real rate-imbalance bug — not something to swallow.
+- **Push the branch** after spot-check. Possibly squash the docs-only
+  step 5 and step 7 commits if you want a cleaner history (but each is
+  individually meaningful).
+- **`topology.view.json` lost** — an uncommitted user edit was wiped
+  by a `git reset --hard` during the option A→B switch. Redo if needed.
+- **Deferred-deliver is interim (Option A).** The long-term fix is
+  parseSpec validation preventing two wires from racing the same slot
+  (Option B in the plan). File this as future work.
+- **Memory drift:** `feedback_run_is_input_only.md` was written
+  pre-redesign ("run is input-woken only; output drain isn't a wake
+  source"). Under the polling model run isn't *woken* at all — it's
+  polled. Update or retire the memory.
 
 ## Working mode
 
-- Delegate executor work (log walks, mechanical edits) to sonnet/haiku
-  subagents. Main session is for judgment.
-- **Verify subagent commits before merging.** A subagent this session
-  picked up an unstaged working-tree edit during a "merge to main"
-  task and pushed it as an extra commit. Check `git log` deltas
-  against the intended diff before pushing to shared branches.
+- Delegate executor work (multi-step migrations, mechanical edits) to
+  sonnet subagents. Two agents executed this redesign across the 9
+  plan steps; both hit real blockers and correctly stopped to ask
+  instead of improvising.
+- **Verify subagent commits before pushing shared branches.** Spot-check
+  `git log` deltas against the plan.
 - Don't propose menus of options when the user is mid-investigation;
   finish the current frame.
 - When the user says "delegate", they want a subagent call, not the
@@ -86,15 +80,19 @@ canAccept guards), store incoming, slot empties. Seed via `data.seed`.
 
 After any substrate-r edit: `npm run build` (vitest/tsc don't refresh
 `out/webview.js`). Live log at `.probe/webview-log.jsonl`; clear with
-`: > .probe/webview-log.jsonl` between runs.
+`: > .probe/webview-log.jsonl` between runs (but NOT before reading the
+current run — Claude truncated it once this session by mistake).
 
 Cwd for tsc/tests/check:loc/build: `tools/topology-vscode/`.
 
 ## Open branches
 
-- `main` — production trunk; at `041949e`; working.
-- `task/pulse-secondary-value` — merged, left intact (per workflow).
-- `task/dropped-load-assert` — merged, left intact.
+- `main` — production trunk at `9b55128` (handoff doc commit on top of
+  the assertion-live state).
+- `task/drop-output-wake-from-bodies` — current task; 10 commits ahead
+  of origin; unpushed. Holds the tick-loop redesign + plan + SVGs.
+- `task/pulse-secondary-value`, `task/dropped-load-assert` — merged
+  prior sessions, left intact.
 
 ## ALWAYS clause
 
