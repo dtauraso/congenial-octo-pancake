@@ -268,11 +268,9 @@ class WireLoop {
     this.distanceCovered = distance;
     if (this.traceId) {
       const pct = measuredLen > 0 ? distance / measuredLen : 0;
-      const threshold = [0.25, 0.5, 0.75, 1.0].some(t => {
-        const prevPct = measuredLen > 0 ? (distance - elapsed * PULSE_SPEED_PX_PER_MS) / measuredLen : 0;
-        return prevPct < t && pct >= t;
-      });
-      if (threshold) {
+      const prevPct = measuredLen > 0 ? (distance - elapsed * PULSE_SPEED_PX_PER_MS) / measuredLen : 0;
+      const completed = prevPct < 1.0 && pct >= 1.0;
+      if (completed) {
         postLog("trace.wire.step", { traceId: this.traceId, elapsed, distance, measuredLen });
       }
     }
