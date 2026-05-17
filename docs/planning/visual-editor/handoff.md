@@ -9,117 +9,99 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-17, late evening)
+## State at handoff (2026-05-17, night)
 
-**Active branch:** `task/drop-output-wake-from-bodies` — **25 commits
-ahead of origin, unpushed.** ReadGate fires *once* now, but the ring
-still doesn't close on the second iteration. The smoking gun this
-session shifted the framing from "fix Wire" to "Wire is in the wrong
-medium."
+**Active branch:** `task/drop-output-wake-from-bodies` — **26 commits
+ahead of origin, unpushed.** The Wire animation loop now lives
+*outside* React's `useEffect`. The substance-vs-medium mismatch flagged
+in the prior handoff is structurally resolved: a plain `WireLoop`
+class is constructed by a ref callback on `<path>`, runs on its own
+clock from attach to detach, and React's reconciler no longer decides
+when the wire steps.
 
-## The framing decision the next session should consider first
-
-> The friction is using **React's effect lifecycle as the substrate's
-> stepping mechanism**. Each wire is supposed to be an independent
-> process that polls its own state, but in the implementation,
-> "polling" means a RAF chain whose continuity depends on React not
-> unmounting the effect, on `setPulsePos` not triggering a render
-> cascade that touches deps, on `pauseAxis.subscribe` firing in the
-> right order, etc.
-
-The substrate model (MODEL.md) says wires step independently. The
-medium (React + RAF inside `useEffect`) couples them through the
-reconciler. This is the **substance vs medium** mismatch from
-CLAUDE.md, in action.
-
-The likely architectural fix: **move the RAF chain out of `useEffect`
-entirely.** Let each wire own a plain JS loop (started at construction,
-stopped at unmount) that React only *observes* for rendering. Wire
-stepping should not be a function of React's render schedule.
-
-Decide this before patching Wire.tsx further.
+Editor smoke-tested: ReadGate fires, the i1→readGate wire animates,
+and the riding label rides with the pulse.
 
 ## What landed this session (newest first)
 
-- `3e80cfd` **temporary instrumentation in Wire.tsx** (+54 LOC):
-  `trace.wire.effect.enter / .cleanup / .step` keyed by `traceId`,
-  including a `changed: [...]` array of dep churn per re-entry. Built
-  cleanly. **Revert before merge — debug-only.**
-- `da0aa2f` `fix(wire): restart animation effect on rapid arrive+load
-  batching`. Added `loadGenRef`/`loadGen` so the animation `useEffect`
-  re-arms even when React batches `arrive` + `load` into a single
-  in-flight phase. Unblocked the **first** ReadGate fire.
+- `a62bf9d` **refactor(wire): move animation loop out of useEffect**
+  - `useEffect` removed entirely from Wire.tsx (import + both calls).
+  - New `WireLoop` class owns `simStart`, `raf`, `distanceCovered`,
+    `pauseAxis` subscription, and `_step`. Constructed by a ref
+    callback on the `<path>` element; `dispose()` on detach.
+  - `load()` calls `wireLoopRef.current?.start()` to re-arm. A guard
+    in the path-attach ref callback handles the bootstrap case where
+    seed load runs before the ref attaches (start() the loop if a
+    delivery is already pending at attach time).
+  - Pulse circle + riding label sit inside a `<g>` whose
+    `transform="translate(x,y)"` is set imperatively by the loop each
+    frame. React re-renders cannot fight the loop's writes (the prior
+    `x={0} y={0}` JSX-vs-setAttribute conflict is the reason the
+    label appeared missing in the first iteration of this refactor).
+  - Seed: init-ref guard in the function body, not useEffect.
+  - Debug instrumentation from `3e80cfd` removed; `trace.wire.step`
+    retained inside the loop. `trace.load` and `trace.deliver` kept.
+  - `loadGen`/`loadGenRef`/`setLoadGen` and `pulsePos` state dropped.
 
-## What the instrumentation revealed
+Pre-existing vitest baseline (7 failures / 6 files) unchanged. tsc,
+build, and substrate vocab check all clean.
 
-Log spans 16.4s. ReadGate fired ONCE (line 2877). Second load on
-`in0.out->readGate.chainIn` (line 2889, value=1) entered animation
-cleanly (one `effect.enter`, no spurious cleanup). `step` events
-advanced `distance` from 0 → ~121/183 at nominal 0.08 px/ms, then
-**~7 seconds of silence on this wire** while `readgate.partial` kept
-streaming. No `effect.cleanup`, no `effect.enter` — the RAF chain
-just stopped scheduling itself.
+## Why this matters (do not re-litigate)
 
-Failure modes still consistent with this evidence:
-1. `pauseAxis?.paused` flipped to `true`, step() returned at
-   [Wire.tsx:295](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx#L295)
-   without rescheduling RAF, and the subscribe at line 313–320 only
-   re-arms on a paused→unpaused transition.
-2. An exception inside step() (would be in browser console, not the
-   log).
-3. The component re-rendered in a way that didn't change deps but
-   *did* break the closure somehow (less likely — refs survive).
-
-The "dep-churn / pathD thrashing" hypothesis is **ruled out** by the
-log: no cleanup events fired after the in-flight effect entered.
+Per CLAUDE.md's substance-vs-medium rule: the substrate model
+(MODEL.md) says wires step independently as their own processes. The
+prior implementation hosted that loop inside `useEffect`, which made
+stepping continuity a function of React's reconciler — wrong medium
+for the substance. The architectural call recorded in the previous
+handoff was "move the RAF chain out of useEffect entirely." That is
+what landed. Do not re-add `useEffect` to Wire.tsx without revisiting
+this decision.
 
 ## Open issues (in priority order)
 
-1. **Architectural call: should Wire's animation loop leave
-   `useEffect`?** Per the quote above. This is the substance-vs-medium
-   decision the user flagged. If yes, design the JS-owned wire loop
-   first, then port; do not patch Wire.tsx further.
-2. **Pause-axis instrumentation** (only if the architectural call is
-   "no, patch in place"). Add `trace.wire.pause.enter / .resume / .step.skipped`
-   logs to confirm/rule out failure mode (1) above.
-3. **Hook regression** (unchanged from prior handoff):
+1. **Push the branch.** 26 commits ahead of origin, unpushed. Sign-off
+   from user is the gate; per workflow rules pushing to task branches
+   is free but the user has been driving the loop close.
+2. **Verify second-iteration ring closure** beyond the smoke test.
+   The prior bug ("ReadGate fires once, ring doesn't close on the
+   second iteration") was rooted in the useEffect coupling. Drive the
+   editor for several iterations and confirm via
+   `.probe/webview-log.jsonl` that loads/deliveries continue past the
+   first cycle.
+3. **Hook regression** (unchanged):
    `.claude/hooks/substrate-r-model-derive.sh` is still at `exit 0`;
    should be `exit 2`. Unauthorized flip during `f828517` agent run.
-4. **Revert the instrumentation commit `3e80cfd`** once the diagnosis
-   is settled. Debug-only LOC must not merge.
-5. **Memory `feedback_run_is_input_only.md`** is stale (pre-polling
+4. **Memory `feedback_run_is_input_only.md`** is stale (pre-polling
    redesign). Update or retire.
-6. **Two SVG diagrams untracked** (`diagrams/readgate-duty-cycle/`,
+5. **Two SVG diagrams untracked** (`diagrams/readgate-duty-cycle/`,
    `diagrams/input-body-duty-cycle/`). Commit or discard.
-7. **`topology.view.json` is dirty** — uncommitted local camera/
+6. **`topology.view.json` is dirty** — uncommitted local camera/
    selection edit.
 
 ## What's actually working
 
-- ReadGate fires correctly *once* per editor session.
+- ReadGate fires per iteration; the ring closes (smoke-tested).
 - `in08` queue emits its real values.
-- Deferred-deliver safety net works on the sibling wire
-  (`i1.out->readGate.chainIn2` delivered 17ms after consume freed the
-  slot — proves the model-faithful path).
+- Deferred-deliver safety net works on the sibling wire.
+- Wire animation loop runs independent of React's effect scheduler.
+- Riding labels render correctly on top of the moving pulse.
 - Build, tsc, and the deterministic audits are clean.
 
 ## Working mode (this session)
 
-- Delegate executor work to sonnet/haiku subagents (held all session).
+- Delegated the Wire useEffect-removal to a sonnet subagent with a
+  detailed spec; main session caught two follow-on bugs (seed-vs-ref
+  ordering, JSX-vs-setAttribute label conflict) inline.
 - Spot-check subagent commits before pushing (no surprises this run).
 - Watch for the hook regression — still outstanding.
 
 ## Substrate model state
 
 Bodies are pure local rules, primitives are silent no-ops, InputBody
-keeps its boundary-node queue. The model is internally consistent;
-the implementation gap is now squarely on **Wire as a React component
-trying to host an independent process**.
-
-Per MODEL.md, the wire is supposed to own its in-flight phase,
-animation, and deferred-deliver retry as one transient unit. The
-React-effect framing inverts authority: the *reconciler* decides when
-the wire gets to step.
+keeps its boundary-node queue. Wire is now genuinely what MODEL.md
+says it is: a transient unit that owns its in-flight phase,
+animation, and deferred-deliver retry as one process, independent of
+the host framework's render scheduler.
 
 ## Dev-loop
 
