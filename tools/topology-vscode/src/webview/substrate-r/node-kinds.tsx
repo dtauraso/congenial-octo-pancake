@@ -19,7 +19,6 @@ export interface KindBodyCtx {
   outWireRefs: Record<string, RefObject<WireHandle | null>>;
   slotIds: string[];
   initialQueue: unknown[];
-  seed?: unknown;
   traceId?: string;
 }
 
@@ -27,14 +26,14 @@ export interface KindBodyCtx {
 // TopologyRoot (test path) and RSubstrateNode (editor path) call this
 // — there is no second switch to keep in sync.
 export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
-  const { nodeRef, outWireRefs, slotIds, initialQueue, seed, traceId } = ctx;
+  const { nodeRef, outWireRefs, slotIds, initialQueue, traceId } = ctx;
   switch (kind) {
     case "input":
       return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} initialQueue={initialQueue} traceId={traceId} />;
     case "relay":
       return <RelayBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} traceId={traceId} />;
     case "chaininhibitor":
-      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} inhibitOutWireRef={outWireRefs["inhibitOut"]} slotId={slotIds[0]} seed={seed} traceId={traceId} />;
+      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} inhibitOutWireRef={outWireRefs["inhibitOut"]} slotId={slotIds[0]} traceId={traceId} />;
     case "join":
       return <JoinBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotAId={slotIds[0]} slotBId={slotIds[1]} traceId={traceId} />;
     case "readgate":
@@ -143,21 +142,21 @@ export function JoinBody({
 // as the new held. Atomic — all preconditions checked before commit.
 
 export function ChainInhibitorBody({
-  nodeRef, outWireRef, inhibitOutWireRef, slotId = "in", seed, traceId,
+  nodeRef, outWireRef, inhibitOutWireRef, slotId = "in", traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
   inhibitOutWireRef?: RefObject<WireHandle | null>;
   slotId?: string;
-  seed?: unknown;
   traceId?: string;
 }) {
-  const heldRef = useRef<unknown>(seed ?? null);
+  const heldRef = useRef<unknown>(null);
 
   const run = useCallback(() => {
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
+    if (node.slotPhase(slotId) !== "filled") return;
     const inhibitWire = inhibitOutWireRef?.current;
     const incoming = node.consume(slotId);
     const emitted = heldRef.current;
