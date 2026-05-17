@@ -1,8 +1,8 @@
 // Node-kind implementations under the slot-in-node substrate. All
 // kinds live in one file so the Node concept is one read, not five.
 //
-// Input: boundary node. run() checks slot in0 filled and outWire
-// canAccept, then consumes and loads. No queue, no restart.
+// Input: boundary node. run() consumes slot in0 and loads outWire
+// unconditionally. Primitives absorb no-ops on unready states.
 
 import { useCallback, useEffect, useRef, type RefObject, type ReactNode } from "react";
 import { Node, type NodeHandle } from "./Node";
@@ -57,8 +57,6 @@ export function InputBody({
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
-    if (node.slotPhase("in0") !== "filled") return;
-    if (!wire.canAccept) return;
     const v = node.consume("in0");
     wire.load(v);
   }, [nodeRef, outWireRef]);
@@ -85,8 +83,6 @@ export function RelayBody({
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
-    if (node.slotPhase(slotId) !== "filled") return;
-    if (!wire.canAccept) return;
     const value = node.consume(slotId);
     wire.load(value);
   }, [nodeRef, outWireRef, slotId]);
@@ -114,9 +110,6 @@ export function JoinBody({
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
-    if (node.slotPhase(slotAId) !== "filled") return;
-    if (node.slotPhase(slotBId) !== "filled") return;
-    if (!wire.canAccept) return;
     const va = node.consume(slotAId);
     const vb = node.consume(slotBId);
     wire.load([va, vb]);
@@ -188,14 +181,12 @@ export function RegisterBody({
     const node = nodeRef.current;
     const wire = outWireRef?.current;
     if (!node || !wire) return;
-    if (node.slotPhase(slotId) !== "filled") return;
-    if (!wire.canAccept) return;
     const incoming = node.consume(slotId);
     const emitted = heldRef.current;
     heldRef.current = incoming;
     if (traceId) postLog("trace.register.fire", { node: traceId, emitted, incoming });
     wire.load(emitted);
-  }, [nodeRef, outWireRef, slotId]);
+  }, [nodeRef, outWireRef, slotId, traceId]);
 
   useEffect(() => {
     let raf = 0;
@@ -227,10 +218,6 @@ export function ReadGateBody({
     const handle = nodeRef.current;
     const wire = outWireRef?.current;
     if (!handle || !wire) return;
-    if (!wire.canAccept) {
-      if (traceId) postLog("trace.readgate.skip", { node: traceId, reason: "wire-blocked", phase: wire.phase.kind });
-      return;
-    }
     const phases = slots.map((s) => handle.slotPhase(s));
     const filledSlots = slots.filter((_, i) => phases[i] === "filled");
     const allFilled = filledSlots.length === slots.length;

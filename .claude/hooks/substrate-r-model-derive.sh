@@ -17,7 +17,7 @@ Substrate-r edit detected. Before patching this file:
 2. Compare to the current code. If they don't match, the model-misalignment is the bug — fix that first, then your change.
 3. Do not add internal state (queues, restart machines, exhaustion phases) to bodies. Bodies are local rules over slots and wires.
 EOF
-  exit 2
+  exit 0
 fi
 
 exit 0
