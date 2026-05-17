@@ -9,87 +9,79 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-17, late night)
+## State at handoff (2026-05-17, end of session)
 
-**Active branch:** `task/drop-output-wake-from-bodies` — **27 commits
-ahead of origin, unpushed.** Working tree has the dirty
-`topology.view.json` and two untracked diagram dirs (carryover); no
-uncommitted source changes.
+**Active branch:** `task/drop-output-wake-from-bodies` — **~38 commits
+ahead of origin, unpushed.** Working tree is clean except for two
+untracked diagram dirs (carryover; see open issues). No uncommitted
+source changes.
 
-Ring smoke-tested: **runs 6 cycles cleanly, then stalls.** The
-ReadGate-specific drop-token bug is fixed. The stall at cycle 6 is a
-separate, parallel bug in other node bodies (see below).
+Ring smoke-test: `i0` no longer emits `undefined` or `null` pulses.
+First-emit is suppressed via the EMPTY sentinel added in `14e9f09`.
+Whether the ring still stalls at cycle 6 is **UNKNOWN** — not
+re-tested this session after the ChainInhibitor fixes.
 
 ## What landed this session (newest first)
 
-- `4a5d6c1` **fix(readgate): guard fire on dest slot readiness** —
-  restored `if (!wire.canAccept) return;` guard at the top of
-  ReadGate's `run` in
-  [node-kinds.tsx:237](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx#L237).
-  Reverts the ReadGate slice of `aaf34de` ("strip all guards past
-  ref-null").
-  - **Why:** ReadGate was consuming both input slots and then calling
-    `wire.load(1)`, which silently no-ops in
-    [Wire.tsx:355](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx#L355)
-    when the wire isn't `empty`. Tokens vanished on every cycle where
-    the output destination slot was still occupied.
-  - **Spec basis (MODEL.md §"Who does what"):** source observes
-    readiness via `dest.slotPhase(slotId)` through the output
-    reference; backpressure lives in the destination slot, not the
-    wire. `wire.canAccept` is the spec-honest accessor — its getter
-    at [Wire.tsx:376-381](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx#L376-L381)
-    checks `dest.slotPhase(destSlotId) === "empty"`.
-  - Build, `tsc --noEmit`, and `check-substrate-vocab.mjs` all clean.
+- `f42e556` **chore: update local camera/selection in topology.view.json**
+- `a6a50a7` **refactor(substrate-r): finish removing seed prop plumbing** —
+  drops `seed` from `RNodeSpec.props`, `RWireSpec`, call sites in
+  `RSubstrateNode`/`TopologyRoot`/`RSubstrateEdge`, and Wire's init-ref
+  seed block. `14e9f09` removed the last consumer; this sweep removes
+  the dead plumbing.
+- `14e9f09` **fix(chaininhibitor): suppress first-emit when no prior held** —
+  module-scope `EMPTY` sentinel so first in-fill stores without
+  emitting. Fixes the `null` first-emit from `heldRef` seeded to null.
+- `b0ebb0a` **fix(chaininhibitor): guard fire on slot=filled** — restores
+  slot-filled guard stripped by `26cd029`; was firing every RAF and
+  emitting `undefined`.
+- `7e22c02` **diag(wireref): log per-port resolution** — diagnostic logging
+  added to find the `i1` outWire gap; still present in the tree.
 
 ## Open issues (in priority order)
 
-1. **Other node bodies likely have the same bug.** Smoke test shows
-   ring stalls at cycle 6: both upstream feeders (`in0`, `i1`) go
-   silent *simultaneously*, suggesting a token vanished on the return
-   path. The synchronized stop matches the pattern fixed in ReadGate
-   — consume-before-checking-output. Two ways to fix:
-   - **(a) Audit every node body** in
-     [node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
-     for `consume`/`wire.load` ordering without a `canAccept` guard.
-     Restore guards locally.
-   - **(b) Make `Wire.load` throw on non-empty** instead of silent
-     return ([Wire.tsx:356](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx#L356)).
-     Surfaces every offender as a loud runtime error. Matches
-     `aaf34de`'s original premise and the
-     [feedback_run_is_input_only](../../../memory/feedback_run_is_input_only.md)
-     memory. Recommended — one commit, exhaustive.
-2. **Push the branch.** 27 commits ahead of origin. Sign-off-gated.
+1. **Audit other node bodies for consume/wire.load ordering.** ReadGate
+   and ChainInhibitor are guarded now, but RelayBody, JoinBody,
+   RegisterBody, etc. have not been audited. Two paths:
+   - **(a)** Audit every body in `node-kinds.tsx` and restore guards
+     locally.
+   - **(b)** Make `Wire.load` throw on non-empty** instead of silent
+     no-op ([Wire.tsx:~356](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)).
+     Surfaces every offender loud. Recommended — one commit, exhaustive.
+   Currently halfway between: some bodies guard, (b) isn't in place.
+2. **Re-smoke the ring.** Cycle-6 stall status unknown after this
+   session's ChainInhibitor fixes. Run the ring and log `.probe/webview-log.jsonl`.
+3. **Push the branch.** ~38 commits ahead of origin. Sign-off-gated per
+   CLAUDE.md.
 4. **Hook regression** (carryover):
    `.claude/hooks/substrate-r-model-derive.sh` is still at `exit 0`;
-   should be `exit 2`. Unauthorized flip during `f828517` agent run.
+   should be `exit 2`. Do not touch it here — tracked as separate issue.
 5. **Memory `feedback_run_is_input_only.md`** is stale (pre-polling
-   redesign). Update or retire — and the conclusion from this session
-   (silent `wire.load` is exactly the rate-bug-hider that memory
-   predicted) is worth folding in.
-6. **Two SVG diagrams untracked** (`diagrams/readgate-duty-cycle/`,
-   `diagrams/input-body-duty-cycle/`). Commit or discard.
-7. **`topology.view.json` is dirty** — uncommitted local camera/
-   selection edit.
+   redesign). Update or retire; the session's conclusion (silent
+   `wire.load` is exactly the rate-bug-hider that memory predicted) is
+   worth folding in.
+6. **Two SVG diagram dirs untracked** (`diagrams/readgate-duty-cycle/`,
+   `diagrams/input-body-duty-cycle/`). Commit or discard when ready.
 
 ## What's actually working
 
-- ReadGate fires per iteration without dropping tokens (6 clean cycles
-  observed before unrelated stall).
-- Wire animation loop runs independent of React's effect scheduler
-  (carryover from previous session).
-- Build, tsc, and the deterministic audits are clean.
+- ChainInhibitor no longer emits `undefined` or `null`; first-emit is
+  suppressed via EMPTY sentinel.
+- Seed prop fully removed from the wire/node pipeline (dead plumbing
+  gone).
+- Wire animation loop runs independent of React's effect scheduler.
+- Build, `tsc --noEmit`, and deterministic audits are clean.
 
 ## Substrate model state
 
-Bodies should be "pure rules" per `aaf34de`'s framing, but pure-rule
-ness depends on substrate primitives being honest about contract
-violations. `Wire.load`'s silent no-op breaks that — it lets bodies
-that skip the readiness check appear to work, then silently lose
-tokens. The model-honest substrate either (a) requires bodies to read
+Bodies should be "pure rules" per `aaf34de`'s framing, but pure-ruleness
+depends on substrate primitives being honest about contract violations.
+`Wire.load`'s silent no-op breaks that — it lets bodies that skip the
+readiness check appear to work, then silently lose tokens. The
+model-honest substrate either (a) requires bodies to read
 `dest.slotPhase` via the output ref before consuming, or (b) makes
-`Wire.load` assert. Currently the codebase is half-way between the
-two: ReadGate now does (a), other bodies don't, and (b) isn't in
-place.
+`Wire.load` assert. Currently half-way between: some bodies guard, no
+others do, and (b) isn't in place.
 
 ## Dev-loop
 
@@ -98,7 +90,7 @@ After any substrate-r edit: `npm run build` (vitest/tsc don't refresh
 `: > .probe/webview-log.jsonl` between runs (NOT before reading the
 current run — Claude truncated it once by mistake).
 
-Cwd for tsc/tests/check:loc/build: `tools/topology-vscode/`.
+Cwd for tsc/tests/check-loc/build: `tools/topology-vscode/`.
 
 ## ALWAYS clause
 
