@@ -18,7 +18,7 @@
 // used by tests.
 
 import {
-  forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState,
+  forwardRef, useCallback, useImperativeHandle, useRef, useState,
 } from "react";
 import type { RefObject } from "react";
 import type { NodeHandle } from "./Node";
@@ -187,6 +187,125 @@ export interface WireProps {
   value?: unknown;
 }
 
+// ── WireLoop ────────────────────────────────────────────────────────
+// Owns the RAF animation loop. Constructed once per path element
+// (via ref callback). Calling start() re-arms on each load; calling
+// dispose() tears down on detach.
+
+class WireLoop {
+  private path: SVGPathElement;
+  private arcLength: number | undefined;
+  private pauseAxis: PauseAxis | undefined;
+  private getPhaseKind: () => string;
+  private getPendingDeliver: () => boolean;
+  private setAnimDone: (v: boolean) => void;
+  private tryFinalize: () => void;
+  private traceId: string | undefined;
+
+  private distanceCovered = 0;
+  private raf = 0;
+  private simStart = 0; // vocab-ok: visual pulse animation, not substrate scheduling
+  private stepCount = 0;
+  private unsub: (() => void) | undefined;
+  private groupEl: SVGGElement | null = null;
+
+  constructor(opts: {
+    path: SVGPathElement;
+    arcLength: number | undefined;
+    pauseAxis: PauseAxis | undefined;
+    getPhaseKind: () => string;
+    getPendingDeliver: () => boolean;
+    setAnimDone: (v: boolean) => void;
+    tryFinalize: () => void;
+    traceId: string | undefined;
+  }) {
+    this.path = opts.path;
+    this.arcLength = opts.arcLength;
+    this.pauseAxis = opts.pauseAxis;
+    this.getPhaseKind = opts.getPhaseKind;
+    this.getPendingDeliver = opts.getPendingDeliver;
+    this.setAnimDone = opts.setAnimDone;
+    this.tryFinalize = opts.tryFinalize;
+    this.traceId = opts.traceId;
+  }
+
+  setGroup(el: SVGGElement | null) { this.groupEl = el; }
+
+  updateArcLength(v: number | undefined) { this.arcLength = v; }
+  updatePauseAxis(v: PauseAxis | undefined) {
+    this.unsub?.();
+    this.pauseAxis = v;
+    if (this.raf !== 0) this._subscribePause();
+  }
+
+  start() {
+    // Cancel any in-progress loop then restart cleanly.
+    cancelAnimationFrame(this.raf);
+    this.unsub?.();
+    this.unsub = undefined;
+    this.distanceCovered = 0;
+    this.stepCount = 0;
+    const measuredLen = this.arcLength ?? this.path.getTotalLength();
+    this.simStart = performance.now(); // vocab-ok: visual layer
+    this._subscribePause();
+    this.raf = requestAnimationFrame(() => this._step(measuredLen)); // vocab-ok: visual layer
+  }
+
+  private _subscribePause() {
+    this.unsub = this.pauseAxis?.subscribe((p) => {
+      if (!p) {
+        // Rebase sim clock so pulse continues from where it stopped
+        this.simStart = performance.now() - this.distanceCovered / PULSE_SPEED_PX_PER_MS; // vocab-ok: visual layer
+        cancelAnimationFrame(this.raf);
+        const measuredLen = this.arcLength ?? this.path.getTotalLength();
+        this.raf = requestAnimationFrame(() => this._step(measuredLen)); // vocab-ok: visual layer
+      }
+    });
+  }
+
+  private _step(measuredLen: number) {
+    if (this.pauseAxis?.paused) return;
+    const elapsed = performance.now() - this.simStart; // vocab-ok: visual layer
+    const distance = Math.min(elapsed * PULSE_SPEED_PX_PER_MS, measuredLen);
+    this.distanceCovered = distance;
+    if (this.traceId) {
+      this.stepCount += 1;
+      const pct = measuredLen > 0 ? distance / measuredLen : 0;
+      const threshold = [0.25, 0.5, 0.75, 1.0].some(t => {
+        const prevPct = measuredLen > 0 ? (distance - elapsed * PULSE_SPEED_PX_PER_MS) / measuredLen : 0;
+        return prevPct < t && pct >= t;
+      });
+      if (this.stepCount % 10 === 1 || threshold) {
+        postLog("trace.wire.step", { traceId: this.traceId, elapsed, distance, measuredLen });
+      }
+    }
+    const pt = this.path.getPointAtLength(distance);
+    if (this.groupEl) {
+      this.groupEl.setAttribute("transform", `translate(${pt.x},${pt.y})`);
+    }
+    if (distance >= measuredLen) {
+      this.setAnimDone(true);
+      this.tryFinalize();
+      // Deferred-deliver: if delivery is still pending (dest slot full),
+      // keep the RAF loop running so tryFinalize retries each frame.
+      if (this.getPendingDeliver()) {
+        this.raf = requestAnimationFrame(() => this._step(measuredLen)); // vocab-ok: visual layer
+      } else {
+        this.raf = 0;
+      }
+      return;
+    }
+    this.raf = requestAnimationFrame(() => this._step(measuredLen)); // vocab-ok: visual layer
+  }
+
+  dispose() {
+    cancelAnimationFrame(this.raf);
+    this.raf = 0;
+    this.unsub?.();
+    this.unsub = undefined;
+  }
+}
+
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId, seed, value }, ref,
 ) {
@@ -196,11 +315,7 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   const pendingDeliverRef = useRef(false);
   const animDoneRef = useRef(false);
   const valueRef = useRef<unknown>(undefined);
-  // loadGenRef increments on every load(). The animation effect depends on it
-  // so it restarts even if React batches arrive+load and phase.kind stays
-  // "in-flight" throughout (which would otherwise suppress the effect cleanup).
-  const loadGenRef = useRef(0);
-  const [loadGen, setLoadGen] = useState(0);
+  const wireLoopRef = useRef<WireLoop | null>(null);
 
   const apply = useCallback((a: Action) => {
     const next = wirePhaseReducer(phaseRef.current, a);
@@ -213,7 +328,7 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     if (!pendingDeliverRef.current) return;
     const dest = destNodeRef.current;
     if (!dest) return;
-    // Deferred-deliver safety net (step 6/9): if dest slot is still filled,
+    // Deferred-deliver safety net: if dest slot is still filled,
     // keep pending and wait for the next RAF retry rather than throwing.
     if (dest.slotPhase(destSlotId) !== "empty") return;
     pendingDeliverRef.current = false;
@@ -226,22 +341,25 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     if (!animDoneRef.current) return;
     deliverIfPending();
     // Deferred-deliver: if deliverIfPending() was a no-op (dest slot still
-    // filled), stay in-flight so the RAF retry loop in the animation effect
-    // keeps calling tryFinalize each frame until delivery succeeds.
+    // filled), stay in-flight so the RAF retry loop keeps calling tryFinalize
+    // each frame until delivery succeeds.
     if (pendingDeliverRef.current) return;
     animDoneRef.current = false;
     apply({ type: "arrive" });
   }, [apply, deliverIfPending]);
 
-  const load = useCallback((value: unknown) => {
+  // Keep tryFinalize ref current so WireLoop always calls the latest closure.
+  const tryFinalizeRef = useRef(tryFinalize);
+  tryFinalizeRef.current = tryFinalize;
+
+  const load = useCallback((v: unknown) => {
     if (phaseRef.current.kind !== "empty") return; // silent no-op: wire in-flight; body retries next poll
-    if (traceId) postLog("trace.load", { wire: traceId, value });
-    apply({ type: "load", value });
-    valueRef.current = value;
+    if (traceId) postLog("trace.load", { wire: traceId, value: v });
+    apply({ type: "load", value: v });
+    valueRef.current = v;
     pendingDeliverRef.current = true;
     animDoneRef.current = false;
-    loadGenRef.current += 1;
-    setLoadGen(loadGenRef.current);
+    wireLoopRef.current?.start();
   }, [apply, traceId]);
 
   const complete = useCallback(() => {
@@ -267,116 +385,57 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     },
   }), [load, complete, destNodeRef, destSlotId]);
 
-  useEffect(() => {
-    if (seed !== undefined) {
-      // value overrides seed if both present; seed is the fallback.
-      load(value !== undefined ? value : seed);
+  // Seed: init-ref guard — runs inline on first render, not in useEffect.
+  const seededRef = useRef(false);
+  if (!seededRef.current) {
+    seededRef.current = true;
+    if (seed !== undefined) load(value !== undefined ? value : seed);
+  }
+
+  // Keep pauseAxis up to date on the loop when it changes between renders.
+  const prevPauseAxisRef = useRef(pauseAxis);
+  if (prevPauseAxisRef.current !== pauseAxis) {
+    prevPauseAxisRef.current = pauseAxis;
+    wireLoopRef.current?.updatePauseAxis(pauseAxis);
+  }
+
+  // Keep arcLength up to date.
+  const prevArcLengthRef = useRef(arcLength);
+  if (prevArcLengthRef.current !== arcLength) {
+    prevArcLengthRef.current = arcLength;
+    wireLoopRef.current?.updateArcLength(arcLength);
+  }
+
+  // Ref callback for the <path> element — constructs/disposes WireLoop.
+  const pathRefCallback = useCallback((el: SVGPathElement | null) => {
+    if (wireLoopRef.current) {
+      wireLoopRef.current.dispose();
+      wireLoopRef.current = null;
+    }
+    if (!el) return;
+    wireLoopRef.current = new WireLoop({
+      path: el,
+      arcLength,
+      pauseAxis,
+      getPhaseKind: () => phaseRef.current.kind,
+      getPendingDeliver: () => pendingDeliverRef.current,
+      setAnimDone: (v) => { animDoneRef.current = v; },
+      tryFinalize: () => tryFinalizeRef.current(),
+      traceId,
+    });
+    // If load() already ran (e.g. seed during initial render, before this
+    // ref callback fired), the wire is in-flight with a pending delivery
+    // but the loop never got a start() call. Start it now.
+    if (pendingDeliverRef.current && phaseRef.current.kind === "in-flight") {
+      wireLoopRef.current.start();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // mount-only: prime the wire once
-
-  const distanceCoveredRef = useRef(0);
-  const pathRef = useRef<SVGPathElement>(null);
-  const [pulsePos, setPulsePos] = useState<{ x: number; y: number } | null>(null);
-
-  // [DBG] dep-churn tracking ref — stores previous dep values for change detection
-  const prevDepsRef = useRef<{
-    phaseKind: string; loadGen: number; arcLength: number | undefined;
-    pathD: string; tryFinalize: () => void; pauseAxis: PauseAxis | undefined;
-  } | null>(null);
-  // [DBG] step counter for sampling
-  const stepCountRef = useRef(0);
-
-  useEffect(() => {
-    // [DBG] dep-churn detection
-    if (traceId) {
-      const prev = prevDepsRef.current;
-      const changed: string[] = [];
-      if (prev) {
-        if (prev.phaseKind !== phase.kind) changed.push("phaseKind");
-        if (prev.loadGen !== loadGen) changed.push("loadGen");
-        if (prev.arcLength !== arcLength) changed.push("arcLength");
-        if (prev.pathD !== pathD) changed.push("pathD");
-        if (prev.tryFinalize !== tryFinalize) changed.push("tryFinalize");
-        if (prev.pauseAxis !== pauseAxis) changed.push("pauseAxis");
-      }
-      prevDepsRef.current = { phaseKind: phase.kind, loadGen, arcLength, pathD, tryFinalize, pauseAxis };
-      postLog({
-        kind: "trace.wire.effect.enter", traceId,
-        phaseKind: phase.kind, loadGen,
-        distanceCovered: distanceCoveredRef.current,
-        pathRefNull: pathRef.current === null,
-        changed,
-      });
-    }
-
-    if (phase.kind !== "in-flight") {
-      distanceCoveredRef.current = 0;
-      setPulsePos(null);
-      return () => {
-        if (traceId) postLog({ kind: "trace.wire.effect.cleanup", traceId, distanceCovered: distanceCoveredRef.current });
-      };
-    }
-    const path = pathRef.current;
-    if (!path) return () => {
-      if (traceId) postLog({ kind: "trace.wire.effect.cleanup", traceId, distanceCovered: distanceCoveredRef.current });
-    };
-    const measuredLen = arcLength ?? path.getTotalLength();
-    let simStart = // vocab-ok: visual pulse animation, not substrate scheduling
-      performance.now() - distanceCoveredRef.current / PULSE_SPEED_PX_PER_MS; // vocab-ok: visual layer
-    let raf = 0;
-    stepCountRef.current = 0;
-    const step = () => {
-      if (pauseAxis?.paused) return;
-      const elapsed = performance.now() - simStart; // vocab-ok: visual layer
-      const distance = Math.min(elapsed * PULSE_SPEED_PX_PER_MS, measuredLen);
-      distanceCoveredRef.current = distance;
-      // [DBG] log every 10th step or when crossing 25/50/75/100% thresholds
-      if (traceId) {
-        stepCountRef.current += 1;
-        const pct = measuredLen > 0 ? distance / measuredLen : 0;
-        const threshold = [0.25, 0.5, 0.75, 1.0].some(t => {
-          const prevPct = measuredLen > 0 ? (distance - elapsed * PULSE_SPEED_PX_PER_MS) / measuredLen : 0;
-          return prevPct < t && pct >= t;
-        });
-        if (stepCountRef.current % 10 === 1 || threshold) {
-          postLog({ kind: "trace.wire.step", traceId, elapsed, distance, measuredLen });
-        }
-      }
-      const pt = path.getPointAtLength(distance);
-      setPulsePos({ x: pt.x, y: pt.y });
-      if (distance >= measuredLen) {
-        animDoneRef.current = true;
-        tryFinalize();
-        // Deferred-deliver: if delivery is still pending (dest slot full),
-        // keep the RAF loop running so tryFinalize retries each frame.
-        if (pendingDeliverRef.current) {
-          raf = requestAnimationFrame(step); // vocab-ok: visual layer
-        }
-        return;
-      }
-      raf = requestAnimationFrame(step); // vocab-ok: visual layer
-    };
-    const unsub = pauseAxis?.subscribe((p) => {
-      if (!p) {
-        // Rebase sim clock so pulse continues from where it stopped
-        simStart = performance.now() - distanceCoveredRef.current / PULSE_SPEED_PX_PER_MS; // vocab-ok: visual layer
-        cancelAnimationFrame(raf);
-        raf = requestAnimationFrame(step); // vocab-ok: visual layer
-      }
-    });
-    raf = requestAnimationFrame(step); // vocab-ok: visual layer
-    return () => {
-      cancelAnimationFrame(raf);
-      unsub?.();
-      if (traceId) postLog({ kind: "trace.wire.effect.cleanup", traceId, distanceCovered: distanceCoveredRef.current });
-    };
-  }, [phase.kind, loadGen, arcLength, pathD, tryFinalize, pauseAxis]);
+  }, []); // mount-only; loop updates itself via updateArcLength/updatePauseAxis
 
   return (
     <g>
       <path
-        ref={pathRef}
+        ref={pathRefCallback}
         d={pathD}
         stroke={stroke}
         fill="none"
@@ -384,12 +443,12 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
         strokeDasharray={strokeDasharray}
         markerEnd={markerEnd}
       />
-      {phase.kind === "in-flight" && pulsePos && (
-        <>
-          <circle cx={pulsePos.x} cy={pulsePos.y} r={4} fill={stroke} />
+      {phase.kind === "in-flight" && (
+        <g ref={(el) => wireLoopRef.current?.setGroup(el)}>
+          <circle cx={0} cy={0} r={4} fill={stroke} />
           <text
-            x={pulsePos.x + 6}
-            y={pulsePos.y - 6}
+            x={6}
+            y={-6}
             fontSize={10}
             fill={stroke}
             style={{ pointerEvents: "none", userSelect: "none" }}
@@ -397,7 +456,7 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
           >
             {formatRidingLabel(phase.value)}
           </text>
-        </>
+        </g>
       )}
     </g>
   );
