@@ -205,7 +205,6 @@ class WireLoop {
   private distanceCovered = 0;
   private raf = 0;
   private simStart = 0; // vocab-ok: visual pulse animation, not substrate scheduling
-  private stepCount = 0;
   private unsub: (() => void) | undefined;
   private groupEl: SVGGElement | null = null;
 
@@ -244,7 +243,6 @@ class WireLoop {
     this.unsub?.();
     this.unsub = undefined;
     this.distanceCovered = 0;
-    this.stepCount = 0;
     const measuredLen = this.arcLength ?? this.path.getTotalLength();
     this.simStart = performance.now(); // vocab-ok: visual layer
     this._subscribePause();
@@ -269,13 +267,12 @@ class WireLoop {
     const distance = Math.min(elapsed * PULSE_SPEED_PX_PER_MS, measuredLen);
     this.distanceCovered = distance;
     if (this.traceId) {
-      this.stepCount += 1;
       const pct = measuredLen > 0 ? distance / measuredLen : 0;
       const threshold = [0.25, 0.5, 0.75, 1.0].some(t => {
         const prevPct = measuredLen > 0 ? (distance - elapsed * PULSE_SPEED_PX_PER_MS) / measuredLen : 0;
         return prevPct < t && pct >= t;
       });
-      if (this.stepCount % 10 === 1 || threshold) {
+      if (threshold) {
         postLog("trace.wire.step", { traceId: this.traceId, elapsed, distance, measuredLen });
       }
     }
