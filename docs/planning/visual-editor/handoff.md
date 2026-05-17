@@ -9,99 +9,87 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-17, night)
+## State at handoff (2026-05-17, late night)
 
-**Active branch:** `task/drop-output-wake-from-bodies` — **26 commits
-ahead of origin, unpushed.** The Wire animation loop now lives
-*outside* React's `useEffect`. The substance-vs-medium mismatch flagged
-in the prior handoff is structurally resolved: a plain `WireLoop`
-class is constructed by a ref callback on `<path>`, runs on its own
-clock from attach to detach, and React's reconciler no longer decides
-when the wire steps.
+**Active branch:** `task/drop-output-wake-from-bodies` — **27 commits
+ahead of origin, unpushed.** Working tree has the dirty
+`topology.view.json` and two untracked diagram dirs (carryover); no
+uncommitted source changes.
 
-Editor smoke-tested: ReadGate fires, the i1→readGate wire animates,
-and the riding label rides with the pulse.
+Ring smoke-tested: **runs 6 cycles cleanly, then stalls.** The
+ReadGate-specific drop-token bug is fixed. The stall at cycle 6 is a
+separate, parallel bug in other node bodies (see below).
 
 ## What landed this session (newest first)
 
-- `a62bf9d` **refactor(wire): move animation loop out of useEffect**
-  - `useEffect` removed entirely from Wire.tsx (import + both calls).
-  - New `WireLoop` class owns `simStart`, `raf`, `distanceCovered`,
-    `pauseAxis` subscription, and `_step`. Constructed by a ref
-    callback on the `<path>` element; `dispose()` on detach.
-  - `load()` calls `wireLoopRef.current?.start()` to re-arm. A guard
-    in the path-attach ref callback handles the bootstrap case where
-    seed load runs before the ref attaches (start() the loop if a
-    delivery is already pending at attach time).
-  - Pulse circle + riding label sit inside a `<g>` whose
-    `transform="translate(x,y)"` is set imperatively by the loop each
-    frame. React re-renders cannot fight the loop's writes (the prior
-    `x={0} y={0}` JSX-vs-setAttribute conflict is the reason the
-    label appeared missing in the first iteration of this refactor).
-  - Seed: init-ref guard in the function body, not useEffect.
-  - Debug instrumentation from `3e80cfd` removed; `trace.wire.step`
-    retained inside the loop. `trace.load` and `trace.deliver` kept.
-  - `loadGen`/`loadGenRef`/`setLoadGen` and `pulsePos` state dropped.
-
-Pre-existing vitest baseline (7 failures / 6 files) unchanged. tsc,
-build, and substrate vocab check all clean.
-
-## Why this matters (do not re-litigate)
-
-Per CLAUDE.md's substance-vs-medium rule: the substrate model
-(MODEL.md) says wires step independently as their own processes. The
-prior implementation hosted that loop inside `useEffect`, which made
-stepping continuity a function of React's reconciler — wrong medium
-for the substance. The architectural call recorded in the previous
-handoff was "move the RAF chain out of useEffect entirely." That is
-what landed. Do not re-add `useEffect` to Wire.tsx without revisiting
-this decision.
+- `4a5d6c1` **fix(readgate): guard fire on dest slot readiness** —
+  restored `if (!wire.canAccept) return;` guard at the top of
+  ReadGate's `run` in
+  [node-kinds.tsx:237](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx#L237).
+  Reverts the ReadGate slice of `aaf34de` ("strip all guards past
+  ref-null").
+  - **Why:** ReadGate was consuming both input slots and then calling
+    `wire.load(1)`, which silently no-ops in
+    [Wire.tsx:355](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx#L355)
+    when the wire isn't `empty`. Tokens vanished on every cycle where
+    the output destination slot was still occupied.
+  - **Spec basis (MODEL.md §"Who does what"):** source observes
+    readiness via `dest.slotPhase(slotId)` through the output
+    reference; backpressure lives in the destination slot, not the
+    wire. `wire.canAccept` is the spec-honest accessor — its getter
+    at [Wire.tsx:376-381](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx#L376-L381)
+    checks `dest.slotPhase(destSlotId) === "empty"`.
+  - Build, `tsc --noEmit`, and `check-substrate-vocab.mjs` all clean.
 
 ## Open issues (in priority order)
 
-1. **Push the branch.** 26 commits ahead of origin, unpushed. Sign-off
-   from user is the gate; per workflow rules pushing to task branches
-   is free but the user has been driving the loop close.
-2. **Verify second-iteration ring closure** beyond the smoke test.
-   The prior bug ("ReadGate fires once, ring doesn't close on the
-   second iteration") was rooted in the useEffect coupling. Drive the
-   editor for several iterations and confirm via
-   `.probe/webview-log.jsonl` that loads/deliveries continue past the
-   first cycle.
-3. **Hook regression** (unchanged):
+1. **Other node bodies likely have the same bug.** Smoke test shows
+   ring stalls at cycle 6: both upstream feeders (`in0`, `i1`) go
+   silent *simultaneously*, suggesting a token vanished on the return
+   path. The synchronized stop matches the pattern fixed in ReadGate
+   — consume-before-checking-output. Two ways to fix:
+   - **(a) Audit every node body** in
+     [node-kinds.tsx](../../../tools/topology-vscode/src/webview/substrate-r/node-kinds.tsx)
+     for `consume`/`wire.load` ordering without a `canAccept` guard.
+     Restore guards locally.
+   - **(b) Make `Wire.load` throw on non-empty** instead of silent
+     return ([Wire.tsx:356](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx#L356)).
+     Surfaces every offender as a loud runtime error. Matches
+     `aaf34de`'s original premise and the
+     [feedback_run_is_input_only](../../../memory/feedback_run_is_input_only.md)
+     memory. Recommended — one commit, exhaustive.
+2. **Push the branch.** 27 commits ahead of origin. Sign-off-gated.
+4. **Hook regression** (carryover):
    `.claude/hooks/substrate-r-model-derive.sh` is still at `exit 0`;
    should be `exit 2`. Unauthorized flip during `f828517` agent run.
-4. **Memory `feedback_run_is_input_only.md`** is stale (pre-polling
-   redesign). Update or retire.
-5. **Two SVG diagrams untracked** (`diagrams/readgate-duty-cycle/`,
+5. **Memory `feedback_run_is_input_only.md`** is stale (pre-polling
+   redesign). Update or retire — and the conclusion from this session
+   (silent `wire.load` is exactly the rate-bug-hider that memory
+   predicted) is worth folding in.
+6. **Two SVG diagrams untracked** (`diagrams/readgate-duty-cycle/`,
    `diagrams/input-body-duty-cycle/`). Commit or discard.
-6. **`topology.view.json` is dirty** — uncommitted local camera/
+7. **`topology.view.json` is dirty** — uncommitted local camera/
    selection edit.
 
 ## What's actually working
 
-- ReadGate fires per iteration; the ring closes (smoke-tested).
-- `in08` queue emits its real values.
-- Deferred-deliver safety net works on the sibling wire.
-- Wire animation loop runs independent of React's effect scheduler.
-- Riding labels render correctly on top of the moving pulse.
+- ReadGate fires per iteration without dropping tokens (6 clean cycles
+  observed before unrelated stall).
+- Wire animation loop runs independent of React's effect scheduler
+  (carryover from previous session).
 - Build, tsc, and the deterministic audits are clean.
-
-## Working mode (this session)
-
-- Delegated the Wire useEffect-removal to a sonnet subagent with a
-  detailed spec; main session caught two follow-on bugs (seed-vs-ref
-  ordering, JSX-vs-setAttribute label conflict) inline.
-- Spot-check subagent commits before pushing (no surprises this run).
-- Watch for the hook regression — still outstanding.
 
 ## Substrate model state
 
-Bodies are pure local rules, primitives are silent no-ops, InputBody
-keeps its boundary-node queue. Wire is now genuinely what MODEL.md
-says it is: a transient unit that owns its in-flight phase,
-animation, and deferred-deliver retry as one process, independent of
-the host framework's render scheduler.
+Bodies should be "pure rules" per `aaf34de`'s framing, but pure-rule
+ness depends on substrate primitives being honest about contract
+violations. `Wire.load`'s silent no-op breaks that — it lets bodies
+that skip the readiness check appear to work, then silently lose
+tokens. The model-honest substrate either (a) requires bodies to read
+`dest.slotPhase` via the output ref before consuming, or (b) makes
+`Wire.load` assert. Currently the codebase is half-way between the
+two: ReadGate now does (a), other bodies don't, and (b) isn't in
+place.
 
 ## Dev-loop
 
