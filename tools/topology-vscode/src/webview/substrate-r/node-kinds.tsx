@@ -154,6 +154,8 @@ export function ChainInhibitorBody({
     if (!node || !wire) return;
     if (node.slotPhase(slotId) !== "filled") return;
     const inhibitWire = inhibitOutWireRef?.current;
+    if (!wire.canAccept) return;
+    if (inhibitWire && !inhibitWire.canAccept) return;
     const incoming = node.consume(slotId);
     const emitted = heldRef.current;
     heldRef.current = incoming;
