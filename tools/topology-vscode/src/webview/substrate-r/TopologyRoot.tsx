@@ -45,7 +45,6 @@ function NodeView({
     outWireRefs,
     slotIds: ports.inputs,
     initialQueue: (node.props?.queue ?? []) as unknown[],
-    seed: node.props?.seed,
     traceId: node.id,
   });
 }
@@ -103,7 +102,6 @@ function TopologyRoot({ spec, haltedOnMount }, ref) {
             destSlotId={wire.target.port}
             pauseAxis={driver.pauseAxis}
             traceId={wire.id}
-            seed={wire.seed}
             value={wire.value}
           />
         ))}

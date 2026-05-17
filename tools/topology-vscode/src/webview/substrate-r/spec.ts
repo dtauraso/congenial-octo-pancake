@@ -28,7 +28,7 @@ export function toRNodeKind(s: string | undefined): RNodeKind | undefined {
 export interface RNodeSpec {
   id: string;
   kind: RNodeKind;
-  props?: { queue?: unknown[]; seed?: unknown };
+  props?: { queue?: unknown[] };
   // Per-node override of NODE_KIND_PORTS. Lets a spec declare e.g. a
   // readgate whose input slot is "chainIn" rather than "slot",
   // matching what the editor schema can produce. Arity must match the
@@ -66,7 +66,6 @@ export interface RWireSpec {
   target: { nodeId: string; port: string };
   pathD: string;
   arcLength: number;
-  seed?: unknown;
   value?: unknown;
 }
 

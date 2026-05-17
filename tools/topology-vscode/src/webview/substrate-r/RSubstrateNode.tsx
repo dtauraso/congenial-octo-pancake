@@ -32,7 +32,7 @@ interface RSubstrateNodeData {
   height?: number;
   inputs?: PortDef[];
   outputs?: PortDef[];
-  nodeData?: { init?: unknown[]; seed?: unknown };
+  nodeData?: { init?: unknown[] };
 }
 
 function handleStyle(side: "left" | "right", pct: number, color: string): React.CSSProperties {
@@ -139,7 +139,6 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
           outWireRefs,
           slotIds: inputs.map((p) => p.name),
           initialQueue: data?.nodeData?.init ?? [],
-          seed: data?.nodeData?.seed,
           traceId: id,
         })}
       </div>

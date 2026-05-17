@@ -183,7 +183,6 @@ export interface WireProps {
   destSlotId: string;
   pauseAxis?: PauseAxis;
   traceId?: string;
-  seed?: unknown;
   value?: unknown;
 }
 
@@ -302,7 +301,7 @@ class WireLoop {
 }
 
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
-  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId, seed, value }, ref,
+  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId, value }, ref,
 ) {
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
@@ -380,13 +379,6 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     },
   }), [load, complete, destNodeRef, destSlotId]);
 
-  // Seed: init-ref guard — runs inline on first render, not in useEffect.
-  const seededRef = useRef(false);
-  if (!seededRef.current) {
-    seededRef.current = true;
-    if (seed !== undefined) load(value !== undefined ? value : seed);
-  }
-
   // Keep pauseAxis up to date on the loop when it changes between renders.
   const prevPauseAxisRef = useRef(pauseAxis);
   if (prevPauseAxisRef.current !== pauseAxis) {
@@ -418,9 +410,9 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
       tryFinalize: () => tryFinalizeRef.current(),
       traceId,
     });
-    // If load() already ran (e.g. seed during initial render, before this
-    // ref callback fired), the wire is in-flight with a pending delivery
-    // but the loop never got a start() call. Start it now.
+    // If load() already ran before this ref callback fired, the wire is
+    // in-flight with a pending delivery but the loop never got a start()
+    // call. Start it now.
     if (pendingDeliverRef.current && phaseRef.current.kind === "in-flight") {
       wireLoopRef.current.start();
     }
