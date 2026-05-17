@@ -97,6 +97,19 @@ export function InputBody({
     return unsub;
   }, [outWireRef, onCanAccept]);
 
+  // RAF poll loop (step 1/9): runs alongside subscribeCanAccept for one
+  // commit; the subscription is dropped in step 2. Both call the same
+  // idempotent run(), so the redundancy is harmless.
+  useEffect(() => {
+    let raf = 0;
+    const step = () => {
+      run();
+      raf = requestAnimationFrame(step); // vocab-ok: visual layer
+    };
+    raf = requestAnimationFrame(step); // vocab-ok: visual layer
+    return () => cancelAnimationFrame(raf);
+  }, [run]);
+
   return <Node ref={nodeRef} onRun={run} traceId={traceId} />;
 }
 
