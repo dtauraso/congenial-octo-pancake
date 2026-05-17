@@ -1,10 +1,8 @@
 // Node-kind implementations under the slot-in-node substrate. All
 // kinds live in one file so the Node concept is one read, not five.
 //
-// Input: each run() checks `outWire.canAccept` (wire empty AND dest
-// slot empty) and loads the next queue value if so. No subscription,
-// no ack — the wire returns to empty on arrival under its own
-// machinery.
+// Input: boundary node. run() checks slot in0 filled and outWire
+// canAccept, then consumes and loads. No queue, no restart.
 
 import { useCallback, useEffect, useRef, type RefObject, type ReactNode } from "react";
 import { Node, type NodeHandle } from "./Node";
@@ -17,7 +15,6 @@ export interface KindBodyCtx {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRefs: Record<string, RefObject<WireHandle | null>>;
   slotIds: string[];
-  initialQueue: unknown[];
   seed?: unknown;
   traceId?: string;
 }
@@ -26,10 +23,10 @@ export interface KindBodyCtx {
 // TopologyRoot (test path) and RSubstrateNode (editor path) call this
 // — there is no second switch to keep in sync.
 export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
-  const { nodeRef, outWireRefs, slotIds, initialQueue, seed, traceId } = ctx;
+  const { nodeRef, outWireRefs, slotIds, seed, traceId } = ctx;
   switch (kind) {
     case "input":
-      return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} initialQueue={initialQueue} traceId={traceId} />;
+      return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} traceId={traceId} />;
     case "relay":
       return <RelayBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} traceId={traceId} />;
     case "chaininhibitor":
@@ -50,58 +47,30 @@ export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
 }
 
 export function InputBody({
-  nodeRef, outWireRef, initialQueue, traceId,
+  nodeRef, outWireRef, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
-  initialQueue: unknown[];
   traceId?: string;
 }) {
-  const initialQueueRef = useRef(initialQueue);
-  const remainingRef = useRef([...initialQueue]);
-  const queuePhaseRef = useRef<"draining" | "exhausted">(
-    initialQueue.length > 0 ? "draining" : "exhausted"
-  );
-
-  // Firing rule: runs when draining (or restarts if exhausted and wire can accept).
   const run = useCallback(() => {
-    const handle = outWireRef.current;
-    if (!handle) {
-      if (traceId) postLog("trace.input.skip", { node: traceId, reason: "no-wire" });
-      return;
-    }
-    if (!handle.canAccept) {
-      if (traceId) postLog("trace.input.skip", { node: traceId, reason: "wire-blocked", phase: handle.phase.kind });
-      return;
-    }
-    // Queue restart: if exhausted but wire can accept, reset from initial queue.
-    if (queuePhaseRef.current === "exhausted") {
-      if (initialQueueRef.current.length === 0) return;
-      remainingRef.current = [...initialQueueRef.current];
-      queuePhaseRef.current = "draining";
-    }
-    const v = remainingRef.current.shift()!;
-    if (remainingRef.current.length === 0) queuePhaseRef.current = "exhausted";
-    if (traceId) postLog("trace.input.fire", { node: traceId, value: v });
-    handle.load(v);
-  }, [outWireRef, traceId]);
+    const node = nodeRef.current;
+    const wire = outWireRef.current;
+    if (!node || !wire) return;
+    if (node.slotPhase("in0") !== "filled") return;
+    if (!wire.canAccept) return;
+    const v = node.consume("in0");
+    wire.load(v);
+  }, [nodeRef, outWireRef]);
 
-  // RAF poll loop (step 2/9): subscribeCanAccept dropped; this is now
-  // the sole wake source for InputBody. run() is called once
-  // synchronously on mount so the first load happens in the same React
-  // commit as setup, matching the prior subscribeCanAccept initial call.
   useEffect(() => {
-    run(); // immediate mount fire
     let raf = 0;
-    const step = () => {
-      run();
-      raf = requestAnimationFrame(step); // vocab-ok: visual layer
-    };
+    const step = () => { run(); raf = requestAnimationFrame(step); }; // vocab-ok: visual layer
     raf = requestAnimationFrame(step); // vocab-ok: visual layer
     return () => cancelAnimationFrame(raf);
   }, [run]);
 
-  return <Node ref={nodeRef} onRun={run} traceId={traceId} />;
+  return <Node ref={nodeRef} slots={["in0"]} onRun={run} traceId={traceId} />;
 }
 
 export function RelayBody({
