@@ -68,8 +68,10 @@ cascade. This definition is intrinsic to the activity: it needs no
 walker, no coordinator, no global ID, and no node-side bookkeeping.
 
 **Driver: self-scheduling nodes + one global play/pause gate.** Nodes
-fire when their preconditions hold; a single global gate halts or
-starts every node at once. No central walker.
+poll their preconditions each RAF step and fire when they hold; a
+single global gate halts or starts wire animations (not nodes). No
+central walker. Node poll loops run continuously; when wires are
+paused, nodes observe no new input state and produce nothing.
 
 **Round-close is all-wires-empty.** The driver runs every node's
 `run()`, then waits for all wires to return to `empty`. Tick
@@ -94,18 +96,20 @@ One incoming wire per slot id — two wires cannot share a slot, so
 Mis-wiring is caught at parseSpec, not at runtime. No subscription
 layer; slots are passive state.
 
-**Firing as a control-flow event.** A node fires the moment its
-precondition holds — this is a control-flow event, not a scheduled
-callback or a clock interrupt. Delivery (wire → slot) is also a
-control-flow event, triggered by animation completion. Every
-cross-wire hop is gated on the previous wire's delivery event; the
-substrate runs at control-flow pace in production. The production
-cascade is a procession of control-flow events, each paced by wire
-geometry. "Atomic cascade" holds only in tests where `arcLength: 0`
-collapses visible duration to a single RAF tick (the event still
-happens; its visible duration is zero). The speeds in the animation
-layer are observed durations between control-flow events, not
-independent clocks competing for authority.
+**Firing is precondition-gated, observed at RAF cadence.** A node
+fires only when its precondition holds — firing is not an arbitrary
+scheduled callback or a clock interrupt. The *observation* of
+preconditions runs at RAF cadence (each body polls its slot state
+each animation frame), but the *firing decision* is still purely
+precondition-gated: a node's `run()` is idempotent when the
+precondition is unmet and returns immediately. Delivery (wire → slot)
+is triggered by animation completion, not by the RAF clock directly.
+Every cross-wire hop is gated on the previous wire's delivery; the
+cascade is a procession of precondition-gated firings, each paced by
+wire geometry. "Atomic cascade" holds only in tests where
+`arcLength: 0` collapses visible duration to a single RAF tick (the
+event still happens; its visible duration is zero). RAF pacing is the
+observation window, not an independent clock competing for authority.
 
 ## Tick close
 
@@ -128,7 +132,12 @@ not abort it.
   the slot is `filled(v)`) — see [diagrams/model-revised-draft/05-q3-slot-visual-depiction.svg](diagrams/model-revised-draft/05-q3-slot-visual-depiction.svg).
   Manually-gated nodes render a take affordance whose click invokes
   the firing rule with the user-gate satisfied.
-- **Global gate** halts or starts every node at once via the pause axis.
+- **Global gate** halts or starts wire animations via the pause axis.
+  While paused, wire RAF steps are no-ops (pulse frozen in-flight);
+  nodes continue to poll their slot state but find no new fills, so
+  they naturally decide to emit nothing. Resume thaws wires; held
+  in-flight pulses finish their transit and nodes pick up work on
+  the next poll tick.
 - **Bridge surface** carries spec I/O only — `ready`, `spec`, `view`,
   `save`, `view-save`, optionally `topogen-status`. Nothing about
   ticks, phases, animation, or controls crosses.
@@ -146,8 +155,12 @@ working on the substrate, you have drifted:
 - wall-clock, Date.now, performance.now (for substrate scheduling;
   the renderer may still use `performance.now` for animation)
 - "tick takes X", "tick boundary at Y", "tick duration"
-- "wire holds the value past arrival" — the wire is transient under
-  the revised model; parked state lives on the destination node's slot
+- "wire parks the value permanently" — the wire is transient; parked
+  state lives on the destination node's slot. (Exception: the
+  deferred-deliver safety net holds the value in-flight past animation
+  end only until the destination slot empties — delivery completes on
+  the next RAF step that finds the slot empty, then the wire returns
+  to `empty`. This is bounded transient deferral, not parking.)
 - `loaded(v)`, `taken(v)`, wire `ack`, wire `take` — replaced by slot
   phases (`filled(v)`, `consumed`) on the destination node
 - inbox queue, edge queue, slot ledger, buffered values
