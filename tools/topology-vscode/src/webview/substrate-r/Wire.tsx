@@ -171,10 +171,6 @@ export interface WireHandle {
   readonly phase: Phase;
   readonly canAccept: boolean;
   subscribePhase(listener: (phase: Phase) => void): () => void;
-  // Fires whenever a transition could change canAccept: wire phase
-  // changes (load/arrive) or the destination slot transitions. Sources
-  // subscribe to trigger their next emit attempt.
-  subscribeCanAccept(listener: () => void): () => void;
 }
 
 export interface WireProps {
@@ -197,23 +193,16 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
   const phaseListenersRef = useRef(new Set<(p: Phase) => void>());
-  const acceptListenersRef = useRef(new Set<() => void>());
-  const destSlotUnsubRef = useRef<(() => void) | null>(null);
   const pendingDeliverRef = useRef(false);
   const animDoneRef = useRef(false);
   const valueRef = useRef<unknown>(undefined);
-
-  const notifyCanAccept = useCallback(() => {
-    for (const fn of acceptListenersRef.current) fn();
-  }, []);
 
   const apply = useCallback((a: Action) => {
     const next = wirePhaseReducer(phaseRef.current, a);
     phaseRef.current = next;
     for (const fn of phaseListenersRef.current) fn(next);
     setPhase(next);
-    notifyCanAccept();
-  }, [notifyCanAccept]);
+  }, []);
 
   const deliverIfPending = useCallback(() => {
     if (!pendingDeliverRef.current) return;
@@ -265,18 +254,7 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
       phaseListenersRef.current.add(listener);
       return () => { phaseListenersRef.current.delete(listener); };
     },
-    subscribeCanAccept(listener) {
-      acceptListenersRef.current.add(listener);
-      // Lazily attach to dest slot transitions on first subscriber.
-      if (!destSlotUnsubRef.current) {
-        const dest = destNodeRef.current;
-        if (dest) {
-          destSlotUnsubRef.current = dest.subscribeSlot(destSlotId, () => notifyCanAccept());
-        }
-      }
-      return () => { acceptListenersRef.current.delete(listener); };
-    },
-  }), [load, complete, destNodeRef, destSlotId, notifyCanAccept]);
+  }), [load, complete, destNodeRef, destSlotId]);
 
   useEffect(() => {
     if (seed !== undefined) {

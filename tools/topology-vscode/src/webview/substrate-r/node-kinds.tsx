@@ -63,9 +63,8 @@ export function InputBody({
     initialQueue.length > 0 ? "draining" : "exhausted"
   );
 
-  // Firing rule: only runs when draining. Does not restart.
+  // Firing rule: runs when draining (or restarts if exhausted and wire can accept).
   const run = useCallback(() => {
-    if (queuePhaseRef.current !== "draining") return;
     const handle = outWireRef.current;
     if (!handle) {
       if (traceId) postLog("trace.input.skip", { node: traceId, reason: "no-wire" });
@@ -75,32 +74,24 @@ export function InputBody({
       if (traceId) postLog("trace.input.skip", { node: traceId, reason: "wire-blocked", phase: handle.phase.kind });
       return;
     }
+    // Queue restart: if exhausted but wire can accept, reset from initial queue.
+    if (queuePhaseRef.current === "exhausted") {
+      if (initialQueueRef.current.length === 0) return;
+      remainingRef.current = [...initialQueueRef.current];
+      queuePhaseRef.current = "draining";
+    }
     const v = remainingRef.current.shift()!;
     if (remainingRef.current.length === 0) queuePhaseRef.current = "exhausted";
     if (traceId) postLog("trace.input.fire", { node: traceId, value: v });
     handle.load(v);
   }, [outWireRef, traceId]);
 
-  const onCanAccept = useCallback(() => {
-    if (queuePhaseRef.current === "exhausted" && initialQueueRef.current.length > 0) {
-      remainingRef.current = [...initialQueueRef.current];
-      queuePhaseRef.current = "draining";
-    }
-    run();
-  }, [run]);
-
+  // RAF poll loop (step 2/9): subscribeCanAccept dropped; this is now
+  // the sole wake source for InputBody. run() is called once
+  // synchronously on mount so the first load happens in the same React
+  // commit as setup, matching the prior subscribeCanAccept initial call.
   useEffect(() => {
-    const handle = outWireRef.current;
-    if (!handle) return;
-    const unsub = handle.subscribeCanAccept(onCanAccept);
-    onCanAccept();
-    return unsub;
-  }, [outWireRef, onCanAccept]);
-
-  // RAF poll loop (step 1/9): runs alongside subscribeCanAccept for one
-  // commit; the subscription is dropped in step 2. Both call the same
-  // idempotent run(), so the redundancy is harmless.
-  useEffect(() => {
+    run(); // immediate mount fire
     let raf = 0;
     const step = () => {
       run();

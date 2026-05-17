@@ -61,6 +61,9 @@ describe("TopologyRoot end-to-end (spec-driven)", () => {
     const gate = ref.current!.node("gate")!;
     expect(gate.slotPhase("in0")).toBe("filled");
     act(() => { gate.requestConsume("in0"); });
+    // Polling model: one extra RAF tick for InputBody to detect empty slot
+    // and start the next wire load before the wire delivers.
+    flushRaf();
     flushRaf();
     expect(gate.slotPhase("in0")).toBe("filled");
     act(() => { gate.requestConsume("in0"); });
@@ -74,6 +77,9 @@ describe("TopologyRoot end-to-end (spec-driven)", () => {
 
     const gate = ref.current!.node("gate")!;
     act(() => { gate.requestConsume("in0"); });
+    // Polling model: one extra RAF tick for InputBody to detect empty slot
+    // and start the next wire load before the wire delivers.
+    flushRaf();
     flushRaf();
     expect(gate.slotPhase("in0")).toBe("filled");
   });
