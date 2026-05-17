@@ -234,6 +234,7 @@ export function ReadGateBody({
     const phases = slots.map((s) => handle.slotPhase(s));
     const filledSlots = slots.filter((_, i) => phases[i] === "filled");
     const allFilled = filledSlots.length === slots.length;
+    if (!wire.canAccept) return;
     if (allFilled) {
       if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length });
       for (const s of slots) handle.consume(s);
