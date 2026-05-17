@@ -279,23 +279,70 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   const pathRef = useRef<SVGPathElement>(null);
   const [pulsePos, setPulsePos] = useState<{ x: number; y: number } | null>(null);
 
+  // [DBG] dep-churn tracking ref — stores previous dep values for change detection
+  const prevDepsRef = useRef<{
+    phaseKind: string; loadGen: number; arcLength: number | undefined;
+    pathD: string; tryFinalize: () => void; pauseAxis: PauseAxis | undefined;
+  } | null>(null);
+  // [DBG] step counter for sampling
+  const stepCountRef = useRef(0);
+
   useEffect(() => {
+    // [DBG] dep-churn detection
+    if (traceId) {
+      const prev = prevDepsRef.current;
+      const changed: string[] = [];
+      if (prev) {
+        if (prev.phaseKind !== phase.kind) changed.push("phaseKind");
+        if (prev.loadGen !== loadGen) changed.push("loadGen");
+        if (prev.arcLength !== arcLength) changed.push("arcLength");
+        if (prev.pathD !== pathD) changed.push("pathD");
+        if (prev.tryFinalize !== tryFinalize) changed.push("tryFinalize");
+        if (prev.pauseAxis !== pauseAxis) changed.push("pauseAxis");
+      }
+      prevDepsRef.current = { phaseKind: phase.kind, loadGen, arcLength, pathD, tryFinalize, pauseAxis };
+      postLog({
+        kind: "trace.wire.effect.enter", traceId,
+        phaseKind: phase.kind, loadGen,
+        distanceCovered: distanceCoveredRef.current,
+        pathRefNull: pathRef.current === null,
+        changed,
+      });
+    }
+
     if (phase.kind !== "in-flight") {
       distanceCoveredRef.current = 0;
       setPulsePos(null);
-      return;
+      return () => {
+        if (traceId) postLog({ kind: "trace.wire.effect.cleanup", traceId, distanceCovered: distanceCoveredRef.current });
+      };
     }
     const path = pathRef.current;
-    if (!path) return;
+    if (!path) return () => {
+      if (traceId) postLog({ kind: "trace.wire.effect.cleanup", traceId, distanceCovered: distanceCoveredRef.current });
+    };
     const measuredLen = arcLength ?? path.getTotalLength();
     let simStart = // vocab-ok: visual pulse animation, not substrate scheduling
       performance.now() - distanceCoveredRef.current / PULSE_SPEED_PX_PER_MS; // vocab-ok: visual layer
     let raf = 0;
+    stepCountRef.current = 0;
     const step = () => {
       if (pauseAxis?.paused) return;
       const elapsed = performance.now() - simStart; // vocab-ok: visual layer
       const distance = Math.min(elapsed * PULSE_SPEED_PX_PER_MS, measuredLen);
       distanceCoveredRef.current = distance;
+      // [DBG] log every 10th step or when crossing 25/50/75/100% thresholds
+      if (traceId) {
+        stepCountRef.current += 1;
+        const pct = measuredLen > 0 ? distance / measuredLen : 0;
+        const threshold = [0.25, 0.5, 0.75, 1.0].some(t => {
+          const prevPct = measuredLen > 0 ? (distance - elapsed * PULSE_SPEED_PX_PER_MS) / measuredLen : 0;
+          return prevPct < t && pct >= t;
+        });
+        if (stepCountRef.current % 10 === 1 || threshold) {
+          postLog({ kind: "trace.wire.step", traceId, elapsed, distance, measuredLen });
+        }
+      }
       const pt = path.getPointAtLength(distance);
       setPulsePos({ x: pt.x, y: pt.y });
       if (distance >= measuredLen) {
@@ -319,7 +366,11 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
       }
     });
     raf = requestAnimationFrame(step); // vocab-ok: visual layer
-    return () => { cancelAnimationFrame(raf); unsub?.(); };
+    return () => {
+      cancelAnimationFrame(raf);
+      unsub?.();
+      if (traceId) postLog({ kind: "trace.wire.effect.cleanup", traceId, distanceCovered: distanceCoveredRef.current });
+    };
   }, [phase.kind, loadGen, arcLength, pathD, tryFinalize, pauseAxis]);
 
   return (
