@@ -196,6 +196,11 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   const pendingDeliverRef = useRef(false);
   const animDoneRef = useRef(false);
   const valueRef = useRef<unknown>(undefined);
+  // loadGenRef increments on every load(). The animation effect depends on it
+  // so it restarts even if React batches arrive+load and phase.kind stays
+  // "in-flight" throughout (which would otherwise suppress the effect cleanup).
+  const loadGenRef = useRef(0);
+  const [loadGen, setLoadGen] = useState(0);
 
   const apply = useCallback((a: Action) => {
     const next = wirePhaseReducer(phaseRef.current, a);
@@ -235,6 +240,8 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     valueRef.current = value;
     pendingDeliverRef.current = true;
     animDoneRef.current = false;
+    loadGenRef.current += 1;
+    setLoadGen(loadGenRef.current);
   }, [apply, traceId]);
 
   const complete = useCallback(() => {
@@ -313,7 +320,7 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     });
     raf = requestAnimationFrame(step); // vocab-ok: visual layer
     return () => { cancelAnimationFrame(raf); unsub?.(); };
-  }, [phase.kind, arcLength, pathD, tryFinalize, pauseAxis]);
+  }, [phase.kind, loadGen, arcLength, pathD, tryFinalize, pauseAxis]);
 
   return (
     <g>
