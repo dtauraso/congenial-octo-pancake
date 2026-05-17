@@ -68,7 +68,6 @@ export const Node = forwardRef<NodeHandle, NodeProps>(function Node(
       s.value = value;
       if (traceId) postLog("trace.fill", { node: traceId, slot: slotId, value });
       for (const l of s.listeners) l("filled");
-      onRunRef.current?.();
     },
     consume(slotId) {
       const s = get(slotId);
