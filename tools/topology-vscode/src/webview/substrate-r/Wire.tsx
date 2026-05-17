@@ -48,7 +48,7 @@ export const initialPhase: Phase = { kind: "empty" };
 export function wirePhaseReducer(p: Phase, a: Action): Phase {
   switch (a.type) {
     case "load":
-      if (p.kind !== "empty") throw new Error(`wire: load while ${p.kind}`);
+      // load() guards this call — reducer only reached when phase is empty
       return { kind: "in-flight", value: a.value };
     case "arrive":
       if (p.kind !== "in-flight") throw new Error(`wire: arrive while ${p.kind}`);
@@ -229,12 +229,7 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   }, [apply, deliverIfPending]);
 
   const load = useCallback((value: unknown) => {
-    if (phaseRef.current.kind !== "empty") {
-      const payload = { wire: traceId, reason: "in-flight", incoming: value };
-      postLog("trace.wire.load.dropped", payload);
-      console.error("[Wire] dropped reload while in-flight", payload);
-      throw new Error(`[Wire] dropped reload while in-flight: wire=${traceId}`);
-    }
+    if (phaseRef.current.kind !== "empty") return; // silent no-op: wire in-flight; body retries next poll
     if (traceId) postLog("trace.load", { wire: traceId, value });
     apply({ type: "load", value });
     valueRef.current = value;

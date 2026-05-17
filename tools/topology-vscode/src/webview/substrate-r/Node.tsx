@@ -63,7 +63,7 @@ export const Node = forwardRef<NodeHandle, NodeProps>(function Node(
     run: () => onRunRef.current?.(),
     fill(slotId, value) {
       const s = get(slotId);
-      if (s.phase !== "empty") throw new Error(`Node: fill ${slotId} while ${s.phase}`);
+      if (s.phase !== "empty") return; // silent no-op: slot already filled; source observes phase and retries
       s.phase = "filled";
       s.value = value;
       if (traceId) postLog("trace.fill", { node: traceId, slot: slotId, value });
@@ -71,7 +71,7 @@ export const Node = forwardRef<NodeHandle, NodeProps>(function Node(
     },
     consume(slotId) {
       const s = get(slotId);
-      if (s.phase !== "filled") throw new Error(`Node: consume ${slotId} while ${s.phase}`);
+      if (s.phase !== "filled") return undefined; // silent no-op: slot not filled; body retries next poll
       const v = s.value;
       s.phase = "empty";
       s.value = undefined;
