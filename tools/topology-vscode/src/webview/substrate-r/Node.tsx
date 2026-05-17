@@ -6,9 +6,9 @@
 // model's "consumed" intermediate is collapsed into consume()'s atomic
 // filled→empty for now (no observable difference yet).
 //
-// onRun is invoked by the tick driver each round and (per the model)
-// re-invoked whenever a slot is written, so auto destinations can fire
-// without waiting for the next round walk.
+// onRun wires a body's run() callback into NodeHandle.run(). Under
+// the polling model, Node.fill() does NOT call onRun — bodies
+// self-wake via their own RAF poll loop.
 
 import {
   forwardRef, useImperativeHandle, useMemo, useRef,
