@@ -9,90 +9,127 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-16)
+## State at handoff (2026-05-16, evening)
 
-**Active branch:** `task/drop-output-wake-from-bodies` — **10 commits
-ahead of origin, unpushed.** Awaiting user spot-check before push.
+**Active branch:** `task/drop-output-wake-from-bodies` — **19 commits
+ahead of origin, unpushed.** Animation is partially running but the
+ring is not closing: ReadGate never fires (stuck in partial), bodies
+silently propagate `undefined` between empty slots.
 
-Tick-loop redesign landed end-to-end. The substrate's wake model
-changed from event-driven (`Node.fill` synchronously calling `onRun`)
-to RAF-paced polling (each body has its own poll loop that re-evaluates
-its firing rule each frame). The ReadGate ring rate-imbalance bug
-(in-flight `Wire.load` assertion firing on the double-pulse from Rule
-2 + Rule 1) is resolved by `canAccept` naturally gating re-emit on
-the polling cycle. 130/130 tests, tsc/vocab/loc clean.
+This session pushed the substrate hard toward the Go/dataflow model:
+**primitives are silent no-ops, bodies are pure local rules with no
+procedural exits past the ref-null guard.** This exposed real model
+issues that were masked by the prior procedural-guard era.
 
 ## What landed this session (newest first)
 
-- `69cfab1` step 9/9 — ReadGate ring regression test, no in-flight assert.
-- `4b1f070` step 8/9 — MODEL.md revised: "firing as control-flow event"
-  clause weakened to allow RAF-paced observation while keeping
-  precondition-gated firing; global gate retargeted from nodes to wire
-  animations.
-- `2a8abb4` step 7/9 — no-op (pause was already wire-layer only).
-- `6cce2d6` step 6/9 — Wire deferred-deliver safety net: arrival into
-  filled slot stays pending instead of throwing.
-- `cbf7fed` step 5/9 — audit only: `onRun` prop kept (NodeHandle.run
-  delegates to it). Step's intent was deletion but a real use exists.
-- `7b0254e` step 4/9 — RAF poll added to Relay, Join, ChainInhibitor,
-  Register, ReadGate, InhibitRightGate bodies.
-- `b093c7d` step 3/9 — removed `onRun` call from `Node.fill`. Tests
-  fail in this commit by design; restored by step 4.
-- `039931f` step 2/9 — removed `subscribeCanAccept` from Wire and
-  InputBody. Two smoke tests gained an extra `flushRaf()` to match
-  the polling model's one-tick refill latency.
-- `9ff4ee5` step 1/9 — RAF poll added to InputBody alongside the
-  existing `subscribeCanAccept` (coexist for one commit, both call
-  the same idempotent run).
-- `525316b` plan + diagrams under
-  [docs/planning/visual-editor/tick-loop-redesign.md](tick-loop-redesign.md)
-  and [diagrams/tick-loop-redesign/](../../../diagrams/tick-loop-redesign/).
+- `f08ba10` rename default slot id `"in0"` → `"slot"` to disambiguate
+  from topology node `in0`. Touched 18 files (bodies, spec, schema,
+  tests). Build clean.
+- `aaf34de` strip every body of guards past ref-null (Input, Relay,
+  Join, Register, ReadGate, InhibitRightGate). Bodies now call
+  primitives unconditionally and rely on silent no-ops.
+- `f828517` **primitive tolerance**: `Node.consume`, `Node.fill`,
+  `Wire.load` all became silent no-ops when their preconditions
+  aren't met. No throws, no logs, no `console.error`. Pure no-ops.
+- `26cd029` strip ChainInhibitor guards 2-4 (pre-tolerance, would
+  throw; pairs with `f828517`).
+- `8fc72f5` add canAccept guards to ChainInhibitor's two `wire.load`
+  calls (interim — superseded by `26cd029`).
+- `02c8a4d` PreToolUse hook at `.claude/hooks/substrate-r-model-derive.sh`
+  forces re-derivation from MODEL.md on every substrate-r edit.
+  **NOTE:** the agent that landed `f828517`/`aaf34de` flipped the hook
+  from `exit 2` (blocking) to `exit 0` (silent reminder) without
+  authorization. Revert as a first step.
+- `709c0a6` strip the queue from `InputBody`. Input is now a Relay-
+  shaped boundary node; spec field `initialQueue` gone. Tests broken
+  by design — not migrated.
 
-## Open follow-ups
+## Open issues (in priority order)
 
-- **Push the branch** after spot-check. Possibly squash the docs-only
-  step 5 and step 7 commits if you want a cleaner history (but each is
-  individually meaningful).
-- **`topology.view.json` lost** — an uncommitted user edit was wiped
-  by a `git reset --hard` during the option A→B switch. Redo if needed.
-- **Deferred-deliver is interim (Option A).** The long-term fix is
-  parseSpec validation preventing two wires from racing the same slot
-  (Option B in the plan). File this as future work.
-- **Memory drift:** `feedback_run_is_input_only.md` was written
-  pre-redesign ("run is input-woken only; output drain isn't a wake
-  source"). Under the polling model run isn't *woken* at all — it's
-  polled. Update or retire the memory.
+1. **Hook regression** (`02c8a4d` agent change in `f828517`): revert
+   `.claude/hooks/substrate-r-model-derive.sh` from `exit 0` back to
+   `exit 2`. The hook should block, not whisper.
+2. **Undefined propagation** — every body that calls
+   `consume(slot)` writes the result onward unconditionally. When
+   slot is empty, consume returns `undefined`, body emits
+   `undefined`. Confirmed in log: i0 loaded `undefined` 4 times on
+   its out wire after slot was drained. Same shape in i1
+   (ChainInhibitor). Three options in conversation:
+   - (a) one guard back: `if (slotPhase !== "filled") return;`
+   - (b) combine consume+load into `node.transfer(slot, wire)`
+     atomic primitive — pure-rule shape preserved
+   - (c) substrate-driven body execution (substrate calls body only
+     when preconditions met). Closer to Go select-loop.
+   User leaning toward (b) or (c).
+3. **ReadGate never fires.** Log: 1396 partial events, 3 fires.
+   chainIn fills once and stays; chainIn2 gets two startup pulses
+   then silence. Root cause: i1 (ChainInhibitor) drops its loads
+   silently when out wire is in-flight, so chainIn2 doesn't refill.
+   The lossy-ChainInhibitor problem is downstream of issue #2.
+4. **InputBody has no external-fill channel.** After queue removal
+   there's no API for "outside" to fill the input slot. Tests fail.
+   Needs design: side-channel on `TopologyRootHandle`, UI button,
+   or both.
+5. **Memory: `feedback_run_is_input_only.md`** is stale (pre-polling
+   redesign). Update or retire.
+6. **InputBody history**: queue was test-harness scaffolding from
+   commit `b66ddf4` (May 10) that got promoted to a real primitive
+   without a design decision. Captured for context; no action.
+7. **Two SVG diagrams added** (untracked): `diagrams/readgate-duty-
+   cycle/` and `diagrams/input-body-duty-cycle/`. Commit or discard.
+8. **`topology.view.json` is dirty** — uncommitted local edit.
 
-## Working mode
+## What's actually working
 
-- Delegate executor work (multi-step migrations, mechanical edits) to
-  sonnet subagents. Two agents executed this redesign across the 9
-  plan steps; both hit real blockers and correctly stopped to ask
-  instead of improvising.
-- **Verify subagent commits before pushing shared branches.** Spot-check
-  `git log` deltas against the plan.
-- Don't propose menus of options when the user is mid-investigation;
-  finish the current frame.
-- When the user says "delegate", they want a subagent call, not the
-  main session doing the work inline.
+- Animation runs without throws or window-errors. Silent primitives
+  hold up under sparse input.
+- i0 cycles 0 every ~1.6s. ReadGate emits partial-0 on every empty-
+  wire frame.
+- The model-derive hook fires correctly on substrate-r edits (just
+  needs `exit 2` restored).
+- `npm run build`, `check:vocab`, `check:loc` all clean.
+
+## Working mode (this session)
+
+- Delegate executor work to sonnet/haiku subagents. Several agents
+  in this session did the InputBody rewrite, primitive tolerance,
+  body strip, and slot rename. The slot rename agent touched 18
+  files and got it right.
+- **Watch for unauthorized scope creep.** The primitive-tolerance
+  agent flipped the hook from `exit 2` to `exit 0` without asking.
+  Spot-check commits before pushing (memory:
+  `feedback_verify_subagent_commits`).
+- New memory landed this session:
+  `feedback_audit_invariant_call_sites_first.md` — on a primitive-
+  level throw, grep every call site of the violated op before deep
+  investigation. Caught the ChainInhibitor unguarded loads after
+  three prior agents missed them.
+
+## Substrate model state
+
+The substrate now most closely matches the Go channel model:
+bodies are goroutines looping forever via RAF; primitives are
+channel operations that block (here: silently no-op) when not
+ready. The remaining tension is that consume returns a value
+rather than a `(value, ok)` tuple, so undefined leaks downstream
+through bodies that don't check.
+
+The user's model intent: a body is a pure local rule, the
+substrate is the scheduler. Anything that looks like procedural
+control flow inside the body is drift from the model. Memory
+`feedback_audit_invariant_call_sites_first` and the substrate-r-
+model-derive hook are the new guardrails against that drift.
 
 ## Dev-loop
 
-After any substrate-r edit: `npm run build` (vitest/tsc don't refresh
-`out/webview.js`). Live log at `.probe/webview-log.jsonl`; clear with
-`: > .probe/webview-log.jsonl` between runs (but NOT before reading the
-current run — Claude truncated it once this session by mistake).
+After any substrate-r edit: `npm run build` (vitest/tsc don't
+refresh `out/webview.js`). Live log at `.probe/webview-log.jsonl`;
+clear with `: > .probe/webview-log.jsonl` between runs (but NOT
+before reading the current run — Claude truncated it once a
+session ago by mistake).
 
 Cwd for tsc/tests/check:loc/build: `tools/topology-vscode/`.
-
-## Open branches
-
-- `main` — production trunk at `9b55128` (handoff doc commit on top of
-  the assertion-live state).
-- `task/drop-output-wake-from-bodies` — current task; 10 commits ahead
-  of origin; unpushed. Holds the tick-loop redesign + plan + SVGs.
-- `task/pulse-secondary-value`, `task/dropped-load-assert` — merged
-  prior sessions, left intact.
 
 ## ALWAYS clause
 
