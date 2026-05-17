@@ -159,10 +159,6 @@ export function ChainInhibitorBody({
     const wire = outWireRef.current;
     if (!node || !wire) return;
     const inhibitWire = inhibitOutWireRef?.current;
-    // Precondition check — all-or-nothing before any mutation.
-    if (node.slotPhase(slotId) !== "filled") return;
-    if (!wire.canAccept) return;
-    if (inhibitWire && !inhibitWire.canAccept) return;
     const incoming = node.consume(slotId);
     const emitted = heldRef.current;
     heldRef.current = incoming;
