@@ -8,6 +8,8 @@
 // without the guard a shifted value would be lost.
 
 import { useCallback, useEffect, useRef, type RefObject, type ReactNode } from "react";
+
+const EMPTY = Symbol("EMPTY");
 import { Node, type NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
 import type { RNodeKind } from "./spec";
@@ -150,7 +152,7 @@ export function ChainInhibitorBody({
   slotId?: string;
   traceId?: string;
 }) {
-  const heldRef = useRef<unknown>(null);
+  const heldRef = useRef<unknown>(EMPTY);
 
   const run = useCallback(() => {
     const node = nodeRef.current;
@@ -161,8 +163,10 @@ export function ChainInhibitorBody({
     const incoming = node.consume(slotId);
     const emitted = heldRef.current;
     heldRef.current = incoming;
-    wire.load(emitted);
-    if (inhibitWire) inhibitWire.load(emitted);
+    if (emitted !== EMPTY) {
+      wire.load(emitted);
+      if (inhibitWire) inhibitWire.load(emitted);
+    }
   }, [nodeRef, outWireRef, inhibitOutWireRef, slotId]);
 
   useEffect(() => {
