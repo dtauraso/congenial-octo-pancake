@@ -1,8 +1,11 @@
 // Node-kind implementations under the slot-in-node substrate. All
 // kinds live in one file so the Node concept is one read, not five.
 //
-// Input: boundary node. run() consumes slot "slot" and loads outWire
-// unconditionally. Primitives absorb no-ops on unready states.
+// Input: boundary node with an internal queue (no inbound wire). Each
+// frame, if queue non-empty AND outWire canAccept, shift one value and
+// load. Restarts from initialQueue on exhaustion. The canAccept guard
+// is required here — wire.load is a silent no-op when in-flight, so
+// without the guard a shifted value would be lost.
 
 import { useCallback, useEffect, useRef, type RefObject, type ReactNode } from "react";
 import { Node, type NodeHandle } from "./Node";
@@ -15,6 +18,7 @@ export interface KindBodyCtx {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRefs: Record<string, RefObject<WireHandle | null>>;
   slotIds: string[];
+  initialQueue: unknown[];
   seed?: unknown;
   traceId?: string;
 }
@@ -23,10 +27,10 @@ export interface KindBodyCtx {
 // TopologyRoot (test path) and RSubstrateNode (editor path) call this
 // — there is no second switch to keep in sync.
 export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
-  const { nodeRef, outWireRefs, slotIds, seed, traceId } = ctx;
+  const { nodeRef, outWireRefs, slotIds, initialQueue, seed, traceId } = ctx;
   switch (kind) {
     case "input":
-      return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} traceId={traceId} />;
+      return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} initialQueue={initialQueue} traceId={traceId} />;
     case "relay":
       return <RelayBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} traceId={traceId} />;
     case "chaininhibitor":
@@ -47,19 +51,28 @@ export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
 }
 
 export function InputBody({
-  nodeRef, outWireRef, traceId,
+  nodeRef, outWireRef, initialQueue, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
+  initialQueue: unknown[];
   traceId?: string;
 }) {
+  const initialQueueRef = useRef(initialQueue);
+  const remainingRef = useRef<unknown[]>([...initialQueue]);
+
   const run = useCallback(() => {
-    const node = nodeRef.current;
     const wire = outWireRef.current;
-    if (!node || !wire) return;
-    const v = node.consume("slot");
+    if (!wire) return;
+    if (!wire.canAccept) return;
+    if (remainingRef.current.length === 0) {
+      if (initialQueueRef.current.length === 0) return;
+      remainingRef.current = [...initialQueueRef.current];
+    }
+    const v = remainingRef.current.shift();
+    if (traceId) postLog("trace.input.fire", { node: traceId, value: v });
     wire.load(v);
-  }, [nodeRef, outWireRef]);
+  }, [outWireRef, traceId]);
 
   useEffect(() => {
     let raf = 0;
@@ -68,7 +81,7 @@ export function InputBody({
     return () => cancelAnimationFrame(raf);
   }, [run]);
 
-  return <Node ref={nodeRef} slots={["slot"]} onRun={run} traceId={traceId} />;
+  return <Node ref={nodeRef} onRun={run} traceId={traceId} />;
 }
 
 export function RelayBody({
