@@ -1,4 +1,4 @@
-import { useCallback, type RefObject } from "react";
+import { useCallback, useEffect, type RefObject } from "react";
 import { Node, type NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
 import { postLog } from "../log/post";
@@ -45,6 +45,13 @@ export function InhibitRightGateBody({
       if (traceId) postLog("trace.inhibitrightgate.skip", { node: traceId, reason: "no-out-wire-drain" });
     }
   }, [nodeRef, outWireRef, leftSlotId, rightSlotId, traceId]);
+
+  useEffect(() => {
+    let raf = 0;
+    const step = () => { run(); raf = requestAnimationFrame(step); }; // vocab-ok: visual layer
+    raf = requestAnimationFrame(step); // vocab-ok: visual layer
+    return () => cancelAnimationFrame(raf);
+  }, [run]);
 
   return <Node ref={nodeRef} slots={[leftSlotId, rightSlotId]} onRun={run} traceId={traceId} />;
 }

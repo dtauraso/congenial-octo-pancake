@@ -50,13 +50,15 @@ describe("<Node>", () => {
     expect(nodeRef.current!.slotPhase("a")).toBe("empty");
   });
 
-  it("fill re-invokes onRun", () => {
+  it("fill does not synchronously invoke onRun (polling model)", () => {
+    // Under the polling model, fill() is a pure slot write. Bodies
+    // wake via their own RAF loop, not via a fill-triggered onRun call.
     const onRun = vi.fn();
     const nodeRef = { current: null } as React.RefObject<NodeHandle | null>;
     render(<Harness slots={["a"]} onRun={onRun} nodeRef={nodeRef} />);
     onRun.mockClear();
     nodeRef.current!.fill("a", 1);
-    expect(onRun).toHaveBeenCalledOnce();
+    expect(onRun).not.toHaveBeenCalled();
   });
 
   it("subscribeSlot fires on fill and consume", () => {

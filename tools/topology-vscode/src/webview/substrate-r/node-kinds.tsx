@@ -122,6 +122,13 @@ export function RelayBody({
     wire.load(value);
   }, [nodeRef, outWireRef, slotId]);
 
+  useEffect(() => {
+    let raf = 0;
+    const step = () => { run(); raf = requestAnimationFrame(step); }; // vocab-ok: visual layer
+    raf = requestAnimationFrame(step); // vocab-ok: visual layer
+    return () => cancelAnimationFrame(raf);
+  }, [run]);
+
   return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
 }
 
@@ -145,6 +152,13 @@ export function JoinBody({
     const vb = node.consume(slotBId);
     wire.load([va, vb]);
   }, [nodeRef, outWireRef, slotAId, slotBId]);
+
+  useEffect(() => {
+    let raf = 0;
+    const step = () => { run(); raf = requestAnimationFrame(step); }; // vocab-ok: visual layer
+    raf = requestAnimationFrame(step); // vocab-ok: visual layer
+    return () => cancelAnimationFrame(raf);
+  }, [run]);
 
   return <Node ref={nodeRef} slots={[slotAId, slotBId]} onRun={run} traceId={traceId} />;
 }
@@ -178,6 +192,13 @@ export function ChainInhibitorBody({
     if (inhibitWire) inhibitWire.load(emitted);
   }, [nodeRef, outWireRef, inhibitOutWireRef, slotId]);
 
+  useEffect(() => {
+    let raf = 0;
+    const step = () => { run(); raf = requestAnimationFrame(step); }; // vocab-ok: visual layer
+    raf = requestAnimationFrame(step); // vocab-ok: visual layer
+    return () => cancelAnimationFrame(raf);
+  }, [run]);
+
   return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
 }
 
@@ -207,6 +228,13 @@ export function RegisterBody({
     if (traceId) postLog("trace.register.fire", { node: traceId, emitted, incoming });
     wire.load(emitted);
   }, [nodeRef, outWireRef, slotId]);
+
+  useEffect(() => {
+    let raf = 0;
+    const step = () => { run(); raf = requestAnimationFrame(step); }; // vocab-ok: visual layer
+    raf = requestAnimationFrame(step); // vocab-ok: visual layer
+    return () => cancelAnimationFrame(raf);
+  }, [run]);
 
   return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
 }
@@ -247,6 +275,13 @@ export function ReadGateBody({
       wire.load(0);
     }
   }, [nodeRef, outWireRef, key, traceId]);
+
+  useEffect(() => {
+    let raf = 0;
+    const step = () => { run(); raf = requestAnimationFrame(step); }; // vocab-ok: visual layer
+    raf = requestAnimationFrame(step); // vocab-ok: visual layer
+    return () => cancelAnimationFrame(raf);
+  }, [run]);
 
   return <Node ref={nodeRef} slots={slots} onRun={run} traceId={traceId} />;
 }
