@@ -19,25 +19,25 @@ const TWO_SLOT_SPEC: RTopologySpec = {
   nodes: [
     { id: "src0", kind: "input", props: { queue: [1] } },
     { id: "src1", kind: "input", props: { queue: [2] } },
-    { id: "gate", kind: "readgate", ports: { inputs: ["in0", "in1"], outputs: ["out"] } },
+    { id: "gate", kind: "readgate", ports: { inputs: ["slot", "in1"], outputs: ["out"] } },
     { id: "sink", kind: "relay" },
   ],
   wires: [
-    { id: "src0ToGate", source: { nodeId: "src0", port: "out" }, target: { nodeId: "gate", port: "in0" }, pathD: "M 0 0 L 100 0", arcLength: 0 },
+    { id: "src0ToGate", source: { nodeId: "src0", port: "out" }, target: { nodeId: "gate", port: "slot" }, pathD: "M 0 0 L 100 0", arcLength: 0 },
     { id: "src1ToGate", source: { nodeId: "src1", port: "out" }, target: { nodeId: "gate", port: "in1" }, pathD: "M 0 50 L 100 50", arcLength: 0 },
-    { id: "gateToSink", source: { nodeId: "gate", port: "out" }, target: { nodeId: "sink", port: "in0" }, pathD: "M 100 0 L 200 0", arcLength: 0 },
+    { id: "gateToSink", source: { nodeId: "gate", port: "out" }, target: { nodeId: "sink", port: "slot" }, pathD: "M 100 0 L 200 0", arcLength: 0 },
   ],
 };
 
 const PARTIAL_ONLY_SPEC: RTopologySpec = {
   nodes: [
     { id: "src0", kind: "input", props: { queue: [1] } },
-    { id: "gate", kind: "readgate", ports: { inputs: ["in0", "in1"], outputs: ["out"] } },
+    { id: "gate", kind: "readgate", ports: { inputs: ["slot", "in1"], outputs: ["out"] } },
     { id: "sink", kind: "relay" },
   ],
   wires: [
-    { id: "src0ToGate", source: { nodeId: "src0", port: "out" }, target: { nodeId: "gate", port: "in0" }, pathD: "M 0 0 L 100 0", arcLength: 0 },
-    { id: "gateToSink", source: { nodeId: "gate", port: "out" }, target: { nodeId: "sink", port: "in0" }, pathD: "M 100 0 L 200 0", arcLength: 0 },
+    { id: "src0ToGate", source: { nodeId: "src0", port: "out" }, target: { nodeId: "gate", port: "slot" }, pathD: "M 0 0 L 100 0", arcLength: 0 },
+    { id: "gateToSink", source: { nodeId: "gate", port: "out" }, target: { nodeId: "sink", port: "slot" }, pathD: "M 100 0 L 200 0", arcLength: 0 },
   ],
 };
 
@@ -47,9 +47,9 @@ describe("2-slot ReadGate partial-fill behavior", () => {
     render(<TopologyRoot ref={ref} spec={PARTIAL_ONLY_SPEC} />);
     flushRaf();
     flushRaf();
-    expect(ref.current!.node("sink")!.slotPhase("in0")).toBe("filled");
-    expect(ref.current!.node("sink")!.consume("in0")).toBe(0);
-    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("sink")!.slotPhase("slot")).toBe("filled");
+    expect(ref.current!.node("sink")!.consume("slot")).toBe(0);
+    expect(ref.current!.node("gate")!.slotPhase("slot")).toBe("filled");
   });
 
   it("no duplicate 0 emission when wire drains and refills with same filled-slot set", () => {
@@ -57,9 +57,9 @@ describe("2-slot ReadGate partial-fill behavior", () => {
     render(<TopologyRoot ref={ref} spec={PARTIAL_ONLY_SPEC} />);
     flushRaf();
     flushRaf();
-    ref.current!.node("sink")!.consume("in0");
+    ref.current!.node("sink")!.consume("slot");
     flushRaf();
-    expect(ref.current!.node("sink")!.slotPhase("in0")).not.toBe("filled");
+    expect(ref.current!.node("sink")!.slotPhase("slot")).not.toBe("filled");
   });
 
   it("2-slot gate: first partial emit is 0 and does not consume any slots", () => {
@@ -67,7 +67,7 @@ describe("2-slot ReadGate partial-fill behavior", () => {
     render(<TopologyRoot ref={ref} spec={TWO_SLOT_SPEC} />);
     flushRaf();
     flushRaf();
-    expect(ref.current!.node("sink")!.slotPhase("in0")).toBe("filled");
-    expect(ref.current!.node("sink")!.consume("in0")).toBe(0);
+    expect(ref.current!.node("sink")!.slotPhase("slot")).toBe("filled");
+    expect(ref.current!.node("sink")!.consume("slot")).toBe(0);
   });
 });

@@ -26,7 +26,7 @@ describe("B1: CI fan-out — both out and inhibitOut wired", () => {
     render(<TopologyRoot ref={ref} spec={ciFanOut([1])} />);
     flush();
 
-    expect(ref.current!.node("relay_out")!.slotPhase("in0")).toBe("filled");
-    expect(ref.current!.node("relay_inh")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("relay_out")!.slotPhase("slot")).toBe("filled");
+    expect(ref.current!.node("relay_inh")!.slotPhase("slot")).toBe("filled");
   });
 });

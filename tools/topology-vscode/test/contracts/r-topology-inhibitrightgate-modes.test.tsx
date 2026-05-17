@@ -41,14 +41,14 @@ describe("A6: IRG left-alone fires", () => {
       ],
       wires: [
         { id: "w1", source: { nodeId: "src", port: "out"   }, target: { nodeId: "irg",   port: "left" }, pathD: "M 0 0 L 100 0",   arcLength: 0 },
-        { id: "w2", source: { nodeId: "irg", port: "out"   }, target: { nodeId: "relay", port: "in0"  }, pathD: "M 100 0 L 200 0", arcLength: 0 },
+        { id: "w2", source: { nodeId: "irg", port: "out"   }, target: { nodeId: "relay", port: "slot"  }, pathD: "M 100 0 L 200 0", arcLength: 0 },
       ],
     };
     render(<TopologyRoot ref={ref} spec={spec} />);
     flush();
 
     expect(hasFire("irg")).toBe(true);
-    expect(ref.current!.node("relay")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("relay")!.slotPhase("slot")).toBe("filled");
   });
 });
 

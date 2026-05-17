@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 //
 // Locks the editor pulse path: a readgate whose schema input port is
-// not "in0". Regression guard for the chainIn/in0 mismatch that
+// not "slot". Regression guard for the chainIn/slot mismatch that
 // crashed the driver mid-step before ef5db1a (slotId now threaded
 // from the spec's port name into the body).
 
@@ -38,7 +38,7 @@ function makeSpec(slot: string, queue: unknown[]): RTopologySpec {
 
 function flushRaf() { act(() => { vi.advanceTimersByTime(50); }); }
 
-describe("readgate with non-in0 schema port", () => {
+describe("readgate with non-slot schema port", () => {
   it("wire arrives → slot 'chainIn' fills without error", () => {
     expect(() => {
       render(<TopologyRoot spec={makeSpec("chainIn", [42])} />);

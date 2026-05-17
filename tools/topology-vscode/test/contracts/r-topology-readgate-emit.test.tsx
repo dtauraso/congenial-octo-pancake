@@ -23,21 +23,21 @@ function spec(): RTopologySpec {
   return {
     nodes: [
       { id: "src", kind: "input", props: { queue: [42] } },
-      { id: "g1", kind: "readgate", ports: { inputs: ["in0"], outputs: ["out"] } },
-      { id: "g2", kind: "readgate", ports: { inputs: ["in0"] } },
+      { id: "g1", kind: "readgate", ports: { inputs: ["slot"], outputs: ["out"] } },
+      { id: "g2", kind: "readgate", ports: { inputs: ["slot"] } },
     ],
     wires: [
       {
         id: "w1",
         source: { nodeId: "src", port: "out" },
-        target: { nodeId: "g1", port: "in0" },
+        target: { nodeId: "g1", port: "slot" },
         pathD: "M 0 0 L 100 0",
         arcLength: 0,
       },
       {
         id: "w2",
         source: { nodeId: "g1", port: "out" },
-        target: { nodeId: "g2", port: "in0" },
+        target: { nodeId: "g2", port: "slot" },
         pathD: "M 100 0 L 200 0",
         arcLength: 0,
       },

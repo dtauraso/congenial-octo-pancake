@@ -91,14 +91,14 @@ describe("<Node>", () => {
   it("manual button is disarmed when slot is empty, arms on fill, invokes consume on click", () => {
     const nodeRef = { current: null } as React.RefObject<NodeHandle | null>;
     const { container } = render(
-      <Harness slots={["in0"]} manualSlot="in0" nodeRef={nodeRef} />,
+      <Harness slots={["slot"]} manualSlot="slot" nodeRef={nodeRef} />,
     );
-    const btn = container.querySelector('[data-input-id="in0"]')!;
+    const btn = container.querySelector('[data-input-id="slot"]')!;
     expect(btn.getAttribute("data-armed")).toBe("false");
-    act(() => { nodeRef.current!.fill("in0", 7); });
+    act(() => { nodeRef.current!.fill("slot", 7); });
     expect(btn.getAttribute("data-armed")).toBe("true");
     act(() => { fireEvent.click(btn); });
     expect(btn.getAttribute("data-armed")).toBe("false");
-    expect(nodeRef.current!.slotPhase("in0")).toBe("empty");
+    expect(nodeRef.current!.slotPhase("slot")).toBe("empty");
   });
 });

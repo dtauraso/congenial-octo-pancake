@@ -23,7 +23,7 @@ describe("A5: CI solo — no inhibitOut wired", () => {
     const ref = createRef<TopologyRootHandle>();
     render(<TopologyRoot ref={ref} spec={ciSoloChain([1])} />);
     flush();
-    expect(ref.current!.node("relay")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("relay")!.slotPhase("slot")).toBe("filled");
   });
 });
 
@@ -35,15 +35,15 @@ describe("E1: sequential consume drains input queue in order", () => {
         { id: "src",  kind: "input",    props: { queue: [1, 2, 3] } },
         { id: "gate", kind: "readgate" },
       ],
-      wires: [{ id: "w1", source: { nodeId: "src", port: "out" }, target: { nodeId: "gate", port: "in0" }, pathD: P, arcLength: 0 }],
+      wires: [{ id: "w1", source: { nodeId: "src", port: "out" }, target: { nodeId: "gate", port: "slot" }, pathD: P, arcLength: 0 }],
     };
     render(<TopologyRoot ref={ref} spec={spec} />);
     flush();
     const values: unknown[] = [];
     for (let i = 0; i < 3; i++) {
-      expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
+      expect(ref.current!.node("gate")!.slotPhase("slot")).toBe("filled");
       let v: unknown;
-      act(() => { v = ref.current!.node("gate")!.consume("in0"); });
+      act(() => { v = ref.current!.node("gate")!.consume("slot"); });
       values.push(v);
       if (i < 2) flush();
     }
@@ -59,11 +59,11 @@ describe("F1: wire seed primes destination slot on mount", () => {
         { id: "src",   kind: "input", props: { queue: [] } },
         { id: "relay", kind: "relay" },
       ],
-      wires: [{ id: "w1", source: { nodeId: "src", port: "out" }, target: { nodeId: "relay", port: "in0" }, pathD: P, arcLength: 0, seed: 5 }],
+      wires: [{ id: "w1", source: { nodeId: "src", port: "out" }, target: { nodeId: "relay", port: "slot" }, pathD: P, arcLength: 0, seed: 5 }],
     };
     render(<TopologyRoot ref={ref} spec={spec} />);
     flush();
-    expect(ref.current!.node("relay")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("relay")!.slotPhase("slot")).toBe("filled");
   });
 });
 
@@ -81,7 +81,7 @@ describe("G1: deferred-deliver — wire retries fill when dest slot occupied", (
       wires: [{
         id: "w1",
         source: { nodeId: "src",  port: "out" },
-        target: { nodeId: "gate", port: "in0" },
+        target: { nodeId: "gate", port: "slot" },
         pathD: P, arcLength: 0,
         seed: 99, // pre-fills gate.in0 before src fires
       }],
@@ -89,12 +89,12 @@ describe("G1: deferred-deliver — wire retries fill when dest slot occupied", (
     render(<TopologyRoot ref={ref} spec={spec} />);
     flush();
     // gate.in0 should hold the seed value (wire arriving with 42 is deferred)
-    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("gate")!.slotPhase("slot")).toBe("filled");
     // Consume the seed — wire should now deliver 42
-    act(() => { ref.current!.node("gate")!.requestConsume("in0"); });
+    act(() => { ref.current!.node("gate")!.requestConsume("slot"); });
     flush();
-    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
-    expect(ref.current!.node("gate")!.consume("in0")).toBe(42);
+    expect(ref.current!.node("gate")!.slotPhase("slot")).toBe("filled");
+    expect(ref.current!.node("gate")!.consume("slot")).toBe(42);
   });
 });
 
@@ -105,16 +105,16 @@ describe("D3-ext: readgate 3-input — 2 filled, 1 empty — no fire", () => {
       nodes: [
         { id: "srcA", kind: "input",    props: { queue: [1] } },
         { id: "srcB", kind: "input",    props: { queue: [1] } },
-        { id: "gate", kind: "readgate", ports: { inputs: ["in0", "in1", "in2"] } },
+        { id: "gate", kind: "readgate", ports: { inputs: ["slot", "in1", "in2"] } },
       ],
       wires: [
-        { id: "wA", source: { nodeId: "srcA", port: "out" }, target: { nodeId: "gate", port: "in0" }, pathD: P, arcLength: 0 },
+        { id: "wA", source: { nodeId: "srcA", port: "out" }, target: { nodeId: "gate", port: "slot" }, pathD: P, arcLength: 0 },
         { id: "wB", source: { nodeId: "srcB", port: "out" }, target: { nodeId: "gate", port: "in1" }, pathD: P, arcLength: 0 },
       ],
     };
     render(<TopologyRoot ref={ref} spec={spec} />);
     flush();
-    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("gate")!.slotPhase("slot")).toBe("filled");
     expect(ref.current!.node("gate")!.slotPhase("in1")).toBe("filled");
     expect(ref.current!.node("gate")!.slotPhase("in2")).toBe("empty");
   });

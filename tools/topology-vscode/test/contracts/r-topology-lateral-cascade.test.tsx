@@ -69,7 +69,7 @@ describe("C2: single lane fires normally", () => {
       wires: [
         { id: "w1", source: { nodeId: "src",   port: "out" },       target: { nodeId: "ci",  port: "in" },   pathD: "M 0 0 L 100 0", arcLength: 0 },
         { id: "w2", source: { nodeId: "ci",    port: "out" },       target: { nodeId: "irg", port: "left" }, pathD: "M 100 0 L 200 0", arcLength: 0 },
-        { id: "w3", source: { nodeId: "irg",   port: "out" },       target: { nodeId: "relay", port: "in0" }, pathD: "M 200 0 L 300 0", arcLength: 0 },
+        { id: "w3", source: { nodeId: "irg",   port: "out" },       target: { nodeId: "relay", port: "slot" }, pathD: "M 200 0 L 300 0", arcLength: 0 },
       ],
     };
     render(<TopologyRoot ref={ref} spec={spec} />);

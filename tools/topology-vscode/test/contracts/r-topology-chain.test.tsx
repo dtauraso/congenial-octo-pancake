@@ -31,14 +31,14 @@ function makeChain(queue: unknown[]): RTopologySpec {
       {
         id: "w1",
         source: { nodeId: "src", port: "out" },
-        target: { nodeId: "r", port: "in0" },
+        target: { nodeId: "r", port: "slot" },
         pathD: "M 0 0 L 100 0",
         arcLength: 0,
       },
       {
         id: "w2",
         source: { nodeId: "r", port: "out" },
-        target: { nodeId: "gate", port: "in0" },
+        target: { nodeId: "gate", port: "slot" },
         pathD: "M 100 0 L 200 0",
         arcLength: 0,
       },
@@ -55,6 +55,6 @@ describe("chain (Input → Relay → ReadGate)", () => {
     flushRaf(); // w1 arrives → relay fires
     flushRaf(); // w2 arrives → readgate slot fills
 
-    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("gate")!.slotPhase("slot")).toBe("filled");
   });
 });

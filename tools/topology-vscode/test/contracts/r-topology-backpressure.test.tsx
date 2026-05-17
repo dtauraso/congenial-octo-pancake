@@ -32,7 +32,7 @@ function inputToGateSpec(queue: unknown[]): RTopologySpec {
       { id: "src",  kind: "input",    props: { queue } },
       { id: "gate", kind: "readgate" },
     ],
-    wires: [{ id: "w1", source: { nodeId: "src", port: "out" }, target: { nodeId: "gate", port: "in0" }, pathD: PATH, arcLength: 0 }],
+    wires: [{ id: "w1", source: { nodeId: "src", port: "out" }, target: { nodeId: "gate", port: "slot" }, pathD: PATH, arcLength: 0 }],
   };
 }
 
@@ -42,7 +42,7 @@ describe("D1: backpressure — second value held in queue", () => {
     render(<TopologyRoot ref={ref} spec={inputToGateSpec([1, 2])} />);
     flush();
 
-    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("gate")!.slotPhase("slot")).toBe("filled");
     // Only one input.fire should have loaded the wire (second is blocked)
     const fireCalls = vi.mocked(postLog).mock.calls.filter(
       ([lbl, d]) => lbl === "trace.input.fire" && d?.["node"] === "src",
@@ -62,12 +62,12 @@ describe("D2: consume releases backpressure; next value delivered", () => {
 
     // Consume slot — must be in act so React can process synchronous reactions
     let v1: unknown;
-    act(() => { v1 = ref.current!.node("gate")!.consume("in0"); });
+    act(() => { v1 = ref.current!.node("gate")!.consume("slot"); });
     expect(v1).toBe(1);
 
     flush();
 
-    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("gate")!.slotPhase("slot")).toBe("filled");
     const v2fires = vi.mocked(postLog).mock.calls.filter(
       ([lbl, d]) => lbl === "trace.input.fire" && d?.["node"] === "src",
     );
@@ -86,7 +86,7 @@ describe("D3: join partial fill — join never fires", () => {
       ],
       wires: [
         { id: "wA",  source: { nodeId: "srcA", port: "out" }, target: { nodeId: "j",    port: "a"   }, pathD: PATH, arcLength: 0 },
-        { id: "wOut",source: { nodeId: "j",    port: "out" }, target: { nodeId: "gate", port: "in0" }, pathD: PATH, arcLength: 0 },
+        { id: "wOut",source: { nodeId: "j",    port: "out" }, target: { nodeId: "gate", port: "slot" }, pathD: PATH, arcLength: 0 },
       ],
     };
     render(<TopologyRoot ref={ref} spec={spec} />);
@@ -94,6 +94,6 @@ describe("D3: join partial fill — join never fires", () => {
 
     expect(ref.current!.node("j")!.slotPhase("a")).toBe("filled");
     expect(ref.current!.node("j")!.slotPhase("b")).toBe("empty");
-    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("empty");
+    expect(ref.current!.node("gate")!.slotPhase("slot")).toBe("empty");
   });
 });

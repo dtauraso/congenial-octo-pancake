@@ -25,8 +25,8 @@ export function chain(queue: unknown[]): RTopologySpec {
       { id: "gate", kind: "readgate" },
     ],
     wires: [
-      wire("w1", "src", "out", "r", "in0"),
-      wire("w2", "r", "out", "gate", "in0"),
+      wire("w1", "src", "out", "r", "slot"),
+      wire("w2", "r", "out", "gate", "slot"),
     ],
   };
 }
@@ -53,14 +53,14 @@ export function lateralCascade(): RTopologySpec {
     ],
     wires: [
       wire("wA_in",       "srcA",   "out",        "ci_A",   "in"),
-      wire("wB_delay",    "srcB",   "out",        "delayB", "in0"),
+      wire("wB_delay",    "srcB",   "out",        "delayB", "slot"),
       wire("wB_in",       "delayB", "out",        "ci_B",   "in"),
       wire("wA_out",      "ci_A",   "out",        "irg_A",  "left"),
       wire("wB_out",      "ci_B",   "out",        "irg_B",  "left"),
       wire("wA_inhibit",  "ci_A",   "inhibitOut", "irg_B",  "right"),
       wire("wB_inhibit",  "ci_B",   "inhibitOut", "irg_A",  "right"),
-      wire("wA_irg_out",  "irg_A",  "out",        "gate_A", "in0"),
-      wire("wB_irg_out",  "irg_B",  "out",        "gate_B", "in0"),
+      wire("wA_irg_out",  "irg_A",  "out",        "gate_A", "slot"),
+      wire("wB_irg_out",  "irg_B",  "out",        "gate_B", "slot"),
     ],
   };
 }
@@ -75,7 +75,7 @@ export function ciSoloChain(queue: unknown[]): RTopologySpec {
     ],
     wires: [
       wire("w_in",  "src",  "out",        "ci",    "in"),
-      wire("w_out", "ci",   "out",        "relay", "in0"),
+      wire("w_out", "ci",   "out",        "relay", "slot"),
     ],
   };
 }
@@ -84,8 +84,8 @@ export function ciSoloChain(queue: unknown[]): RTopologySpec {
 export function ciFanOut(queue: unknown[], inhibitSeed?: unknown): RTopologySpec {
   const wires: RWireSpec[] = [
     wire("w_in",      "src",  "out",        "ci",      "in"),
-    wire("w_out",     "ci",   "out",        "relay_out","in0"),
-    wire("w_inhibit", "ci",   "inhibitOut", "relay_inh","in0", inhibitSeed !== undefined ? { seed: inhibitSeed } : {}),
+    wire("w_out",     "ci",   "out",        "relay_out","slot"),
+    wire("w_inhibit", "ci",   "inhibitOut", "relay_inh","slot", inhibitSeed !== undefined ? { seed: inhibitSeed } : {}),
   ];
   return {
     nodes: [

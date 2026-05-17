@@ -33,7 +33,7 @@ function makeSpec(queue: unknown[]): RTopologySpec {
     wires: [{
       id: "w0",
       source: { nodeId: "src", port: "out" },
-      target: { nodeId: "gate", port: "in0" },
+      target: { nodeId: "gate", port: "slot" },
       pathD: "M 80 80 L 300 80",
       arcLength: 0,
     }],
@@ -50,7 +50,7 @@ describe("TopologyRoot end-to-end (spec-driven)", () => {
     render(<TopologyRoot ref={ref} spec={makeSpec([42])} />);
     flushRaf();
 
-    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("gate")!.slotPhase("slot")).toBe("filled");
   });
 
   it("subsequent pulse fills slot again after consume", () => {
@@ -59,15 +59,15 @@ describe("TopologyRoot end-to-end (spec-driven)", () => {
     flushRaf();
 
     const gate = ref.current!.node("gate")!;
-    expect(gate.slotPhase("in0")).toBe("filled");
-    act(() => { gate.requestConsume("in0"); });
+    expect(gate.slotPhase("slot")).toBe("filled");
+    act(() => { gate.requestConsume("slot"); });
     // Polling model: one extra RAF tick for InputBody to detect empty slot
     // and start the next wire load before the wire delivers.
     flushRaf();
     flushRaf();
-    expect(gate.slotPhase("in0")).toBe("filled");
-    act(() => { gate.requestConsume("in0"); });
-    expect(gate.slotPhase("in0")).toBe("empty");
+    expect(gate.slotPhase("slot")).toBe("filled");
+    act(() => { gate.requestConsume("slot"); });
+    expect(gate.slotPhase("slot")).toBe("empty");
   });
 
   it("queue restart: slot refills after queue drains", () => {
@@ -76,11 +76,11 @@ describe("TopologyRoot end-to-end (spec-driven)", () => {
     flushRaf();
 
     const gate = ref.current!.node("gate")!;
-    act(() => { gate.requestConsume("in0"); });
+    act(() => { gate.requestConsume("slot"); });
     // Polling model: one extra RAF tick for InputBody to detect empty slot
     // and start the next wire load before the wire delivers.
     flushRaf();
     flushRaf();
-    expect(gate.slotPhase("in0")).toBe("filled");
+    expect(gate.slotPhase("slot")).toBe("filled");
   });
 });

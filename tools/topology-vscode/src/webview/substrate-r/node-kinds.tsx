@@ -1,7 +1,7 @@
 // Node-kind implementations under the slot-in-node substrate. All
 // kinds live in one file so the Node concept is one read, not five.
 //
-// Input: boundary node. run() consumes slot in0 and loads outWire
+// Input: boundary node. run() consumes slot "slot" and loads outWire
 // unconditionally. Primitives absorb no-ops on unready states.
 
 import { useCallback, useEffect, useRef, type RefObject, type ReactNode } from "react";
@@ -57,7 +57,7 @@ export function InputBody({
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
-    const v = node.consume("in0");
+    const v = node.consume("slot");
     wire.load(v);
   }, [nodeRef, outWireRef]);
 
@@ -68,11 +68,11 @@ export function InputBody({
     return () => cancelAnimationFrame(raf);
   }, [run]);
 
-  return <Node ref={nodeRef} slots={["in0"]} onRun={run} traceId={traceId} />;
+  return <Node ref={nodeRef} slots={["slot"]} onRun={run} traceId={traceId} />;
 }
 
 export function RelayBody({
-  nodeRef, outWireRef, slotId = "in0", traceId,
+  nodeRef, outWireRef, slotId = "slot", traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
@@ -168,7 +168,7 @@ export function ChainInhibitorBody({
 // This is a one-round shift-register pattern.
 
 export function RegisterBody({
-  nodeRef, outWireRef, slotId = "in0", traceId,
+  nodeRef, outWireRef, slotId = "slot", traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef?: RefObject<WireHandle | null>;
@@ -211,7 +211,7 @@ export function ReadGateBody({
   outWireRef?: RefObject<WireHandle | null>;
   traceId?: string;
 }) {
-  const slots = slotIds.length > 0 ? slotIds : ["in0"];
+  const slots = slotIds.length > 0 ? slotIds : ["slot"];
   const key = slots.join("|");
 
   const run = useCallback(() => {

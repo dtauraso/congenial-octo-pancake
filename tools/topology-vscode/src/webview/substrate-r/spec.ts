@@ -30,7 +30,7 @@ export interface RNodeSpec {
   kind: RNodeKind;
   props?: { queue?: unknown[]; seed?: unknown };
   // Per-node override of NODE_KIND_PORTS. Lets a spec declare e.g. a
-  // readgate whose input slot is "chainIn" rather than "in0",
+  // readgate whose input slot is "chainIn" rather than "slot",
   // matching what the editor schema can produce. Arity must match the
   // kind's defaults; only the names change.
   ports?: { inputs?: string[]; outputs?: string[] };
@@ -79,12 +79,12 @@ export interface KindPorts { inputs: string[]; outputs: string[] }
 
 export const NODE_KIND_PORTS: Record<RNodeKind, KindPorts> = {
   input:    { inputs: [],      outputs: ["out"] },
-  relay:    { inputs: ["in0"], outputs: ["out"] },
+  relay:    { inputs: ["slot"], outputs: ["out"] },
   join:     { inputs: ["a", "b"], outputs: ["out"] },
-  readgate: { inputs: ["in0"], outputs: [] },
+  readgate: { inputs: ["slot"], outputs: [] },
   chaininhibitor: { inputs: ["in"], outputs: ["inhibitOut", "out"] },
   inhibitrightgate: { inputs: ["left", "right"], outputs: ["out"] },
-  register: { inputs: ["in0"], outputs: ["out"] },
+  register: { inputs: ["slot"], outputs: ["out"] },
 };
 
 export function parseSpec(spec: RTopologySpec): RTopologySpec {

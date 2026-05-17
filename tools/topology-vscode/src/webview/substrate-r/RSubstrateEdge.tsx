@@ -43,7 +43,7 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
   );
 
   const destNodeRef = registry.getNodeRef(target) ?? { current: null };
-  const destSlotId = targetHandle ?? "in0";
+  const destSlotId = targetHandle ?? "slot";
 
   const route: EdgeRoute = data?.route ?? "line";
   const lane = data?.lane ?? 0;

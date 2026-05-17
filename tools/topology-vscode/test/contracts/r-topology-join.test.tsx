@@ -33,7 +33,7 @@ function makeJoin(qa: unknown[], qb: unknown[]): RTopologySpec {
         pathD: "M 0 0 L 100 0", arcLength: 0 },
       { id: "wB", source: { nodeId: "srcB", port: "out" }, target: { nodeId: "j", port: "b" },
         pathD: "M 0 50 L 100 50", arcLength: 0 },
-      { id: "wOut", source: { nodeId: "j", port: "out" }, target: { nodeId: "gate", port: "in0" },
+      { id: "wOut", source: { nodeId: "j", port: "out" }, target: { nodeId: "gate", port: "slot" },
         pathD: "M 100 25 L 200 25", arcLength: 0 },
     ],
   };
@@ -47,7 +47,7 @@ describe("2-input join", () => {
     render(<TopologyRoot ref={ref} spec={makeJoin([1], [])} />);
     flushRaf();
     flushRaf();
-    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("empty");
+    expect(ref.current!.node("gate")!.slotPhase("slot")).toBe("empty");
   });
 
   it("both predecessors deliver → join fires; readgate fills after arrivals", () => {
@@ -55,6 +55,6 @@ describe("2-input join", () => {
     render(<TopologyRoot ref={ref} spec={makeJoin([1], [2])} />);
     flushRaf();
     flushRaf();
-    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("gate")!.slotPhase("slot")).toBe("filled");
   });
 });

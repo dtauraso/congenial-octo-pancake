@@ -22,8 +22,8 @@ const PRIMED_SPEC: RTopologySpec = {
     { id: "sink", kind: "relay" },
   ],
   wires: [
-    { id: "srcToReg", source: { nodeId: "src", port: "out" }, target: { nodeId: "reg", port: "in0" }, pathD: "M 0 0 L 100 0", arcLength: 0 },
-    { id: "regToSink", source: { nodeId: "reg", port: "out" }, target: { nodeId: "sink", port: "in0" }, pathD: "M 100 0 L 200 0", arcLength: 0 },
+    { id: "srcToReg", source: { nodeId: "src", port: "out" }, target: { nodeId: "reg", port: "slot" }, pathD: "M 0 0 L 100 0", arcLength: 0 },
+    { id: "regToSink", source: { nodeId: "reg", port: "out" }, target: { nodeId: "sink", port: "slot" }, pathD: "M 100 0 L 200 0", arcLength: 0 },
   ],
 };
 
@@ -33,22 +33,22 @@ describe("Register (delay buffer) — round 1 emits held null", () => {
     render(<TopologyRoot ref={ref} spec={PRIMED_SPEC} />);
     flushRaf();
     flushRaf();
-    expect(ref.current!.node("sink")!.slotPhase("in0")).toBe("filled");
-    expect(ref.current!.node("sink")!.consume("in0")).toBeNull();
+    expect(ref.current!.node("sink")!.slotPhase("slot")).toBe("filled");
+    expect(ref.current!.node("sink")!.consume("slot")).toBeNull();
   });
 });
 
 const CHAIN_SPEC: RTopologySpec = {
   nodes: [
     { id: "src", kind: "input", props: { queue: [42] } },
-    { id: "gate", kind: "readgate", ports: { inputs: ["in0"], outputs: ["out"] } },
+    { id: "gate", kind: "readgate", ports: { inputs: ["slot"], outputs: ["out"] } },
     { id: "reg", kind: "register" },
     { id: "sink", kind: "relay" },
   ],
   wires: [
-    { id: "srcToGate", source: { nodeId: "src", port: "out" }, target: { nodeId: "gate", port: "in0" }, pathD: "M 0 0 L 100 0", arcLength: 0 },
-    { id: "gateToReg", source: { nodeId: "gate", port: "out" }, target: { nodeId: "reg", port: "in0" }, pathD: "M 100 0 L 200 0", arcLength: 0 },
-    { id: "regToSink", source: { nodeId: "reg", port: "out" }, target: { nodeId: "sink", port: "in0" }, pathD: "M 200 0 L 300 0", arcLength: 0 },
+    { id: "srcToGate", source: { nodeId: "src", port: "out" }, target: { nodeId: "gate", port: "slot" }, pathD: "M 0 0 L 100 0", arcLength: 0 },
+    { id: "gateToReg", source: { nodeId: "gate", port: "out" }, target: { nodeId: "reg", port: "slot" }, pathD: "M 100 0 L 200 0", arcLength: 0 },
+    { id: "regToSink", source: { nodeId: "reg", port: "out" }, target: { nodeId: "sink", port: "slot" }, pathD: "M 200 0 L 300 0", arcLength: 0 },
   ],
 };
 
@@ -59,7 +59,7 @@ describe("ReadGate → Register chain (scalar delay buffer)", () => {
     flushRaf();
     flushRaf();
     flushRaf();
-    expect(ref.current!.node("sink")!.slotPhase("in0")).toBe("filled");
-    expect(ref.current!.node("sink")!.consume("in0")).toBeNull();
+    expect(ref.current!.node("sink")!.slotPhase("slot")).toBe("filled");
+    expect(ref.current!.node("sink")!.consume("slot")).toBeNull();
   });
 });
