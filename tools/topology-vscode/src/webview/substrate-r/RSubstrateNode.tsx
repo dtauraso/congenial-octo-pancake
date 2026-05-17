@@ -17,6 +17,7 @@ import type { WireHandle } from "./Wire";
 import { renderKindBody } from "./node-kinds";
 import { useRegistry } from "./registry";
 import { toRNodeKind } from "./spec";
+import { postLog } from "../log/post";
 
 interface PortDef { name: string; kind: EdgeKind; side?: "left" | "right" }
 
@@ -71,7 +72,14 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
   const outWireRefs: Record<string, RefObject<WireHandle | null>> = {};
   for (const port of outputs) {
     const edgeId = outputEdgeIds[port.name];
-    outWireRefs[port.name] = edgeId ? (registry.getWireRef(edgeId) ?? NULL_REF) : NULL_REF;
+    const wireRef = edgeId ? (registry.getWireRef(edgeId) ?? NULL_REF) : NULL_REF;
+    postLog("trace.wireref.resolve", {
+      nodeId: id,
+      portName: port.name,
+      edgeId: edgeId ?? null,
+      hasRef: wireRef !== NULL_REF,
+    });
+    outWireRefs[port.name] = wireRef;
   }
 
   const width = data?.width ?? 90;
