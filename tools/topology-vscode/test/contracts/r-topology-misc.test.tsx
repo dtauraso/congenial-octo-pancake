@@ -67,6 +67,37 @@ describe("F1: wire seed primes destination slot on mount", () => {
   });
 });
 
+describe("G1: deferred-deliver — wire retries fill when dest slot occupied", () => {
+  it("wire delivers once dest slot empties after initial fill blocked", () => {
+    // Topology: src → gate (readgate, no out). Gate slot is pre-seeded
+    // so it is already filled when the wire arrives. Wire must hold
+    // the value and retry until requestConsume empties the slot.
+    const ref = createRef<TopologyRootHandle>();
+    const spec: RTopologySpec = {
+      nodes: [
+        { id: "src",  kind: "input",    props: { queue: [42] } },
+        { id: "gate", kind: "readgate" },
+      ],
+      wires: [{
+        id: "w1",
+        source: { nodeId: "src",  port: "out" },
+        target: { nodeId: "gate", port: "in0" },
+        pathD: P, arcLength: 0,
+        seed: 99, // pre-fills gate.in0 before src fires
+      }],
+    };
+    render(<TopologyRoot ref={ref} spec={spec} />);
+    flush();
+    // gate.in0 should hold the seed value (wire arriving with 42 is deferred)
+    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
+    // Consume the seed — wire should now deliver 42
+    act(() => { ref.current!.node("gate")!.requestConsume("in0"); });
+    flush();
+    expect(ref.current!.node("gate")!.slotPhase("in0")).toBe("filled");
+    expect(ref.current!.node("gate")!.consume("in0")).toBe(42);
+  });
+});
+
 describe("D3-ext: readgate 3-input — 2 filled, 1 empty — no fire", () => {
   it("readgate does not fire when third slot empty", () => {
     const ref = createRef<TopologyRootHandle>();

@@ -206,15 +206,24 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
 
   const deliverIfPending = useCallback(() => {
     if (!pendingDeliverRef.current) return;
+    const dest = destNodeRef.current;
+    if (!dest) return;
+    // Deferred-deliver safety net (step 6/9): if dest slot is still filled,
+    // keep pending and wait for the next RAF retry rather than throwing.
+    if (dest.slotPhase(destSlotId) !== "empty") return;
     pendingDeliverRef.current = false;
     if (traceId) postLog("trace.deliver", { wire: traceId, slot: destSlotId, value: valueRef.current });
-    destNodeRef.current?.fill(destSlotId, valueRef.current);
+    dest.fill(destSlotId, valueRef.current);
   }, [destNodeRef, destSlotId, traceId]);
 
   const tryFinalize = useCallback(() => {
     if (phaseRef.current.kind !== "in-flight") return;
     if (!animDoneRef.current) return;
     deliverIfPending();
+    // Deferred-deliver: if deliverIfPending() was a no-op (dest slot still
+    // filled), stay in-flight so the RAF retry loop in the animation effect
+    // keeps calling tryFinalize each frame until delivery succeeds.
+    if (pendingDeliverRef.current) return;
     animDoneRef.current = false;
     apply({ type: "arrive" });
   }, [apply, deliverIfPending]);
@@ -290,6 +299,11 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
       if (distance >= measuredLen) {
         animDoneRef.current = true;
         tryFinalize();
+        // Deferred-deliver: if delivery is still pending (dest slot full),
+        // keep the RAF loop running so tryFinalize retries each frame.
+        if (pendingDeliverRef.current) {
+          raf = requestAnimationFrame(step); // vocab-ok: visual layer
+        }
         return;
       }
       raf = requestAnimationFrame(step); // vocab-ok: visual layer
