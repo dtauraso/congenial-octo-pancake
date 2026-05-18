@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import type { Edge as RFEdge, Node as RFNode } from "reactflow";
 import { applyDelete } from "../../delete-core";
 import { flushViewSave, scheduleSave, scheduleViewSave } from "../../save";
-import { mutateBoth, mutateViewer, viewerState } from "../../state";
+import { getSpec, mutateBoth, mutateViewer, viewerState } from "../../state";
 import type { AppCtx } from "./_ctx";
 
 export function useDeleteHandlers(ctx: AppCtx) {
@@ -13,9 +13,8 @@ export function useDeleteHandlers(ctx: AppCtx) {
     // mutateBoth: applyDelete patches both spec and viewerState (orphan
     // cleanup in views/folds/lastSelectionIds). Cmd-Z must restore both
     // surfaces in one step.
-    let next = ctx.lastSpec.current;
-    mutateBoth((s, v) => { applyDelete(s, v, nodeIds, edgeIds); next = s; });
-    ctx.lastSpec.current = next;
+    mutateBoth((s, v) => { applyDelete(s, v, nodeIds, edgeIds); });
+    ctx.lastSpec.current = getSpec();
     // applyDelete cascades — RF only removed the items its own change
     // set named, so rebuild from the post-delete spec to flush stale
     // visuals before the host save round-trip.
