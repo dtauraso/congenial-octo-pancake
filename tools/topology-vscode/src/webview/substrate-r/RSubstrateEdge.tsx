@@ -61,7 +61,7 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
     [route, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, lane],
   );
 
-  const mid = (data?.label || data?.valueLabel)
+  const mid = data?.valueLabel
     ? edgeMidpoint(route, sourceX, sourceY, targetX, targetY, lane)
     : null;
 
@@ -81,7 +81,6 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
       />
       <EdgeLabels
         mid={mid}
-        label={data?.label}
         valueLabel={data?.valueLabel}
         stroke={stroke}
       />
