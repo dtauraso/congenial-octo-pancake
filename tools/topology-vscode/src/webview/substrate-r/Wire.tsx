@@ -85,6 +85,11 @@ export function pickShape(
   const targetHorizontal = tp === "left" || tp === "right";
   if (sourceHorizontal !== targetHorizontal) return "line";
 
+  // Same-side bottom pair: both handles exit downward; the "below"
+  // corridor (down → across → up) is the only route that doesn't
+  // immediately cross either node body.
+  if (sp === "bottom" && tp === "bottom") return "below";
+
   const dx = tx - sx;
   const dy = ty - sy;
   if (sourceHorizontal) {
