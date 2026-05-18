@@ -6,7 +6,7 @@
 
 import { useRef, useState, useCallback, type PointerEvent } from "react";
 import * as React from "react";
-import { Handle, Position, useStore } from "reactflow";
+import { Handle, Position, useStore, useReactFlow } from "reactflow";
 import { shallow } from "zustand/shallow";
 import { KIND_COLORS } from "../../schema";
 import type { EdgeKind } from "../../schema";
@@ -46,6 +46,7 @@ interface Props {
 export function PortRim({ nodeId, inputs, outputs, width, height }: Props) {
   const nodeElRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<ActiveDrag | null>(null);
+  const rf = useReactFlow();
 
   const connected = useStore((s) => {
     const r: Record<string, boolean> = {};
@@ -93,6 +94,18 @@ export function PortRim({ nodeId, inputs, outputs, width, height }: Props) {
         if (occupant) { const occ = all.find(({ p }) => p.name === occupant.p.name); if (occ) { occ.p.side = curSide; occ.p.slot = curSlot; } }
         dragged.p.side = n.side; dragged.p.slot = n.slot;
       });
+      rf.setNodes((nodes) => nodes.map((nd) => {
+        if (nd.id !== nodeId) return nd;
+        const patch = (p: PortDef): PortDef => {
+          if (p.name === portName) return { ...p, side: n.side, slot: n.slot };
+          if (occupant && p.name === occupant.p.name) return { ...p, side: curSide, slot: curSlot };
+          return p;
+        };
+        return { ...nd, data: { ...nd.data,
+          inputs: (nd.data?.inputs ?? []).map(patch),
+          outputs: (nd.data?.outputs ?? []).map(patch),
+        } };
+      }));
       scheduleSave();
     };
     window.addEventListener("pointermove", onMove);
