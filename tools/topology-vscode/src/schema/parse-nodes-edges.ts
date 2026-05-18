@@ -27,7 +27,13 @@ function parsePort(v: unknown, path: string): Port {
     kind: oneOf(o.kind, EDGE_KINDS, `${path}.kind`),
   };
   if (o.required !== undefined) out.required = bool(o.required, `${path}.required`);
-  if (o.side !== undefined) out.side = oneOf(o.side, ["left", "right"] as const, `${path}.side`);
+  if (o.side !== undefined) out.side = oneOf(o.side, ["left", "right", "top", "bottom"] as const, `${path}.side`);
+  if (o.slot !== undefined) {
+    if (o.slot !== 0 && o.slot !== 1 && o.slot !== 2) {
+      throw new Error(`${path}.slot: expected 0|1|2, got ${JSON.stringify(o.slot)}`);
+    }
+    out.slot = o.slot;
+  }
   return out;
 }
 

@@ -8,18 +8,19 @@
 // data.stroke / data.width / data.height per the spec's node-types.ts.
 
 import { useEffect, useMemo, useRef, type RefObject } from "react";
-import { Handle, Position, useStore, type NodeProps } from "reactflow";
+import { useStore, type NodeProps } from "reactflow";
 import { shallow } from "zustand/shallow";
 import type * as React from "react";
-import { KIND_COLORS, type EdgeKind } from "../../schema";
+import type { EdgeKind } from "../../schema";
 import type { NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
 import { renderKindBody } from "./node-kinds";
 import { useRegistry } from "./registry";
 import { toRNodeKind } from "./spec";
 import { postLog } from "../log/post";
+import { PortRim } from "../rf/PortRim";
 
-interface PortDef { name: string; kind: EdgeKind; side?: "left" | "right" }
+interface PortDef { name: string; kind: EdgeKind; side?: "left" | "right" | "top" | "bottom"; slot?: 0 | 1 | 2 }
 
 interface RSubstrateNodeData {
   type?: string;
@@ -35,16 +36,6 @@ interface RSubstrateNodeData {
   nodeData?: { init?: unknown[]; seed?: unknown };
 }
 
-function handleStyle(side: "left" | "right", pct: number, color: string): React.CSSProperties {
-  return {
-    [side]: -5,
-    top: `${pct}%`,
-    width: 8,
-    height: 8,
-    background: color,
-    border: "1px solid #333",
-  } as React.CSSProperties;
-}
 
 export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
   const { id, data, selected } = props;
@@ -121,36 +112,7 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
         boxSizing: "border-box",
       }}
     >
-      {(() => {
-        const leftIns = inputs.filter((p) => (p.side ?? "left") === "left");
-        const rightIns = inputs.filter((p) => p.side === "right");
-        const leftOuts = outputs.filter((p) => p.side === "left");
-        const rightOuts = outputs.filter((p) => (p.side ?? "right") === "right");
-        const leftPorts = [...leftIns, ...leftOuts];
-        const rightPorts = [...rightIns, ...rightOuts];
-        return (
-          <>
-            {leftPorts.map((p, i) => (
-              <Handle
-                key={`l-${p.name}`}
-                id={p.name}
-                type={inputs.includes(p) ? "target" : "source"}
-                position={Position.Left}
-                style={handleStyle("left", ((i + 1) * 100) / (leftPorts.length + 1), KIND_COLORS[p.kind] ?? "#888")}
-              />
-            ))}
-            {rightPorts.map((p, i) => (
-              <Handle
-                key={`r-${p.name}`}
-                id={p.name}
-                type={inputs.includes(p) ? "target" : "source"}
-                position={Position.Right}
-                style={handleStyle("right", ((i + 1) * 100) / (rightPorts.length + 1), KIND_COLORS[p.kind] ?? "#888")}
-              />
-            ))}
-          </>
-        );
-      })()}
+      <PortRim nodeId={id} inputs={inputs} outputs={outputs} width={width} height={height} />
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         <span style={{ fontWeight: 500 }}>{data?.label ?? id}</span>
         {kind && renderKindBody(kind, {
