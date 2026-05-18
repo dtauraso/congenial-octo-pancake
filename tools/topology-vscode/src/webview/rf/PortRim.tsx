@@ -112,9 +112,14 @@ export function PortRim({ nodeId, inputs, outputs, width, height }: Props) {
       const curSide = (p.side as Side | undefined) ?? (isInput ? "left" : "right");
       const curSlot: 0|1|2 = p.slot ?? pctToSlot(pct);
       return (
-        <div key={`${side}-${p.name}`} onPointerDown={(e) => handlePointerDown(e, p.name, isInput, curSide, curSlot)} style={{ position: "absolute", zIndex: 1 }}>
-          <Handle id={p.name} type={isInput ? "target" : "source"} position={SIDE_POSITION[side]} style={handleStyle(side, pct, KIND_COLORS[p.kind] ?? "#888")} />
-        </div>
+        <Handle
+          key={`${side}-${p.name}`}
+          id={p.name}
+          type={isInput ? "target" : "source"}
+          position={SIDE_POSITION[side]}
+          style={handleStyle(side, pct, KIND_COLORS[p.kind] ?? "#888")}
+          onPointerDown={(e) => handlePointerDown(e, p.name, isInput, curSide, curSlot)}
+        />
       );
     });
   });
