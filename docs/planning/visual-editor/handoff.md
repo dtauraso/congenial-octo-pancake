@@ -11,11 +11,9 @@ handoff.md is exempt from the 100-LOC budget.
 
 ## State at handoff (2026-05-17, end of session)
 
-**Active branch:** `task/drop-output-wake-from-bodies` — **~42 commits
-ahead of origin, unpushed.** Working tree is clean except for untracked
-diagram dirs and a pre-existing `.claude/settings.json` edit (use of
-`$CLAUDE_PROJECT_DIR` in hook paths — not from this session). No
-uncommitted source changes.
+**Active branch:** `task/drop-output-wake-from-bodies` — **~44 commits
+ahead of origin, unpushed.** Working tree is clean. No uncommitted
+source changes and no untracked files.
 
 Ring smoke-test re-run this session. **The ring is alive** — ReadGate
 cold-start is not a deadlock; it just takes one full lap to fill
@@ -61,7 +59,7 @@ model.
      before (a) is in place.
    Apply (a) to ChainInhibitor first (it's the demonstrated offender),
    then audit Relay/Join/Register the same way.
-2. **Push the branch.** ~42 commits ahead of origin. Sign-off-gated per
+2. **Push the branch.** ~44 commits ahead of origin. Sign-off-gated per
    CLAUDE.md.
 3. **Hook regression** (carryover):
    `.claude/hooks/substrate-r-model-derive.sh` is still at `exit 0`;
@@ -70,12 +68,6 @@ model.
    redesign). Update or retire; this session's evidence (silent
    `wire.load` is exactly the rate-bug-hider that memory predicted) is
    worth folding in.
-5. **Three SVG diagram dirs untracked** (`diagrams/readgate-duty-cycle/`,
-   `diagrams/input-body-duty-cycle/`, `diagrams/chaininhibitor-bootstrap/`).
-   Commit or discard when ready.
-6. **Pre-existing `.claude/settings.json` edit** ($CLAUDE_PROJECT_DIR
-   absolute-path conversion for hook commands) is uncommitted; commit
-   or discard when the user decides whether they want it.
 
 ## What's actually working
 
