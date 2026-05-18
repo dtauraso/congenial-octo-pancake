@@ -19,7 +19,7 @@ import { useRegistry } from "./registry";
 import { toRNodeKind } from "./spec";
 import { postLog } from "../log/post";
 
-interface PortDef { name: string; kind: EdgeKind; side?: "left" | "right" }
+interface PortDef { name: string; kind: EdgeKind; side?: "left" | "right" | "top" | "bottom" }
 
 interface RSubstrateNodeData {
   type?: string;
@@ -35,10 +35,11 @@ interface RSubstrateNodeData {
   nodeData?: { init?: unknown[]; seed?: unknown };
 }
 
-function handleStyle(side: "left" | "right", pct: number, color: string): React.CSSProperties {
+function handleStyle(side: "left" | "right" | "top" | "bottom", pct: number, color: string): React.CSSProperties {
+  const isVertical = side === "left" || side === "right";
   return {
     [side]: -5,
-    top: `${pct}%`,
+    ...(isVertical ? { top: `${pct}%` } : { left: `${pct}%` }),
     width: 8,
     height: 8,
     background: color,
@@ -122,32 +123,36 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
       }}
     >
       {(() => {
-        const leftIns = inputs.filter((p) => (p.side ?? "left") === "left");
-        const rightIns = inputs.filter((p) => p.side === "right");
-        const leftOuts = outputs.filter((p) => p.side === "left");
-        const rightOuts = outputs.filter((p) => (p.side ?? "right") === "right");
-        const leftPorts = [...leftIns, ...leftOuts];
-        const rightPorts = [...rightIns, ...rightOuts];
+        type Side = "left" | "right" | "top" | "bottom";
+        const buckets: Record<Side, PortDef[]> = { left: [], right: [], top: [], bottom: [] };
+        for (const p of inputs) {
+          const s: Side = (p.side as Side) ?? "left";
+          buckets[s].push(p);
+        }
+        for (const p of outputs) {
+          const s: Side = (p.side as Side) ?? "right";
+          buckets[s].push(p);
+        }
+        const sidePosition: Record<Side, Position> = {
+          left: Position.Left,
+          right: Position.Right,
+          top: Position.Top,
+          bottom: Position.Bottom,
+        };
+        const keyPrefix: Record<Side, string> = { left: "l-", right: "r-", top: "t-", bottom: "b-" };
         return (
           <>
-            {leftPorts.map((p, i) => (
-              <Handle
-                key={`l-${p.name}`}
-                id={p.name}
-                type={inputs.includes(p) ? "target" : "source"}
-                position={Position.Left}
-                style={handleStyle("left", ((i + 1) * 100) / (leftPorts.length + 1), KIND_COLORS[p.kind] ?? "#888")}
-              />
-            ))}
-            {rightPorts.map((p, i) => (
-              <Handle
-                key={`r-${p.name}`}
-                id={p.name}
-                type={inputs.includes(p) ? "target" : "source"}
-                position={Position.Right}
-                style={handleStyle("right", ((i + 1) * 100) / (rightPorts.length + 1), KIND_COLORS[p.kind] ?? "#888")}
-              />
-            ))}
+            {(["left", "right", "top", "bottom"] as Side[]).flatMap((side) =>
+              buckets[side].map((p, i, arr) => (
+                <Handle
+                  key={`${keyPrefix[side]}${p.name}`}
+                  id={p.name}
+                  type={inputs.includes(p) ? "target" : "source"}
+                  position={sidePosition[side]}
+                  style={handleStyle(side, ((i + 1) * 100) / (arr.length + 1), KIND_COLORS[p.kind] ?? "#888")}
+                />
+              ))
+            )}
           </>
         );
       })()}
