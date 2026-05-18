@@ -40,6 +40,7 @@ Each entry can drift; if it conflicts with current code, update or remove the me
 - [feedback_substrate_landing_requires_editor_path.md](feedback_substrate_landing_requires_editor_path.md) — Node kinds are auto-landed via shared renderKindBody; wire-prop fork remains (TopologyRoot vs RSubstrateEdge).
 - [feedback_delegate_executor_work.md](feedback_delegate_executor_work.md) — Main Opus session is for judgment; grep sweeps and mechanical edits go to cheaper subagents via `Agent({ model: ... })`.
 - [feedback_delegate_by_default.md](feedback_delegate_by_default.md) — Spawn subagents without asking each time; David will say "don't delegate" if he wants inline work.
+- [feedback_tight_delegate_prompts.md](feedback_tight_delegate_prompts.md) — Agent prompts: ~15 lines (goal, paths, edits, verify, constraints); skip prose framing
 - [feedback_uniform_pulse_speed.md](feedback_uniform_pulse_speed.md) — Reject per-wire `speed` props; pulse speed is uniform across all wires.
 - [feedback_dont_pause_after_go.md](feedback_dont_pause_after_go.md) — When the frame is named and decisions are recorded, just execute; the substrate "state next step and wait" rule is about new decisions, not re-confirmation.
 - [feedback_verify_subagent_commits.md](feedback_verify_subagent_commits.md) — Subagents have picked up unstaged working-tree edits and pushed them; spot-check `git log` deltas before pushing to main.
