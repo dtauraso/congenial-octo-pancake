@@ -22,6 +22,7 @@ import { useNodeContextHandlers } from "./app/_on-node-context";
 import { useNodeDrag } from "./app/_on-node-drag";
 import { useUndoRedo } from "./app/_use-undo-redo";
 import type { AppCtx } from "./app/_ctx";
+import { EdgeActionsCtx } from "../substrate-r/edge-actions-ctx";
 
 function Inner() {
   const [nodes, setNodes] = useState<RFNode[]>([]);
@@ -108,8 +109,10 @@ function Inner() {
   }, [s]);
 
   const styled = decorate(nodes, edges, dimmed, s.comparisonSpec, s.compareMode, s.lastSpec.current);
+  const edgeActions = useMemo(() => ({ setEdgeLane: edgeH.setEdgeLane }), [edgeH.setEdgeLane]);
 
   return (
+    <EdgeActionsCtx.Provider value={edgeActions}>
     <AppView
       paneRef={s.paneRef} ghostFront={s.ghostFront}
       styledNodes={styled.nodes} styledEdges={styled.edges}
@@ -130,6 +133,7 @@ function Inner() {
       setCompareMode={s.setCompareMode} closeCompare={closeCompare}
       onDragOver={ddH.onDragOver} onDrop={ddH.onDrop}
     />
+    </EdgeActionsCtx.Provider>
   );
 }
 

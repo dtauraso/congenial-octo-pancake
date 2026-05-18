@@ -55,8 +55,23 @@ export function useEdgeHandlers(ctx: AppCtx) {
     setEdgeMenu(null);
   }, [ctx]);
 
+  const setEdgeLane = useCallback((edgeId: string, lane: number) => {
+    if (ctx.isReadOnlyView()) return;
+    if (!ctx.lastSpec.current) return;
+    if (!spec.edges.some((e) => e.id === edgeId)) return;
+    const next = mutateSpec((s) => {
+      const e = s.edges.find((x) => x.id === edgeId);
+      if (e) e.lane = lane;
+    });
+    ctx.lastSpec.current = next;
+    const flow = specToFlow(next, viewerState.folds, viewerState);
+    ctx.setNodes(flow.nodes);
+    ctx.setEdges(flow.edges);
+    scheduleSave();
+  }, [ctx]);
+
   return {
     edgeMenu, isValidConnection, onConnect, onReconnectStart, onReconnect,
-    onReconnectEnd, onEdgeContextMenu, closeEdgeMenu, setEdgeKind,
+    onReconnectEnd, onEdgeContextMenu, closeEdgeMenu, setEdgeKind, setEdgeLane,
   };
 }

@@ -4,9 +4,10 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useStore, type EdgeProps } from "reactflow";
-import { Wire, type WireHandle, buildEdgePathD, edgeMidpoint, EdgeLabels, type EdgeRoute } from "./Wire";
+import { Wire, type WireHandle, buildEdgePathD, edgeMidpoint, EdgeLabels, pickShape, type EdgeRoute, type SideName } from "./Wire";
 import { useRegistry } from "./registry";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind } from "../../schema";
+import { LaneDragHandle } from "./LaneDragHandle";
 
 function dashForKind(kind: EdgeKind | undefined): string | undefined {
   return kind === "pointer" ? "4 3" : undefined;
@@ -45,7 +46,10 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
   const destNodeRef = registry.getNodeRef(target) ?? { current: null };
   const destSlotId = targetHandle ?? "slot";
 
-  const route: EdgeRoute = data?.route ?? "line";
+  const route: EdgeRoute = data?.route ?? pickShape(
+    sourceX, sourceY, sourcePosition as SideName,
+    targetX, targetY, targetPosition as SideName,
+  );
   const lane = data?.lane ?? 0;
   const kind: EdgeKind = data?.kind ?? "any";
   const stroke = KIND_COLORS[kind] ?? "#888";
@@ -62,7 +66,8 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
     [route, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, lane],
   );
 
-  const mid = data?.valueLabel
+  const showHandle = route === "snake" || route === "below";
+  const mid = (data?.valueLabel || showHandle)
     ? edgeMidpoint(route, sourceX, sourceY, targetX, targetY, lane)
     : null;
 
@@ -86,6 +91,16 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
         valueLabel={data?.valueLabel}
         stroke={stroke}
       />
+      {showHandle && mid && (
+        <LaneDragHandle
+          edgeId={id}
+          route={route}
+          pathD={pathD}
+          mid={mid}
+          lane={lane}
+          stroke={stroke}
+        />
+      )}
     </>
   );
 }

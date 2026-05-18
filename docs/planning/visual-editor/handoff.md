@@ -9,81 +9,105 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, kind-default port-drag persistence fixed)
+## State at handoff (2026-05-18, topology-driven-edge-shape pushed)
 
-**Active branch:** `task/editor-friction-pass-3`, ten commits ahead
-of `main`. Working tree clean.
+**Active branch:** `task/topology-driven-edge-shape`, five commits
+ahead of `main`, pushed to origin. Working tree has unstaged edits in
+`memory/MEMORY.md`, `topology.json`, `topology.view.json` — user's
+in-editor state plus memory-index pruning. **Do not commit these to
+this task branch.**
 
-## What landed on this branch (since last handoff)
+Unmerged sibling branches still outstanding against main:
+- `task/grow-port-on-drop` (1 commit — green-handle grow on saturated nodes)
+- `task/editor-friction-pass-4` (3 commits — Input init seed, delete-handler immer-draft fix, delegation-nudge inlined into CLAUDE.md)
 
-- `58a6035` **feat(visual-editor):** drag-to-move port positions with
-  3-slot snap. Connected ports (port already has an edge attached):
-  click-hold-drag moves the port; on release, snaps to nearest of 12
-  rim positions (3 per side at 25/50/75%); swap if occupied.
-  Unconnected ports retain RF wire-creation drag. Persistence via
-  `mutateSpec` + `scheduleSave`; PortDef extended with `slot?: 0|1|2`.
-  Handle rendering extracted into new `rf/PortRim.tsx` (concept:
-  editor UX); `substrate-r/RSubstrateNode.tsx` shrank to a thin call.
-  Pure snap math in `rf/port-rim-drag.ts`.
-- `8cbcc68` **fix:** drop wrapper `<div>` around each Handle (collapsed
-  to (0,0) with no inset, stacking all ports at the corner).
-- `2e09255` **fix:** refresh RF node data after port-move via
-  `useReactFlow().setNodes`; `mutateSpec` alone doesn't re-derive flow.
-- `192343f` **chore:** normalize `topology.json` to JSON.stringify
-  (null,2) so future saves are no-op diffs.
-- `5961389` **fix(schema):** accept `top|bottom` side and `slot 0|1|2`
-  in `parse-nodes-edges.ts`. Without this, first save of a moved port
-  produced an unparseable spec → editor loaded blank.
-- `a853b60` **memory:** add `feedback_schema_parser_parity` —
-  extending a spec type requires updating the runtime validator in the
-  same commit.
-- `ef1fa96` **fix:** call `useUpdateNodeInternals(nodeId)` after a
-  port move so RF re-measures handle positions; otherwise edges stay
-  anchored to the old port spot.
-- `455170e` **chore:** capture test state in topology.json /
-  topology.view.json (readGate ports rearranged, i1 nudged).
-- `2f7d6ab` **chore:** remove unconnected `inhibitRight0.out` port
-  (override `outputs: []`).
-- `54919ea` **fix(substrate-r):** tolerate missing `outWireRef` in
-  InhibitRightGate. Body referenced `outWireRef.current` unconditionally;
-  when the spec omits the `out` port, renderKindBody passes undefined
-  and the body threw every RAF tick, leaving input slots filled and
-  upstream wires stuck in deliver-retry. Mark prop optional and guard
-  the deref. Firing gate (`&& wire`) already suppresses emission when
-  no wire is connected.
-- `f74eac1` **chore(hooks):** remove `substrate-r-model-derive`
-  PreToolUse hook. It blocked trivial defensive edits as often as it
-  caught model drift; can't distinguish a typo fix from a structural
-  change. Model alignment is a review concern, not a hook concern.
-- `7cc8fad` **fix(visual-editor):** materialize kind-default ports
-  before port-drag spec mutation. Ports inherited from `NODE_TYPES`
-  defaults (e.g. `inhibitRight0`'s `left`/`right`) were absent from
-  `sn.inputs`/`sn.outputs`, so the drop handler's `find()` returned
-  undefined and the spec write silently no-op'd. `rf.setNodes` made
-  it look like the move stuck until refresh. Fix: on first drag,
-  `structuredClone` the kind defaults onto the node spec; subsequent
-  side/slot writes persist.
+## What landed on this branch
+
+Five commits, in order:
+
+- `da0d047` **feat:** `pickShape(sx,sy,sp,tx,ty,tp): EdgeRoute` in
+  `substrate-r/Wire.tsx`. Picks "line" vs "snake" from handle sides
+  + dx/dy. Perpendicular handle pair → "line" (bezier curves into a
+  natural L). Parallel-opposing with target ahead + small cross-axis
+  offset → "line". Otherwise → "snake". Wired in `RSubstrateEdge.tsx`
+  as the default when `data?.route` is unset; explicit author choice
+  still wins.
+
+- `f5aba49` **fix:** same-side-bottom handle pair → "below" corridor.
+  Caught when i1.out (side=bottom) → readGate1.chainIn2 (side=bottom)
+  produced a wide bezier dip. Both bezier control points sat below
+  the endpoints, dragging the wire far down. "Below" routes cleanly
+  under both nodes instead.
+
+- `8406ec1` **feat:** draggable midpoint handle on "snake" and
+  "below" edges, writing to `data.lane`. New files:
+  `LaneDragHandle.tsx`, `edge-actions-ctx.ts`. New action
+  `setEdgeLane` in `rf/app/_use-edge-handlers.ts` follows the
+  existing `mutateSpec` → `specToFlow` → `scheduleSave` pattern
+  (`lane` is a top-level spec edge field, not inside `data`).
+  Provider wraps in `rf/app.tsx`. Drag axis matches the lane
+  semantic: horizontal for snake, vertical for below.
+
+- `40b319f` **fix:** circle needed `pointerEvents:"all"`. React Flow's
+  edge SVG layer is `pointer-events:none` by default, so custom
+  children get no mouse events without an opt-in.
+
+- `8eac594` **feat:** handle reveals on hover within 16px of the
+  wire, stays visible while dragging. Implemented via an invisible
+  16px-stroke path along `pathD` as the hit area inside a
+  hover-tracking `<g>`.
+
+User confirmed dragging works and saves round-trip.
 
 ## Next action
 
-None queued. Port-drag now persists across refreshes for all nodes,
-including those using kind-default ports. Drive the editor and let
-friction pick the next task.
+None queued. Drive the editor and let friction pick the next task.
+Carried-forward friction signals worth watching:
+
+- **Inert nodes by construction.** A `ReadGate` with no outgoing
+  `out` edge bails on `!wire` and silently no-ops — no visual signal
+  that it's dead. Candidate fix per
+  `feedback_enforce_required_inputs`: model-enforced required
+  output, or a visual "inert" indicator.
+- **Process hygiene.** Start each new task by checking out a fresh
+  `task/...` branch off `main`, not by committing on whichever
+  branch HEAD happens to be on. (This session did so correctly,
+  stashing WIP through the branch switch.)
+- **Two pre-existing TS diagnostics in `Wire.tsx`** (`getPhaseKind`
+  ~L228 unused, `value` ~L342 unused) are not caused by this branch.
+  Worth a small cleanup commit if the next session has slack.
+- **Three unmerged task branches stacked on main**
+  (grow-port-on-drop, editor-friction-pass-4, this one). Consider
+  merging the green ones to keep base churn manageable.
 
 ## Parked (not open; revisit when friction returns)
 
+- **Grow port on zero-input nodes** (decided 2026-05-18 not to do).
+  `Generic`/`Input` can't grow today; user accepted this.
+- **Wire-grab feature** (discussed 2026-05-18). A wire whose path
+  animates with the pulse, plus a node that "grabs" the wire and
+  hands the endpoint off — runtime topology mutation. Visual-only
+  half is ~1 day; handoff half needs a substrate-model answer first
+  (what "held" means locally, what triggers grab/release, whether
+  dangling endpoints are legal). Cheapest discovery move: build the
+  visual-only animation, author a held wire by hand in
+  `topology.json`, use the breakage list as the design spec.
 - **Fan-out back-pressure on ChainInhibitor** still unsolved. Naive
-  `wire.canAccept && inhibitWire.canAccept` gate broke animation both
-  times it was tried. Trace deadlock if retried.
+  `wire.canAccept && inhibitWire.canAccept` gate broke animation
+  both times tried. Trace deadlock if retried.
 - **Pacing-by-pixel-length / wire-length-dependent firing** — item 9
-  in [recommendations.md](recommendations.md). Audit (2026-05-17)
-  found no active firing-rule divergence: all node predicates are
-  slot-phase-only. Two artifacts noted: dead file `fanout-convergence.ts`
-  reads `wire.phase` (prohibited pattern, but unused); ChainInhibitor's
-  two-load pattern can lose the inhibitOut token if that wire is
-  in-flight, masked today by wire lengths making both wires accept on
-  the same frame. Do NOT reach for a clock primitive, barrier, or
-  sequence-tagged values; MODEL.md has no logical-tick view.
+  in [recommendations.md](recommendations.md). 2026-05-17 audit
+  found no active firing-rule divergence; two artifacts noted (dead
+  `fanout-convergence.ts` reads `wire.phase`; ChainInhibitor's
+  two-load pattern can lose the `inhibitOut` token, masked today by
+  wire lengths making both wires accept on the same frame). Do NOT
+  reach for a clock primitive, barrier, or sequence-tagged values;
+  MODEL.md has no logical-tick view.
+- **Obstacle-aware edge routing.** `pickShape` only knows handle
+  sides and endpoint coordinates; it doesn't check whether the
+  chosen route crosses other node bodies. If that becomes friction,
+  thread `useStore((s) => s.nodes)` into the picker and add a
+  bbox-intersection check.
 
 ## What's actually working
 
@@ -92,9 +116,16 @@ friction pick the next task.
 - Edge seed delivers once to dest slot at wire mount.
 - Drag-to-move ports: 12 snap positions, swap on collision, edges
   follow via `updateNodeInternals`.
-- `tsc --noEmit` clean; `npm run build` clean.
-- 4 Playwright scenario tests all pass (`npm run test:e2e`).
-- `check-substrate-vocab.mjs` clean.
+- Wire drop onto a saturated node grows a new input port at the
+  nearest free snap position; round-trips through save/reload.
+- Edge routes pick themselves from topology (handle sides + dx/dy);
+  same-side-bottom pairs use the "below" corridor.
+- Lane handle reveals on hover within 16px, drag adjusts `lane`
+  live along the route's lane axis, mouse-up persists via
+  `scheduleSave`.
+- `tsc --noEmit` clean except two pre-existing Wire.tsx warnings;
+  `npm run build` clean; `check:loc` clean; `check-substrate-vocab`
+  clean.
 
 ## Substrate model state
 
@@ -110,8 +141,7 @@ script enforces this in substrate-r/.
 After any substrate-r edit: `npm run build` (tsc alone doesn't refresh
 `out/webview.js`). Live log at `.probe/webview-log.jsonl`; clear with
 `: > .probe/webview-log.jsonl` between runs (NOT before reading the
-current run). The log is currently >500 MB — worth clearing when
-convenient.
+current run). Cleared at start of this session.
 
 Cwd for tsc/tests/check-loc/build: `tools/topology-vscode/`.
 
