@@ -141,6 +141,8 @@ the matching kind. If unsure, downshift first and escalate only if the
 cheaper model produces poor output — the cost asymmetry favors trying
 cheap first.
 
+**Delegation check (apply each prompt):** if the task needs >2 read-only lookups or a mechanical edit pass, spawn a subagent (Explore w/ haiku for research, general-purpose w/ sonnet for mechanical edits). Main session is for judgment.
+
 **Delegation is the default, not the exception.** Before running a
 multi-step investigation, grep sweep, or mechanical edit pass from the
 main (Opus) session, ask: "can a haiku or sonnet subagent do this?" If
