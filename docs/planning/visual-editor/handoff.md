@@ -9,9 +9,9 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, drag-to-move ports landed)
+## State at handoff (2026-05-18, kind-default port-drag persistence fixed)
 
-**Active branch:** `task/editor-friction-pass-3`, eight commits ahead
+**Active branch:** `task/editor-friction-pass-3`, ten commits ahead
 of `main`. Working tree clean.
 
 ## What landed on this branch (since last handoff)
@@ -55,12 +55,20 @@ of `main`. Working tree clean.
   PreToolUse hook. It blocked trivial defensive edits as often as it
   caught model drift; can't distinguish a typo fix from a structural
   change. Model alignment is a review concern, not a hook concern.
+- `7cc8fad` **fix(visual-editor):** materialize kind-default ports
+  before port-drag spec mutation. Ports inherited from `NODE_TYPES`
+  defaults (e.g. `inhibitRight0`'s `left`/`right`) were absent from
+  `sn.inputs`/`sn.outputs`, so the drop handler's `find()` returned
+  undefined and the spec write silently no-op'd. `rf.setNodes` made
+  it look like the move stuck until refresh. Fix: on first drag,
+  `structuredClone` the kind defaults onto the node spec; subsequent
+  side/slot writes persist.
 
 ## Next action
 
-None queued. The port-drag feature is functional end-to-end: drag a
-connected port → snap to one of 12 rim positions → spec persists →
-edges follow. Drive the editor and let friction pick the next task.
+None queued. Port-drag now persists across refreshes for all nodes,
+including those using kind-default ports. Drive the editor and let
+friction pick the next task.
 
 ## Parked (not open; revisit when friction returns)
 
