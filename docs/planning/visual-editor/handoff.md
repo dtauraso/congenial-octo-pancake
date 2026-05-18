@@ -48,8 +48,7 @@ friction-driven per CLAUDE.md post-v0 posture.
 
 Cross-session backlog with priorities lives in
 [recommendations.md](recommendations.md). Update it as items land.
-**Next action:** items 4+5 (trivial: hook regression, memory hygiene)
-then item 3 (run-start signal). See recommendations.md.
+**Next action:** item 0 (run-start signal). See recommendations.md.
 
 ## Open issues (in priority order)
 
@@ -69,13 +68,6 @@ then item 3 (run-start signal). See recommendations.md.
 2. **Pacing-by-pixel-length is still load-bearing for correctness.**
    Logical-tick vs physical-wire mismatch; edge detection only works
    when wire lengths happen to align. Design pass needed before code.
-
-3. **Hook regression** (carryover):
-   `.claude/hooks/substrate-r-model-derive.sh` is still at `exit 0`;
-   should be `exit 2`.
-
-4. **Memory hygiene:** `feedback_run_is_input_only.md` is pre-
-   polling-redesign and stale; should be retired or rewritten.
 
 ## What's actually working
 
