@@ -22,7 +22,7 @@ export function InhibitRightGateBody({
   traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
-  outWireRef: RefObject<WireHandle | null>;
+  outWireRef?: RefObject<WireHandle | null>;
   leftSlotId?: string;
   rightSlotId?: string;
   traceId?: string;
@@ -37,7 +37,7 @@ export function InhibitRightGateBody({
     const rightFilled = node.slotPhase(rightSlotId) === "filled";
     const leftValue = node.consume(leftSlotId);
     node.consume(rightSlotId);
-    const wire = outWireRef.current;
+    const wire = outWireRef?.current ?? null;
     if (leftFilled && !rightFilled && wire) {
       if (traceId) postLog("trace.inhibitrightgate.fire", { node: traceId });
       lastSkipReasonRef.current = null;
