@@ -44,6 +44,17 @@ of `main`. Working tree clean.
   topology.view.json (readGate ports rearranged, i1 nudged).
 - `2f7d6ab` **chore:** remove unconnected `inhibitRight0.out` port
   (override `outputs: []`).
+- `54919ea` **fix(substrate-r):** tolerate missing `outWireRef` in
+  InhibitRightGate. Body referenced `outWireRef.current` unconditionally;
+  when the spec omits the `out` port, renderKindBody passes undefined
+  and the body threw every RAF tick, leaving input slots filled and
+  upstream wires stuck in deliver-retry. Mark prop optional and guard
+  the deref. Firing gate (`&& wire`) already suppresses emission when
+  no wire is connected.
+- `f74eac1` **chore(hooks):** remove `substrate-r-model-derive`
+  PreToolUse hook. It blocked trivial defensive edits as often as it
+  caught model drift; can't distinguish a typo fix from a structural
+  change. Model alignment is a review concern, not a hook concern.
 
 ## Next action
 
@@ -96,20 +107,6 @@ reasoning that reaches for a clock primitive, barrier, sequence-tagged
 values, or "logical view" is drift — the substrate has one view.
 Banned vocabulary includes tick/round/step/cohort/lap; the vocab check
 script enforces this in substrate-r/.
-
-## Hook caveat
-
-The `.claude/hooks/substrate-r-model-derive.sh` PreToolUse hook fires
-on Edit/Write to `node-kinds.tsx`, `Node.tsx`, and `Wire.tsx` only
-(bodies + substrate primitives). RF wrappers, registry, and spec edits
-no longer trip it. For legitimate edits to the three guarded files,
-follow the in-hook reminder (name the local rule per MODEL.md, compare
-to current code, then patch). If you genuinely need to bypass,
-temporarily remove the first PreToolUse entry from
-`.claude/settings.json`, do the work, then restore it — do NOT commit
-the settings.json change. The hook still overfires on Bash commands
-referencing a guarded filename combined with `2>/dev/null`; avoid that
-idiom or delegate Grep/Read to a subagent.
 
 ## Dev-loop
 
