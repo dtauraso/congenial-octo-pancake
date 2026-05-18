@@ -9,9 +9,9 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-17, items 1+2 landed)
+## State at handoff (2026-05-17, items 1+2+cleanup landed)
 
-**Active branch:** `task/editor-friction-pass`, at `8802c18`, pushed.
+**Active branch:** `task/editor-friction-pass`, at `21c3b8c`, pushed.
 Working tree has uncommitted TEMP probes in `RSubstrateEdge.tsx` and
 `registry.tsx` (left intentionally for the run-start follow-up to
 reuse) and camera-drift in `topology.view.json` (ignore). Branch is
@@ -35,6 +35,16 @@ friction-driven per CLAUDE.md post-v0 posture.
   ring-animates, edge-seed, wire-survives-drag, chaininhibitor-held.
   Also adds `e2e/fixtures/ring-5node.json`. All 4 pass.
   Run: `npm run test:e2e` in `tools/topology-vscode/`.
+
+- `21c3b8c` **chore(e2e): delete 4 dead-vocab specs (substrate
+  match/emit, pulse testid)** — `riding-label.spec.ts`,
+  `runner-play-pause.spec.ts`, `substrate-pause-resume.spec.ts`, and
+  `substrate-step1.spec.ts` deleted (referenced removed vocab, were
+  all failing). Orphaned fixtures `riding-label.json` and
+  `runner-smoke.json` also deleted. `substrate-2node.json` retained
+  (still used by `scenario-wire-survives-drag.spec.ts`). e2e failures:
+  14 → 10. Remaining 10 failures are FIX + visual-regression tests —
+  **known/deferred, out of scope for this task branch.**
 
 Cross-session backlog with priorities lives in
 [recommendations.md](recommendations.md). Update it as items land.
