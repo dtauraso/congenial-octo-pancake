@@ -46,4 +46,5 @@ Each entry can drift; if it conflicts with current code, update or remove the me
 - [feedback_readgate_partial_0_is_spec.md](feedback_readgate_partial_0_is_spec.md) — ReadGate partial-0 branch removed 2026-05-17; ReadGate fires only on all-filled and passes through slots[0].
 - [feedback_edge_seed_required_for_rings.md](feedback_edge_seed_required_for_rings.md) — Feedback edges in rings need wire.data.seed to break startup deadlock; substrate-r reads it and fills the dest slot once on mount.
 - [feedback_audit_invariant_call_sites_first.md](feedback_audit_invariant_call_sites_first.md) — On a primitive-level throw, grep every call site of the violated op first; narrow investigations only after that audit is clean.
+- [feedback_schema_parser_parity.md](feedback_schema_parser_parity.md) — When extending a spec type, update the schema parser's validator in the same commit, or saves produce unparseable JSON and the editor loads blank
 - [feedback_hook_block_means_stop.md](feedback_hook_block_means_stop.md) — When a PreToolUse hook returns exit 2, stop and report to the user; do not route around the block via python3, sed -i, shell redirect, or any other write path.

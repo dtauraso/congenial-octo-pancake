@@ -1,0 +1,14 @@
+---
+name: feedback-schema-parser-parity
+description: "When extending a spec type (PortDef, NodeSpec, etc.), update the schema parser's validator in the same commit; otherwise saves produce unparseable JSON and the editor loads blank"
+metadata: 
+  node_type: memory
+  type: feedback
+  originSessionId: a241546a-3bb1-4e6c-aa75-4b3e1844da22
+---
+
+Extending a TypeScript type in `tools/topology-vscode/src/schema/types.ts` (e.g., new enum value on `PortDef.side`, new optional field like `slot`) requires updating the matching validator in `tools/topology-vscode/src/schema/parse-nodes-edges.ts` (and siblings) in the **same commit**.
+
+**Why:** The runtime validator is independent of TypeScript types — it uses `oneOf(...)` against a hand-written allowed-values list. The type-checker won't catch the mismatch. Once new code writes a value the parser doesn't accept, the next load throws and the React Flow canvas renders blank with no nodes — symptom looks like "diagram disappeared" but the data is fine; only parsing is broken.
+
+**How to apply:** When adding/extending a field on `PortDef`, `NodeSpec`, `EdgeSpec`, etc., grep `parse-nodes-edges.ts` for the existing validator and update it alongside the type change. Build + reload editor before committing so a stale validator can't ship. Concrete incident: commit `6c2a238` added top/bottom to `PortDef.side` in types but left `parsePort` allowing only `left|right`; first drag persisted `"bottom"` and the editor went blank on next load.
