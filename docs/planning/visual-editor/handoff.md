@@ -15,11 +15,21 @@ handoff.md is exempt from the 100-LOC budget.
 Working tree has only camera-drift in `topology.view.json` (ignore).
 Branch is friction-driven per CLAUDE.md post-v0 posture.
 
-**Animation is working.** The edge-detector ring (in0 → ReadGate →
-i0 → i1 → ReadGate, with i0/i1.inhibitOut → InhibitRightGate) now
-runs end-to-end. ReadGate emits real input values, the seed on the
-i1→chainIn2 edge breaks startup deadlock, and the dot stays on the
-wire when nodes are dragged while paused.
+**Animation is running, but the i1→ReadGate seed is not actually
+delivering in the editor path.** The ring appears to animate, but
+user observation (2026-05-17) is that the seed-once-at-mount fill
+on the `i1.out->readGate.chainIn2` edge is not happening in the live
+editor. F1 test (TopologyRoot path) passes — so the substrate-r
+Wire seed logic works when given a `seed` prop. The break is
+somewhere between the editor's edge data and the Wire's `seed` prop.
+First place to look: `spec-to-flow.ts:142` puts `seed` at the top
+level of the React Flow edge `data`; RSubstrateEdge reads
+`data?.seed`. Verify that matches what RSubstrateEdge actually
+receives (vs nested under `edgeData`, or stripped by parseSpec, or
+not migrated by `_migrate-legacy-fields.ts`).
+
+ReadGate's pass-through emit and the riding-dot reposition both
+land correctly.
 
 ## What landed this session
 
@@ -41,6 +51,14 @@ Branch maintenance: deleted `task/drop-output-wake-from-bodies` and
 `task/wire-dot-reanchor` after merging; main is at `9c67d53`.
 
 ## Open issues (in priority order)
+
+0. **Editor-path edge seed not delivering.** Substrate-r logic
+   works (F1 test passes); the live editor wire is not receiving a
+   `seed` prop. Investigate: dump `data` inside RSubstrateEdge to
+   confirm shape; check `_migrate-legacy-fields.ts` and parseSpec
+   for stripping; verify spec-to-flow puts `seed` where
+   RSubstrateEdge expects. The ring runs by accident without it
+   today — fix this before claiming the ring is correctly seeded.
 
 1. **Fan-out back-pressure on ChainInhibitor** is *still* unsolved.
    The naive `wire.canAccept && inhibitWire.canAccept` gate has been
