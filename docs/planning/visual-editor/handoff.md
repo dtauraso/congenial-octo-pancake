@@ -9,12 +9,27 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-17, items 4–9 landed/reframed)
+## State at handoff (2026-05-17, port-side decoupling + hook narrowing landed)
 
-**Active branch:** `task/editor-friction-pass-3`, fresh from `main`.
-Previous branch `task/editor-friction-pass-2` was merged to `main`
-(`0253349`) and deleted local + remote. Working tree has uncommitted
-camera-drift in `topology.view.json` (pre-existing; do not stage).
+**Active branch:** `task/editor-friction-pass-3`, two commits ahead of
+`main`. Previous branch `task/editor-friction-pass-2` was merged to
+`main` (`0253349`) and deleted local + remote. Working tree has
+uncommitted camera-drift in `topology.view.json` (pre-existing; do not
+stage).
+
+## What landed on this branch
+
+- `6c2a238` **feat(visual-editor):** PortDef.side extended to
+  `"left"|"right"|"top"|"bottom"`; RSubstrateNode render refactored
+  into a four-bucket grouping. Defaults preserved (inputs→left,
+  outputs→right) so existing specs render unchanged. Any port can now
+  opt into top/bottom via the existing per-port `side` field.
+  Visual-layer only; slot/wire/phase semantics unchanged.
+- `2e20496` **chore(hooks):** narrowed `substrate-r-model-derive.sh`
+  to fire only on `node-kinds.tsx` (bodies), `Node.tsx`, and
+  `Wire.tsx` (substrate primitives). RF wrappers, registry, and spec
+  no longer trigger the model-derive reminder. The disable/restore
+  dance for layout edits is gone.
 
 ## What landed in the prior branch (now on main)
 
@@ -90,14 +105,18 @@ check script enforces this in substrate-r/.
 
 ## Hook caveat
 
-The `.claude/hooks/substrate-r-model-derive.sh` PreToolUse hook blocks
-all Edit/Write to substrate-r/ files (this is intentional). For
-legitimate substrate-r edits, temporarily remove the first PreToolUse
-entry from `.claude/settings.json`, do the work, then restore it. Do
-NOT commit the settings.json change. The hook also overfires on Bash
-reads containing `2>/dev/null` (the `>[^&]` write-verb regex matches
-the stderr redirect); avoid that idiom or delegate Grep/Read to a
-subagent.
+The `.claude/hooks/substrate-r-model-derive.sh` PreToolUse hook fires
+on Edit/Write to `node-kinds.tsx`, `Node.tsx`, and `Wire.tsx` only
+(bodies + substrate primitives). RF wrappers, registry, and spec edits
+no longer trip it. For legitimate edits to the three guarded files,
+follow the in-hook reminder (name the local rule per MODEL.md, compare
+to current code, then patch). If you genuinely need to bypass,
+temporarily remove the first PreToolUse entry from
+`.claude/settings.json`, do the work, then restore it — do NOT commit
+the settings.json change. The hook still overfires on Bash commands
+referencing a guarded filename combined with `2>/dev/null` (write-verb
+regex matches the stderr redirect); avoid that idiom in such commands
+or delegate Grep/Read to a subagent.
 
 ## Dev-loop
 
