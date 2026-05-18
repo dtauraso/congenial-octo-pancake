@@ -11,90 +11,95 @@ handoff.md is exempt from the 100-LOC budget.
 
 ## State at handoff (2026-05-17, end of session)
 
-**Active branch:** `task/drop-output-wake-from-bodies` — **~44 commits
-ahead of origin, unpushed.** Working tree is clean. No uncommitted
-source changes and no untracked files.
+**Active branch:** `task/editor-friction-pass`, at `f273f6a`, pushed.
+Working tree has only camera-drift in `topology.view.json` (ignore).
+Branch is friction-driven per CLAUDE.md post-v0 posture.
 
-Ring smoke-test re-run this session. **The ring is alive** — ReadGate
-cold-start is not a deadlock; it just takes one full lap to fill
-`chainIn2`. Cycle-6 stall not observed. ChainInhibitor shift-register
-is correct in code. **But** i0 silently drops emissions whenever its
-outgoing wire is still in-flight from the previous fire — confirmed
-visually by shortening the `i0→i1` wire (commit `d18a418`), which
-brings the cadence back into sync and the drops stop. Correctness is
-currently a function of pixel length, which is the wrong substrate
-model.
+**Animation is working.** The edge-detector ring (in0 → ReadGate →
+i0 → i1 → ReadGate, with i0/i1.inhibitOut → InhibitRightGate) now
+runs end-to-end. ReadGate emits real input values, the seed on the
+i1→chainIn2 edge breaks startup deadlock, and the dot stays on the
+wire when nodes are dragged while paused.
 
-## What landed this session (newest first)
+## What landed this session
 
-- `d18a418` **chore: shorten i0->i1 wire to confirm rate-mismatch
-  diagnosis** — visual test that wire length is load-bearing for
-  correctness; staked in topology.view.json as evidence for the
-  upcoming back-pressure work.
-- `42f20bf` **log: gate per-frame trace emissions on state change** —
-  ChainInhibitor.skip, ReadGate.partial, wire.load (rejected),
-  wireref.resolve all gated on real state changes. Ring log went from
-  ~21k lines/30s to ~200 lines/95s. Surfaced handoff issue #1
-  immediately: i0 fires into in-flight outgoing wires, silently
-  drops the emission, slot stays consumed.
-- `f42e556` **chore: update local camera/selection in topology.view.json**
-- `a6a50a7` **refactor(substrate-r): finish removing seed prop plumbing**
-- `14e9f09` **fix(chaininhibitor): suppress first-emit when no prior held**
-- `b0ebb0a` **fix(chaininhibitor): guard fire on slot=filled**
-- `7e22c02` **diag(wireref): log per-port resolution**
+- `9c67d53` (now on main) **fix(wire): re-anchor riding dot on path
+  change regardless of pause** — dragging a node while paused no
+  longer leaves the in-flight dot stranded in old coords.
+- `6a197c2` **refactor(edge): drop mid-wire name labels** —
+  EdgeLabels renders only the in-flight value, no `data.label` text.
+- `f273f6a` **feat(readgate,wire): pass-through value + edge-seed
+  plumbing** —
+  - ReadGate fires only on all-filled; emits `slots[0]` (primary
+    input value) instead of synthesised 1. Removes the partial-0
+    emit branch and its tests.
+  - Edge-level `seed` is now threaded from spec → RSubstrateEdge /
+    TopologyRoot → Wire and delivered once to the dest slot on
+    mount. Required to seed ring feedback edges.
+
+Branch maintenance: deleted `task/drop-output-wake-from-bodies` and
+`task/wire-dot-reanchor` after merging; main is at `9c67d53`.
 
 ## Open issues (in priority order)
 
-1. **Implement back-pressure on ChainInhibitor (and audit other
-   bodies).** Now load-bearing — observable token drops confirmed in
-   the log. Two paths:
-   - **(a) Gate the body's consume on `outWireRef.current?.canAccept`.**
-     Body refuses to consume while output is busy. Tokens stay in the
-     input slot until output drains. ReadGate then sees the slot still
-     filled and doesn't redeliver. Self-paces. **Recommended** — this
-     is the substrate-model-honest answer (slot-in-node backpressure).
-   - **(b) Make `Wire.load` throw when non-empty**
-     ([Wire.tsx:~360](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)).
-     Surfaces every offender loud; useful as a separate audit pass
-     before (a) is in place.
-   Apply (a) to ChainInhibitor first (it's the demonstrated offender),
-   then audit Relay/Join/Register the same way.
-2. **Push the branch.** ~44 commits ahead of origin. Sign-off-gated per
-   CLAUDE.md.
+1. **Fan-out back-pressure on ChainInhibitor** is *still* unsolved.
+   The naive `wire.canAccept && inhibitWire.canAccept` gate has been
+   tried twice this session and both times broke the animation
+   (likely deadlock — body refuses to consume, downstream never
+   drains). With ReadGate now pass-through and seed in place, the
+   contention pattern is different — worth another attempt, but
+   trace the deadlock if it recurs (capture `trace.chaininhibitor.skip`
+   bursts and follow the cascade).
+2. **Pacing-by-pixel-length is still load-bearing for correctness.**
+   The fix removed one source of clobber (partial-0) but the model
+   incompatibility named in this session — logical-tick view vs
+   physical-wire view — still stands. Edge detection only works when
+   wire lengths happen to align. The substrate-level shape of the
+   real fix (clock primitive? tick-boundary node? sequence numbers
+   on values?) is undecided.
 3. **Hook regression** (carryover):
    `.claude/hooks/substrate-r-model-derive.sh` is still at `exit 0`;
-   should be `exit 2`. Do not touch it here — tracked as separate issue.
-4. **Memory `feedback_run_is_input_only.md`** is stale (pre-polling
-   redesign). Update or retire; this session's evidence (silent
-   `wire.load` is exactly the rate-bug-hider that memory predicted) is
-   worth folding in.
+   should be `exit 2`.
+4. **Memory hygiene:** `feedback_run_is_input_only.md` is still pre-
+   polling-redesign and stale; should be retired or rewritten.
+   `feedback_readgate_partial_0_is_spec.md` and a new
+   `feedback_edge_seed_required_for_rings.md` were updated/added
+   this session.
 
 ## What's actually working
 
-- Ring cycles end-to-end. Values shift through `i0 → i1 → chainIn2`
-  and back into ReadGate. Verified by reading the gated log.
-- ChainInhibitor shift-register code is correct: one consume atomically
-  emits the previously held and stores the incoming.
-- ChainInhibitor no longer emits `undefined` or `null`.
-- Wire animation loop runs independent of React's effect scheduler.
-- Log is readable — only state changes are emitted, dropped tokens
-  are visible on the transition into rejected loads.
-- Build, `tsc --noEmit`, and deterministic audits are clean.
+- End-to-end ring animation with real input values flowing through.
+- ReadGate pass-through emits `slots[0]`'s consumed value.
+- Edge seed delivers once to dest slot at wire mount (substrate-r
+  and editor paths both); F1 test now passes.
+- Riding dot stays on the wire under paused-drag (Wire.reposition
+  + useLayoutEffect on pathD/arcLength).
+- Mid-wire name labels removed; in-flight value labels intact.
+- `tsc --noEmit` clean; `npm run build` clean.
+- 4 pre-existing vitest failures (Node throw, 2-input join silent,
+  D3 join partial, wirePhaseReducer load-on-in-flight throw) —
+  unchanged this session, predate this branch.
 
 ## Substrate model state
 
-Bodies should be "pure rules" per `aaf34de`'s framing, but pure-ruleness
-depends on substrate primitives being honest about contract violations.
-`Wire.load`'s silent no-op breaks that — it lets bodies that skip the
-readiness check appear to work, then silently lose tokens. **Confirmed
-this session by tracing i0**: with the gated log in place the dropped
-emissions are visible as `accepted:false` transitions, and shortening
-`i0→i1` removes the drops by changing nothing but pixel length.
-Topology length cannot be load-bearing for correctness in a system
-whose whole premise is that the topology IS the logic — it has to
-encode model semantics, not animation timing. The model-honest fix is
-slot-in-node back-pressure: body refuses to consume while its output
-slot can't accept. Implementing that is the next step.
+The session named the central tension explicitly: two views of the
+topology that the substrate is forced to reconcile —
+
+- **Logical view:** values flow per shared tick; the shift-register
+  pair (i0/i1) presents `(curr, prev)` as a synchronised pair to
+  InhibitRightGate; edges are detected by comparing same-tick values.
+- **Physical view:** independent pulses at uniform speed travel along
+  wires of different lengths; nodes see arrivals at whatever wall-
+  clock moment the wire's length dictates. No shared tick exists.
+
+The topology is correct in the logical view. The substrate runs in
+the physical view. They agree only when wire lengths happen to align
+— which is why empirical fixes ("shorten this wire") work locally
+but don't generalise. Recovery requires introducing something in the
+physical layer that carries the shared-tick contract (clock, barrier,
+sequence-tagged values, or moving held state into slots so substrate
+slot-phase rules govern it). No code change yet; this is the next
+design conversation.
 
 ## Dev-loop
 
