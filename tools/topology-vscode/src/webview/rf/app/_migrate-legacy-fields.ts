@@ -49,7 +49,7 @@ export function migrateLegacyFields(raw: unknown, vs: ViewerState): void {
     for (const e of edges as RawEdge[]) {
       if (!isStr(e.id)) continue;
       if (vs.edges?.[e.id]) continue;
-      if (e.route !== "line" && e.route !== "snake" && e.route !== "below") continue;
+      if (e.route !== "line" && e.route !== "snake" && e.route !== "snake-v" && e.route !== "below") continue;
       const ev: EdgeView = { route: e.route };
       if (!vs.edges) vs.edges = {};
       vs.edges[e.id] = ev;

@@ -80,7 +80,7 @@ export function parseEdgeViews(v: unknown): Record<string, EdgeView> | undefined
   for (const [id, raw] of Object.entries(v)) {
     if (!isObj(raw)) continue;
     const ev: EdgeView = {};
-    if (raw.route === "line" || raw.route === "snake" || raw.route === "below") {
+    if (raw.route === "line" || raw.route === "snake" || raw.route === "snake-v" || raw.route === "below") {
       ev.route = raw.route;
     }
     out[id] = ev;

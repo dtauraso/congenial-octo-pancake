@@ -34,7 +34,7 @@ export function LaneDragHandle({ edgeId, route, pathD, mid, lane, stroke }: Prop
       const current = rf.screenToFlowPosition({ x: me.clientX, y: me.clientY });
       const delta = route === "snake"
         ? current.x - origin.x
-        : current.y - origin.y;
+        : current.y - origin.y; // snake-v and below both drag vertically
       actions.setEdgeLane(edgeId, dragRef.current.startLane + delta);
     };
 

@@ -44,7 +44,7 @@ export type NodeView = {
 };
 
 export type EdgeView = {
-  route?: "line" | "snake" | "below";
+  route?: "line" | "snake" | "snake-v" | "below";
 };
 
 export type ViewerState = {

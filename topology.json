@@ -8,7 +8,16 @@
           0,
           1
         ]
-      }
+      },
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "out",
+          "kind": "chain",
+          "side": "right",
+          "slot": 1
+        }
+      ]
     },
     {
       "id": "readGate1",
@@ -42,6 +51,14 @@
       "data": {
         "seed": 0
       },
+      "inputs": [
+        {
+          "name": "in",
+          "kind": "chain",
+          "side": "left",
+          "slot": 1
+        }
+      ],
       "outputs": [
         {
           "name": "inhibitOut",
@@ -63,6 +80,14 @@
       "data": {
         "seed": 0
       },
+      "inputs": [
+        {
+          "name": "in",
+          "kind": "chain",
+          "side": "left",
+          "slot": 1
+        }
+      ],
       "outputs": [
         {
           "name": "inhibitOut",
@@ -81,6 +106,20 @@
     {
       "id": "inhibitRight0",
       "type": "InhibitRightGate",
+      "inputs": [
+        {
+          "name": "left",
+          "kind": "inhibit-in",
+          "side": "bottom",
+          "slot": 0
+        },
+        {
+          "name": "right",
+          "kind": "inhibit-in",
+          "side": "bottom",
+          "slot": 2
+        }
+      ],
       "outputs": []
     }
   ],
@@ -129,6 +168,7 @@
       "targetHandle": "left",
       "kind": "inhibit-in",
       "label": "i0InhibitToRight0Left",
+      "lane": 0,
       "data": {
         "slots": 1
       }
@@ -154,6 +194,7 @@
       "targetHandle": "chainIn2",
       "kind": "chain",
       "label": "i1ToReadGate",
+      "lane": -69.0549836800538,
       "data": {
         "slots": 1,
         "seed": 1,

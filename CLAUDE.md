@@ -161,6 +161,14 @@ that a cheaper model handles fine. Concretely:
 If the main session catches itself doing executor-style work, that's a
 miss — note it and route the next similar task to a subagent.
 
+**Keep delegate prompts tight (~15 lines).** Structure: one-line goal;
+files to read (paths only); bulleted concrete edits with `file:line`
+when known; one-line verify command; one-line constraints (branch, no
+merge, no amend, push or not). Skip rationale paragraphs,
+alternative-considerations, and "if ambiguous…" hedging — the agent
+will ask if blocked. Long prompts restate context the agent can derive
+from the files; that's wasted tokens.
+
 ## Language / runtime
 
 Go 1.21.4 — `github.com/dtauraso/wirefold`

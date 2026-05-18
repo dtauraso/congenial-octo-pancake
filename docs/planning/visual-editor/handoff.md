@@ -9,61 +9,42 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, all task branches merged to main)
+## State at handoff (2026-05-18, snake-v merged to main)
 
-**Active branch:** `main`. No task branches outstanding —
-`task/topology-driven-edge-shape`, `task/grow-port-on-drop`, and
-`task/editor-friction-pass-4` were all merged via `--no-ff` and the
-branches deleted locally and on remote. Working tree has unstaged
-edits in `memory/MEMORY.md`, `topology.json`, `topology.view.json`
-— user's in-editor state plus memory-index pruning. Leave on `main`
-or stash before starting a new task branch.
+**Active branch:** `main`. `task/snake-v-route` merged via `--no-ff`
+and deleted locally and on remote. Working tree clean.
 
 ## What landed on main this session
 
-Merge commits: `fd2cddf` (topology-driven-edge-shape), `0dbb038`
-(grow-port-on-drop), `78bc916` (editor-friction-pass-4).
+Merge commit on `main` brings four commits from `task/snake-v-route`:
 
-topology-driven-edge-shape — five commits, in order:
+- `03ede91` **feat(wire):** add `snake-v` edge route — a V–H–V dogleg
+  (vertical exit → horizontal corridor through `midY` → vertical
+  entry). Mirrors the existing H–V–H `snake` across x=y, for
+  horizontal-side (left/right) handle pairs. Touches `Wire.tsx`
+  (`EdgeRoute` type, `pickShape`, `snakeVD`, `buildEdgePathD`,
+  `edgeMidpoint`), `RSubstrateEdge.tsx` (`showHandle` guard),
+  `LaneDragHandle.tsx` (existing `ns-resize`/y-delta branch covers
+  snake-v).
+- `22d8fa0` **feat(view):** explicit `route: "snake-v"` override on
+  edge `i1.inhibitOut->inhibitRight0.right` in `topology.view.json`.
+- `97e5279` **fix(schema):** accept `snake-v` in the viewerState
+  parser, `EdgeView` type, and legacy-field migrator. Without this,
+  `route: "snake-v"` survives in memory but is dropped on save→reload.
+  (Schema-parser-parity rule: when adding a route variant, update all
+  three call sites in the same commit.)
+- `e9a0ba7` **docs(claude):** add the "~15-line tight delegate-prompt"
+  rule to `CLAUDE.md` (Model routing section) and `memory/`.
 
-- `da0d047` **feat:** `pickShape(sx,sy,sp,tx,ty,tp): EdgeRoute` in
-  `substrate-r/Wire.tsx`. Picks "line" vs "snake" from handle sides
-  + dx/dy. Perpendicular handle pair → "line" (bezier curves into a
-  natural L). Parallel-opposing with target ahead + small cross-axis
-  offset → "line". Otherwise → "snake". Wired in `RSubstrateEdge.tsx`
-  as the default when `data?.route` is unset; explicit author choice
-  still wins.
-
-- `f5aba49` **fix:** same-side-bottom handle pair → "below" corridor.
-  Caught when i1.out (side=bottom) → readGate1.chainIn2 (side=bottom)
-  produced a wide bezier dip. Both bezier control points sat below
-  the endpoints, dragging the wire far down. "Below" routes cleanly
-  under both nodes instead.
-
-- `8406ec1` **feat:** draggable midpoint handle on "snake" and
-  "below" edges, writing to `data.lane`. New files:
-  `LaneDragHandle.tsx`, `edge-actions-ctx.ts`. New action
-  `setEdgeLane` in `rf/app/_use-edge-handlers.ts` follows the
-  existing `mutateSpec` → `specToFlow` → `scheduleSave` pattern
-  (`lane` is a top-level spec edge field, not inside `data`).
-  Provider wraps in `rf/app.tsx`. Drag axis matches the lane
-  semantic: horizontal for snake, vertical for below.
-
-- `40b319f` **fix:** circle needed `pointerEvents:"all"`. React Flow's
-  edge SVG layer is `pointer-events:none` by default, so custom
-  children get no mouse events without an opt-in.
-
-- `8eac594` **feat:** handle reveals on hover within 16px of the
-  wire, stays visible while dragging. Implemented via an invisible
-  16px-stroke path along `pathD` as the hit area inside a
-  hover-tracking `<g>`.
-
-User confirmed dragging works and saves round-trip.
+Topology side: the two top↔bottom inhibitor edges (`i0.inhibitOut→
+inhibitRight0.left` and `i1.inhibitOut→inhibitRight0.right`) now use
+the snake-v override and render V–H–V, rotated across x=y / y=-x from
+the previous H–V–H. User confirmed working.
 
 ## Next action
 
 None queued. Drive the editor and let friction pick the next task.
-Carried-forward friction signals worth watching:
+Carried-forward friction signals:
 
 - **Inert nodes by construction.** A `ReadGate` with no outgoing
   `out` edge bails on `!wire` and silently no-ops — no visual signal
@@ -74,8 +55,14 @@ Carried-forward friction signals worth watching:
   `task/...` branch off `main`, not by committing on whichever
   branch HEAD happens to be on.
 - **Two pre-existing TS diagnostics in `Wire.tsx`** (`getPhaseKind`
-  ~L228 unused, `value` ~L342 unused) — worth a small cleanup
-  commit if the next session has slack.
+  unused, `value` unused) — line numbers drift each edit pass. Worth
+  a small cleanup commit if the next session has slack.
+- **Schema-parser-parity reminder.** Today's session caught a
+  near-miss: the `snake-v` route was added to `Wire.tsx` first; the
+  override appeared to work in memory but would have been silently
+  dropped on save→reload until the parser/type/migrator triple was
+  patched. The feedback memory `feedback_schema_parser_parity`
+  covers this — re-read it before adding any route/spec variant.
 
 ## Parked (not open; revisit when friction returns)
 
@@ -105,6 +92,12 @@ Carried-forward friction signals worth watching:
   chosen route crosses other node bodies. If that becomes friction,
   thread `useStore((s) => s.nodes)` into the picker and add a
   bbox-intersection check.
+- **Auto-pick for snake-v.** `pickShape` returns `snake-v` for
+  horizontal-side pairs, but vertical-side pairs in the "snake"
+  branch don't have an auto-pick rule to choose snake-v based on
+  geometry (e.g. when a V–H–V detour would be cleaner than H–V–H).
+  Today both call sites set the override by hand. Promote to
+  geometry-driven auto-pick if a third hand-overridden case appears.
 
 ## What's actually working
 
@@ -116,10 +109,13 @@ Carried-forward friction signals worth watching:
 - Wire drop onto a saturated node grows a new input port at the
   nearest free snap position; round-trips through save/reload.
 - Edge routes pick themselves from topology (handle sides + dx/dy);
-  same-side-bottom pairs use the "below" corridor.
+  same-side-bottom pairs use the "below" corridor; horizontal-side
+  pairs that need a detour use the V–H–V `snake-v` corridor.
 - Lane handle reveals on hover within 16px, drag adjusts `lane`
   live along the route's lane axis, mouse-up persists via
   `scheduleSave`.
+- Edge-route overrides (`route: "snake-v"` etc.) round-trip through
+  save/reload via `topology.view.json` edges block.
 - `tsc --noEmit` clean except two pre-existing Wire.tsx warnings;
   `npm run build` clean; `check:loc` clean; `check-substrate-vocab`
   clean.
@@ -138,7 +134,7 @@ script enforces this in substrate-r/.
 After any substrate-r edit: `npm run build` (tsc alone doesn't refresh
 `out/webview.js`). Live log at `.probe/webview-log.jsonl`; clear with
 `: > .probe/webview-log.jsonl` between runs (NOT before reading the
-current run). Cleared at start of this session.
+current run).
 
 Cwd for tsc/tests/check-loc/build: `tools/topology-vscode/`.
 
