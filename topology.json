@@ -16,17 +16,23 @@
       "inputs": [
         {
           "name": "chainIn",
-          "kind": "chain"
+          "kind": "chain",
+          "side": "left",
+          "slot": 1
         },
         {
           "name": "chainIn2",
-          "kind": "chain"
+          "kind": "chain",
+          "side": "bottom",
+          "slot": 1
         }
       ],
       "outputs": [
         {
           "name": "out",
-          "kind": "chain"
+          "kind": "chain",
+          "side": "right",
+          "slot": 1
         }
       ]
     },
@@ -39,11 +45,15 @@
       "outputs": [
         {
           "name": "inhibitOut",
-          "kind": "inhibit-in"
+          "kind": "inhibit-in",
+          "side": "top",
+          "slot": 1
         },
         {
           "name": "out",
-          "kind": "chain"
+          "kind": "chain",
+          "side": "right",
+          "slot": 1
         }
       ]
     },
@@ -56,13 +66,15 @@
       "outputs": [
         {
           "name": "inhibitOut",
-          "kind": "inhibit-in"
+          "kind": "inhibit-in",
+          "side": "top",
+          "slot": 1
         },
         {
           "name": "out",
           "kind": "chain",
           "side": "bottom",
-          "slot": 2
+          "slot": 1
         }
       ]
     },
