@@ -9,38 +9,32 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-17, end of session)
+## State at handoff (2026-05-17, item 1 landed)
 
-**Active branch:** `task/editor-friction-pass`, at `2120b30`, pushed.
+**Active branch:** `task/editor-friction-pass`, at `6f71ac3`, pushed.
 Working tree has uncommitted TEMP probes in `RSubstrateEdge.tsx` and
 `registry.tsx` (left intentionally for the run-start follow-up to
 reuse) and camera-drift in `topology.view.json` (ignore). Branch is
 friction-driven per CLAUDE.md post-v0 posture.
 
-**Prior handoff's open issue #0 ("seed not delivering") was stale.**
-Investigation this session confirmed seed IS delivered correctly to
-the dest slot via `Wire.tsx:424-433`. The real problem the user was
-seeing — "i1 looks like it's waiting on i0 to send its first pulse" —
-is that seed bypasses the wire animation entirely (`dest.fill` at
-mount rather than a source-side `wire.load`), so visually nothing
-leaves i1 at tick 0. This is now reframed as a substrate-concept gap
-(see new issue #0 below).
-
 ## What landed this session
 
 - `f8af21a` **feat(chain-inhibitor): display held value as in-box
-  label** — i0/i1 now show `held=<value>` below the title, matching
-  the chain-cascade reference SVG. Mirrors `heldRef` into `useState`
-  so the label re-renders on each fire. Caveat for verification:
-  the label uses `position: absolute` without an explicit
-  `position: relative` parent — visually verify placement in the
-  live editor; if it floats, wrap or thread a `subLabel` prop into
-  `<Node>`.
+  label** — i0/i1 now show `held=<value>` below the title.
 
-Investigation only (no code): traced the seed delivery and the
-i1-silent-at-tick-0 symptom; concluded the right fix is a substrate-
-level run-start signal, not a local seed-path patch. Wrote up
-[project_runstart_concept_needed.md](../../../memory/project_runstart_concept_needed.md).
+- `6f71ac3` **refactor(item1): delete contract suite and TopologyRoot**
+  — 17 substrate contract test files (~1 400 LOC) deleted.
+  `TopologyRoot.tsx` deleted. `@testing-library/react` and `happy-dom`
+  removed from devDependencies. `view-load-setviewport.test.ts` kept
+  (pure function, no substrate dependency). CLAUDE.md and memory
+  updated. `tsc --noEmit` clean; `npm run build` clean.
+
+Cross-session backlog with priorities lives in
+[recommendations.md](recommendations.md). Update it as items land.
+**Next action:** item 2 (thin Playwright scenario suite) or item 3
+(run-start signal). Suggested order from recommendations.md: pair
+item 2 with item 1 so there's never a window where the old suite is
+gone and no new one exists — item 2 next.
 
 ## Open issues (in priority order)
 
@@ -48,86 +42,51 @@ level run-start signal, not a local seed-path patch. Wrote up
    Today seed is delivered by `Wire.tsx` calling `dest.fill` at
    mount (bypassing `wire.load` and the animation), and InputBody
    self-starts its own RAF loop in a mount `useEffect`. Two local
-   mount hacks instead of one substrate concept. Consequence:
-   visually i1 looks silent at tick 0 (no source-side launch), and
-   "what happens at tick 0" requires reading three files to
-   reconcile. The ring animates today only because mount-time
-   seed prefill + ReadGate's all-filled gate accidentally pair
-   seed with in0[0]'s late arrival. **Investigated and confirmed
-   stale: prior handoff issue #0 ("seed not delivering") was
-   wrong** — seed delivers correctly to the dest slot via
-   `Wire.tsx:424-433`; the real problem is that it skips the wire.
-   Fix shape: add a run-start signal (observable along PauseAxis
-   lines, or an explicit Start node); seed becomes
-   `wire.load(seed)` on run-start; InputBody first emit subscribes
-   to run-start. Then tick-0 coincidence is structural, not lucky.
-   See [project_runstart_concept_needed.md](../../../memory/project_runstart_concept_needed.md).
+   mount hacks instead of one substrate concept. Fix shape: add a
+   run-start signal; seed becomes `wire.load(seed)` on run-start;
+   InputBody first emit subscribes to run-start. See
+   [project_runstart_concept_needed.md](../../../memory/project_runstart_concept_needed.md).
 
-1. **Fan-out back-pressure on ChainInhibitor** is *still* unsolved.
-   The naive `wire.canAccept && inhibitWire.canAccept` gate has been
-   tried twice this session and both times broke the animation
-   (likely deadlock — body refuses to consume, downstream never
-   drains). With ReadGate now pass-through and seed in place, the
-   contention pattern is different — worth another attempt, but
-   trace the deadlock if it recurs (capture `trace.chaininhibitor.skip`
-   bursts and follow the cascade).
+1. **Fan-out back-pressure on ChainInhibitor** still unsolved.
+   Naive `wire.canAccept && inhibitWire.canAccept` gate broke
+   animation both times it was tried. Trace deadlock if retried.
+
 2. **Pacing-by-pixel-length is still load-bearing for correctness.**
-   The fix removed one source of clobber (partial-0) but the model
-   incompatibility named in this session — logical-tick view vs
-   physical-wire view — still stands. Edge detection only works when
-   wire lengths happen to align. The substrate-level shape of the
-   real fix (clock primitive? tick-boundary node? sequence numbers
-   on values?) is undecided.
+   Logical-tick vs physical-wire mismatch; edge detection only works
+   when wire lengths happen to align. Design pass needed before code.
+
 3. **Hook regression** (carryover):
    `.claude/hooks/substrate-r-model-derive.sh` is still at `exit 0`;
    should be `exit 2`.
-4. **Memory hygiene:** `feedback_run_is_input_only.md` is still pre-
+
+4. **Memory hygiene:** `feedback_run_is_input_only.md` is pre-
    polling-redesign and stale; should be retired or rewritten.
-   `feedback_readgate_partial_0_is_spec.md` and a new
-   `feedback_edge_seed_required_for_rings.md` were updated/added
-   this session.
 
 ## What's actually working
 
 - End-to-end ring animation with real input values flowing through.
 - ReadGate pass-through emits `slots[0]`'s consumed value.
-- Edge seed delivers once to dest slot at wire mount (substrate-r
-  and editor paths both); F1 test now passes.
-- Riding dot stays on the wire under paused-drag (Wire.reposition
-  + useLayoutEffect on pathD/arcLength).
-- Mid-wire name labels removed; in-flight value labels intact.
+- Edge seed delivers once to dest slot at wire mount.
+- Riding dot stays on the wire under paused-drag.
+- i0/i1 show `held=<value>` in-box label.
 - `tsc --noEmit` clean; `npm run build` clean.
-- 4 pre-existing vitest failures (Node throw, 2-input join silent,
-  D3 join partial, wirePhaseReducer load-on-in-flight throw) —
-  unchanged this session, predate this branch.
+- `view-load-setviewport.test.ts` passes (pure function, kept from
+  the deleted contract suite).
 
 ## Substrate model state
 
-The session named the central tension explicitly: two views of the
-topology that the substrate is forced to reconcile —
-
-- **Logical view:** values flow per shared tick; the shift-register
-  pair (i0/i1) presents `(curr, prev)` as a synchronised pair to
-  InhibitRightGate; edges are detected by comparing same-tick values.
-- **Physical view:** independent pulses at uniform speed travel along
-  wires of different lengths; nodes see arrivals at whatever wall-
-  clock moment the wire's length dictates. No shared tick exists.
-
-The topology is correct in the logical view. The substrate runs in
-the physical view. They agree only when wire lengths happen to align
-— which is why empirical fixes ("shorten this wire") work locally
-but don't generalise. Recovery requires introducing something in the
-physical layer that carries the shared-tick contract (clock, barrier,
-sequence-tagged values, or moving held state into slots so substrate
-slot-phase rules govern it). No code change yet; this is the next
-design conversation.
+Central tension (unchanged): logical-tick view vs physical-wire view.
+The topology is correct in the logical view; the substrate runs in the
+physical view. They agree only when wire lengths happen to align.
+Recovery requires a clock primitive, barrier, or sequence-tagged values.
+No code change yet; this is the next design conversation (#2 above).
 
 ## Dev-loop
 
-After any substrate-r edit: `npm run build` (vitest/tsc don't refresh
+After any substrate-r edit: `npm run build` (tsc alone doesn't refresh
 `out/webview.js`). Live log at `.probe/webview-log.jsonl`; clear with
 `: > .probe/webview-log.jsonl` between runs (NOT before reading the
-current run — Claude truncated it once by mistake).
+current run).
 
 Cwd for tsc/tests/check-loc/build: `tools/topology-vscode/`.
 
