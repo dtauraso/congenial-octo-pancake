@@ -63,6 +63,42 @@ export function wirePhaseReducer(p: Phase, a: Action): Phase {
 
 export type EdgeRoute = "line" | "snake" | "below";
 
+// Topology-driven default route: pick from handle sides + relative position.
+// Used when an edge has no explicit `data.route`. Explicit author choice
+// still wins at the call site.
+//
+//   • Perpendicular handles (one horizontal side, one vertical) → "line".
+//     The bezier control points already exit each handle along its
+//     normal, producing a natural L-shaped curve.
+//   • Parallel-opposing handles roughly collinear on the cross-axis
+//     and target ahead of source → "line".
+//   • Otherwise (handle exits away from target, large cross-axis offset,
+//     or same-side pair) → "snake" so the dogleg can route around.
+export type SideName = "left" | "right" | "top" | "bottom";
+const COLLINEAR_TOLERANCE = 8;
+
+export function pickShape(
+  sx: number, sy: number, sp: SideName,
+  tx: number, ty: number, tp: SideName,
+): EdgeRoute {
+  const sourceHorizontal = sp === "left" || sp === "right";
+  const targetHorizontal = tp === "left" || tp === "right";
+  if (sourceHorizontal !== targetHorizontal) return "line";
+
+  const dx = tx - sx;
+  const dy = ty - sy;
+  if (sourceHorizontal) {
+    const exitsAway = (sp === "right" && dx < 0) || (sp === "left" && dx > 0);
+    if (exitsAway) return "snake";
+    if (Math.abs(dy) < COLLINEAR_TOLERANCE) return "line";
+    return "snake";
+  }
+  const exitsAway = (sp === "bottom" && dy < 0) || (sp === "top" && dy > 0);
+  if (exitsAway) return "snake";
+  if (Math.abs(dx) < COLLINEAR_TOLERANCE) return "line";
+  return "snake";
+}
+
 function controlOffset(distance: number): number {
   return distance >= 0 ? 0.5 * distance : 0.25 * 25 * Math.sqrt(-distance);
 }

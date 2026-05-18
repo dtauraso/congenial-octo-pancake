@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useStore, type EdgeProps } from "reactflow";
-import { Wire, type WireHandle, buildEdgePathD, edgeMidpoint, EdgeLabels, type EdgeRoute } from "./Wire";
+import { Wire, type WireHandle, buildEdgePathD, edgeMidpoint, EdgeLabels, pickShape, type EdgeRoute, type SideName } from "./Wire";
 import { useRegistry } from "./registry";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind } from "../../schema";
 
@@ -45,7 +45,10 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
   const destNodeRef = registry.getNodeRef(target) ?? { current: null };
   const destSlotId = targetHandle ?? "slot";
 
-  const route: EdgeRoute = data?.route ?? "line";
+  const route: EdgeRoute = data?.route ?? pickShape(
+    sourceX, sourceY, sourcePosition as SideName,
+    targetX, targetY, targetPosition as SideName,
+  );
   const lane = data?.lane ?? 0;
   const kind: EdgeKind = data?.kind ?? "any";
   const stroke = KIND_COLORS[kind] ?? "#888";
