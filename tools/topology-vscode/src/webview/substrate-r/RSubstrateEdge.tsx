@@ -8,13 +8,41 @@ import { Wire, type WireHandle, buildEdgePathD, edgeMidpoint, EdgeLabels, pickSh
 import { useRegistry } from "./registry";
 import { KIND_COLORS, type ArrowStyle, type EdgeKind } from "../../schema";
 import { LaneDragHandle } from "./LaneDragHandle";
+import { markerEndUrl } from "../rf/MarkerDefs";
+
+const SHORT_EDGE_THRESHOLD_PX = 12;
 
 function dashForKind(kind: EdgeKind | undefined): string | undefined {
   return kind === "pointer" ? "4 3" : undefined;
 }
 
-function markerEndUrl(kind: EdgeKind, arrowStyle: ArrowStyle | undefined): string {
-  return `url(#wf-arrow-${arrowStyle === "open" ? "open" : "filled"}-${kind})`;
+// Approximate pixel length of the edge path without a DOM measurement.
+// For dogleg routes (snake, snake-v, below), the total run is the sum of
+// the three axis-aligned segments; for the bezier "line" route, the chord
+// distance is a conservative lower bound (real arc is longer, so using it
+// only makes the threshold more conservative — safe for the shrink case).
+function approxEdgeLength(
+  route: EdgeRoute,
+  sx: number, sy: number,
+  tx: number, ty: number,
+  lane: number,
+): number {
+  const dx = Math.abs(tx - sx);
+  const dy = Math.abs(ty - sy);
+  if (route === "snake") {
+    const midX = (sx + tx) / 2 + lane;
+    return Math.abs(midX - sx) + dy + Math.abs(tx - midX);
+  }
+  if (route === "snake-v") {
+    const midY = (sy + ty) / 2 + lane;
+    return dx + Math.abs(midY - sy) + Math.abs(ty - midY);
+  }
+  if (route === "below") {
+    const corridorY = Math.max(sy, ty) + 80 + lane;
+    return (corridorY - sy) + dx + (corridorY - ty);
+  }
+  // "line" bezier: chord is a lower bound
+  return Math.sqrt(dx * dx + dy * dy);
 }
 
 interface RSubstrateEdgeData {
@@ -54,7 +82,9 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
   const kind: EdgeKind = data?.kind ?? "any";
   const stroke = KIND_COLORS[kind] ?? "#888";
   const dash = dashForKind(kind);
-  const markerEnd = markerEndUrl(kind, data?.arrowStyle);
+  const edgeLen = approxEdgeLength(route, sourceX, sourceY, targetX, targetY, lane);
+  const markerSize = edgeLen < SHORT_EDGE_THRESHOLD_PX ? "sm" : "md";
+  const markerEnd = markerEndUrl(kind, data?.arrowStyle, markerSize);
 
   const pathD = useMemo(
     () => buildEdgePathD(

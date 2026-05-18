@@ -18,9 +18,11 @@ const KINDS = Object.keys(KIND_COLORS) as EdgeKind[];
 export function markerEndUrl(
   kind: EdgeKind,
   arrowStyle: "filled" | "open" | undefined,
+  size?: "sm" | "md",
 ): string {
   const variant = arrowStyle === "open" ? "open" : "filled";
-  return `url(#wf-arrow-${variant}-${kind})`;
+  const suffix = size === "sm" ? `-sm` : "";
+  return `url(#wf-arrow-${variant}${suffix}-${kind})`;
 }
 
 export function MarkerDefs() {
@@ -59,6 +61,39 @@ export function MarkerDefs() {
           >
             <path
               d="M0,0 L10,4 L0,8"
+              fill="none"
+              stroke={KIND_COLORS[k]}
+              strokeWidth={1.2}
+            />
+          </marker>
+        ))}
+        {KINDS.map((k) => (
+          <marker
+            key={`fsm-${k}`}
+            id={`wf-arrow-filled-sm-${k}`}
+            viewBox="0 0 5 4"
+            markerWidth={5}
+            markerHeight={4}
+            refX={5}
+            refY={2}
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L5,2 L0,4 Z" fill={KIND_COLORS[k]} />
+          </marker>
+        ))}
+        {KINDS.map((k) => (
+          <marker
+            key={`osm-${k}`}
+            id={`wf-arrow-open-sm-${k}`}
+            viewBox="0 0 6 5"
+            markerWidth={6}
+            markerHeight={5}
+            refX={6}
+            refY={2.5}
+            orient="auto-start-reverse"
+          >
+            <path
+              d="M0,0 L6,2.5 L0,5"
               fill="none"
               stroke={KIND_COLORS[k]}
               strokeWidth={1.2}
