@@ -9,21 +9,22 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, topology-driven-edge-shape pushed)
+## State at handoff (2026-05-18, all task branches merged to main)
 
-**Active branch:** `task/topology-driven-edge-shape`, five commits
-ahead of `main`, pushed to origin. Working tree has unstaged edits in
-`memory/MEMORY.md`, `topology.json`, `topology.view.json` — user's
-in-editor state plus memory-index pruning. **Do not commit these to
-this task branch.**
+**Active branch:** `main`. No task branches outstanding —
+`task/topology-driven-edge-shape`, `task/grow-port-on-drop`, and
+`task/editor-friction-pass-4` were all merged via `--no-ff` and the
+branches deleted locally and on remote. Working tree has unstaged
+edits in `memory/MEMORY.md`, `topology.json`, `topology.view.json`
+— user's in-editor state plus memory-index pruning. Leave on `main`
+or stash before starting a new task branch.
 
-Unmerged sibling branches still outstanding against main:
-- `task/grow-port-on-drop` (1 commit — green-handle grow on saturated nodes)
-- `task/editor-friction-pass-4` (3 commits — Input init seed, delete-handler immer-draft fix, delegation-nudge inlined into CLAUDE.md)
+## What landed on main this session
 
-## What landed on this branch
+Merge commits: `fd2cddf` (topology-driven-edge-shape), `0dbb038`
+(grow-port-on-drop), `78bc916` (editor-friction-pass-4).
 
-Five commits, in order:
+topology-driven-edge-shape — five commits, in order:
 
 - `da0d047` **feat:** `pickShape(sx,sy,sp,tx,ty,tp): EdgeRoute` in
   `substrate-r/Wire.tsx`. Picks "line" vs "snake" from handle sides
@@ -71,14 +72,10 @@ Carried-forward friction signals worth watching:
   output, or a visual "inert" indicator.
 - **Process hygiene.** Start each new task by checking out a fresh
   `task/...` branch off `main`, not by committing on whichever
-  branch HEAD happens to be on. (This session did so correctly,
-  stashing WIP through the branch switch.)
+  branch HEAD happens to be on.
 - **Two pre-existing TS diagnostics in `Wire.tsx`** (`getPhaseKind`
-  ~L228 unused, `value` ~L342 unused) are not caused by this branch.
-  Worth a small cleanup commit if the next session has slack.
-- **Three unmerged task branches stacked on main**
-  (grow-port-on-drop, editor-friction-pass-4, this one). Consider
-  merging the green ones to keep base churn manageable.
+  ~L228 unused, `value` ~L342 unused) — worth a small cleanup
+  commit if the next session has slack.
 
 ## Parked (not open; revisit when friction returns)
 
