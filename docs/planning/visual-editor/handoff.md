@@ -9,9 +9,9 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-17, item 1 landed)
+## State at handoff (2026-05-17, items 1+2 landed)
 
-**Active branch:** `task/editor-friction-pass`, at `6f71ac3`, pushed.
+**Active branch:** `task/editor-friction-pass`, at `8802c18`, pushed.
 Working tree has uncommitted TEMP probes in `RSubstrateEdge.tsx` and
 `registry.tsx` (left intentionally for the run-start follow-up to
 reuse) and camera-drift in `topology.view.json` (ignore). Branch is
@@ -29,12 +29,17 @@ friction-driven per CLAUDE.md post-v0 posture.
   (pure function, no substrate dependency). CLAUDE.md and memory
   updated. `tsc --noEmit` clean; `npm run build` clean.
 
+- `8802c18` **test(item2): add 4 editor-path Playwright scenario tests**
+  — thin scenario suite in `e2e/scenario-*.spec.ts` pinning
+  user-observable behavior via the existing Playwright harness:
+  ring-animates, edge-seed, wire-survives-drag, chaininhibitor-held.
+  Also adds `e2e/fixtures/ring-5node.json`. All 4 pass.
+  Run: `npm run test:e2e` in `tools/topology-vscode/`.
+
 Cross-session backlog with priorities lives in
 [recommendations.md](recommendations.md). Update it as items land.
-**Next action:** item 2 (thin Playwright scenario suite) or item 3
-(run-start signal). Suggested order from recommendations.md: pair
-item 2 with item 1 so there's never a window where the old suite is
-gone and no new one exists — item 2 next.
+**Next action:** items 4+5 (trivial: hook regression, memory hygiene)
+then item 3 (run-start signal). See recommendations.md.
 
 ## Open issues (in priority order)
 
@@ -72,6 +77,7 @@ gone and no new one exists — item 2 next.
 - `tsc --noEmit` clean; `npm run build` clean.
 - `view-load-setviewport.test.ts` passes (pure function, kept from
   the deleted contract suite).
+- 4 Playwright scenario tests all pass (`npm run test:e2e`).
 
 ## Substrate model state
 
