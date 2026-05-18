@@ -11,65 +11,82 @@ handoff.md is exempt from the 100-LOC budget.
 
 ## State at handoff (2026-05-17, end of session)
 
-**Active branch:** `task/drop-output-wake-from-bodies` — **~38 commits
-ahead of origin, unpushed.** Working tree is clean except for two
-untracked diagram dirs (carryover; see open issues). No uncommitted
-source changes.
+**Active branch:** `task/drop-output-wake-from-bodies` — **~42 commits
+ahead of origin, unpushed.** Working tree is clean except for untracked
+diagram dirs and a pre-existing `.claude/settings.json` edit (use of
+`$CLAUDE_PROJECT_DIR` in hook paths — not from this session). No
+uncommitted source changes.
 
-Ring smoke-test: `i0` no longer emits `undefined` or `null` pulses.
-First-emit is suppressed via the EMPTY sentinel added in `14e9f09`.
-Whether the ring still stalls at cycle 6 is **UNKNOWN** — not
-re-tested this session after the ChainInhibitor fixes.
+Ring smoke-test re-run this session. **The ring is alive** — ReadGate
+cold-start is not a deadlock; it just takes one full lap to fill
+`chainIn2`. Cycle-6 stall not observed. ChainInhibitor shift-register
+is correct in code. **But** i0 silently drops emissions whenever its
+outgoing wire is still in-flight from the previous fire — confirmed
+visually by shortening the `i0→i1` wire (commit `d18a418`), which
+brings the cadence back into sync and the drops stop. Correctness is
+currently a function of pixel length, which is the wrong substrate
+model.
 
 ## What landed this session (newest first)
 
+- `d18a418` **chore: shorten i0->i1 wire to confirm rate-mismatch
+  diagnosis** — visual test that wire length is load-bearing for
+  correctness; staked in topology.view.json as evidence for the
+  upcoming back-pressure work.
+- `42f20bf` **log: gate per-frame trace emissions on state change** —
+  ChainInhibitor.skip, ReadGate.partial, wire.load (rejected),
+  wireref.resolve all gated on real state changes. Ring log went from
+  ~21k lines/30s to ~200 lines/95s. Surfaced handoff issue #1
+  immediately: i0 fires into in-flight outgoing wires, silently
+  drops the emission, slot stays consumed.
 - `f42e556` **chore: update local camera/selection in topology.view.json**
-- `a6a50a7` **refactor(substrate-r): finish removing seed prop plumbing** —
-  drops `seed` from `RNodeSpec.props`, `RWireSpec`, call sites in
-  `RSubstrateNode`/`TopologyRoot`/`RSubstrateEdge`, and Wire's init-ref
-  seed block. `14e9f09` removed the last consumer; this sweep removes
-  the dead plumbing.
-- `14e9f09` **fix(chaininhibitor): suppress first-emit when no prior held** —
-  module-scope `EMPTY` sentinel so first in-fill stores without
-  emitting. Fixes the `null` first-emit from `heldRef` seeded to null.
-- `b0ebb0a` **fix(chaininhibitor): guard fire on slot=filled** — restores
-  slot-filled guard stripped by `26cd029`; was firing every RAF and
-  emitting `undefined`.
-- `7e22c02` **diag(wireref): log per-port resolution** — diagnostic logging
-  added to find the `i1` outWire gap; still present in the tree.
+- `a6a50a7` **refactor(substrate-r): finish removing seed prop plumbing**
+- `14e9f09` **fix(chaininhibitor): suppress first-emit when no prior held**
+- `b0ebb0a` **fix(chaininhibitor): guard fire on slot=filled**
+- `7e22c02` **diag(wireref): log per-port resolution**
 
 ## Open issues (in priority order)
 
-1. **Audit other node bodies for consume/wire.load ordering.** ReadGate
-   and ChainInhibitor are guarded now, but RelayBody, JoinBody,
-   RegisterBody, etc. have not been audited. Two paths:
-   - **(a)** Audit every body in `node-kinds.tsx` and restore guards
-     locally.
-   - **(b)** Make `Wire.load` throw on non-empty** instead of silent
-     no-op ([Wire.tsx:~356](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)).
-     Surfaces every offender loud. Recommended — one commit, exhaustive.
-   Currently halfway between: some bodies guard, (b) isn't in place.
-2. **Re-smoke the ring.** Cycle-6 stall status unknown after this
-   session's ChainInhibitor fixes. Run the ring and log `.probe/webview-log.jsonl`.
-3. **Push the branch.** ~38 commits ahead of origin. Sign-off-gated per
+1. **Implement back-pressure on ChainInhibitor (and audit other
+   bodies).** Now load-bearing — observable token drops confirmed in
+   the log. Two paths:
+   - **(a) Gate the body's consume on `outWireRef.current?.canAccept`.**
+     Body refuses to consume while output is busy. Tokens stay in the
+     input slot until output drains. ReadGate then sees the slot still
+     filled and doesn't redeliver. Self-paces. **Recommended** — this
+     is the substrate-model-honest answer (slot-in-node backpressure).
+   - **(b) Make `Wire.load` throw when non-empty**
+     ([Wire.tsx:~360](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)).
+     Surfaces every offender loud; useful as a separate audit pass
+     before (a) is in place.
+   Apply (a) to ChainInhibitor first (it's the demonstrated offender),
+   then audit Relay/Join/Register the same way.
+2. **Push the branch.** ~42 commits ahead of origin. Sign-off-gated per
    CLAUDE.md.
-4. **Hook regression** (carryover):
+3. **Hook regression** (carryover):
    `.claude/hooks/substrate-r-model-derive.sh` is still at `exit 0`;
    should be `exit 2`. Do not touch it here — tracked as separate issue.
-5. **Memory `feedback_run_is_input_only.md`** is stale (pre-polling
-   redesign). Update or retire; the session's conclusion (silent
+4. **Memory `feedback_run_is_input_only.md`** is stale (pre-polling
+   redesign). Update or retire; this session's evidence (silent
    `wire.load` is exactly the rate-bug-hider that memory predicted) is
    worth folding in.
-6. **Two SVG diagram dirs untracked** (`diagrams/readgate-duty-cycle/`,
-   `diagrams/input-body-duty-cycle/`). Commit or discard when ready.
+5. **Three SVG diagram dirs untracked** (`diagrams/readgate-duty-cycle/`,
+   `diagrams/input-body-duty-cycle/`, `diagrams/chaininhibitor-bootstrap/`).
+   Commit or discard when ready.
+6. **Pre-existing `.claude/settings.json` edit** ($CLAUDE_PROJECT_DIR
+   absolute-path conversion for hook commands) is uncommitted; commit
+   or discard when the user decides whether they want it.
 
 ## What's actually working
 
-- ChainInhibitor no longer emits `undefined` or `null`; first-emit is
-  suppressed via EMPTY sentinel.
-- Seed prop fully removed from the wire/node pipeline (dead plumbing
-  gone).
+- Ring cycles end-to-end. Values shift through `i0 → i1 → chainIn2`
+  and back into ReadGate. Verified by reading the gated log.
+- ChainInhibitor shift-register code is correct: one consume atomically
+  emits the previously held and stores the incoming.
+- ChainInhibitor no longer emits `undefined` or `null`.
 - Wire animation loop runs independent of React's effect scheduler.
+- Log is readable — only state changes are emitted, dropped tokens
+  are visible on the transition into rejected loads.
 - Build, `tsc --noEmit`, and deterministic audits are clean.
 
 ## Substrate model state
@@ -77,11 +94,15 @@ re-tested this session after the ChainInhibitor fixes.
 Bodies should be "pure rules" per `aaf34de`'s framing, but pure-ruleness
 depends on substrate primitives being honest about contract violations.
 `Wire.load`'s silent no-op breaks that — it lets bodies that skip the
-readiness check appear to work, then silently lose tokens. The
-model-honest substrate either (a) requires bodies to read
-`dest.slotPhase` via the output ref before consuming, or (b) makes
-`Wire.load` assert. Currently half-way between: some bodies guard, no
-others do, and (b) isn't in place.
+readiness check appear to work, then silently lose tokens. **Confirmed
+this session by tracing i0**: with the gated log in place the dropped
+emissions are visible as `accepted:false` transitions, and shortening
+`i0→i1` removes the drops by changing nothing but pixel length.
+Topology length cannot be load-bearing for correctness in a system
+whose whole premise is that the topology IS the logic — it has to
+encode model semantics, not animation timing. The model-honest fix is
+slot-in-node back-pressure: body refuses to consume while its output
+slot can't accept. Implementing that is the next step.
 
 ## Dev-loop
 
