@@ -22,7 +22,7 @@ import {
 } from "react";
 import type { RefObject } from "react";
 import type { NodeHandle } from "./Node";
-import type { PauseAxis } from "./pause-axis";
+import type { PauseAxis } from "./registry";
 import { postLog } from "../log/post";
 
 const PULSE_SPEED_PX_PER_MS = 0.08;

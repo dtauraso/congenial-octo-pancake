@@ -7,13 +7,13 @@
 //
 // Usage:
 //   const unsub = subscribeFanoutConvergence(wireA, wireB, () => {
-//     // both wires delivered in this fan-out round
+//     // both wires delivered in this fan-out pairing
 //   });
 //   // call unsub() to unsubscribe
 //
-// The callback fires each time both wires complete a paired delivery round.
-// "Paired round" means: from the moment the first wire loads, the convergence
-// fires once both have returned to empty. Concurrent fan-out loads (both wires
+// The callback fires each time both wires complete a paired delivery.
+// "Paired delivery" means: from the moment the first wire enters in-flight, the
+// convergence fires once both have returned to empty. Concurrent fan-out loads (both wires
 // in-flight simultaneously) also converge correctly — the callback fires when
 // the slower wire arrives.
 
@@ -40,7 +40,7 @@ export function subscribeFanoutConvergence(
 
   function check() {
     if (aInFlight && bInFlight && aArrived && bArrived) {
-      // Reset for next round before calling out (re-entrant safety).
+      // Reset for next pairing before calling out (re-entrant safety).
       aInFlight = false;
       bInFlight = false;
       aArrived = false;

@@ -1,8 +1,8 @@
 # Node bodies use RAF polling, not event-driven wakeup
 
-Under the current polling substrate-r model, node bodies self-wake via their own RAF loop (useEffect in each kind body). `Node.fill()` does NOT trigger `run()` — bodies poll independently.
+Under the current substrate-r model, node bodies self-wake via their own RAF loop (`requestAnimationFrame` in each kind body). Slot fills do NOT trigger run — bodies poll independently.
 
-**Consequence:** outbound wire state (including `canAccept`) is NOT a wake source. Bodies must check `wire.canAccept` as a guard in their `run()` callback to prevent silent loss when a wire is in-flight, but they do not subscribe to wire phase changes.
+**Consequence:** outbound wire state is NOT a wake source. Bodies check `wire.canAccept` as a guard before calling `wire.load(value)`. `wire.load` is a silent no-op when the wire is in-flight, so the guard prevents unnecessary calls but a missing guard is not a correctness hazard — it is a performance one.
 
 **Current code pattern** (all node kinds):
 ```tsx
@@ -14,4 +14,6 @@ useEffect(() => {
 }, [run]);
 ```
 
-**Do NOT add**: subscriptions to outWire phase changes as a wakeup mechanism. If a body needs to coordinate on output drain (e.g., blocking pending upstream input), that requires a different substrate signal (e.g., back-pressure clause, ready-event, or barrier). Check NODE.md for the current model before proposing output-drain coupling.
+**Do NOT add**: subscriptions to outWire phase changes as a wakeup mechanism. If a body needs to coordinate on output drain, that requires a different substrate signal. Check NODE.md for the current model before proposing output-drain coupling.
+
+*Updated 2026-05-17: removed stale reference to `Node.fill()` (API deleted); clarified `wire.load` silent-no-op behavior.*

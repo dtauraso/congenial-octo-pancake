@@ -13,7 +13,53 @@ import { Node, type NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
 import type { RNodeKind } from "./spec";
 import { postLog } from "../log/post";
-import { InhibitRightGateBody } from "./inhibit-right-gate";
+
+export function InhibitRightGateBody({
+  nodeRef,
+  outWireRef,
+  leftSlotId = "left",
+  rightSlotId = "right",
+  traceId,
+}: {
+  nodeRef: RefObject<NodeHandle | null>;
+  outWireRef: RefObject<WireHandle | null>;
+  leftSlotId?: string;
+  rightSlotId?: string;
+  traceId?: string;
+}) {
+  const lastSkipReasonRef = useRef<string | null>(null);
+  const run = useCallback(() => {
+    const node = nodeRef.current;
+    if (!node) return;
+    // Inhibition rule: consume both slots; fire output only when left arrived
+    // and right did not. Primitives are silent no-ops on empty slots.
+    const leftFilled = node.slotPhase(leftSlotId) === "filled";
+    const rightFilled = node.slotPhase(rightSlotId) === "filled";
+    const leftValue = node.consume(leftSlotId);
+    node.consume(rightSlotId);
+    const wire = outWireRef.current;
+    if (leftFilled && !rightFilled && wire) {
+      if (traceId) postLog("trace.inhibitrightgate.fire", { node: traceId });
+      lastSkipReasonRef.current = null;
+      wire.load(leftValue);
+    } else if (traceId) {
+      const reason = !leftFilled ? "no-left" : rightFilled ? "inhibited" : "no-out-wire";
+      if (reason !== lastSkipReasonRef.current) {
+        postLog("trace.inhibitrightgate.skip", { node: traceId, reason });
+        lastSkipReasonRef.current = reason;
+      }
+    }
+  }, [nodeRef, outWireRef, leftSlotId, rightSlotId, traceId]);
+
+  useEffect(() => {
+    let raf = 0;
+    const step = () => { run(); raf = requestAnimationFrame(step); }; // vocab-ok: visual layer
+    raf = requestAnimationFrame(step); // vocab-ok: visual layer
+    return () => cancelAnimationFrame(raf);
+  }, [run]);
+
+  return <Node ref={nodeRef} slots={[leftSlotId, rightSlotId]} onRun={run} traceId={traceId} />;
+}
 
 export interface KindBodyCtx {
   nodeRef: RefObject<NodeHandle | null>;
@@ -196,8 +242,8 @@ export function ChainInhibitorBody({
 }
 
 // Register (delay buffer): emits the held secondary value when a pulse
-// arrives, then stores the incoming secondary for the next round.
-// This is a one-round shift-register pattern.
+// arrives, then stores the incoming secondary for the next fill.
+// This is a one-fill shift-register pattern.
 
 export function RegisterBody({
   nodeRef, outWireRef, slotId = "slot", traceId,
@@ -232,7 +278,7 @@ export function RegisterBody({
 
 // ReadGate: variable-arity AND. When the instance declares an `out`
 // port, the firing rule auto-consumes all slots and loads `1` on the
-// out wire each tick the AND is satisfied. The ⌫ button is a manual
+// out wire each time the AND fires. The ⌫ button is a manual
 // consume kept for the no-out-wire case (debug / contract use).
 
 export function ReadGateBody({
