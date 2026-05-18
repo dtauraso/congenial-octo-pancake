@@ -4,7 +4,7 @@
 // in the same DOM layer as the React Flow node wrapper.
 
 import { useEffect, useState, type RefObject } from "react";
-import type { NodeHandle, SlotPhase } from "./Node";
+import type { NodeHandle, SlotPhase } from "../substrate-r/Node";
 
 export function ManualTakeButton({
   nodeRef, slotId, onConsume,
