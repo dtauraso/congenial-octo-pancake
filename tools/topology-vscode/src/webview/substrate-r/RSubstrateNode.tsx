@@ -8,18 +8,19 @@
 // data.stroke / data.width / data.height per the spec's node-types.ts.
 
 import { useEffect, useMemo, useRef, type RefObject } from "react";
-import { Handle, Position, useStore, type NodeProps } from "reactflow";
+import { useStore, type NodeProps } from "reactflow";
 import { shallow } from "zustand/shallow";
 import type * as React from "react";
-import { KIND_COLORS, type EdgeKind } from "../../schema";
+import type { EdgeKind } from "../../schema";
 import type { NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
 import { renderKindBody } from "./node-kinds";
 import { useRegistry } from "./registry";
 import { toRNodeKind } from "./spec";
 import { postLog } from "../log/post";
+import { PortRim } from "../rf/PortRim";
 
-interface PortDef { name: string; kind: EdgeKind; side?: "left" | "right" | "top" | "bottom" }
+interface PortDef { name: string; kind: EdgeKind; side?: "left" | "right" | "top" | "bottom"; slot?: 0 | 1 | 2 }
 
 interface RSubstrateNodeData {
   type?: string;
@@ -35,17 +36,6 @@ interface RSubstrateNodeData {
   nodeData?: { init?: unknown[]; seed?: unknown };
 }
 
-function handleStyle(side: "left" | "right" | "top" | "bottom", pct: number, color: string): React.CSSProperties {
-  const isVertical = side === "left" || side === "right";
-  return {
-    [side]: -5,
-    ...(isVertical ? { top: `${pct}%` } : { left: `${pct}%` }),
-    width: 8,
-    height: 8,
-    background: color,
-    border: "1px solid #333",
-  } as React.CSSProperties;
-}
 
 export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
   const { id, data, selected } = props;
@@ -122,40 +112,7 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
         boxSizing: "border-box",
       }}
     >
-      {(() => {
-        type Side = "left" | "right" | "top" | "bottom";
-        const buckets: Record<Side, PortDef[]> = { left: [], right: [], top: [], bottom: [] };
-        for (const p of inputs) {
-          const s: Side = (p.side as Side) ?? "left";
-          buckets[s].push(p);
-        }
-        for (const p of outputs) {
-          const s: Side = (p.side as Side) ?? "right";
-          buckets[s].push(p);
-        }
-        const sidePosition: Record<Side, Position> = {
-          left: Position.Left,
-          right: Position.Right,
-          top: Position.Top,
-          bottom: Position.Bottom,
-        };
-        const keyPrefix: Record<Side, string> = { left: "l-", right: "r-", top: "t-", bottom: "b-" };
-        return (
-          <>
-            {(["left", "right", "top", "bottom"] as Side[]).flatMap((side) =>
-              buckets[side].map((p, i, arr) => (
-                <Handle
-                  key={`${keyPrefix[side]}${p.name}`}
-                  id={p.name}
-                  type={inputs.includes(p) ? "target" : "source"}
-                  position={sidePosition[side]}
-                  style={handleStyle(side, ((i + 1) * 100) / (arr.length + 1), KIND_COLORS[p.kind] ?? "#888")}
-                />
-              ))
-            )}
-          </>
-        );
-      })()}
+      <PortRim nodeId={id} inputs={inputs} outputs={outputs} width={width} height={height} />
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         <span style={{ fontWeight: 500 }}>{data?.label ?? id}</span>
         {kind && renderKindBody(kind, {
