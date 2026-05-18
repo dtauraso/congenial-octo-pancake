@@ -62,17 +62,6 @@ None queued. The port-drag feature is functional end-to-end: drag a
 connected port → snap to one of 12 rim positions → spec persists →
 edges follow. Drive the editor and let friction pick the next task.
 
-## Open issues
-
-- **Single-port auto-placement asymmetry.** With no explicit `slot`,
-  `resolvePositions` fills available slots in order [0,1,2], so a lone
-  port lands at 25% (top of its side) instead of the visually expected
-  50% (center). 2 ports land at [0,1] instead of [0,2]. Fix: pick
-  unclaimed defaults as `1` / `0,2` / `0,1,2` based on count so
-  single/double-port nodes look centered. Friction surfaced when the
-  user noticed inhibitRight's lone right-side port sitting at the
-  top-right rather than mid-right.
-
 ## Parked (not open; revisit when friction returns)
 
 - **Fan-out back-pressure on ChainInhibitor** still unsolved. Naive
