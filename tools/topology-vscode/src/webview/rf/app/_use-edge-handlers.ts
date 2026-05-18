@@ -16,8 +16,11 @@ export function useEdgeHandlers(ctx: AppCtx) {
   // Input ports are 1-to-1: each target.handle is a single chan field on
   // the runtime node struct, so two senders into the same port can't be
   // wired. Returning false makes ReactFlow skip onConnect / onReconnect.
+  // Exception: __grow handles are always valid — they represent a new port
+  // that doesn't exist yet, so no existing edge can occupy them.
   const isValidConnection = useCallback((conn: Connection) => {
     if (!conn.target || !conn.targetHandle) return false;
+    if (conn.targetHandle.startsWith("__grow:")) return true;
     return !spec.edges.some(
       (e) => e.target === conn.target && e.targetHandle === conn.targetHandle,
     );

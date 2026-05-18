@@ -3,6 +3,9 @@
 // wire-creation). On release, snaps to nearest of 12 positions and
 // persists side+slot via mutateSpec/scheduleSave.
 // Unconnected ports: pass-through to React Flow new-wire gesture.
+// Grow affordance: when all inputs are filled and a wire drag is
+// incoming, a ghost handle at the nearest free snap position lets the
+// user drop to create a new input port (see port-rim-grow.tsx).
 
 import { useRef, useState, useCallback, type PointerEvent } from "react";
 import * as React from "react";
@@ -17,6 +20,7 @@ import {
   type Side, type ActiveDrag, SLOT_PCT,
   resolvePositions, computeSnapPoints, nearestSnap, pctToSlot,
 } from "./port-rim-drag";
+import { useGrowSnap, GrowHandle } from "./port-rim-grow";
 
 export interface PortDef {
   name: string;
@@ -56,6 +60,8 @@ export function PortRim({ nodeId, inputs, outputs, width, height }: Props) {
     for (const p of outputs) r[p.name] = s.edges.some((e) => e.source === nodeId && e.sourceHandle === p.name);
     return r;
   }, shallow);
+
+  const growSnap = useGrowSnap({ nodeId, inputs, width, height }, connected);
 
   const handlePointerDown = useCallback((
     e: PointerEvent<HTMLDivElement>, portName: string,
@@ -160,5 +166,5 @@ export function PortRim({ nodeId, inputs, outputs, width, height }: Props) {
     })
   ) : [];
 
-  return <>{handles}{snapDots}</>;
+  return <>{handles}{snapDots}{growSnap && <GrowHandle snap={growSnap} />}</>;
 }
