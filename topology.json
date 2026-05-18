@@ -81,12 +81,7 @@
     {
       "id": "inhibitRight0",
       "type": "InhibitRightGate",
-      "outputs": [
-        {
-          "name": "out",
-          "kind": "chain"
-        }
-      ]
+      "outputs": []
     }
   ],
   "edges": [
