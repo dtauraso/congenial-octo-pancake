@@ -74,3 +74,17 @@ export function pctToSlot(pct: number): 0 | 1 | 2 {
   if (pct <= 62) return 1;
   return 2;
 }
+
+// Grow-port handle id codec. Encodes side+slot so _on-connect.ts can
+// recover placement without extra state.
+export function encodeGrowHandle(side: Side, slot: 0|1|2): string {
+  return `__grow:${side}:${slot}`;
+}
+export function decodeGrowHandle(id: string): { side: Side; slot: 0|1|2 } | null {
+  if (!id.startsWith("__grow:")) return null;
+  const parts = id.split(":");
+  const side = parts[1] as Side;
+  const slot = Number(parts[2]) as 0|1|2;
+  if (!["left","right","top","bottom"].includes(side) || ![0,1,2].includes(slot)) return null;
+  return { side, slot };
+}
