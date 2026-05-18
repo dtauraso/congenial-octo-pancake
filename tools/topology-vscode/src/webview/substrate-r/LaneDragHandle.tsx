@@ -53,7 +53,7 @@ export function LaneDragHandle({ edgeId, route, mid, lane, stroke }: Props) {
       fillOpacity={0.5}
       stroke={stroke}
       strokeWidth={1}
-      style={{ cursor: route === "snake" ? "ew-resize" : "ns-resize" }}
+      style={{ cursor: route === "snake" ? "ew-resize" : "ns-resize", pointerEvents: "all" }}
       onMouseDown={onMouseDown}
     />
   );
