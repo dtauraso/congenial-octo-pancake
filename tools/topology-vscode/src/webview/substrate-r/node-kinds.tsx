@@ -154,15 +154,20 @@ export function ChainInhibitorBody({
   traceId?: string;
 }) {
   const heldRef = useRef<unknown>(seed ?? null);
+  const lastSkipReasonRef = useRef<string | null>(null);
 
   const run = useCallback(() => {
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
     if (node.slotPhase(slotId) !== "filled") {
-      if (traceId) postLog("trace.chaininhibitor.skip", { node: traceId, reason: "slot-not-filled" });
+      if (traceId && lastSkipReasonRef.current !== "slot-not-filled") {
+        postLog("trace.chaininhibitor.skip", { node: traceId, reason: "slot-not-filled" });
+        lastSkipReasonRef.current = "slot-not-filled";
+      }
       return;
     }
+    lastSkipReasonRef.current = null;
     const inhibitWire = inhibitOutWireRef?.current;
     const incoming = node.consume(slotId);
     const emitted = heldRef.current;
@@ -232,6 +237,7 @@ export function ReadGateBody({
 }) {
   const slots = slotIds.length > 0 ? slotIds : ["slot"];
   const key = slots.join("|");
+  const lastPartialFilledRef = useRef<number>(-1);
 
   const run = useCallback(() => {
     const handle = nodeRef.current;
@@ -243,10 +249,14 @@ export function ReadGateBody({
     if (!wire.canAccept) return;
     if (allFilled) {
       if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length });
+      lastPartialFilledRef.current = -1;
       for (const s of slots) handle.consume(s);
       wire.load(1);
     } else {
-      if (traceId) postLog("trace.readgate.partial", { node: traceId, filled: filledSlots.length, of: slots.length });
+      if (traceId && lastPartialFilledRef.current !== filledSlots.length) {
+        postLog("trace.readgate.partial", { node: traceId, filled: filledSlots.length, of: slots.length });
+        lastPartialFilledRef.current = filledSlots.length;
+      }
       wire.load(0);
     }
   }, [nodeRef, outWireRef, key, traceId]);

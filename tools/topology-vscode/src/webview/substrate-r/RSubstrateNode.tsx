@@ -70,17 +70,36 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
 
   const NULL_REF = useMemo<{ current: WireHandle | null }>(() => ({ current: null }), []);
   const outWireRefs: Record<string, RefObject<WireHandle | null>> = {};
+  const resolvedPorts: Array<{ portName: string; edgeId: string | null; hasRef: boolean }> = [];
   for (const port of outputs) {
     const edgeId = outputEdgeIds[port.name];
     const wireRef = edgeId ? (registry.getWireRef(edgeId) ?? NULL_REF) : NULL_REF;
-    postLog("trace.wireref.resolve", {
-      nodeId: id,
-      portName: port.name,
-      edgeId: edgeId ?? null,
-      hasRef: wireRef !== NULL_REF,
-    });
+    resolvedPorts.push({ portName: port.name, edgeId: edgeId ?? null, hasRef: wireRef !== NULL_REF });
     outWireRefs[port.name] = wireRef;
   }
+
+  const lastLoggedRef = useRef<Record<string, string>>({});
+  useEffect(() => {
+    for (const r of resolvedPorts) {
+      const key = `${r.portName}`;
+      const sig = `${r.edgeId ?? ""}|${r.hasRef}`;
+      if (lastLoggedRef.current[key] === sig) continue;
+      // Skip transient "lost ref" pings — registry returns NULL_REF for one
+      // render between renders. Only log the resolved (hasRef:true) state and
+      // edgeId changes; absent edges still log once at hasRef:false.
+      const prevSig = lastLoggedRef.current[key];
+      const prevEdge = prevSig?.split("|")[0] ?? "";
+      const edgeChanged = prevEdge !== (r.edgeId ?? "");
+      if (!r.hasRef && !edgeChanged && prevSig !== undefined) continue;
+      lastLoggedRef.current[key] = sig;
+      postLog("trace.wireref.resolve", {
+        nodeId: id,
+        portName: r.portName,
+        edgeId: r.edgeId,
+        hasRef: r.hasRef,
+      });
+    }
+  });
 
   const width = data?.width ?? 90;
   const height = data?.height ?? 50;

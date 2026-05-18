@@ -346,15 +346,20 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   const tryFinalizeRef = useRef(tryFinalize);
   tryFinalizeRef.current = tryFinalize;
 
+  const lastLoadAcceptedRef = useRef<boolean>(true);
   const load = useCallback((v: unknown) => {
     const phaseBefore = phaseRef.current.kind;
     const accepted = phaseBefore === "empty";
-    if (traceId) postLog("trace.load", {
-      wire: traceId,
-      value: v,
-      phaseBefore,
-      accepted,
-    });
+    if (traceId) {
+      // Log accepted loads (real state changes) plus the FIRST rejected load
+      // after an accepted streak — each first-rejection represents a body
+      // that consumed its slot but couldn't ship, i.e. a dropped token.
+      // Subsequent same-phase rejections are RAF-spam retries; skip them.
+      if (accepted || lastLoadAcceptedRef.current) {
+        postLog("trace.load", { wire: traceId, value: v, phaseBefore, accepted });
+      }
+    }
+    lastLoadAcceptedRef.current = accepted;
     if (!accepted) return; // silent no-op: wire in-flight; body retries next poll
     apply({ type: "load", value: v });
     valueRef.current = v;
