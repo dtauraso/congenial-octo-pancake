@@ -42,6 +42,8 @@ of `main`. Working tree clean.
   anchored to the old port spot.
 - `455170e` **chore:** capture test state in topology.json /
   topology.view.json (readGate ports rearranged, i1 nudged).
+- `2f7d6ab` **chore:** remove unconnected `inhibitRight0.out` port
+  (override `outputs: []`).
 
 ## Next action
 
@@ -51,7 +53,14 @@ edges follow. Drive the editor and let friction pick the next task.
 
 ## Open issues
 
-None queued.
+- **Single-port auto-placement asymmetry.** With no explicit `slot`,
+  `resolvePositions` fills available slots in order [0,1,2], so a lone
+  port lands at 25% (top of its side) instead of the visually expected
+  50% (center). 2 ports land at [0,1] instead of [0,2]. Fix: pick
+  unclaimed defaults as `1` / `0,2` / `0,1,2` based on count so
+  single/double-port nodes look centered. Friction surfaced when the
+  user noticed inhibitRight's lone right-side port sitting at the
+  top-right rather than mid-right.
 
 ## Parked (not open; revisit when friction returns)
 
