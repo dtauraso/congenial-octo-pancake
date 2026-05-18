@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 # PreToolUse hook: fires on Edit/Write/MultiEdit and Bash.
-# If the target file (or Bash command) touches substrate-r/, emit the model-derive reminder and exit 2.
+# Narrowed (2026-05-17): only guards bodies + substrate primitives where the
+# "name the local rule per MODEL.md" check is actually load-bearing.
+# Skipped: RF wrappers (RSubstrateNode/RSubstrateEdge), registry, spec —
+# those are visual-medium plumbing and were tripping the guard with
+# layout/type edits, eroding its signal.
 
 SUBSTRATE_PATH='tools/topology-vscode/src/webview/substrate-r/'
+# Guarded files within substrate-r/ — bodies (node-kinds.tsx) and the
+# substrate primitives (Node.tsx, Wire.tsx). Matched as a regex alternation.
+GUARDED_FILES='(node-kinds\.tsx|Node\.tsx|Wire\.tsx)'
 LOG_FILE="$(dirname "$0")/substrate-r-blocks.log"
 
 input=$(cat)
@@ -37,7 +44,8 @@ import json, sys
 data = json.load(sys.stdin)
 print(data.get('tool_input', {}).get('file_path', ''))
 " 2>/dev/null)
-    if printf '%s' "$file_path" | grep -q "$SUBSTRATE_PATH"; then
+    if printf '%s' "$file_path" | grep -q "$SUBSTRATE_PATH" \
+       && printf '%s' "$file_path" | grep -qE "$SUBSTRATE_PATH$GUARDED_FILES\$"; then
       block "$file_path"
     fi
     ;;
@@ -49,8 +57,8 @@ data = json.load(sys.stdin)
 print(data.get('tool_input', {}).get('command', ''))
 " 2>/dev/null)
 
-    # Only check commands that reference the substrate-r path at all
-    if printf '%s' "$command" | grep -q "$SUBSTRATE_PATH"; then
+    # Only check commands that reference a guarded file by name
+    if printf '%s' "$command" | grep -qE "$SUBSTRATE_PATH$GUARDED_FILES"; then
       # Match write verbs (broad — favor false positives over missed bypasses)
       if printf '%s' "$command" | grep -qE \
         '(>[^&]|>>|sed[[:space:]]+-i|tee[[:space:]]+|cp[[:space:]]+|mv[[:space:]]+|node[[:space:]]+-e)'; then
