@@ -24,9 +24,8 @@ export interface KindBodyCtx {
   traceId?: string;
 }
 
-// Single dispatch from validated kind to body component. Both
-// TopologyRoot (test path) and RSubstrateNode (editor path) call this
-// — there is no second switch to keep in sync.
+// Single dispatch from validated kind to body component.
+// RSubstrateNode is the only caller — one switch, one path.
 export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
   const { nodeRef, outWireRefs, slotIds, initialQueue, seed, traceId } = ctx;
   switch (kind) {
