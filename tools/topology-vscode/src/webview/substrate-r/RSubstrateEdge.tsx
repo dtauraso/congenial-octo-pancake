@@ -95,6 +95,7 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
         <LaneDragHandle
           edgeId={id}
           route={route}
+          pathD={pathD}
           mid={mid}
           lane={lane}
           stroke={stroke}
