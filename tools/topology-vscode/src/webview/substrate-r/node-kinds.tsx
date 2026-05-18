@@ -7,7 +7,7 @@
 // is required here — wire.load is a silent no-op when in-flight, so
 // without the guard a shifted value would be lost.
 
-import { useCallback, useEffect, useRef, type RefObject, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject, type ReactNode } from "react";
 
 import { Node, type NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
@@ -24,9 +24,8 @@ export interface KindBodyCtx {
   traceId?: string;
 }
 
-// Single dispatch from validated kind to body component. Both
-// TopologyRoot (test path) and RSubstrateNode (editor path) call this
-// — there is no second switch to keep in sync.
+// Single dispatch from validated kind to body component.
+// RSubstrateNode is the only caller — one switch, one path.
 export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
   const { nodeRef, outWireRefs, slotIds, initialQueue, seed, traceId } = ctx;
   switch (kind) {
@@ -154,6 +153,7 @@ export function ChainInhibitorBody({
   traceId?: string;
 }) {
   const heldRef = useRef<unknown>(seed ?? null);
+  const [heldDisplay, setHeldDisplay] = useState<unknown>(seed ?? null);
   const lastSkipReasonRef = useRef<string | null>(null);
 
   const run = useCallback(() => {
@@ -172,6 +172,7 @@ export function ChainInhibitorBody({
     const incoming = node.consume(slotId);
     const emitted = heldRef.current;
     heldRef.current = incoming;
+    setHeldDisplay(incoming);
     if (traceId) postLog("trace.chaininhibitor.fire", { node: traceId, incoming, emitted });
     wire.load(emitted);
     if (inhibitWire) inhibitWire.load(emitted);
@@ -184,7 +185,14 @@ export function ChainInhibitorBody({
     return () => cancelAnimationFrame(raf);
   }, [run]);
 
-  return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
+  return (
+    <>
+      <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />
+      <span style={{ position: "absolute", bottom: 4, left: 0, right: 0, fontWeight: 600, fontSize: 13, color: "#bf360c", textAlign: "center", pointerEvents: "none" }}>
+        {`held=${heldDisplay}`}
+      </span>
+    </>
+  );
 }
 
 // Register (delay buffer): emits the held secondary value when a pulse
@@ -237,28 +245,22 @@ export function ReadGateBody({
 }) {
   const slots = slotIds.length > 0 ? slotIds : ["slot"];
   const key = slots.join("|");
-  const lastPartialFilledRef = useRef<number>(-1);
 
   const run = useCallback(() => {
     const handle = nodeRef.current;
     const wire = outWireRef?.current;
     if (!handle || !wire) return;
     const phases = slots.map((s) => handle.slotPhase(s));
-    const filledSlots = slots.filter((_, i) => phases[i] === "filled");
-    const allFilled = filledSlots.length === slots.length;
+    const allFilled = phases.every((p) => p === "filled");
+    if (!allFilled) return;
     if (!wire.canAccept) return;
-    if (allFilled) {
-      if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length });
-      lastPartialFilledRef.current = -1;
-      for (const s of slots) handle.consume(s);
-      wire.load(1);
-    } else {
-      if (traceId && lastPartialFilledRef.current !== filledSlots.length) {
-        postLog("trace.readgate.partial", { node: traceId, filled: filledSlots.length, of: slots.length });
-        lastPartialFilledRef.current = filledSlots.length;
-      }
-      wire.load(0);
-    }
+    // Emit the primary input slot's value (slots[0]), not a synthesised
+    // 1. ReadGate is a gated pass-through: all secondary inputs must
+    // be present, but the primary value flows through.
+    const primary = handle.consume(slots[0]);
+    for (let i = 1; i < slots.length; i++) handle.consume(slots[i]);
+    if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length, value: primary });
+    wire.load(primary);
   }, [nodeRef, outWireRef, key, traceId]);
 
   useEffect(() => {

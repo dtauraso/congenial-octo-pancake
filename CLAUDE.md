@@ -30,21 +30,20 @@ pointer at the top of this file is the only entry point you need.
 ## Substrate primitive landing rule (narrowed)
 
 **Node kinds:** auto-landed. `renderKindBody` in `node-kinds.tsx` is
-the single dispatch — both `TopologyRoot` (tests) and `RSubstrateNode`
-(editor) call it. Adding a kind = one switch case + the `RNodeKind`
-type in `spec.ts`. No second path to forget.
+the single dispatch — `RSubstrateNode` (editor) is the only caller.
+Adding a kind = one switch case + the `RNodeKind` type in `spec.ts`.
+No second path to forget.
 
-**Wire props and registry/driver plumbing:** still need both paths.
-`RSubstrateEdge` threads wire props from the React Flow store into
-`<Wire>`; `TopologyRoot` threads them from the validated spec. A new
-wire prop must be added in both places (or in a shared helper) in the
-same commit, otherwise the editor diverges silently from the model.
+**Wire props and registry/driver plumbing:** `RSubstrateEdge` threads
+wire props from the React Flow store into `<Wire>`. A new wire prop
+must be added there in the same commit it is used, otherwise the
+editor path is silently incomplete.
 
-History: this rule used to cover node kinds too, after a series of
-half-landings during the slot-in-node work (memory:
-`feedback-substrate-landing-requires-editor-path`). The shared
-`renderKindBody` switch (concept-bounded refactor) eliminated that
-scope; the rule now covers only the remaining fork.
+History: `TopologyRoot` (test harness) was deleted after the contract
+suite was retired (item 1, task/editor-friction-pass). Before that,
+wire props also had to be threaded through `TopologyRoot`; that second
+path is gone. The memory `feedback-substrate-landing-requires-editor-path`
+pre-dates deletion and is now stale; disregard its TopologyRoot clause.
 
 ## Two modes, same machinery
 
@@ -95,7 +94,7 @@ docs, and the auto-memory dir, costing tokens and time.
 ## Workflow
 
 - **Commit and push freely on task branches.** Per-commit sign-off is no longer required (relaxed post-v0; editing or reverting committed code is cheap). Sign-off IS still required for: merging a task branch into `main`, force-pushes, branch deletion, dependency removal, and any other destructive or shared-state action called out in the system prompt's "Executing actions with care" section.
-- Build and run before reporting a change as ready; verify output matches previous run. If verification fails, fix forward or revert — don't leave broken state on the branch. **`tsc --noEmit` and vitest alone do not refresh `out/webview.js`** — if a TS change needs to be exercised in the live editor, run `npm run build` (the Stop hook does this automatically; manual subagent verifications do not).
+- Build and run before reporting a change as ready; verify output matches previous run. If verification fails, fix forward or revert — don't leave broken state on the branch. **`tsc --noEmit` alone does not refresh `out/webview.js`** — if a TS change needs to be exercised in the live editor, run `npm run build` (the Stop hook does this automatically; manual subagent verifications do not).
 - One logical change per commit.
 - Push each commit to the current task branch.
 - **Cost markers:** only record a `($N.NN)` cost marker on a commit (or bundle of commits) when the work was sized at **≥$5 expected** beforehand. Sub-$5 work lands without a marker. Bundle small commits into ≥$5 chunks for marker purposes. Pre-v0 sub-$5 markers stay as historical record but are no longer the convention.

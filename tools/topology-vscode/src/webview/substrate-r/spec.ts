@@ -67,6 +67,7 @@ export interface RWireSpec {
   pathD: string;
   arcLength: number;
   value?: unknown;
+  seed?: unknown;
 }
 
 export interface RTopologySpec {

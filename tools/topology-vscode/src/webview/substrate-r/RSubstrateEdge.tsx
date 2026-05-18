@@ -24,6 +24,7 @@ interface RSubstrateEdgeData {
   label?: string;
   valueLabel?: string;
   value?: unknown;
+  seed?: unknown;
 }
 
 export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
@@ -61,7 +62,7 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
     [route, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, lane],
   );
 
-  const mid = (data?.label || data?.valueLabel)
+  const mid = data?.valueLabel
     ? edgeMidpoint(route, sourceX, sourceY, targetX, targetY, lane)
     : null;
 
@@ -78,10 +79,10 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
         pauseAxis={registry.driver.pauseAxis}
         traceId={id}
         value={data?.value}
+        seed={data?.seed}
       />
       <EdgeLabels
         mid={mid}
-        label={data?.label}
         valueLabel={data?.valueLabel}
         stroke={stroke}
       />

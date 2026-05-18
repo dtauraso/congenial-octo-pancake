@@ -9,99 +9,94 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-17, end of session)
+## State at handoff (2026-05-17, item 3 / run-start resolved)
 
-**Active branch:** `task/drop-output-wake-from-bodies` — **~44 commits
-ahead of origin, unpushed.** Working tree is clean. No uncommitted
-source changes and no untracked files.
+**Active branch:** `task/editor-friction-pass`, at `719e8c7`, pushed.
+Working tree has uncommitted TEMP probes in `RSubstrateEdge.tsx` and
+`registry.tsx` and camera-drift in `topology.view.json` (all
+pre-existing; do not stage). Branch is friction-driven per CLAUDE.md
+post-v0 posture.
 
-Ring smoke-test re-run this session. **The ring is alive** — ReadGate
-cold-start is not a deadlock; it just takes one full lap to fill
-`chainIn2`. Cycle-6 stall not observed. ChainInhibitor shift-register
-is correct in code. **But** i0 silently drops emissions whenever its
-outgoing wire is still in-flight from the previous fire — confirmed
-visually by shortening the `i0→i1` wire (commit `d18a418`), which
-brings the cadence back into sync and the drops stop. Correctness is
-currently a function of pixel length, which is the wrong substrate
-model.
+## What landed this session
 
-## What landed this session (newest first)
+- `f8af21a` **feat(chain-inhibitor): display held value as in-box
+  label** — i0/i1 now show `held=<value>` below the title.
 
-- `d18a418` **chore: shorten i0->i1 wire to confirm rate-mismatch
-  diagnosis** — visual test that wire length is load-bearing for
-  correctness; staked in topology.view.json as evidence for the
-  upcoming back-pressure work.
-- `42f20bf` **log: gate per-frame trace emissions on state change** —
-  ChainInhibitor.skip, ReadGate.partial, wire.load (rejected),
-  wireref.resolve all gated on real state changes. Ring log went from
-  ~21k lines/30s to ~200 lines/95s. Surfaced handoff issue #1
-  immediately: i0 fires into in-flight outgoing wires, silently
-  drops the emission, slot stays consumed.
-- `f42e556` **chore: update local camera/selection in topology.view.json**
-- `a6a50a7` **refactor(substrate-r): finish removing seed prop plumbing**
-- `14e9f09` **fix(chaininhibitor): suppress first-emit when no prior held**
-- `b0ebb0a` **fix(chaininhibitor): guard fire on slot=filled**
-- `7e22c02` **diag(wireref): log per-port resolution**
+- `6f71ac3` **refactor(item1): delete contract suite and TopologyRoot**
+  — 17 substrate contract test files (~1 400 LOC) deleted.
+  `TopologyRoot.tsx` deleted. `@testing-library/react` and `happy-dom`
+  removed from devDependencies. `view-load-setviewport.test.ts` kept
+  (pure function, no substrate dependency). CLAUDE.md and memory
+  updated. `tsc --noEmit` clean; `npm run build` clean.
+
+- `8802c18` **test(item2): add 4 editor-path Playwright scenario tests**
+  — thin scenario suite in `e2e/scenario-*.spec.ts` pinning
+  user-observable behavior via the existing Playwright harness:
+  ring-animates, edge-seed, wire-survives-drag, chaininhibitor-held.
+  Also adds `e2e/fixtures/ring-5node.json`. All 4 pass.
+  Run: `npm run test:e2e` in `tools/topology-vscode/`.
+
+- `21c3b8c` **chore(e2e): delete 4 dead-vocab specs (substrate
+  match/emit, pulse testid)** — `riding-label.spec.ts`,
+  `runner-play-pause.spec.ts`, `substrate-pause-resume.spec.ts`, and
+  `substrate-step1.spec.ts` deleted. e2e failures: 14 → 10. Remaining
+  10 failures are FIX + visual-regression tests — **known/deferred.**
+
+- `719e8c7` **refactor(wire): seed flows through wire.load instead of
+  dest.fill prefill** — seed now calls `load(seed)` so the value
+  enters in-flight, animates, and delivers via the normal arrive path.
+  One value-delivery path instead of two. See recommendations.md #3.
+  InputBody self-RAF retained (STOP: no central driver to replace it;
+  see open issues below).
+
+Cross-session backlog with priorities lives in
+[recommendations.md](recommendations.md). Update it as items land.
+**Next action:** item 4 (fix hook exit 2) or David's choice.
 
 ## Open issues (in priority order)
 
-1. **Implement back-pressure on ChainInhibitor (and audit other
-   bodies).** Now load-bearing — observable token drops confirmed in
-   the log. Two paths:
-   - **(a) Gate the body's consume on `outWireRef.current?.canAccept`.**
-     Body refuses to consume while output is busy. Tokens stay in the
-     input slot until output drains. ReadGate then sees the slot still
-     filled and doesn't redeliver. Self-paces. **Recommended** — this
-     is the substrate-model-honest answer (slot-in-node backpressure).
-   - **(b) Make `Wire.load` throw when non-empty**
-     ([Wire.tsx:~360](../../../tools/topology-vscode/src/webview/substrate-r/Wire.tsx)).
-     Surfaces every offender loud; useful as a separate audit pass
-     before (a) is in place.
-   Apply (a) to ChainInhibitor first (it's the demonstrated offender),
-   then audit Relay/Join/Register the same way.
-2. **Push the branch.** ~44 commits ahead of origin. Sign-off-gated per
-   CLAUDE.md.
-3. **Hook regression** (carryover):
-   `.claude/hooks/substrate-r-model-derive.sh` is still at `exit 0`;
-   should be `exit 2`. Do not touch it here — tracked as separate issue.
-4. **Memory `feedback_run_is_input_only.md`** is stale (pre-polling
-   redesign). Update or retire; this session's evidence (silent
-   `wire.load` is exactly the rate-bug-hider that memory predicted) is
-   worth folding in.
+0. ~~**run-start signal**~~ **RESOLVED** (`719e8c7`). Decision: no
+   new substrate axis. Wire seed hack replaced with `wire.load(seed)`
+   (one delivery path). InputBody self-RAF was examined: there is no
+   central driver RAF loop — each node kind owns its own RAF loop.
+   Deleting InputBody's self-RAF would leave it unwoken. The second
+   mount hack is not redundant; it IS the mechanism. No change there.
+   Memory updated in `project_runstart_concept_needed.md`.
+
+1. **Fan-out back-pressure on ChainInhibitor** still unsolved.
+   Naive `wire.canAccept && inhibitWire.canAccept` gate broke
+   animation both times it was tried. Trace deadlock if retried.
+
+2. **Pacing-by-pixel-length is still load-bearing for correctness.**
+   Logical-tick vs physical-wire mismatch; edge detection only works
+   when wire lengths happen to align. Design pass needed before code.
 
 ## What's actually working
 
-- Ring cycles end-to-end. Values shift through `i0 → i1 → chainIn2`
-  and back into ReadGate. Verified by reading the gated log.
-- ChainInhibitor shift-register code is correct: one consume atomically
-  emits the previously held and stores the incoming.
-- ChainInhibitor no longer emits `undefined` or `null`.
-- Wire animation loop runs independent of React's effect scheduler.
-- Log is readable — only state changes are emitted, dropped tokens
-  are visible on the transition into rejected loads.
-- Build, `tsc --noEmit`, and deterministic audits are clean.
+- End-to-end ring animation with real input values flowing through.
+- ReadGate pass-through emits `slots[0]`'s consumed value.
+- Edge seed delivers once to dest slot at wire mount.
+- Riding dot stays on the wire under paused-drag.
+- i0/i1 show `held=<value>` in-box label.
+- `tsc --noEmit` clean; `npm run build` clean.
+- `view-load-setviewport.test.ts` passes (pure function, kept from
+  the deleted contract suite).
+- 4 Playwright scenario tests all pass (`npm run test:e2e`).
 
 ## Substrate model state
 
-Bodies should be "pure rules" per `aaf34de`'s framing, but pure-ruleness
-depends on substrate primitives being honest about contract violations.
-`Wire.load`'s silent no-op breaks that — it lets bodies that skip the
-readiness check appear to work, then silently lose tokens. **Confirmed
-this session by tracing i0**: with the gated log in place the dropped
-emissions are visible as `accepted:false` transitions, and shortening
-`i0→i1` removes the drops by changing nothing but pixel length.
-Topology length cannot be load-bearing for correctness in a system
-whose whole premise is that the topology IS the logic — it has to
-encode model semantics, not animation timing. The model-honest fix is
-slot-in-node back-pressure: body refuses to consume while its output
-slot can't accept. Implementing that is the next step.
+Central tension (unchanged): logical-tick view vs physical-wire view.
+The topology is correct in the logical view; the substrate runs in the
+physical view. They agree only when wire lengths happen to align.
+Recovery requires a clock primitive, barrier, or sequence-tagged values.
+No code change yet; this is the next design conversation (#2 above).
 
 ## Dev-loop
 
-After any substrate-r edit: `npm run build` (vitest/tsc don't refresh
+After any substrate-r edit: `npm run build` (tsc alone doesn't refresh
 `out/webview.js`). Live log at `.probe/webview-log.jsonl`; clear with
 `: > .probe/webview-log.jsonl` between runs (NOT before reading the
-current run — Claude truncated it once by mistake).
+current run).
 
 Cwd for tsc/tests/check-loc/build: `tools/topology-vscode/`.
 
