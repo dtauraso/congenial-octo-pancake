@@ -18,7 +18,7 @@
 // used by tests.
 
 import {
-  forwardRef, useCallback, useImperativeHandle, useRef, useState,
+  forwardRef, useCallback, useImperativeHandle, useLayoutEffect, useRef, useState,
 } from "react";
 import type { RefObject } from "react";
 import type { NodeHandle } from "./Node";
@@ -227,7 +227,15 @@ class WireLoop {
     this.traceId = opts.traceId;
   }
 
-  setGroup(el: SVGGElement | null) { this.groupEl = el; }
+  setGroup(el: SVGGElement | null) { this.groupEl = el; this.reposition(); }
+
+  reposition() {
+    if (!this.groupEl) return;
+    const measuredLen = this.arcLength ?? this.path.getTotalLength();
+    const d = Math.min(this.distanceCovered, measuredLen);
+    const pt = this.path.getPointAtLength(d);
+    this.groupEl.setAttribute("transform", `translate(${pt.x},${pt.y})`);
+  }
 
   updateArcLength(v: number | undefined) { this.arcLength = v; }
   updatePauseAxis(v: PauseAxis | undefined) {
@@ -404,6 +412,13 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
     prevArcLengthRef.current = arcLength;
     wireLoopRef.current?.updateArcLength(arcLength);
   }
+
+  // Re-anchor the riding dot to the path after geometry changes (e.g. a
+  // node was dragged). The RAF loop is the normal repositioner but it's
+  // gated on !paused; this keeps the dot on the wire even when paused.
+  useLayoutEffect(() => {
+    wireLoopRef.current?.reposition();
+  }, [pathD, arcLength]);
 
   // Ref callback for the <path> element — constructs/disposes WireLoop.
   const pathRefCallback = useCallback((el: SVGPathElement | null) => {
