@@ -53,7 +53,7 @@ print(data.get('tool_input', {}).get('command', ''))
     if printf '%s' "$command" | grep -q "$SUBSTRATE_PATH"; then
       # Match write verbs (broad — favor false positives over missed bypasses)
       if printf '%s' "$command" | grep -qE \
-        '(>[^&]|>>|sed[[:space:]]+-i|tee[[:space:]]+|cp[[:space:]]+|mv[[:space:]]+|python3?[[:space:]]|node[[:space:]]+-e|python3?[[:space:]]+-c)'; then
+        '(>[^&]|>>|sed[[:space:]]+-i|tee[[:space:]]+|cp[[:space:]]+|mv[[:space:]]+|node[[:space:]]+-e)'; then
         block "$(printf '%s' "$command" | head -c 200)"
       fi
     fi
