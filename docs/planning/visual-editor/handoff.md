@@ -11,11 +11,11 @@ handoff.md is exempt from the 100-LOC budget.
 
 ## State at handoff (2026-05-17, end of session)
 
-**Active branch:** `task/editor-friction-pass`, at `f8af21a`, not yet
-pushed. Working tree has uncommitted TEMP probes in
-`RSubstrateEdge.tsx` and `registry.tsx` (left intentionally for the
-run-start follow-up to reuse) and camera-drift in `topology.view.json`
-(ignore). Branch is friction-driven per CLAUDE.md post-v0 posture.
+**Active branch:** `task/editor-friction-pass`, at `2120b30`, pushed.
+Working tree has uncommitted TEMP probes in `RSubstrateEdge.tsx` and
+`registry.tsx` (left intentionally for the run-start follow-up to
+reuse) and camera-drift in `topology.view.json` (ignore). Branch is
+friction-driven per CLAUDE.md post-v0 posture.
 
 **Prior handoff's open issue #0 ("seed not delivering") was stale.**
 Investigation this session confirmed seed IS delivered correctly to
