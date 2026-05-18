@@ -242,8 +242,8 @@ export function ChainInhibitorBody({
 }
 
 // Register (delay buffer): emits the held secondary value when a pulse
-// arrives, then stores the incoming secondary for the next round.
-// This is a one-round shift-register pattern.
+// arrives, then stores the incoming secondary for the next fill.
+// This is a one-fill shift-register pattern.
 
 export function RegisterBody({
   nodeRef, outWireRef, slotId = "slot", traceId,
@@ -278,7 +278,7 @@ export function RegisterBody({
 
 // ReadGate: variable-arity AND. When the instance declares an `out`
 // port, the firing rule auto-consumes all slots and loads `1` on the
-// out wire each tick the AND is satisfied. The ⌫ button is a manual
+// out wire each time the AND fires. The ⌫ button is a manual
 // consume kept for the no-out-wire case (debug / contract use).
 
 export function ReadGateBody({

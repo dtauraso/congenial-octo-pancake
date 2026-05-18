@@ -31,6 +31,11 @@ const BANNED = [
   /\bdeadline\b/i,
   /\bschedule[rd]?\b/i,
   /\bcarrying\b/,
+  // Logical-tick vocabulary banned after MODEL.md removed the tick view
+  /\btick\b/i,
+  /\bround[- ]?close\b/i,
+  /\blap\b/i,
+  /\bcohort\b/i,
 ];
 
 function walk(dir) {

@@ -1,5 +1,5 @@
 // React Flow edge component backed by the <Wire> substrate primitive.
-// Registers its wire ref with the SubstrateProvider so the tick driver
+// Registers its wire ref with the SubstrateProvider so the RAF driver
 // walks it; renders kind-coloured path, arrow marker, dash, and labels.
 
 import { useEffect, useMemo, useRef } from "react";

@@ -14,10 +14,10 @@ import type { NodeHandle } from "./Node";
 // locally — no central authority is consulted. On resume, each wire
 // rebases its sim clock so the pulse continues from where it stopped.
 //
-// Distinct from the cohort gate. The gate's released set is monotonic
-// (release-only) and is the wrong axis for pause: after one lap every
-// cohort ≥1 is permanently released. Pause must apply to all in-flight
-// wires regardless of cohort, so it lives on its own toggleable axis.
+// Distinct from the release gate. The gate's released set is monotonic
+// (release-only) and is the wrong axis for pause: once a wire has been
+// released it is permanently released. Pause must apply to all in-flight
+// wires regardless of release state, so it lives on its own toggleable axis.
 
 export interface PauseAxis {
   readonly paused: boolean;
