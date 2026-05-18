@@ -32,3 +32,4 @@ Each entry can drift; if it conflicts with current code, update or remove the me
 - [feedback_webview_devtools_frame.md](feedback_webview_devtools_frame.md) — VS Code webview devtools default to the outer wrapper frame; prefer file-bridge round-trips over `typeof window.X` for verification
 - [feedback_runner_errors_probe_first.md](feedback_runner_errors_probe_first.md) — When the editor hangs/decouples, read `../.probe/runner-errors-last.json` first; one thrown listener often explains compound UI symptoms
 - [feedback_cost_overruns.md](feedback_cost_overruns.md) — Catalog of session cost overruns; pattern is speculative tooling on top of an unverified diagnosis
+- [project_runstart_concept_needed.md](project_runstart_concept_needed.md) — Substrate-r has no shared tick-0/run-start; seed-as-prefill + InputBody self-start RAF are mount hacks. Replace with one substrate concept so seed and in0 are the same kind of thing.

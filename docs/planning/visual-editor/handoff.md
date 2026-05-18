@@ -11,54 +11,57 @@ handoff.md is exempt from the 100-LOC budget.
 
 ## State at handoff (2026-05-17, end of session)
 
-**Active branch:** `task/editor-friction-pass`, at `f273f6a`, pushed.
-Working tree has only camera-drift in `topology.view.json` (ignore).
-Branch is friction-driven per CLAUDE.md post-v0 posture.
+**Active branch:** `task/editor-friction-pass`, at `f8af21a`, not yet
+pushed. Working tree has uncommitted TEMP probes in
+`RSubstrateEdge.tsx` and `registry.tsx` (left intentionally for the
+run-start follow-up to reuse) and camera-drift in `topology.view.json`
+(ignore). Branch is friction-driven per CLAUDE.md post-v0 posture.
 
-**Animation is running, but the i1→ReadGate seed is not actually
-delivering in the editor path.** The ring appears to animate, but
-user observation (2026-05-17) is that the seed-once-at-mount fill
-on the `i1.out->readGate.chainIn2` edge is not happening in the live
-editor. F1 test (TopologyRoot path) passes — so the substrate-r
-Wire seed logic works when given a `seed` prop. The break is
-somewhere between the editor's edge data and the Wire's `seed` prop.
-First place to look: `spec-to-flow.ts:142` puts `seed` at the top
-level of the React Flow edge `data`; RSubstrateEdge reads
-`data?.seed`. Verify that matches what RSubstrateEdge actually
-receives (vs nested under `edgeData`, or stripped by parseSpec, or
-not migrated by `_migrate-legacy-fields.ts`).
-
-ReadGate's pass-through emit and the riding-dot reposition both
-land correctly.
+**Prior handoff's open issue #0 ("seed not delivering") was stale.**
+Investigation this session confirmed seed IS delivered correctly to
+the dest slot via `Wire.tsx:424-433`. The real problem the user was
+seeing — "i1 looks like it's waiting on i0 to send its first pulse" —
+is that seed bypasses the wire animation entirely (`dest.fill` at
+mount rather than a source-side `wire.load`), so visually nothing
+leaves i1 at tick 0. This is now reframed as a substrate-concept gap
+(see new issue #0 below).
 
 ## What landed this session
 
-- `9c67d53` (now on main) **fix(wire): re-anchor riding dot on path
-  change regardless of pause** — dragging a node while paused no
-  longer leaves the in-flight dot stranded in old coords.
-- `6a197c2` **refactor(edge): drop mid-wire name labels** —
-  EdgeLabels renders only the in-flight value, no `data.label` text.
-- `f273f6a` **feat(readgate,wire): pass-through value + edge-seed
-  plumbing** —
-  - ReadGate fires only on all-filled; emits `slots[0]` (primary
-    input value) instead of synthesised 1. Removes the partial-0
-    emit branch and its tests.
-  - Edge-level `seed` is now threaded from spec → RSubstrateEdge /
-    TopologyRoot → Wire and delivered once to the dest slot on
-    mount. Required to seed ring feedback edges.
+- `f8af21a` **feat(chain-inhibitor): display held value as in-box
+  label** — i0/i1 now show `held=<value>` below the title, matching
+  the chain-cascade reference SVG. Mirrors `heldRef` into `useState`
+  so the label re-renders on each fire. Caveat for verification:
+  the label uses `position: absolute` without an explicit
+  `position: relative` parent — visually verify placement in the
+  live editor; if it floats, wrap or thread a `subLabel` prop into
+  `<Node>`.
 
-Branch maintenance: deleted `task/drop-output-wake-from-bodies` and
-`task/wire-dot-reanchor` after merging; main is at `9c67d53`.
+Investigation only (no code): traced the seed delivery and the
+i1-silent-at-tick-0 symptom; concluded the right fix is a substrate-
+level run-start signal, not a local seed-path patch. Wrote up
+[project_runstart_concept_needed.md](../../../memory/project_runstart_concept_needed.md).
 
 ## Open issues (in priority order)
 
-0. **Editor-path edge seed not delivering.** Substrate-r logic
-   works (F1 test passes); the live editor wire is not receiving a
-   `seed` prop. Investigate: dump `data` inside RSubstrateEdge to
-   confirm shape; check `_migrate-legacy-fields.ts` and parseSpec
-   for stripping; verify spec-to-flow puts `seed` where
-   RSubstrateEdge expects. The ring runs by accident without it
-   today — fix this before claiming the ring is correctly seeded.
+0. **Introduce a shared tick-0 / run-start signal in substrate-r.**
+   Today seed is delivered by `Wire.tsx` calling `dest.fill` at
+   mount (bypassing `wire.load` and the animation), and InputBody
+   self-starts its own RAF loop in a mount `useEffect`. Two local
+   mount hacks instead of one substrate concept. Consequence:
+   visually i1 looks silent at tick 0 (no source-side launch), and
+   "what happens at tick 0" requires reading three files to
+   reconcile. The ring animates today only because mount-time
+   seed prefill + ReadGate's all-filled gate accidentally pair
+   seed with in0[0]'s late arrival. **Investigated and confirmed
+   stale: prior handoff issue #0 ("seed not delivering") was
+   wrong** — seed delivers correctly to the dest slot via
+   `Wire.tsx:424-433`; the real problem is that it skips the wire.
+   Fix shape: add a run-start signal (observable along PauseAxis
+   lines, or an explicit Start node); seed becomes
+   `wire.load(seed)` on run-start; InputBody first emit subscribes
+   to run-start. Then tick-0 coincidence is structural, not lucky.
+   See [project_runstart_concept_needed.md](../../../memory/project_runstart_concept_needed.md).
 
 1. **Fan-out back-pressure on ChainInhibitor** is *still* unsolved.
    The naive `wire.canAccept && inhibitWire.canAccept` gate has been
