@@ -9,60 +9,49 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-17, port-side decoupling + hook narrowing landed)
+## State at handoff (2026-05-18, drag-to-move ports landed)
 
-**Active branch:** `task/editor-friction-pass-3`, two commits ahead of
-`main`. Previous branch `task/editor-friction-pass-2` was merged to
-`main` (`0253349`) and deleted local + remote. Working tree has
-uncommitted camera-drift in `topology.view.json` (pre-existing; do not
-stage).
+**Active branch:** `task/editor-friction-pass-3`, eight commits ahead
+of `main`. Working tree clean.
 
-## What landed on this branch
+## What landed on this branch (since last handoff)
 
-- `6c2a238` **feat(visual-editor):** PortDef.side extended to
-  `"left"|"right"|"top"|"bottom"`; RSubstrateNode render refactored
-  into a four-bucket grouping. Defaults preserved (inputs→left,
-  outputs→right) so existing specs render unchanged. Any port can now
-  opt into top/bottom via the existing per-port `side` field.
-  Visual-layer only; slot/wire/phase semantics unchanged.
-- `2e20496` **chore(hooks):** narrowed `substrate-r-model-derive.sh`
-  to fire only on `node-kinds.tsx` (bodies), `Node.tsx`, and
-  `Wire.tsx` (substrate primitives). RF wrappers, registry, and spec
-  no longer trigger the model-derive reminder. The disable/restore
-  dance for layout edits is gone.
+- `58a6035` **feat(visual-editor):** drag-to-move port positions with
+  3-slot snap. Connected ports (port already has an edge attached):
+  click-hold-drag moves the port; on release, snaps to nearest of 12
+  rim positions (3 per side at 25/50/75%); swap if occupied.
+  Unconnected ports retain RF wire-creation drag. Persistence via
+  `mutateSpec` + `scheduleSave`; PortDef extended with `slot?: 0|1|2`.
+  Handle rendering extracted into new `rf/PortRim.tsx` (concept:
+  editor UX); `substrate-r/RSubstrateNode.tsx` shrank to a thin call.
+  Pure snap math in `rf/port-rim-drag.ts`.
+- `8cbcc68` **fix:** drop wrapper `<div>` around each Handle (collapsed
+  to (0,0) with no inset, stacking all ports at the corner).
+- `2e09255` **fix:** refresh RF node data after port-move via
+  `useReactFlow().setNodes`; `mutateSpec` alone doesn't re-derive flow.
+- `192343f` **chore:** normalize `topology.json` to JSON.stringify
+  (null,2) so future saves are no-op diffs.
+- `5961389` **fix(schema):** accept `top|bottom` side and `slot 0|1|2`
+  in `parse-nodes-edges.ts`. Without this, first save of a moved port
+  produced an unparseable spec → editor loaded blank.
+- `a853b60` **memory:** add `feedback_schema_parser_parity` —
+  extending a spec type requires updating the runtime validator in the
+  same commit.
+- `ef1fa96` **fix:** call `useUpdateNodeInternals(nodeId)` after a
+  port move so RF re-measures handle positions; otherwise edges stay
+  anchored to the old port spot.
+- `455170e` **chore:** capture test state in topology.json /
+  topology.view.json (readGate ports rearranged, i1 nudged).
 
-## What landed in the prior branch (now on main)
+## Next action
 
-Branch `task/editor-friction-pass-2` ran items 4–9 from
-[recommendations.md](recommendations.md):
+None queued. The port-drag feature is functional end-to-end: drag a
+connected port → snap to one of 12 rim positions → spec persists →
+edges follow. Drive the editor and let friction pick the next task.
 
-- `7aed3cc` **fix(hook):** removed `python3` patterns from the
-  substrate-r write-verb regex; was a false-positive source on
-  read-only `python3` calls. (Note: `2>/dev/null` still trips the
-  `>[^&]` write-verb regex on bash reads — follow-up candidate.)
-- `53f7850` **memory:** rewrote `feedback_run_is_input_only.md`
-  (removed stale `Node.fill` reference, clarified `wire.load`).
-- `9ff79a7` **refactor(rf):** moved `ManualTakeButton.tsx` out of
-  `substrate-r/` into `rf/`.
-- `b573931` **refactor(substrate-r):** folded `inhibit-right-gate.tsx`
-  into `node-kinds.tsx`.
-- `9590e26` **refactor(substrate-r):** inlined `pause-axis.ts` and
-  `useHaltControl.ts` into `registry.tsx`.
-- `485f041` **docs(model):** removed `Ticks and stepping` and
-  `Tick close` sections from MODEL.md; banned tick/round/step/cohort/
-  lap/simultaneity-layer vocabulary; reframed handoff issue #2 and
-  recommendations item 9 from "design pass" to "bug hunt."
-- `ceae5a3` **chore(substrate-r):** purged tick/round/lap/cohort
-  from comments and extended `check-substrate-vocab.mjs` with the new
-  banned terms.
+## Open issues
 
-**Next action:** none queued. Item 9 audit ran 2026-05-17 and found
-no active divergence; parked below. Drive the editor and let
-friction pick the next task.
-
-## Open issues (in priority order)
-
-None queued. Drive the editor and let friction pick the next task.
+None queued.
 
 ## Parked (not open; revisit when friction returns)
 
@@ -70,29 +59,25 @@ None queued. Drive the editor and let friction pick the next task.
   `wire.canAccept && inhibitWire.canAccept` gate broke animation both
   times it was tried. Trace deadlock if retried.
 - **Pacing-by-pixel-length / wire-length-dependent firing** — item 9
-  in [recommendations.md](recommendations.md). Audit (2026-05-17,
-  haiku Explore) found no active firing-rule divergence: all node
-  predicates are slot-phase-only. Two artifacts noted: dead file
-  `fanout-convergence.ts` reads `wire.phase` (prohibited pattern,
-  but unused); ChainInhibitor's two-load pattern can lose the
-  inhibitOut token if that wire is in-flight, masked today by wire
-  lengths making both wires accept on the same frame. Animation is
-  currently fine — parked until a wire-length change or a visible
-  token loss surfaces it. Do NOT reach for a clock primitive,
-  barrier, or sequence-tagged values; MODEL.md has no logical-tick
-  view.
+  in [recommendations.md](recommendations.md). Audit (2026-05-17)
+  found no active firing-rule divergence: all node predicates are
+  slot-phase-only. Two artifacts noted: dead file `fanout-convergence.ts`
+  reads `wire.phase` (prohibited pattern, but unused); ChainInhibitor's
+  two-load pattern can lose the inhibitOut token if that wire is
+  in-flight, masked today by wire lengths making both wires accept on
+  the same frame. Do NOT reach for a clock primitive, barrier, or
+  sequence-tagged values; MODEL.md has no logical-tick view.
 
 ## What's actually working
 
 - End-to-end ring animation with real input values flowing through.
 - ReadGate pass-through emits `slots[0]`'s consumed value.
 - Edge seed delivers once to dest slot at wire mount.
-- Riding dot stays on the wire under paused-drag.
-- i0/i1 show `held=<value>` in-box label.
+- Drag-to-move ports: 12 snap positions, swap on collision, edges
+  follow via `updateNodeInternals`.
 - `tsc --noEmit` clean; `npm run build` clean.
 - 4 Playwright scenario tests all pass (`npm run test:e2e`).
-- `check-substrate-vocab.mjs` clean (now covers tick/round-close/
-  lap/cohort in addition to original terms).
+- `check-substrate-vocab.mjs` clean.
 
 ## Substrate model state
 
@@ -100,8 +85,8 @@ MODEL.md (as of 2026-05-17 / `485f041`) has no global round, tick, or
 simultaneity layer. Coordination is local via slot phases. Any
 reasoning that reaches for a clock primitive, barrier, sequence-tagged
 values, or "logical view" is drift — the substrate has one view.
-Banned vocabulary now includes tick/round/step/cohort/lap; the vocab
-check script enforces this in substrate-r/.
+Banned vocabulary includes tick/round/step/cohort/lap; the vocab check
+script enforces this in substrate-r/.
 
 ## Hook caveat
 
@@ -114,16 +99,16 @@ to current code, then patch). If you genuinely need to bypass,
 temporarily remove the first PreToolUse entry from
 `.claude/settings.json`, do the work, then restore it — do NOT commit
 the settings.json change. The hook still overfires on Bash commands
-referencing a guarded filename combined with `2>/dev/null` (write-verb
-regex matches the stderr redirect); avoid that idiom in such commands
-or delegate Grep/Read to a subagent.
+referencing a guarded filename combined with `2>/dev/null`; avoid that
+idiom or delegate Grep/Read to a subagent.
 
 ## Dev-loop
 
 After any substrate-r edit: `npm run build` (tsc alone doesn't refresh
 `out/webview.js`). Live log at `.probe/webview-log.jsonl`; clear with
 `: > .probe/webview-log.jsonl` between runs (NOT before reading the
-current run).
+current run). The log is currently >500 MB — worth clearing when
+convenient.
 
 Cwd for tsc/tests/check-loc/build: `tools/topology-vscode/`.
 
