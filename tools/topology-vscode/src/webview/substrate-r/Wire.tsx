@@ -18,7 +18,7 @@
 // used by tests.
 
 import {
-  forwardRef, useCallback, useImperativeHandle, useLayoutEffect, useRef, useState,
+  forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState,
 } from "react";
 import type { RefObject } from "react";
 import type { NodeHandle } from "./Node";
@@ -177,6 +177,7 @@ export interface WireProps {
   pauseAxis?: PauseAxis;
   traceId?: string;
   value?: unknown;
+  seed?: unknown;
 }
 
 // ── WireLoop ────────────────────────────────────────────────────────
@@ -302,7 +303,7 @@ class WireLoop {
 }
 
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
-  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId, value }, ref,
+  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId, value, seed }, ref,
 ) {
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
@@ -412,6 +413,24 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   useLayoutEffect(() => {
     wireLoopRef.current?.reposition();
   }, [pathD, arcLength]);
+
+  // One-shot seed: if a seed value is configured, prime the destination
+  // slot once so downstream nodes have a starting value. Used by ring
+  // topologies where a feedback edge needs an initial pulse to break
+  // chicken-and-egg startup. Re-runs as destNodeRef ref-object identity
+  // changes (registry hands out a fresh fallback ref until the dest
+  // node registers); a ref guard ensures we only fill once successfully.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current) return;
+    if (seed === undefined) return;
+    const dest = destNodeRef.current;
+    if (!dest) return;
+    if (dest.slotPhase(destSlotId) !== "empty") return;
+    dest.fill(destSlotId, seed);
+    seededRef.current = true;
+    if (traceId) postLog("trace.seed", { wire: traceId, slot: destSlotId, value: seed });
+  }, [seed, destNodeRef, destSlotId, traceId]);
 
   // Ref callback for the <path> element — constructs/disposes WireLoop.
   const pathRefCallback = useCallback((el: SVGPathElement | null) => {

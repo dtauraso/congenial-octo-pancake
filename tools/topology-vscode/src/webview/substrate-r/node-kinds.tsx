@@ -237,28 +237,22 @@ export function ReadGateBody({
 }) {
   const slots = slotIds.length > 0 ? slotIds : ["slot"];
   const key = slots.join("|");
-  const lastPartialFilledRef = useRef<number>(-1);
 
   const run = useCallback(() => {
     const handle = nodeRef.current;
     const wire = outWireRef?.current;
     if (!handle || !wire) return;
     const phases = slots.map((s) => handle.slotPhase(s));
-    const filledSlots = slots.filter((_, i) => phases[i] === "filled");
-    const allFilled = filledSlots.length === slots.length;
+    const allFilled = phases.every((p) => p === "filled");
+    if (!allFilled) return;
     if (!wire.canAccept) return;
-    if (allFilled) {
-      if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length });
-      lastPartialFilledRef.current = -1;
-      for (const s of slots) handle.consume(s);
-      wire.load(1);
-    } else {
-      if (traceId && lastPartialFilledRef.current !== filledSlots.length) {
-        postLog("trace.readgate.partial", { node: traceId, filled: filledSlots.length, of: slots.length });
-        lastPartialFilledRef.current = filledSlots.length;
-      }
-      wire.load(0);
-    }
+    // Emit the primary input slot's value (slots[0]), not a synthesised
+    // 1. ReadGate is a gated pass-through: all secondary inputs must
+    // be present, but the primary value flows through.
+    const primary = handle.consume(slots[0]);
+    for (let i = 1; i < slots.length; i++) handle.consume(slots[i]);
+    if (traceId) postLog("trace.readgate.fire", { node: traceId, slots: slots.length, value: primary });
+    wire.load(primary);
   }, [nodeRef, outWireRef, key, traceId]);
 
   useEffect(() => {
