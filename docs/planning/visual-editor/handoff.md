@@ -9,81 +9,79 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, kind-default port-drag persistence fixed)
+## State at handoff (2026-05-18, grow-port-on-drop landed)
 
-**Active branch:** `task/editor-friction-pass-3`, ten commits ahead
-of `main`. Working tree clean.
+**Active branch:** `task/grow-port-on-drop`, one commit ahead of
+`main`, pushed. Working tree has unstaged edits in `memory/MEMORY.md`,
+`topology.json`, `topology.view.json` — user's in-editor state plus a
+memory-index pruning. **Do not commit these to this task branch.**
 
-## What landed on this branch (since last handoff)
+Unmerged sibling branch `task/editor-friction-pass-4` (three commits:
+Input init seed, delete-handler immer-draft fix, delegation-nudge
+inlined into CLAUDE.md) is still outstanding against main.
 
-- `58a6035` **feat(visual-editor):** drag-to-move port positions with
-  3-slot snap. Connected ports (port already has an edge attached):
-  click-hold-drag moves the port; on release, snaps to nearest of 12
-  rim positions (3 per side at 25/50/75%); swap if occupied.
-  Unconnected ports retain RF wire-creation drag. Persistence via
-  `mutateSpec` + `scheduleSave`; PortDef extended with `slot?: 0|1|2`.
-  Handle rendering extracted into new `rf/PortRim.tsx` (concept:
-  editor UX); `substrate-r/RSubstrateNode.tsx` shrank to a thin call.
-  Pure snap math in `rf/port-rim-drag.ts`.
-- `8cbcc68` **fix:** drop wrapper `<div>` around each Handle (collapsed
-  to (0,0) with no inset, stacking all ports at the corner).
-- `2e09255` **fix:** refresh RF node data after port-move via
-  `useReactFlow().setNodes`; `mutateSpec` alone doesn't re-derive flow.
-- `192343f` **chore:** normalize `topology.json` to JSON.stringify
-  (null,2) so future saves are no-op diffs.
-- `5961389` **fix(schema):** accept `top|bottom` side and `slot 0|1|2`
-  in `parse-nodes-edges.ts`. Without this, first save of a moved port
-  produced an unparseable spec → editor loaded blank.
-- `a853b60` **memory:** add `feedback_schema_parser_parity` —
-  extending a spec type requires updating the runtime validator in the
-  same commit.
-- `ef1fa96` **fix:** call `useUpdateNodeInternals(nodeId)` after a
-  port move so RF re-measures handle positions; otherwise edges stay
-  anchored to the old port spot.
-- `455170e` **chore:** capture test state in topology.json /
-  topology.view.json (readGate ports rearranged, i1 nudged).
-- `2f7d6ab` **chore:** remove unconnected `inhibitRight0.out` port
-  (override `outputs: []`).
-- `54919ea` **fix(substrate-r):** tolerate missing `outWireRef` in
-  InhibitRightGate. Body referenced `outWireRef.current` unconditionally;
-  when the spec omits the `out` port, renderKindBody passes undefined
-  and the body threw every RAF tick, leaving input slots filled and
-  upstream wires stuck in deliver-retry. Mark prop optional and guard
-  the deref. Firing gate (`&& wire`) already suppresses emission when
-  no wire is connected.
-- `f74eac1` **chore(hooks):** remove `substrate-r-model-derive`
-  PreToolUse hook. It blocked trivial defensive edits as often as it
-  caught model drift; can't distinguish a typo fix from a structural
-  change. Model alignment is a review concern, not a hook concern.
-- `7cc8fad` **fix(visual-editor):** materialize kind-default ports
-  before port-drag spec mutation. Ports inherited from `NODE_TYPES`
-  defaults (e.g. `inhibitRight0`'s `left`/`right`) were absent from
-  `sn.inputs`/`sn.outputs`, so the drop handler's `find()` returned
-  undefined and the spec write silently no-op'd. `rf.setNodes` made
-  it look like the move stuck until refresh. Fix: on first drag,
-  `structuredClone` the kind defaults onto the node spec; subsequent
-  side/slot writes persist.
+## What landed on this branch
+
+- `a6230a1` **feat(visual-editor):** grow input port on wire drop onto
+  saturated node. When every declared input on the destination is
+  already connected, dragging a wire over the node surfaces a green
+  dashed ghost handle at the nearest free of-12 snap positions under
+  the cursor. Dropping creates a new port in `node.inputs`
+  (auto-named `in0`, `in1`, …; kind mirrors the source port) and the
+  connecting edge in one action. Files: `port-rim-drag.ts`
+  (`__grow:<side>:<slot>` codec), `port-rim-grow.tsx` *(new —
+  `useGrowSnap` hook + `GrowHandle` component)*, `PortRim.tsx`,
+  `_use-edge-handlers.ts` (`isValidConnection` allows `__grow:`
+  ids), `_on-connect.ts` (decode grow handle, append port, resolve
+  target name, create edge). Per-instance `node.inputs` was already
+  in the schema and round-trips via `parseNode` / `validatePorts` —
+  no schema-parser changes needed.
+
+  Scope note: grow affordance is gated by `inputs.length > 0`, so
+  `Generic` and `Input` (zero declared inputs) never grow. User
+  confirmed leaving this as-is; revisit only if drag-into-`Generic`
+  becomes a friction.
 
 ## Next action
 
-None queued. Port-drag now persists across refreshes for all nodes,
-including those using kind-default ports. Drive the editor and let
-friction pick the next task.
+None queued. Drive the editor and let friction pick the next task.
+Two open friction signals still worth watching (carried from
+friction-pass-4 — note those fixes are not yet merged into main):
+
+- **Inert nodes by construction.** A `ReadGate` with no outgoing
+  `out` edge bails on `!wire` and silently no-ops — no visual signal
+  that it's dead. Candidate fix per
+  `feedback_enforce_required_inputs`: model-enforced required
+  output, or a visual "inert" indicator.
+- **Process hygiene.** A prior session landed two commits directly
+  on `main` before being caught. Start each new task by checking out
+  a fresh `task/...` branch off `main`, not by committing on
+  whichever branch HEAD happens to be on. (This session did so
+  correctly, stashing WIP through the branch switch.)
 
 ## Parked (not open; revisit when friction returns)
 
+- **Grow port on zero-input nodes** (decided 2026-05-18 not to do).
+  `Generic`/`Input` can't grow today; user accepted this.
+- **Wire-grab feature** (discussed 2026-05-18). A wire whose path
+  animates with the pulse, plus a node that "grabs" the wire and
+  hands the endpoint off — runtime topology mutation. Visual-only
+  half is ~1 day; handoff half needs a substrate-model answer first
+  (what "held" means locally, what triggers grab/release, whether
+  dangling endpoints are legal). Cheapest discovery move: build the
+  visual-only animation, author a held wire by hand in
+  `topology.json`, use the breakage list as the design spec.
 - **Fan-out back-pressure on ChainInhibitor** still unsolved. Naive
-  `wire.canAccept && inhibitWire.canAccept` gate broke animation both
-  times it was tried. Trace deadlock if retried.
+  `wire.canAccept && inhibitWire.canAccept` gate broke animation
+  both times tried. Trace deadlock if retried.
 - **Pacing-by-pixel-length / wire-length-dependent firing** — item 9
-  in [recommendations.md](recommendations.md). Audit (2026-05-17)
-  found no active firing-rule divergence: all node predicates are
-  slot-phase-only. Two artifacts noted: dead file `fanout-convergence.ts`
-  reads `wire.phase` (prohibited pattern, but unused); ChainInhibitor's
-  two-load pattern can lose the inhibitOut token if that wire is
-  in-flight, masked today by wire lengths making both wires accept on
-  the same frame. Do NOT reach for a clock primitive, barrier, or
-  sequence-tagged values; MODEL.md has no logical-tick view.
+  in [recommendations.md](recommendations.md). 2026-05-17 audit
+  found no active firing-rule divergence; two artifacts noted (dead
+  `fanout-convergence.ts` reads `wire.phase`; ChainInhibitor's
+  two-load pattern can lose the `inhibitOut` token, masked today by
+  wire lengths making both wires accept on the same frame). Do NOT
+  reach for a clock primitive, barrier, or sequence-tagged values;
+  MODEL.md has no logical-tick view.
 
 ## What's actually working
 
@@ -92,9 +90,11 @@ friction pick the next task.
 - Edge seed delivers once to dest slot at wire mount.
 - Drag-to-move ports: 12 snap positions, swap on collision, edges
   follow via `updateNodeInternals`.
-- `tsc --noEmit` clean; `npm run build` clean.
-- 4 Playwright scenario tests all pass (`npm run test:e2e`).
-- `check-substrate-vocab.mjs` clean.
+- Wire drop onto a saturated node grows a new input port at the
+  nearest free snap position; round-trips through save/reload.
+- `tsc --noEmit` clean; `npm run build` clean; `check:loc` clean;
+  `check-substrate-vocab.mjs` clean. 10 pre-existing e2e failures
+  unchanged by this branch (carried from main; not caused here).
 
 ## Substrate model state
 
