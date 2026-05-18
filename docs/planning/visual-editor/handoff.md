@@ -9,66 +9,51 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, kind-default port-drag persistence fixed)
+## State at handoff (2026-05-18, Input default + delete crash fix)
 
-**Active branch:** `task/editor-friction-pass-3`, ten commits ahead
-of `main`. Working tree clean.
+**Active branch:** `task/editor-friction-pass-4`, two commits ahead of
+`main` (rebuilt from main after both commits accidentally landed
+directly on main mid-session; main was reset to `1c6eb12`). Working
+tree has unstaged edits in `topology.json` / `topology.view.json`
+(user's in-editor state, includes a working `input0` + `readGate0`
+pair plus the original ring). Nothing pushed.
 
-## What landed on this branch (since last handoff)
+## What landed on this branch
 
-- `58a6035` **feat(visual-editor):** drag-to-move port positions with
-  3-slot snap. Connected ports (port already has an edge attached):
-  click-hold-drag moves the port; on release, snaps to nearest of 12
-  rim positions (3 per side at 25/50/75%); swap if occupied.
-  Unconnected ports retain RF wire-creation drag. Persistence via
-  `mutateSpec` + `scheduleSave`; PortDef extended with `slot?: 0|1|2`.
-  Handle rendering extracted into new `rf/PortRim.tsx` (concept:
-  editor UX); `substrate-r/RSubstrateNode.tsx` shrank to a thin call.
-  Pure snap math in `rf/port-rim-drag.ts`.
-- `8cbcc68` **fix:** drop wrapper `<div>` around each Handle (collapsed
-  to (0,0) with no inset, stacking all ports at the corner).
-- `2e09255` **fix:** refresh RF node data after port-move via
-  `useReactFlow().setNodes`; `mutateSpec` alone doesn't re-derive flow.
-- `192343f` **chore:** normalize `topology.json` to JSON.stringify
-  (null,2) so future saves are no-op diffs.
-- `5961389` **fix(schema):** accept `top|bottom` side and `slot 0|1|2`
-  in `parse-nodes-edges.ts`. Without this, first save of a moved port
-  produced an unparseable spec → editor loaded blank.
-- `a853b60` **memory:** add `feedback_schema_parser_parity` —
-  extending a spec type requires updating the runtime validator in the
-  same commit.
-- `ef1fa96` **fix:** call `useUpdateNodeInternals(nodeId)` after a
-  port move so RF re-measures handle positions; otherwise edges stay
-  anchored to the old port spot.
-- `455170e` **chore:** capture test state in topology.json /
-  topology.view.json (readGate ports rearranged, i1 nudged).
-- `2f7d6ab` **chore:** remove unconnected `inhibitRight0.out` port
-  (override `outputs: []`).
-- `54919ea` **fix(substrate-r):** tolerate missing `outWireRef` in
-  InhibitRightGate. Body referenced `outWireRef.current` unconditionally;
-  when the spec omits the `out` port, renderKindBody passes undefined
-  and the body threw every RAF tick, leaving input slots filled and
-  upstream wires stuck in deliver-retry. Mark prop optional and guard
-  the deref. Firing gate (`&& wire`) already suppresses emission when
-  no wire is connected.
-- `f74eac1` **chore(hooks):** remove `substrate-r-model-derive`
-  PreToolUse hook. It blocked trivial defensive edits as often as it
-  caught model drift; can't distinguish a typo fix from a structural
-  change. Model alignment is a review concern, not a hook concern.
-- `7cc8fad` **fix(visual-editor):** materialize kind-default ports
-  before port-drag spec mutation. Ports inherited from `NODE_TYPES`
-  defaults (e.g. `inhibitRight0`'s `left`/`right`) were absent from
-  `sn.inputs`/`sn.outputs`, so the drop handler's `find()` returned
-  undefined and the spec write silently no-op'd. `rf.setNodes` made
-  it look like the move stuck until refresh. Fix: on first drag,
-  `structuredClone` the kind defaults onto the node spec; subsequent
-  side/slot writes persist.
+- `8a0d8a0` **fix(visual-editor):** seed Input nodes with
+  `data.init: [0, 1]` on palette drop. Previously a freshly-dropped
+  Input had no `data.init`, so `InputBody`'s queue was empty and it
+  silently no-op'd every RAF tick. Default applied in
+  `rf/app/_use-drag-drop.ts` only; existing Input nodes saved before
+  the fix are unaffected (re-drop to pick up the default).
+- `e3a9131` **fix(visual-editor):** stop capturing the immer draft in
+  the delete handler. `_handle-delete.ts:17` captured the draft `s`
+  into `ctx.lastSpec.current`; after `produce()` returned, immer
+  revoked the proxy and the subsequent `rebuildFlow → specToFlow`
+  deref threw `Cannot perform 'get' on a proxy that has been revoked`.
+  The render-phase throw hit the `ErrorBoundary` and unmounted most
+  of the editor — symptom user reported was "the entire diagram and
+  most of the editor vanished" on Input delete. Fix: drop the capture;
+  re-read via `getSpec()` after `mutateBoth` returns.
 
 ## Next action
 
-None queued. Port-drag now persists across refreshes for all nodes,
-including those using kind-default ports. Drive the editor and let
-friction pick the next task.
+None queued. Drive the editor and let friction pick the next task.
+Two open friction signals worth watching:
+
+- **Inert nodes by construction.** Same bug-class as the Input/init
+  case: an editor-created node can land in a state where its body
+  silently no-ops. A `ReadGate` with no outgoing `out` edge bails on
+  `!wire` and never consumes its inputs — no visual signal that it's
+  dead. Candidate fix shape per `feedback_enforce_required_inputs`:
+  model-enforced required output, or a visual "inert" indicator.
+- **Process hygiene.** Two commits landed directly on `main` this
+  session before the user noticed. The merge of
+  `task/editor-friction-pass-3` left HEAD on main, and subsequent
+  fixes were committed there rather than on a new task branch.
+  Mitigation: start each new piece of work by checking out a fresh
+  `task/...` branch, not by committing on whichever branch HEAD
+  happens to be.
 
 ## Parked (not open; revisit when friction returns)
 
@@ -92,6 +77,9 @@ friction pick the next task.
 - Edge seed delivers once to dest slot at wire mount.
 - Drag-to-move ports: 12 snap positions, swap on collision, edges
   follow via `updateNodeInternals`.
+- Newly-dropped Input nodes come with `data.init: [0, 1]` and emit
+  immediately on play.
+- Deleting a node no longer crashes the editor.
 - `tsc --noEmit` clean; `npm run build` clean.
 - 4 Playwright scenario tests all pass (`npm run test:e2e`).
 - `check-substrate-vocab.mjs` clean.
