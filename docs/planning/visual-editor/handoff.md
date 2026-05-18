@@ -41,23 +41,31 @@ Branch `task/editor-friction-pass-2` ran items 4–9 from
   from comments and extended `check-substrate-vocab.mjs` with the new
   banned terms.
 
-**Next action:** item 9 — audit substrate-r firing rules for
-RAF-frame simultaneity assumptions; fix divergences from MODEL.md so
-edge detection no longer depends on wire-length coincidence.
+**Next action:** none queued. Item 9 audit ran 2026-05-17 and found
+no active divergence; parked below. Drive the editor and let
+friction pick the next task.
 
 ## Open issues (in priority order)
 
-1. **Fan-out back-pressure on ChainInhibitor** still unsolved.
-   Naive `wire.canAccept && inhibitWire.canAccept` gate broke
-   animation both times it was tried. Trace deadlock if retried.
+None queued. Drive the editor and let friction pick the next task.
 
-2. **Pacing-by-pixel-length is still load-bearing for correctness.**
-   Somewhere in substrate-r, a firing rule assumes simultaneous
-   arrival (RAF-frame coincidence) instead of both-slots-filled
-   (slot-state precondition only, per MODEL.md). Find the divergence
-   and fix forward. This is item 9 in recommendations.md — bug hunt,
-   not design pass. Do NOT reach for a clock primitive, barrier, or
-   sequence-tagged values; MODEL.md has no logical-tick view.
+## Parked (not open; revisit when friction returns)
+
+- **Fan-out back-pressure on ChainInhibitor** still unsolved. Naive
+  `wire.canAccept && inhibitWire.canAccept` gate broke animation both
+  times it was tried. Trace deadlock if retried.
+- **Pacing-by-pixel-length / wire-length-dependent firing** — item 9
+  in [recommendations.md](recommendations.md). Audit (2026-05-17,
+  haiku Explore) found no active firing-rule divergence: all node
+  predicates are slot-phase-only. Two artifacts noted: dead file
+  `fanout-convergence.ts` reads `wire.phase` (prohibited pattern,
+  but unused); ChainInhibitor's two-load pattern can lose the
+  inhibitOut token if that wire is in-flight, masked today by wire
+  lengths making both wires accept on the same frame. Animation is
+  currently fine — parked until a wire-length change or a visible
+  token loss surfaces it. Do NOT reach for a clock primitive,
+  barrier, or sequence-tagged values; MODEL.md has no logical-tick
+  view.
 
 ## What's actually working
 
