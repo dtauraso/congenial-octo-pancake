@@ -1,4 +1,5 @@
 import { NODE_TYPES } from "../../schema";
+import { useStore } from "../state/store";
 
 // Drag a palette item into the canvas to mint a new node of that type at
 // the drop coordinates. The actual mint happens in app.tsx onDrop, which
@@ -7,7 +8,11 @@ import { NODE_TYPES } from "../../schema";
 export const PALETTE_DATA_TYPE = "application/wirefold-node-type";
 
 export function NodePalette() {
-  const types = Object.keys(NODE_TYPES);
+  const specNodes = useStore((s) => s.spec.nodes);
+  const usedTypes = new Set(specNodes.map((n) => n.type));
+  const allTypes = Object.keys(NODE_TYPES);
+  // If the diagram is empty show all kinds; otherwise show only kinds in use.
+  const types = usedTypes.size === 0 ? allTypes : allTypes.filter((t) => usedTypes.has(t));
   return (
     <div className="palette-panel">
       <div className="palette-header">nodes</div>

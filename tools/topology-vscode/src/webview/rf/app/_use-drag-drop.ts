@@ -32,7 +32,8 @@ export function useDragDrop(ctx: AppCtx) {
     }
     if (!IDENT_RE.test(id)) return;
     const next = mutateSpec((s) => {
-      s.nodes.push({ id, type });
+      const nodeData = type === "Input" ? { init: [0, 1] } : undefined;
+      s.nodes.push({ id, type, ...(nodeData ? { data: nodeData } : {}) });
     });
     ctx.lastSpec.current = next;
     patchViewerState((v) => {
