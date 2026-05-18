@@ -24,7 +24,7 @@ suite + the test-vs-editor fork it created are slated for deletion.
 | 6 | **Low** | Fold `inhibit-right-gate.tsx` (51 LOC) into `node-kinds.tsx`. | XS | One less file in substrate-r read set. |
 | 7 | **Low** | Inline `pause-axis.ts` + `useHaltControl.ts` (56 LOC) into `registry.tsx`. | XS | Driver concept in one place. |
 | 8 | **Low** | Move `ManualTakeButton.tsx` out of `substrate-r/` into `rf/`. | XS | Keeps the carve-out honest. |
-| 9 | **Deferred** | Logical-vs-physical tick mismatch (handoff issue #2). Needs design pass, not a patch. | L | Generalises edge detection beyond wire-length luck. |
+| 9 | **Medium** | Audit substrate-r firing rules for RAF-frame simultaneity assumptions; firing must be slot-state-only per MODEL.md. Find the divergence causing edge-detection wire-length dependency and fix forward. (Reframed 2026-05-17: was "logical-vs-physical tick mismatch / design pass"; MODEL.md has no logical-tick view, so this is a bug hunt.) | M | Removes pacing-by-pixel-length dependency. |
 
 **Suggested order:** #4 + #5 (trivial), then #1 + #2 as a paired
 move (delete the old layer, add the new one in the same branch so

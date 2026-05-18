@@ -68,8 +68,13 @@ Cross-session backlog with priorities lives in
    animation both times it was tried. Trace deadlock if retried.
 
 2. **Pacing-by-pixel-length is still load-bearing for correctness.**
-   Logical-tick vs physical-wire mismatch; edge detection only works
-   when wire lengths happen to align. Design pass needed before code.
+   Somewhere in substrate-r, a firing rule assumes simultaneous
+   arrival (RAF-frame coincidence) instead of both-slots-filled
+   (slot-state precondition only, per MODEL.md). Find the divergence
+   and fix forward. Bug hunt, not design pass. The "logical-tick vs
+   physical-wire" framing previously recorded here was drift —
+   MODEL.md has no logical-tick view (see 2026-05-17 update removing
+   `Ticks and stepping` / `Tick close` sections).
 
 ## What's actually working
 
@@ -85,11 +90,13 @@ Cross-session backlog with priorities lives in
 
 ## Substrate model state
 
-Central tension (unchanged): logical-tick view vs physical-wire view.
-The topology is correct in the logical view; the substrate runs in the
-physical view. They agree only when wire lengths happen to align.
-Recovery requires a clock primitive, barrier, or sequence-tagged values.
-No code change yet; this is the next design conversation (#2 above).
+MODEL.md was updated 2026-05-17 to remove the `Ticks and stepping` and
+`Tick close` sections and to ban tick/round/step/cohort vocabulary.
+There is no global round or simultaneity layer; coordination is local
+via slot phases. Any reasoning that reaches for a clock primitive,
+barrier, sequence-tagged values, or "logical view" is drift — the
+substrate has one view. Open issue #2 above is now framed as a bug
+hunt for the local divergence, not a design pass for a new layer.
 
 ## Dev-loop
 

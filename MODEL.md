@@ -58,31 +58,21 @@ directly, not through wire phase.
 - Phase is otherwise ordinal. The substrate tracks no other
   durations.
 
-## Ticks and stepping
+## Driver
 
-A tick is one round of edges that had activity at the same moment —
-see [diagrams/model-revised-draft/13-tick-as-edge-cohort.svg](diagrams/model-revised-draft/13-tick-as-edge-cohort.svg).
-The tick is observable in the edges themselves, not stored on any
-node. Counting ticks is counting the simultaneity layers of a
-cascade. This definition is intrinsic to the activity: it needs no
-walker, no coordinator, no global ID, and no node-side bookkeeping.
+**Self-scheduling nodes + one global play/pause gate.** Nodes poll
+their preconditions each RAF frame and fire when they hold; a single
+global gate halts or starts wire animations (not nodes). No central
+walker. Node poll loops run continuously; when wires are paused,
+nodes observe no new input state and produce nothing.
 
-**Driver: self-scheduling nodes + one global play/pause gate.** Nodes
-poll their preconditions each RAF step and fire when they hold; a
-single global gate halts or starts wire animations (not nodes). No
-central walker. Node poll loops run continuously; when wires are
-paused, nodes observe no new input state and produce nothing.
-
-**Round-close is all-wires-empty.** The driver runs every node's
-`run()`, then waits for all wires to return to `empty`. Tick
-increments at each round-close.
-
-**Cohort-indexed stepping (future feature, deferred).** The cohort
-lap-label machinery was retired in v0 — it had no live consumer and
-its monotonic-released-set design was a known foot-gun. See
-[docs/planning/cohort-future-feature.md](docs/planning/cohort-future-feature.md)
-for the preserved design intent and conditions for re-deriving it
-when self-sustaining mode is implemented.
+There is no global round, tick, or simultaneity layer. The substrate
+does not count rounds, observe round-close, or align activity to a
+shared clock. Coordination between nodes happens through destination
+slot phases, read directly by source nodes — never through a shared
+time concept. Any reasoning that treats activity as a sequence of
+globally-aligned rounds is drift; re-derive from local rules over
+slots and wires.
 
 ## Firing rule and slot writes
 
@@ -107,17 +97,9 @@ is triggered by animation completion, not by the RAF clock directly.
 Every cross-wire hop is gated on the previous wire's delivery; the
 cascade is a procession of precondition-gated firings, each paced by
 wire geometry. "Atomic cascade" holds only in tests where
-`arcLength: 0` collapses visible duration to a single RAF tick (the
+`arcLength: 0` collapses visible duration to a single RAF frame (the
 event still happens; its visible duration is zero). RAF pacing is the
 observation window, not an independent clock competing for authority.
-
-## Tick close
-
-A round ends when every wire is `empty` AND every node's firing rule
-has had the chance to run on its current slot state. The substrate
-observes this; it does not schedule it. A slot in `filled(v)` waiting
-for a manually-gated destination continues to wait — halt/resume does
-not abort it.
 
 ## React surface realization
 
@@ -137,10 +119,12 @@ not abort it.
   nodes continue to poll their slot state but find no new fills, so
   they naturally decide to emit nothing. Resume thaws wires; held
   in-flight pulses finish their transit and nodes pick up work on
-  the next poll tick.
+  the next poll frame. A slot in `filled(v)` waiting for a
+  manually-gated destination continues to wait — halt/resume does
+  not abort it.
 - **Bridge surface** carries spec I/O only — `ready`, `spec`, `view`,
   `save`, `view-save`, optionally `topogen-status`. Nothing about
-  ticks, phases, animation, or controls crosses.
+  phases, animation, or controls crosses.
 
 ## Banned vocabulary (in substrate context)
 
@@ -154,7 +138,11 @@ working on the substrate, you have drifted:
 - schedule, scheduler, deadline, timeout, setTimeout, setInterval
 - wall-clock, Date.now, performance.now (for substrate scheduling;
   the renderer may still use `performance.now` for animation)
-- "tick takes X", "tick boundary at Y", "tick duration"
+- tick, round, step, round-close, tick-close, simultaneity layer,
+  lap, cohort, cohort index — any framing that treats activity as a
+  global sequence of rounds or counts edges across nodes. There is
+  no global round in this substrate; coordination is local via slot
+  phases.
 - "wire parks the value permanently" — the wire is transient; parked
   state lives on the destination node's slot. (Exception: the
   deferred-deliver safety net holds the value in-flight past animation
@@ -172,7 +160,6 @@ describe the current substrate.
 
 ## Allowed vocabulary
 
-- tick (ordinal = round count), round, step
 - empty, in-flight(v), filled(v), consumed
 - halt, resume, snap, global gate
 - arc length, pulse speed, in-flight traversal time (the one permitted
