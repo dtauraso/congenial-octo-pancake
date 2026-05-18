@@ -66,7 +66,7 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
     [route, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, lane],
   );
 
-  const showHandle = route === "snake" || route === "below";
+  const showHandle = route === "snake" || route === "snake-v" || route === "below";
   const mid = (data?.valueLabel || showHandle)
     ? edgeMidpoint(route, sourceX, sourceY, targetX, targetY, lane)
     : null;

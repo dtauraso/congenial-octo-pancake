@@ -61,7 +61,7 @@ export function wirePhaseReducer(p: Phase, a: Action): Phase {
 // (mid-x dogleg), below (corridor under both endpoints). Arc length
 // is measured from the live <path> during animation.
 
-export type EdgeRoute = "line" | "snake" | "below";
+export type EdgeRoute = "line" | "snake" | "snake-v" | "below";
 
 // Topology-driven default route: pick from handle sides + relative position.
 // Used when an edge has no explicit `data.route`. Explicit author choice
@@ -93,10 +93,12 @@ export function pickShape(
   const dx = tx - sx;
   const dy = ty - sy;
   if (sourceHorizontal) {
+    // Horizontal-side pair (left/right): snake-v (V-H-V dogleg through midY).
+    // Mirror of the vertical-side snake logic with x↔y swapped.
     const exitsAway = (sp === "right" && dx < 0) || (sp === "left" && dx > 0);
-    if (exitsAway) return "snake";
+    if (exitsAway) return "snake-v";
     if (Math.abs(dy) < COLLINEAR_TOLERANCE) return "line";
-    return "snake";
+    return "snake-v";
   }
   const exitsAway = (sp === "bottom" && dy < 0) || (sp === "top" && dy > 0);
   if (exitsAway) return "snake";
@@ -137,6 +139,28 @@ function snakeD(sx: number, sy: number, tx: number, ty: number, lane: number): s
   );
 }
 
+// snake-v: V-H-V dogleg — mirror of snakeD across x=y (x↔y swapped).
+// Exits source vertically, runs horizontally through midY corridor, enters
+// target vertically. Used for horizontal-side (left/right) handle pairs.
+function snakeVD(sx: number, sy: number, tx: number, ty: number, lane: number): string {
+  const midY = (sy + ty) / 2 + lane;
+  const r = Math.min(15, Math.abs(midY - sy) / 2, Math.abs(ty - midY) / 2, Math.abs(tx - sx) / 2);
+  if (!(r > 0.5)) {
+    return `M ${sx},${sy} L ${sx},${midY} L ${tx},${midY} L ${tx},${ty}`;
+  }
+  const syDir = midY >= sy ? 1 : -1;
+  const xDir  = tx   >= sx ? 1 : -1;
+  const tyDir = ty   >= midY ? 1 : -1;
+  return (
+    `M ${sx},${sy} ` +
+    `L ${sx},${midY - syDir * r} ` +
+    `Q ${sx},${midY} ${sx + xDir * r},${midY} ` +
+    `L ${tx - xDir * r},${midY} ` +
+    `Q ${tx},${midY} ${tx},${midY + tyDir * r} ` +
+    `L ${tx},${ty}`
+  );
+}
+
 function belowD(sx: number, sy: number, tx: number, ty: number, lane: number): string {
   const corridorY = Math.max(sy, ty) + 80 + lane;
   const r = Math.min(15, Math.abs(corridorY - sy) / 2, Math.abs(corridorY - ty) / 2, Math.abs(tx - sx) / 2);
@@ -161,6 +185,7 @@ export function buildEdgePathD(
   lane: number,
 ): string {
   if (route === "snake") return snakeD(sx, sy, tx, ty, lane);
+  if (route === "snake-v") return snakeVD(sx, sy, tx, ty, lane);
   if (route === "below") return belowD(sx, sy, tx, ty, lane);
   const c1 = controlPoint(sp, sx, sy, tx, ty);
   const c2 = controlPoint(tp, tx, ty, sx, sy);
@@ -172,6 +197,7 @@ export function edgeMidpoint(
   sx: number, sy: number, tx: number, ty: number, lane: number,
 ): { x: number; y: number } {
   if (route === "snake") return { x: (sx + tx) / 2 + lane, y: (sy + ty) / 2 };
+  if (route === "snake-v") return { x: (sx + tx) / 2, y: (sy + ty) / 2 + lane };
   if (route === "below") return { x: (sx + tx) / 2, y: Math.max(sy, ty) + 80 + lane };
   return { x: (sx + tx) / 2, y: (sy + ty) / 2 };
 }
