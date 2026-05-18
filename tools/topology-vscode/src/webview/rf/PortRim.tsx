@@ -12,6 +12,7 @@ import { KIND_COLORS } from "../../schema";
 import type { EdgeKind } from "../../schema";
 import { mutateSpec } from "../state";
 import { scheduleSave } from "../save";
+import { NODE_TYPES } from "../../schema/node-types";
 import {
   type Side, type ActiveDrag, SLOT_PCT,
   resolvePositions, computeSnapPoints, nearestSnap, pctToSlot,
@@ -90,6 +91,9 @@ export function PortRim({ nodeId, inputs, outputs, width, height }: Props) {
       );
       mutateSpec((s) => {
         const sn = s.nodes.find((nd) => nd.id === nodeId); if (!sn) return;
+        const kindDef = NODE_TYPES[sn.type];
+        if (sn.inputs === undefined && kindDef?.inputs) sn.inputs = structuredClone(kindDef.inputs);
+        if (sn.outputs === undefined && kindDef?.outputs) sn.outputs = structuredClone(kindDef.outputs);
         const all = [...(sn.inputs ?? []).map((p) => ({ p })), ...(sn.outputs ?? []).map((p) => ({ p }))];
         const dragged = all.find(({ p }) => p.name === portName); if (!dragged) return;
         if (occupant) { const occ = all.find(({ p }) => p.name === occupant.p.name); if (occ) { occ.p.side = curSide; occ.p.slot = curSlot; } }
