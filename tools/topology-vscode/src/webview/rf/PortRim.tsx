@@ -6,7 +6,7 @@
 
 import { useRef, useState, useCallback, type PointerEvent } from "react";
 import * as React from "react";
-import { Handle, Position, useStore, useReactFlow } from "reactflow";
+import { Handle, Position, useStore, useReactFlow, useUpdateNodeInternals } from "reactflow";
 import { shallow } from "zustand/shallow";
 import { KIND_COLORS } from "../../schema";
 import type { EdgeKind } from "../../schema";
@@ -47,6 +47,7 @@ export function PortRim({ nodeId, inputs, outputs, width, height }: Props) {
   const nodeElRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<ActiveDrag | null>(null);
   const rf = useReactFlow();
+  const updateNodeInternals = useUpdateNodeInternals();
 
   const connected = useStore((s) => {
     const r: Record<string, boolean> = {};
@@ -106,6 +107,7 @@ export function PortRim({ nodeId, inputs, outputs, width, height }: Props) {
           outputs: (nd.data?.outputs ?? []).map(patch),
         } };
       }));
+      updateNodeInternals(nodeId);
       scheduleSave();
     };
     window.addEventListener("pointermove", onMove);
