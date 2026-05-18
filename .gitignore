@@ -75,5 +75,8 @@ tools/topology-vscode/test-results/
 # Pulse-probe dump from the visual editor's webview (workspace-local, transient)
 /.probe/
 
+# Hook block log (local audit trail, not for VCS)
+.claude/hooks/substrate-r-blocks.log
+
 # macOS
 .DS_Store
