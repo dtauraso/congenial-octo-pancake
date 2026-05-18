@@ -9,13 +9,13 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-17, items 1+2+cleanup landed)
+## State at handoff (2026-05-17, item 3 / run-start resolved)
 
-**Active branch:** `task/editor-friction-pass`, at `21c3b8c`, pushed.
+**Active branch:** `task/editor-friction-pass`, at `719e8c7`, pushed.
 Working tree has uncommitted TEMP probes in `RSubstrateEdge.tsx` and
-`registry.tsx` (left intentionally for the run-start follow-up to
-reuse) and camera-drift in `topology.view.json` (ignore). Branch is
-friction-driven per CLAUDE.md post-v0 posture.
+`registry.tsx` and camera-drift in `topology.view.json` (all
+pre-existing; do not stage). Branch is friction-driven per CLAUDE.md
+post-v0 posture.
 
 ## What landed this session
 
@@ -39,27 +39,29 @@ friction-driven per CLAUDE.md post-v0 posture.
 - `21c3b8c` **chore(e2e): delete 4 dead-vocab specs (substrate
   match/emit, pulse testid)** — `riding-label.spec.ts`,
   `runner-play-pause.spec.ts`, `substrate-pause-resume.spec.ts`, and
-  `substrate-step1.spec.ts` deleted (referenced removed vocab, were
-  all failing). Orphaned fixtures `riding-label.json` and
-  `runner-smoke.json` also deleted. `substrate-2node.json` retained
-  (still used by `scenario-wire-survives-drag.spec.ts`). e2e failures:
-  14 → 10. Remaining 10 failures are FIX + visual-regression tests —
-  **known/deferred, out of scope for this task branch.**
+  `substrate-step1.spec.ts` deleted. e2e failures: 14 → 10. Remaining
+  10 failures are FIX + visual-regression tests — **known/deferred.**
+
+- `719e8c7` **refactor(wire): seed flows through wire.load instead of
+  dest.fill prefill** — seed now calls `load(seed)` so the value
+  enters in-flight, animates, and delivers via the normal arrive path.
+  One value-delivery path instead of two. See recommendations.md #3.
+  InputBody self-RAF retained (STOP: no central driver to replace it;
+  see open issues below).
 
 Cross-session backlog with priorities lives in
 [recommendations.md](recommendations.md). Update it as items land.
-**Next action:** item 0 (run-start signal). See recommendations.md.
+**Next action:** item 4 (fix hook exit 2) or David's choice.
 
 ## Open issues (in priority order)
 
-0. **Introduce a shared tick-0 / run-start signal in substrate-r.**
-   Today seed is delivered by `Wire.tsx` calling `dest.fill` at
-   mount (bypassing `wire.load` and the animation), and InputBody
-   self-starts its own RAF loop in a mount `useEffect`. Two local
-   mount hacks instead of one substrate concept. Fix shape: add a
-   run-start signal; seed becomes `wire.load(seed)` on run-start;
-   InputBody first emit subscribes to run-start. See
-   [project_runstart_concept_needed.md](../../../memory/project_runstart_concept_needed.md).
+0. ~~**run-start signal**~~ **RESOLVED** (`719e8c7`). Decision: no
+   new substrate axis. Wire seed hack replaced with `wire.load(seed)`
+   (one delivery path). InputBody self-RAF was examined: there is no
+   central driver RAF loop — each node kind owns its own RAF loop.
+   Deleting InputBody's self-RAF would leave it unwoken. The second
+   mount hack is not redundant; it IS the mechanism. No change there.
+   Memory updated in `project_runstart_concept_needed.md`.
 
 1. **Fan-out back-pressure on ChainInhibitor** still unsolved.
    Naive `wire.canAccept && inhibitWire.canAccept` gate broke
