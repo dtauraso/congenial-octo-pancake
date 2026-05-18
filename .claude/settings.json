@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash scripts/stop-checks.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/scripts/stop-checks.sh"
           }
         ]
       }
@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/delegate-reminder-hook.py"
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/delegate-reminder-hook.py"
           }
         ]
       }
@@ -59,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/substrate-r-model-derive.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/substrate-r-model-derive.sh"
           }
         ]
       },
