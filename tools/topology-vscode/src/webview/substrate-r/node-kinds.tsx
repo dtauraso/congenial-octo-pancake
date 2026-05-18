@@ -7,7 +7,7 @@
 // is required here — wire.load is a silent no-op when in-flight, so
 // without the guard a shifted value would be lost.
 
-import { useCallback, useEffect, useRef, type RefObject, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject, type ReactNode } from "react";
 
 import { Node, type NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
@@ -154,6 +154,7 @@ export function ChainInhibitorBody({
   traceId?: string;
 }) {
   const heldRef = useRef<unknown>(seed ?? null);
+  const [heldDisplay, setHeldDisplay] = useState<unknown>(seed ?? null);
   const lastSkipReasonRef = useRef<string | null>(null);
 
   const run = useCallback(() => {
@@ -172,6 +173,7 @@ export function ChainInhibitorBody({
     const incoming = node.consume(slotId);
     const emitted = heldRef.current;
     heldRef.current = incoming;
+    setHeldDisplay(incoming);
     if (traceId) postLog("trace.chaininhibitor.fire", { node: traceId, incoming, emitted });
     wire.load(emitted);
     if (inhibitWire) inhibitWire.load(emitted);
@@ -184,7 +186,14 @@ export function ChainInhibitorBody({
     return () => cancelAnimationFrame(raf);
   }, [run]);
 
-  return <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />;
+  return (
+    <>
+      <Node ref={nodeRef} slots={[slotId]} onRun={run} traceId={traceId} />
+      <span style={{ position: "absolute", bottom: 4, left: 0, right: 0, fontWeight: 600, fontSize: 13, color: "#bf360c", textAlign: "center", pointerEvents: "none" }}>
+        {`held=${heldDisplay}`}
+      </span>
+    </>
+  );
 }
 
 // Register (delay buffer): emits the held secondary value when a pulse
