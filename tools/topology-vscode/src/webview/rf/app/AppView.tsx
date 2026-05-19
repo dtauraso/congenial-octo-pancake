@@ -1,5 +1,4 @@
 import ReactFlow, { Background, Controls, SelectionMode } from "reactflow";
-import { CompareToolbar } from "../panels/CompareToolbar";
 import { LegendPanel } from "../panels/LegendPanel";
 import { MarkerDefs } from "../MarkerDefs";
 import { NodePalette } from "../panels/NodePalette";
@@ -13,7 +12,6 @@ export function AppView(p: AppViewProps) {
   return (
     <div
       ref={p.paneRef}
-      className={p.ghostFront ? "ghost-front" : undefined}
       style={{ position: "absolute", inset: 0 }}
       onDragOver={p.onDragOver}
       onDrop={p.onDrop}
@@ -59,13 +57,6 @@ export function AppView(p: AppViewProps) {
       <MarkerDefs />
       <LegendPanel rows={spec.legend ?? []} />
       <NodePalette />
-      <CompareToolbar
-        mode={p.compareMode}
-        label={p.comparisonLabel}
-        error={p.compareError}
-        onSetMode={p.setCompareMode}
-        onClose={p.closeCompare}
-      />
       {p.edgeMenu && (
         <EdgeContextMenu
           x={p.edgeMenu.x}

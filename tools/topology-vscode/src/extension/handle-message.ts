@@ -10,7 +10,6 @@ import { writeSidecar } from "../sidecar";
 import { parseWebviewToHost, type HostToWebviewMsg, type WebviewToHostMsg } from "../messages";
 import { applyEdit } from "./html";
 import { appendWebviewLog } from "./webview-log";
-import { handleCompareFile, handleCompareHead } from "./compare-load";
 import { toErrorMessage } from "../utils/error";
 
 export type MessageCtx = {
@@ -42,9 +41,6 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
       return;
     case "save":
       try {
-        // Bump suppression watermark synchronously before applyEdit so
-        // the change event (fires before applyEdit's promise resolves)
-        // is filtered by docSub.
         ctx.setLastAppliedVersion(document.version + 1);
         await applyEdit(document, msg.text);
         await document.save();
@@ -60,9 +56,6 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
       return;
     case "run":
       try {
-        // If the webview bundled the latest spec text, persist it before
-        // codegen so an in-flight inline edit (or a still-debounced save)
-        // can't leave topology.json one rename behind the editor view.
         if (msg.text !== undefined) {
           ctx.setLastAppliedVersion(document.version + 1);
           await applyEdit(document, msg.text);
@@ -80,15 +73,8 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
     case "run-cancel":
       runner.cancel();
       return;
-    case "compare-head":
-      await handleCompareHead(document.uri, post);
-      return;
-    case "compare-file":
-      await handleCompareFile(document.uri, post);
-      return;
     case "webview-log":
       await appendWebviewLog(msg.entry, document.uri);
       return;
   }
 }
-

@@ -8,7 +8,6 @@ import type { AppCtx } from "./_ctx";
 
 export function useNodeContextHandlers(ctx: AppCtx) {
   const onNodeDoubleClick = useCallback((ev: React.MouseEvent, node: RFNode) => {
-    if (ctx.isReadOnlyView()) return;
     // Fold placeholder → toggle collapsed state. Expanded folds aren't
     // selectable, so dbl-click never fires on them; collapsing again
     // uses the right-click "fold selection" path on regular nodes.
@@ -42,7 +41,6 @@ export function useNodeContextHandlers(ctx: AppCtx) {
   }, [ctx]);
 
   const foldCurrentSelection = useCallback(() => {
-    if (ctx.isReadOnlyView()) return;
     const sel = new Set(viewerState.lastSelectionIds ?? []);
     const memberIds = Array.from(sel).filter((id) => spec.nodes.some((n) => n.id === id));
     if (memberIds.length < 2) {

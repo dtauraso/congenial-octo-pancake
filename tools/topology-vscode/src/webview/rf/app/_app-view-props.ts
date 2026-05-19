@@ -4,19 +4,14 @@ import type {
   EdgeChange, NodeChange, Viewport,
 } from "reactflow";
 import type { EdgeKind } from "../../../schema";
-import type { CompareMode } from "../panels/CompareToolbar";
 import type { EdgeMenu } from "./_use-edge-handlers";
 
 export type AppViewProps = {
   paneRef: MutableRefObject<HTMLDivElement | null>;
-  ghostFront: boolean;
   styledNodes: RFNode[];
   styledEdges: RFEdge[];
   guides: { vx: number | null; hy: number | null };
   edgeMenu: EdgeMenu;
-  compareMode: CompareMode;
-  comparisonLabel: string | null;
-  compareError: string | null;
   onNodesChange: (c: NodeChange[]) => void;
   onEdgesChange: (c: EdgeChange[]) => void;
   onMoveEnd: (e: unknown, vp: Viewport) => void;
@@ -36,8 +31,6 @@ export type AppViewProps = {
   onEdgeContextMenu: (ev: React.MouseEvent, e: RFEdge) => void;
   closeEdgeMenu: () => void;
   setEdgeKind: (id: string, k: EdgeKind) => void;
-  setCompareMode: (m: CompareMode) => void;
-  closeCompare: () => void;
   onDragOver: (ev: React.DragEvent) => void;
   onDrop: (ev: React.DragEvent) => void;
 };

@@ -13,16 +13,12 @@ export type RunStatus =
   | { state: "error"; message: string }
   | { state: "cancelled" };
 
-export type CompareSource = "head" | "file";
-
 export type WebviewToHostMsg =
   | { type: "ready" }
   | { type: "save"; text: string }
   | { type: "view-save"; text: string }
   | { type: "run"; text?: string }
   | { type: "run-cancel" }
-  | { type: "compare-head" }
-  | { type: "compare-file" }
   | { type: "webview-log"; entry: string };
 
 export type HostToWebviewMsg =
@@ -31,18 +27,14 @@ export type HostToWebviewMsg =
   | { type: "topogen-status"; state: TopogenStatus["state"]; message?: string }
   | { type: "run-status"; state: RunStatus["state"]; message?: string }
   | { type: "flush" }
-  | { type: "save-error"; message: string }
-  | { type: "compare-load"; source: CompareSource; text: string; label: string }
-  | { type: "compare-error"; source: CompareSource; message: string };
+  | { type: "save-error"; message: string };
 
 export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new Set([
-  "ready", "save", "view-save", "run", "run-cancel", "compare-head", "compare-file",
-  "webview-log",
+  "ready", "save", "view-save", "run", "run-cancel", "webview-log",
 ]);
 
 export const HOST_TO_WEBVIEW_TYPES: ReadonlySet<HostToWebviewMsg["type"]> = new Set([
   "load", "view-load", "topogen-status", "run-status", "flush", "save-error",
-  "compare-load", "compare-error",
 ]);
 
 export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {

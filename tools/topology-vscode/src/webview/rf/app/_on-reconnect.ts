@@ -6,7 +6,6 @@ import { mutateSpec, spec, viewerState } from "../../state";
 import type { AppCtx } from "./_ctx";
 
 export function onReconnectImpl(ctx: AppCtx, oldEdge: RFEdge, conn: Connection) {
-  if (ctx.isReadOnlyView()) return;
   if (!conn.source || !conn.target || !conn.sourceHandle || !conn.targetHandle) return;
   if (!ctx.lastSpec.current) return;
   const specEdge = spec.edges.find((e) => e.id === oldEdge.id);
