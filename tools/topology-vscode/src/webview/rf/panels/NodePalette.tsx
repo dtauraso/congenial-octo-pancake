@@ -18,7 +18,6 @@ export function NodePalette() {
   return (
     <div className={"palette-panel" + (collapsed ? " collapsed" : "")}>
       <div className="palette-header">
-        {!collapsed && <span>nodes</span>}
         <button
           type="button"
           className="palette-fold"
@@ -27,6 +26,7 @@ export function NodePalette() {
         >
           {collapsed ? "▶" : "◀"}
         </button>
+        {!collapsed && <span>nodes</span>}
       </div>
       {!collapsed && (
         <div className="palette-list">

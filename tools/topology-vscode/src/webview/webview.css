@@ -97,7 +97,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-fami
   max-height: calc(100vh - 120px); overflow-y: auto;
 }
 .palette-panel.collapsed { width: auto; padding: 4px; }
-.palette-header { font-weight: 600; color: #444; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.palette-header { font-weight: 600; color: #444; display: flex; align-items: center; gap: 6px; }
 .palette-fold {
   border: 1px solid #ddd; background: #fafafa; border-radius: 4px;
   padding: 0 6px; cursor: pointer; font-size: 11px; line-height: 1.4; color: #444;
