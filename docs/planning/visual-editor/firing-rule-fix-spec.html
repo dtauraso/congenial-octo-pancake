@@ -849,7 +849,7 @@ const incoming = node.consume(slotId);
 const emitted = heldRef.current;
 heldRef.current = incoming;
 setHeldDisplay(incoming);
-if (traceId) postLog("trace.chaininhibitor.fire", { node: traceId, incoming, emitted });
+if (traceId) postLog("trace.chainInhibitor.fire", { node: traceId, incoming, emitted });
 wire.load(emitted);
 if (inhibitWire) inhibitWire.load(emitted);</code></pre></div>
   </div>
@@ -986,9 +986,9 @@ if (inhibitWire) inhibitWire.load(emitted);</code></pre></div>
   <!-- Diagram 6: sequence diagram — healthy ring vs. regression -->
   <figure>
     <svg viewBox="0 0 700 300" font-family="ui-sans-serif, system-ui, sans-serif" font-weight="400">
-      <metadata>{"nodes":[{"id":"ci-a","role":"ChainInhibitor","index":0},{"id":"ci-b","role":"ChainInhibitor","index":1},{"id":"probe","role":"probe-log"}],"edges":[{"id":"fire-a","source":"ci-a","target":"ci-b","kind":"trace.chaininhibitor.fire"},{"id":"fire-b","source":"ci-b","target":"ci-a","kind":"trace.chaininhibitor.fire"},{"id":"regression","source":"ci-a","target":"probe","kind":"trace.load accepted:false"}],"timing":[{"t":0,"event":"CI-A fires, value flows to CI-B slot"},{"t":1,"event":"CI-B fires, value flows to CI-A slot"},{"t":2,"event":"ring continues alternating"},{"t":"regression","event":"trace.load accepted:false outside backpressure — regression signal"}]}</metadata>
+      <metadata>{"nodes":[{"id":"ci-a","role":"ChainInhibitor","index":0},{"id":"ci-b","role":"ChainInhibitor","index":1},{"id":"probe","role":"probe-log"}],"edges":[{"id":"fire-a","source":"ci-a","target":"ci-b","kind":"trace.chainInhibitor.fire"},{"id":"fire-b","source":"ci-b","target":"ci-a","kind":"trace.chainInhibitor.fire"},{"id":"regression","source":"ci-a","target":"probe","kind":"trace.load accepted:false"}],"timing":[{"t":0,"event":"CI-A fires, value flows to CI-B slot"},{"t":1,"event":"CI-B fires, value flows to CI-A slot"},{"t":2,"event":"ring continues alternating"},{"t":"regression","event":"trace.load accepted:false outside backpressure — regression signal"}]}</metadata>
       <desc>
-        Left: healthy ring — ChainInhibitor A and B fire alternately; probe log shows alternating trace.chaininhibitor.fire events.
+        Left: healthy ring — ChainInhibitor A and B fire alternately; probe log shows alternating trace.chainInhibitor.fire events.
         Right: regression — trace.load accepted:false appears outside a backpressure window.
       </desc>
       <defs>
@@ -1036,14 +1036,14 @@ if (inhibitWire) inhibitWire.load(emitted);</code></pre></div>
       <text x="119" y="80" text-anchor="middle" font-size="10" font-weight="300" fill="#2b5fb3" stroke="none">fire; value -> CI-B slot</text>
       <!-- probe -->
       <line x1="175" y1="92" x2="293" y2="98" class="seq-msg" marker-end="url(#seq-arr)"/>
-      <text x="234" y="93" text-anchor="middle" font-size="9" font-weight="300" fill="#2b5fb3" stroke="none">trace.chaininhibitor.fire{A}</text>
+      <text x="234" y="93" text-anchor="middle" font-size="9" font-weight="300" fill="#2b5fb3" stroke="none">trace.chainInhibitor.fire{A}</text>
 
       <!-- Fire B -> A -->
       <line x1="175" y1="140" x2="67" y2="140" class="seq-msg" marker-end="url(#seq-arr)"/>
       <text x="119" y="135" text-anchor="middle" font-size="10" font-weight="300" fill="#2b5fb3" stroke="none">fire; value -> CI-A slot</text>
       <!-- probe -->
       <line x1="65" y1="147" x2="293" y2="153" class="seq-msg" marker-end="url(#seq-arr)"/>
-      <text x="179" y="148" text-anchor="middle" font-size="9" font-weight="300" fill="#2b5fb3" stroke="none">trace.chaininhibitor.fire{B}</text>
+      <text x="179" y="148" text-anchor="middle" font-size="9" font-weight="300" fill="#2b5fb3" stroke="none">trace.chainInhibitor.fire{B}</text>
 
       <!-- ellipsis -->
       <text x="119" y="185" text-anchor="middle" font-size="14" font-weight="300" fill="#888" stroke="none">...</text>
@@ -1076,7 +1076,7 @@ if (inhibitWire) inhibitWire.load(emitted);</code></pre></div>
       <text x="580" y="210" text-anchor="middle" font-size="10" font-weight="300" fill="#b14d2a" stroke="none">= canAccept guard missing</text>
       <text x="580" y="225" text-anchor="middle" font-size="10" font-weight="300" fill="#b14d2a" stroke="none">or regressed</text>
     </svg>
-    <figcaption>Diagram 6. Left: healthy ring — probe log shows alternating trace.chaininhibitor.fire events from CI-A and CI-B; no accepted:false appears. Right: regression — trace.load with accepted:false outside a backpressure window indicates a missing or removed canAccept guard.</figcaption>
+    <figcaption>Diagram 6. Left: healthy ring — probe log shows alternating trace.chainInhibitor.fire events from CI-A and CI-B; no accepted:false appears. Right: regression — trace.load with accepted:false outside a backpressure window indicates a missing or removed canAccept guard.</figcaption>
   </figure>
 
   <h3>Mechanical checks</h3>
@@ -1086,7 +1086,7 @@ if (inhibitWire) inhibitWire.load(emitted);</code></pre></div>
   </ul>
   <h3>Live editor smoke tests (handoff.md working features)</h3>
   <ul>
-    <li><strong>Ring animation:</strong> open ring topology; confirm <code>trace.chaininhibitor.fire</code> alternates between the two ChainInhibitor nodes in <code>.probe/webview-log.jsonl</code>.</li>
+    <li><strong>Ring animation:</strong> open ring topology; confirm <code>trace.chainInhibitor.fire</code> alternates between the two ChainInhibitor nodes in <code>.probe/webview-log.jsonl</code>.</li>
     <li><strong>ReadGate pass-through:</strong> unchanged (reference impl); spot-check.</li>
     <li><strong>Edge seed:</strong> <code>Wire.tsx</code> seed logic untouched; confirm <code>trace.seed</code> on mount.</li>
     <li><strong>InhibitRightGate inhibit path:</strong> verify a right-slot arrival still suppresses output even when out-wire is empty.</li>

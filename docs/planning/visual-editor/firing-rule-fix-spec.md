@@ -123,7 +123,7 @@ const incoming = node.consume(slotId);
 const emitted = heldRef.current;
 heldRef.current = incoming;
 setHeldDisplay(incoming);
-if (traceId) postLog("trace.chaininhibitor.fire", { node: traceId, incoming, emitted });
+if (traceId) postLog("trace.chainInhibitor.fire", { node: traceId, incoming, emitted });
 wire.load(emitted);
 if (inhibitWire) inhibitWire.load(emitted);
 ```
@@ -150,7 +150,7 @@ as a signal, not an error.
 - `node tools/topology-vscode/scripts/check-substrate-vocab.mjs` — no
   banned vocabulary introduced.
 - Live editor smoke tests against handoff.md's working-features list:
-  - **Ring animation:** open ring topology, confirm `trace.chaininhibitor.fire`
+  - **Ring animation:** open ring topology, confirm `trace.chainInhibitor.fire`
     alternates between the two ChainInhibitor nodes in `.probe/webview-log.jsonl`.
   - **ReadGate pass-through:** unchanged (reference impl); spot-check
     a topology that uses it.
