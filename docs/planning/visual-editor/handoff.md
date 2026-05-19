@@ -9,94 +9,88 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-19, navigation-tax pass in flight)
+## State at handoff (2026-05-19, chain-inhibitor convergence landed)
 
-**Active branch:** `task/navigation-tax`. NOT merged. 1 commit on
+**Active branch:** `task/navigation-tax`. NOT merged. 7 commits on
 top of `main` (`af4bdf8`). Pushed.
 
 ## What landed on main this session
 
-Nothing. All work is on task branches.
+Nothing. All work is on `task/navigation-tax`.
 
-## What's on `task/navigation-tax`
+## What's on `task/navigation-tax` (new this session)
 
-- `bf16279` — `animation-audit.html` and `naming-pass.html` at repo
-  root. Tabbed HTML artifacts with SVG diagrams. The first audits
-  start/continuation hacks (wire seed prefill, InputBody self-start
-  RAF, ChainInhibitor heldRef) and proposes "slots can be born
-  filled" as the unifying fix. The second documents the naming
-  convention used to reduce **navigation tax** (canonical noun per
-  concept across Go / topogen / JSON / editor / SVG; channel name
-  encodes endpoints; SVG groups carry `data-role` + `data-index`).
-  See `naming-pass.html` for the five-step convergence pipeline and
-  the pre-commit checklist.
+The chain-inhibitor naming-convergence pipeline (step 3 from
+`naming-pass.html`) ran end-to-end across the five boundaries
+(Go / topogen / JSON / TS editor / SVG). Six commits:
+
+- `c6f7d23` — Wiring.go `i0Test` → `i0` (drop fixture-leaked suffix).
+- `bd3c42b` — Go port keys `chainIn` / `chainIn2` → `i0In` / `i1In`.
+- `d73eaae` — JSON fixtures port rename (topology.json, e2e, parseSpec).
+- `732b156` — TS editor lowercase → camelCase + port keys + ReadGate trace label.
+- `596645a` — cleanup of stragglers (e2e runtime check string, testdata edge ids, planning JSON).
+- `7e364ce` — planning SVGs (`lateral-cascade.svg`, `overview.svg`) lowercase → camelCase.
+
+Decisions recorded:
+
+- Canonical noun: `ChainInhibitor`, case-flexed per host language.
+- Ports: `chainIn` / `chainIn2` → `i0In` / `i1In` (instance-specific,
+  per 2026-05-18 rule).
+- Instance var: `i0Test` → `i0`.
+- `TransferInhibitor` kept distinct (separate node kind).
+- `spec.ts` `case "chaininhibitor"` retained — intentional
+  toLowerCase normalization, not drift.
+
+Verification: `go build ./...`, `go test ./...`, `tsc --noEmit`, and
+`npm run build` all green after the cleanup commit.
+
+## Known stale references (out of scope, historical)
+
+These planning docs still contain `chaininhibitor` lowercase and were
+intentionally left as point-in-time records:
+
+- `docs/planning/visual-editor/recommendations.md` (scenario filename)
+- `docs/planning/visual-editor/firing-rule-fix-spec.html` / `.md`
+  (postLog trace string `trace.chaininhibitor.fire` — actual code now
+  emits `trace.chainInhibitor.fire`)
+
+If a future task touches those specs, normalize then. Don't sweep
+purely for sweep's sake.
 
 ## Other open task branches
 
 - `task/runtime-editor-port-alignment` — has `6811c5` (revert of the
   readGate port rename — restored the animation) and `ec11b0b`
   (disabled the Run button: faded, unclickable). Findings (A) and
-  (B) from the prior handoff are now deferred: Go runtime is
+  (B) from the prior handoff remain deferred: Go runtime is
   intentionally inert via the disabled Run button; the visual editor
   is the only runtime exercised. Will revisit when `go run .` is
   reactivated.
 
-## Carried-forward work — chain-inhibitor naming convergence
-
-The naming-pass pipeline calls for picking one bounded concept and
-converging its vocabulary across all five boundaries. **Chosen
-concept:** chain-inhibitor. **Step 1 (map) done this session.** Step
-2 (decide canonical noun) is next — user-driven, not delegated.
-
-### Drift map (haiku Explore subagent, 2026-05-19)
-
-Seven distinct spellings of the same concept, by frequency:
-
-| spelling | rough count | where |
-|---|---|---|
-| `chaininhibitor` (lowercase) | 45+ | TS RNodeKind, SVG `data-role`, trace logs, portspec keys |
-| `ChainInhibitor` (PascalCase) | 30+ | Go struct/type, JSON node type, TS `NODE_TYPES` registry |
-| `chainInhibitor` (camelCase) | 3 | JSON node ids in `topology.view.json` (`chainInhibitor0/1/2`) |
-| `chainIn` | 11 | JSON input port, Go topogen registry key, TS `NODE_TYPES` port |
-| `chainIn2` | 3 | JSON feedback-port name in `topology.json` |
-| `ChainInhibitorBody` | 5 | TS React component (`node-kinds.tsx`) |
-| `ChainInhibitorNode` | 5+ | Go package/struct (`ChainInhibitorNode.go`) |
-
-Also noted: instance variables in `Wiring.go` are `i0Test` (not
-`i0`) and `i1` — drift inside the instance naming too. Channel
-names already follow the endpoint convention (`readGateToI0`,
-`i0ToI1`, `i1AckToReadGate`, `i0ToInhibitRight`).
-
-### Next concrete step (step 2 of the pipeline)
-
-User picks the canonical noun. Suggested ladder (assistant has no
-preference — judgment call):
-
-- **Concept name** for the node kind: `ChainInhibitor` everywhere,
-  with case flexed only where the host language demands
-  (`chainInhibitor` in JSON ids, `ChainInhibitor` in Go types, etc).
-  Retire `chaininhibitor` lowercase form entirely — pick `RNodeKind`
-  strings to match the JSON convention (`"chainInhibitor"`).
-- **Port names** on the kind: `chainIn` / `chainIn2` are
-  direction-only and ambiguous. Per Rule 3 in `naming-pass.html`:
-  rename to concept-carrying names. Suggested:
-  `prevStageIn` / `feedbackIn` (or the topology-instance-specific
-  form: `i0In` / `i1Out`, matching the project rule established
-  2026-05-18).
-- **Instance variables** in `Wiring.go`: `i0Test` → `i0`. Drop the
-  `Test` suffix; it leaked from a test fixture.
-
-Once chosen, steps 3–5 (edit per boundary, verify, grep check) are
-mechanical — delegate to sonnet subagents one boundary at a time
-with the clone-as-insurance pattern.
-
 ## Working-tree state
 
-`topology.view.json` carries unstaged camera/position drift carried
-across from the prior branch. Untouched on this branch — do not
-commit it as part of any navigation-tax work; either revert it
-before the next commit on this branch, or land it as its own
-single-purpose commit if the user wants to keep the camera tweak.
+`topology.view.json` carries unstaged camera/position drift from a
+prior branch — untouched on this branch and intentionally not
+committed. Either revert it before the next commit or land it as its
+own single-purpose commit if the user wants the camera tweak.
+
+## Next concrete step
+
+Convergence is done for ChainInhibitor. Options for next:
+
+1. **Merge `task/navigation-tax` into main.** Six clean rename
+   commits + the audit/naming-pass HTML artifacts. Requires user
+   sign-off (merge into shared `main`).
+2. **Run the same naming-pass pipeline on another concept.**
+   Candidates surfaced during this pass:
+   - `TransferInhibitor` (parallel kind, may have similar drift)
+   - `inhibitrightgate` (lowercase form spotted in planning SVGs)
+   - Wiring.go instance vars beyond `i0`/`i1` if any drift remains
+3. **Pivot to a different friction.** The parked list below has
+   open items.
+
+State the next step before acting; the convergence loop has no more
+queued mechanical work to drain.
 
 ## Parked (revisit when friction returns)
 
