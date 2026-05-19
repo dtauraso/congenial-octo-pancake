@@ -9,35 +9,43 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, short-edge-small-markers merged to main)
+## State at handoff (2026-05-18, plugin-hygiene-fixes merged to main)
 
-**Active branch:** `main`. `task/short-edge-small-markers` merged via
+**Active branch:** `main`. `task/plugin-hygiene-fixes` merged via
 `--no-ff` and deleted locally and on remote. Working tree clean.
 
 ## What landed on main this session
 
-Two task branches merged in sequence; the second (this session)
-brings three commits via `task/short-edge-small-markers`:
+Hygiene pass driven by a delegated code-smell audit. Four refactor
+commits via `task/plugin-hygiene-fixes`, merged `12f5445`:
 
-- `d8e9886` **feat(markers):** auto-shrink arrow marker on short edges
-  — adds `sm` marker set (5x4 filled, 6x5 open) to `MarkerDefs.tsx`,
-  exports `markerEndUrl(kind, arrowStyle, size?)`, and selects `sm`
-  in `RSubstrateEdge.tsx` when the edge is below threshold. Docs
-  section 9 updated in `svg-style-guide.md`.
-- `d827f36` **feat(markers):** shrink by final-segment length, sm at
-  3/4, -1px undershoot. The shrink decision now keys off
-  `finalSegmentLength` (the leg the arrow sits on) rather than total
-  path length — snake-v with a short vertical entry leg now picks
-  `sm` even when total path is long. `sm` boxes scaled to 3/4
-  (filled 3.75x3, open 4.5x3.75). All four markers nudged refX -1px
-  (md 7/9, sm 4/5) so the tip sits just inside the handle dot.
-- `a3e5096` **chore(ci):** drop manual periodic-checks workflow —
-  `workflow_dispatch`-only, duplicated locally-run commands, no
-  observed use. `.github/` removed entirely (no dependabot either,
-  per user choice to rely on UI-toggled Dependabot alerts).
+- `793266c` **refactor(plugin):** extract `toErrorMessage` util to
+  `src/utils/error.ts`; dedupe inline `err instanceof Error ? …`
+  pattern across `compareLoader.ts`, `extension/handle-message.ts`
+  (replacing local `errMsg`), and
+  `webview/rf/app/_use-host-messages.ts`.
+- `064df07` **refactor(plugin):** extract `reconcileSelection` helper
+  to `webview/rf/app/_reconcile-selection.ts`; replace two near-
+  identical blocks in `_handle-load.ts` and `_handle-view-load.ts`.
+- `211192d` **refactor(plugin):** surface previously-swallowed
+  run-dispatch error — `extension/handle-message.ts:72` no longer
+  silently `catch { return }` on topogen write/runner setup; posts
+  `save-error` to the webview (existing message type, also used by
+  save and view-save handlers) plus `console.error` host-side.
+- `29b801a` **refactor(plugin):** extract magic numbers into existing
+  `_constants.ts` — `FIT_VIEW_DURATION_MS`, `FIT_VIEW_PADDING`,
+  `FIT_VIEW_PADDING_WIDE`, `FIT_VIEW_MAX_ZOOM`, `FLASH_TIMEOUT_MS`.
+  Replaces inline literals in `_use-fit-view.ts` and
+  `_use-undo-redo.ts`.
 
-Topology side: `topology.view.json` reflects a new camera/zoom and a
-moved `inhibitRight0` position from this session's editor drive.
+83 tests pass; `npm run build` clean.
+
+Audit caveat worth carrying forward: a second-pass audit over a
+larger category list (38 categories + substrate vocab) reported
+"clean" on the four items above. The first audit was correct; the
+second was over-charitable. When delegating audits, request the
+narrower, sharper category list — broad-sweep audits encourage the
+agent to declare clean rather than triage.
 
 ## Next action
 
@@ -58,6 +66,12 @@ Carried-forward friction signals (unchanged from prior handoff):
 - **Schema-parser-parity reminder.** When adding a route/spec
   variant, update `Wire.tsx`, the parser, the type, and the legacy
   migrator in the same commit. See `feedback_schema_parser_parity`.
+- **Pending working-tree edits** before this session existed on
+  `task/short-edge-small-markers` (MarkerDefs.tsx, RSubstrateEdge.tsx,
+  topology.view.json). Stash reported "no local changes" when
+  switching branches, so they appear to have already been folded
+  into the merged commits. Verify with `git status` next session;
+  if they reappear, decide whether to commit or discard.
 
 ## Parked (not open; revisit when friction returns)
 
