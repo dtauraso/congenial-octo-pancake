@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { vscode } from "../save";
+import { vscode } from "../vscode-api";
 import { spec, useRunStatus } from "../state";
 import { flushActiveInlineEdit } from "../inline-edit";
 

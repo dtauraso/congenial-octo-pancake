@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { parseSpec, type Spec } from "../../../schema";
 import { specToFlow } from "../adapter";
 import { setInlineEditRerender } from "../../inline-edit";
-import { vscode } from "../../save";
+import { vscode } from "../../vscode-api";
 import { getSpec, viewerState } from "../../state";
 import type { CompareMode } from "../CompareToolbar";
 import type { AppCtx } from "./_ctx";
