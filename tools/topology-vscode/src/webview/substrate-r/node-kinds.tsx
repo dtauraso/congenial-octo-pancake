@@ -72,6 +72,27 @@ export interface KindBodyCtx {
   traceId?: string;
 }
 
+// Required output wire names per kind.
+// A kind is "inert" when any of these wires is unconnected (wireRef.current === null).
+// inhibitrightgate has no required out wire — it fires (inhibiting) even without one.
+const REQUIRED_OUT_WIRES: Partial<Record<RNodeKind, string[]>> = {
+  input:            ["out"],
+  relay:            ["out"],
+  chaininhibitor:   ["out"],
+  join:             ["out"],
+  readgate:         ["out"],
+  register:         ["out"],
+};
+
+export function isKindInert(
+  kind: RNodeKind,
+  outWireRefs: Record<string, import("react").RefObject<WireHandle | null>>,
+): boolean {
+  const required = REQUIRED_OUT_WIRES[kind];
+  if (!required) return false;
+  return required.some((name) => !outWireRefs[name]?.current);
+}
+
 // Single dispatch from validated kind to body component.
 // RSubstrateNode is the only caller — one switch, one path.
 export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
