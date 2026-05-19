@@ -4,6 +4,7 @@ import { clearViewerHistory, patchViewerState, setViewerState } from "../../stat
 import { parseViewerState, serializeViewerState } from "../../state/viewer/types";
 import { resolveViewLoadViewport } from "./_resolve-view-load-viewport";
 import { reconcileSelection } from "./_reconcile-selection";
+import { postLog } from "../../log/post";
 import type { AppCtx } from "./_ctx";
 
 // "view-load" sidecar message: install viewerState, reconcile selection
@@ -11,6 +12,15 @@ import type { AppCtx } from "./_ctx";
 // SVG-viewBox migration if needed).
 export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
   const next = parseViewerState(text);
+  if (next.edges && ctx.lastSpec.current) {
+    const knownEdgeIds = ctx.lastSpec.current.edges.map((e) => e.id);
+    for (const key of Object.keys(next.edges)) {
+      if (!knownEdgeIds.includes(key)) {
+        console.warn(`topology.view.json: edge key "${key}" has no matching edge in spec`);
+        postLog("view.orphan-edge-key", { key, knownEdgeIds });
+      }
+    }
+  }
   setViewerState(next);
   // A fresh sidecar makes prior viewer history incoherent (folds/views/
   // bookmarks may not exist there).

@@ -13,7 +13,7 @@ import {
   validatePorts,
 } from "./parse-meta";
 
-export function parseSpec(input: unknown): Spec {
+export function parseSpec(input: unknown, view?: { edges?: Record<string, unknown> }): Spec {
   const o = obj(input, "spec");
   const spec: Spec = {
     nodes: arr(o.nodes, "spec.nodes").map((n, i) =>
@@ -49,5 +49,16 @@ export function parseSpec(input: unknown): Spec {
     ),
   };
   validatePorts(spec);
+  if (view?.edges) {
+    const knownIds = new Set(spec.edges.map((e) => e.id));
+    for (const key of Object.keys(view.edges)) {
+      if (!knownIds.has(key)) {
+        const known = [...knownIds].join(", ") || "(none)";
+        throw new Error(
+          `parseSpec: view edge key "${key}" has no matching edge in spec; known: ${known}`,
+        );
+      }
+    }
+  }
   return spec;
 }

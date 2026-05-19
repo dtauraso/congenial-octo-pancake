@@ -96,6 +96,38 @@ it("legend row with bad kind", () => {
   });
 });
 
+describe("parseSpec view orphan-edge-key detection", () => {
+  it("throws when view.edges contains a key not in spec edges", () => {
+    expect(() =>
+      parseSpec(
+        { nodes: [okNode], edges: [okEdge] },
+        { edges: { "ghost-edge": {} } },
+      ),
+    ).toThrow(/view edge key "ghost-edge" has no matching edge in spec/);
+  });
+
+  it("accepts when view.edges keys match spec edge ids", () => {
+    expect(() =>
+      parseSpec(
+        { nodes: [okNode], edges: [okEdge] },
+        { edges: { [okEdge.id]: { route: "snake-v" } } },
+      ),
+    ).not.toThrow();
+  });
+
+  it("accepts when view has no edges key", () => {
+    expect(() =>
+      parseSpec({ nodes: [okNode], edges: [okEdge] }, {}),
+    ).not.toThrow();
+  });
+
+  it("accepts when view argument is omitted", () => {
+    expect(() =>
+      parseSpec({ nodes: [okNode], edges: [okEdge] }),
+    ).not.toThrow();
+  });
+});
+
 describe("parseSpec accepts", () => {
   it("a minimal valid spec", () => {
     const s = parseSpec({ nodes: [okNode], edges: [] });
