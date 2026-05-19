@@ -71,6 +71,7 @@ export interface KindBodyCtx {
   slotIds: string[];
   initialQueue: unknown[];
   initialSlots?: Record<string, unknown>;
+  repeat?: boolean;
   traceId?: string;
 }
 
@@ -98,10 +99,10 @@ export function isKindInert(
 // Single dispatch from validated kind to body component.
 // RSubstrateNode is the only caller — one switch, one path.
 export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
-  const { nodeRef, outWireRefs, slotIds, initialQueue, initialSlots, traceId } = ctx;
+  const { nodeRef, outWireRefs, slotIds, initialQueue, initialSlots, repeat, traceId } = ctx;
   switch (kind) {
     case "input":
-      return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} initialQueue={initialQueue} traceId={traceId} />;
+      return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} initialQueue={initialQueue} repeat={repeat} traceId={traceId} />;
     case "relay":
       return <RelayBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} initialSlots={initialSlots} traceId={traceId} />;
     case "chainInhibitor":
@@ -122,11 +123,12 @@ export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
 }
 
 export function InputBody({
-  nodeRef, outWireRef, initialQueue, traceId,
+  nodeRef, outWireRef, initialQueue, repeat = true, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
   initialQueue: unknown[];
+  repeat?: boolean;
   traceId?: string;
 }) {
   const initialQueueRef = useRef(initialQueue);
@@ -137,13 +139,13 @@ export function InputBody({
     if (!wire) return;
     if (!wire.canAccept) return;
     if (remainingRef.current.length === 0) {
-      if (initialQueueRef.current.length === 0) return;
+      if (!repeat || initialQueueRef.current.length === 0) return;
       remainingRef.current = [...initialQueueRef.current];
     }
     const v = remainingRef.current.shift();
     if (traceId) postLog("trace.input.fire", { node: traceId, value: v });
     wire.load(v);
-  }, [outWireRef, traceId]);
+  }, [outWireRef, repeat, traceId]);
 
   useEffect(() => {
     let raf = 0;
@@ -237,31 +239,25 @@ export function ChainInhibitorBody({
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
-    const inhibitWire = inhibitOutWireRef?.current ?? null;
-
-    // Rule A (emit): held filled && canAccept — runs first so existing held
-    // is consumed before Rule B potentially refills it this same frame.
-    if (node.slotPhase("held") === "filled" && wire.canAccept && (!inhibitWire || inhibitWire.canAccept)) {
-      lastSkipReasonRef.current = null;
-      const emitted = node.consume("held");
-      if (traceId) postLog("trace.chainInhibitor.emit", { node: traceId, emitted });
-      wire.load(emitted);
-      if (inhibitWire) inhibitWire.load(emitted);
-    }
-
-    // Rule B (refill): slot filled && held empty — may fill held for next frame
-    // (or immediately if Rule A just cleared it above).
-    if (node.slotPhase(slotId) === "filled" && node.slotPhase("held") === "empty") {
-      const incoming = node.consume(slotId);
-      node.fill("held", incoming);
-      setHeldDisplay(incoming);
-      if (traceId) postLog("trace.chainInhibitor.refill", { node: traceId, incoming });
-    } else if (node.slotPhase(slotId) !== "filled") {
+    if (node.slotPhase(slotId) !== "filled") {
       if (traceId && lastSkipReasonRef.current !== "slot-not-filled") {
         postLog("trace.chainInhibitor.skip", { node: traceId, reason: "slot-not-filled" });
         lastSkipReasonRef.current = "slot-not-filled";
       }
+      return;
     }
+    if (node.slotPhase("held") !== "filled") return;
+    lastSkipReasonRef.current = null;
+    const inhibitWire = inhibitOutWireRef?.current ?? null;
+    if (!wire.canAccept) return;
+    if (inhibitWire && !inhibitWire.canAccept) return;
+    const incoming = node.consume(slotId);
+    const emitted = node.consume("held");
+    node.fill("held", incoming);
+    setHeldDisplay(incoming);
+    if (traceId) postLog("trace.chainInhibitor.fire", { node: traceId, incoming, emitted });
+    wire.load(emitted);
+    if (inhibitWire) inhibitWire.load(emitted);
   }, [nodeRef, outWireRef, inhibitOutWireRef, slotId, traceId]);
 
   useEffect(() => {
