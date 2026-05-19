@@ -18,7 +18,7 @@
     {
       "id": "gate->inhib",
       "source": "gate",
-      "sourceHandle": "out",
+      "sourceHandle": "gated",
       "target": "inhib",
       "targetHandle": "in",
       "kind": "chain",

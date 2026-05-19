@@ -14,7 +14,7 @@ type ReadGateNode struct {
 	HasAck    bool
 	ValueCh   <-chan int
 	AckCh     <-chan int
-	ToLatch   chan<- int
+	Gated     chan<- int
 }
 
 func (g *ReadGateNode) Update(s *S.SafeWorker) {
@@ -49,8 +49,8 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 		if g.HasValue && g.HasAck {
 			fmt.Printf("%s: value=%d ack=%d → %d\n", g.Name, g.Value, g.AckVal, g.Value)
 			s.Trace.Fire(g.Name)
-			S.Send(g.ToLatch, g.Value)
-			s.Trace.Send(g.Name, "out", g.Value)
+			S.Send(g.Gated, g.Value)
+			s.Trace.Send(g.Name, "gated", g.Value)
 			g.HasValue = false
 			g.HasAck = false
 		}

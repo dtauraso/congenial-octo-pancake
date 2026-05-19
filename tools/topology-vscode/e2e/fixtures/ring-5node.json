@@ -18,9 +18,9 @@
       "data": { "slots": 1 }
     },
     {
-      "id": "readGate.out->i0.in",
+      "id": "readGate.gated->i0.in",
       "source": "readGate1",
-      "sourceHandle": "out",
+      "sourceHandle": "gated",
       "target": "i0",
       "targetHandle": "in",
       "kind": "chain",

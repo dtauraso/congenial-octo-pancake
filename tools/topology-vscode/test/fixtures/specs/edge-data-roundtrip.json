@@ -27,7 +27,7 @@
     {
       "id": "readGateToI0",
       "source": "readGate",
-      "sourceHandle": "out",
+      "sourceHandle": "gated",
       "target": "i0",
       "targetHandle": "in",
       "kind": "chain",

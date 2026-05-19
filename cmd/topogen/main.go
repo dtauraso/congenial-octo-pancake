@@ -83,7 +83,7 @@ var REGISTRY = map[string]NodeBind{
 			"value": {Field: "ValueCh"},
 			"ack": {Field: "AckCh"},
 		},
-		Outputs: map[string]PortBind{"out": {Field: "ToLatch"}},
+		Outputs: map[string]PortBind{"gated": {Field: "Gated"}},
 	},
 	"ChainInhibitor": {
 		Pkg: "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode", Alias: "CI", Struct: "ChainInhibitorNode",

@@ -12,7 +12,7 @@
 //
 // Edges:
 //   inputToReadGate         in08.out -> readGate1.value
-//   readGateToI0            readGate1.out -> i0.in
+//   readGateToI0            readGate1.gated -> i0.in
 //   i0ToI1                  i0.out -> i1.in
 //   i0InhibitToRight0Left   i0.inhibitOut -> inhibitRight0.left
 //   i1InhibitToRight0Right  i1.inhibitOut -> inhibitRight0.right
@@ -53,7 +53,7 @@ func Wire() []S.Node {
 
 	// Nodes
 	in08 := INN.InputNode{Id: 0, Name: "in08", Input: in08Input, ToNext: inputToReadGate}
-	readGate1 := RGN.ReadGateNode{Id: 0, Name: "readGate1", ValueCh: inputToReadGate, AckCh: bootstrapRgToReadGate, ToLatch: readGateToI0}
+	readGate1 := RGN.ReadGateNode{Id: 0, Name: "readGate1", ValueCh: inputToReadGate, AckCh: bootstrapRgToReadGate, Gated: readGateToI0}
 	i0 := CI.ChainInhibitorNode{Id: 0, Name: "i0", HeldValue: 0, FromPrev: readGateToI0, ToAck: i0Ack, ToEdge: []chan<- int{i0InhibitToRight0Left}, ToNext: i0ToI1}
 	i1 := CI.ChainInhibitorNode{Id: 0, Name: "i1", HeldValue: 0, FromPrev: i0ToI1, ToAck: i1Ack, ToEdge: []chan<- int{i1InhibitToRight0Right}, ToNext: i1ToReadGate}
 	inhibitRight0 := IRG.InhibitRightGateNode{Id: 0, Name: "inhibitRight0", FromLeft: i0InhibitToRight0Left, FromRight: i1InhibitToRight0Right, ToOut: inhibitRight0Out}

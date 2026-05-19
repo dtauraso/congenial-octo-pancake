@@ -59,9 +59,9 @@
   ],
   "edges": [
     {
-      "id": "readGate.out->i0.in",
+      "id": "readGate.gated->i0.in",
       "source": "readGate14",
-      "sourceHandle": "out",
+      "sourceHandle": "gated",
       "target": "i0Test3",
       "targetHandle": "in",
       "kind": "chain",
@@ -164,7 +164,7 @@
           "readGate14"
         ],
         "departs": [
-          "readGate.out->i0.in"
+          "readGate.gated->i0.in"
         ],
         "arrives": [
           "in0.out->readGate.value"
@@ -181,7 +181,7 @@
           "i0.inhibitOut->inhibitRight0.left"
         ],
         "arrives": [
-          "readGate.out->i0.in"
+          "readGate.gated->i0.in"
         ],
         "state": {
           "i0Test3": {
