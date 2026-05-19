@@ -1,7 +1,7 @@
 // Phase 8 Chunk 4 — ReadGate cross-language fixture parity.
 //
-// ReadGate is an AndGate variant whose output equals i0In (TS:
-// makeJoin(["i0In","ack"], "out", a => a)). The Go ReadGateNode
+// ReadGate is an AndGate variant whose output equals value (TS:
+// makeJoin(["value","ack"], "out", a => a)). The Go ReadGateNode
 // already existed with Trace wired; this test pins it against the
 // TS-authored canonical fixture.
 
@@ -58,7 +58,7 @@ func TestParity_FixtureMatch_ReadGate(t *testing.T) {
 	ackIn := make(chan int, 1)
 	rgOut := make(chan int, 1)
 
-	rg := RG.ReadGateNode{Name: "rg", FromValue: chainIn, FromAck: ackIn, ToLatch: rgOut}
+	rg := RG.ReadGateNode{Name: "rg", ValueCh: chainIn, FromAck: ackIn, ToLatch: rgOut}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)

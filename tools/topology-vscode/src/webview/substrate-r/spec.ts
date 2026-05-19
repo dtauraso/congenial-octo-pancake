@@ -30,7 +30,7 @@ export interface RNodeSpec {
   kind: RNodeKind;
   props?: { queue?: unknown[] };
   // Per-node override of NODE_KIND_PORTS. Lets a spec declare e.g. a
-  // readgate whose input slot is "i0In" rather than "slot",
+  // readgate whose input slot is "value" rather than "slot",
   // matching what the editor schema can produce. Arity must match the
   // kind's defaults; only the names change.
   ports?: { inputs?: string[]; outputs?: string[] };

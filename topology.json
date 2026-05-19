@@ -24,7 +24,7 @@
       "type": "ReadGate",
       "inputs": [
         {
-          "name": "i0In",
+          "name": "value",
           "kind": "chain",
           "side": "left",
           "slot": 1
@@ -142,11 +142,11 @@
   ],
   "edges": [
     {
-      "id": "in0.out->readGate.i0In",
+      "id": "in0.out->readGate.value",
       "source": "in08",
       "sourceHandle": "out",
       "target": "readGate1",
-      "targetHandle": "i0In",
+      "targetHandle": "value",
       "kind": "chain",
       "label": "inputToReadGate",
       "data": {

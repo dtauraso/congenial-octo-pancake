@@ -20,7 +20,7 @@
       "source": "in0",
       "sourceHandle": "out",
       "target": "readGate",
-      "targetHandle": "i0In",
+      "targetHandle": "value",
       "kind": "chain",
       "data": { "slots": 1 }
     },

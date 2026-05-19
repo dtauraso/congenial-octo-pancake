@@ -9,7 +9,7 @@ import { parseSpec } from "../src/schema";
 const okNode = { id: "n", type: "ChainInhibitor" };
 const okEdge = {
   id: "e", source: "n", sourceHandle: "out",
-  target: "n", targetHandle: "i0In", kind: "chain",
+  target: "n", targetHandle: "value", kind: "chain",
 };
 
 describe("parseSpec rejects", () => {

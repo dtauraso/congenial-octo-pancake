@@ -13,7 +13,7 @@
 //   readGateToI0      readGate14.out -> i0Test3.in
 //   i0ToI1            i0Test3.out -> myInhibitor.in
 //   i1AckToReadGate   myInhibitor.out -> readGate14.ack
-//   inputToReadGate   in0test.out -> readGate14.i0In
+//   inputToReadGate   in0test.out -> readGate14.value
 //   i0ToInhibitRight  i0Test3.inhibitOut -> inhibitRight0.left
 //   i1ToInhibitRight  myInhibitor.inhibitOut -> inhibitRight0.right
 
@@ -36,9 +36,6 @@ func Wire() []S.Node {
 	i0ToInhibitRight := make(chan int, 1)
 	i1ToInhibitRight := make(chan int, 1)
 
-	// Edge priming
-	i1AckToReadGate <- 1
-
 	// Input externals
 	in0testInput := make(chan int, 3)
 	in0testInput <- 0
@@ -52,7 +49,7 @@ func Wire() []S.Node {
 
 	// Nodes
 	in0test := INN.InputNode{Id: 0, Name: "in0test", Input: in0testInput, ToNext: inputToReadGate}
-	readGate14 := RGN.ReadGateNode{Id: 0, Name: "readGate14", FromAck: i1AckToReadGate, FromValue: inputToReadGate, ToLatch: readGateToI0}
+	readGate14 := RGN.ReadGateNode{Id: 0, Name: "readGate14", ValueCh: inputToReadGate, ToLatch: readGateToI0}
 	i0Test3 := CI.ChainInhibitorNode{Id: 0, Name: "i0Test3", FromPrev: readGateToI0, ToAck: i0Test3Ack, ToEdge: []chan<- int{i0ToInhibitRight}, ToNext: i0ToI1}
 	myInhibitor := CI.ChainInhibitorNode{Id: 1, Name: "myInhibitor", FromPrev: i0ToI1, ToAck: myInhibitorAck, ToEdge: []chan<- int{i1ToInhibitRight}, ToNext: i1AckToReadGate}
 	inhibitRight0 := IRG.InhibitRightGateNode{Id: 0, Name: "inhibitRight0", FromLeft: i0ToInhibitRight, FromRight: i1ToInhibitRight, ToOut: inhibitRight0Out}

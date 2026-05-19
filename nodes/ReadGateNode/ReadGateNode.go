@@ -12,7 +12,7 @@ type ReadGateNode struct {
 	HasValue  bool
 	AckVal    int
 	HasAck    bool
-	FromValue <-chan int
+	ValueCh   <-chan int
 	FromAck   <-chan int
 	ToLatch   chan<- int
 }
@@ -28,10 +28,10 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 
 		if !g.HasValue {
 			select {
-			case v := <-g.FromValue:
+			case v := <-g.ValueCh:
 				g.Value = v
 				g.HasValue = true
-				s.Trace.Recv(g.Name, "i0In", v)
+				s.Trace.Recv(g.Name, "value", v)
 			default:
 			}
 		}
