@@ -10,38 +10,41 @@ import { KIND_COLORS, type ArrowStyle, type EdgeKind } from "../../schema";
 import { LaneDragHandle } from "./LaneDragHandle";
 import { markerEndUrl } from "../rf/MarkerDefs";
 
-const SHORT_EDGE_THRESHOLD_PX = 12;
+// Marker head lengths (refX of the filled markers in MarkerDefs).
+// Shrink to sm only when the path is shorter than the md head itself,
+// otherwise the head visually overflows the path tail. Drop the marker
+// entirely when the path is shorter than the sm head.
+const MD_HEAD_PX = 8;
+const SM_HEAD_PX = 5;
 
 function dashForKind(kind: EdgeKind | undefined): string | undefined {
   return kind === "pointer" ? "4 3" : undefined;
 }
 
-// Approximate pixel length of the edge path without a DOM measurement.
-// For dogleg routes (snake, snake-v, below), the total run is the sum of
-// the three axis-aligned segments; for the bezier "line" route, the chord
-// distance is a conservative lower bound (real arc is longer, so using it
-// only makes the threshold more conservative — safe for the shrink case).
-function approxEdgeLength(
+// Length of the final segment of the edge — the leg the arrow sits on.
+// Marker-shrink decisions should use this, not total path length: a long
+// dogleg route can still terminate in a tiny entry leg where a full-size
+// arrow visually dominates. For the bezier "line" route there is no
+// distinct final segment, so fall back to the chord length.
+function finalSegmentLength(
   route: EdgeRoute,
   sx: number, sy: number,
   tx: number, ty: number,
   lane: number,
 ): number {
-  const dx = Math.abs(tx - sx);
-  const dy = Math.abs(ty - sy);
   if (route === "snake") {
     const midX = (sx + tx) / 2 + lane;
-    return Math.abs(midX - sx) + dy + Math.abs(tx - midX);
+    return Math.abs(tx - midX);
   }
   if (route === "snake-v") {
     const midY = (sy + ty) / 2 + lane;
-    return dx + Math.abs(midY - sy) + Math.abs(ty - midY);
+    return Math.abs(ty - midY);
   }
   if (route === "below") {
     const corridorY = Math.max(sy, ty) + 80 + lane;
-    return (corridorY - sy) + dx + (corridorY - ty);
+    return corridorY - ty;
   }
-  // "line" bezier: chord is a lower bound
+  const dx = tx - sx, dy = ty - sy;
   return Math.sqrt(dx * dx + dy * dy);
 }
 
@@ -82,9 +85,9 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
   const kind: EdgeKind = data?.kind ?? "any";
   const stroke = KIND_COLORS[kind] ?? "#888";
   const dash = dashForKind(kind);
-  const edgeLen = approxEdgeLength(route, sourceX, sourceY, targetX, targetY, lane);
-  const markerSize = edgeLen < SHORT_EDGE_THRESHOLD_PX ? "sm" : "md";
-  const markerEnd = markerEndUrl(kind, data?.arrowStyle, markerSize);
+  const legLen = finalSegmentLength(route, sourceX, sourceY, targetX, targetY, lane);
+  const markerSize: "sm" | "md" = legLen < MD_HEAD_PX ? "sm" : "md";
+  const markerEnd = legLen < SM_HEAD_PX ? undefined : markerEndUrl(kind, data?.arrowStyle, markerSize);
 
   const pathD = useMemo(
     () => buildEdgePathD(

@@ -41,7 +41,7 @@ export function MarkerDefs() {
             viewBox="0 0 8 6"
             markerWidth={8}
             markerHeight={6}
-            refX={8}
+            refX={7}
             refY={3}
             orient="auto-start-reverse"
           >
@@ -55,7 +55,7 @@ export function MarkerDefs() {
             viewBox="0 0 10 8"
             markerWidth={10}
             markerHeight={8}
-            refX={10}
+            refX={9}
             refY={4}
             orient="auto-start-reverse"
           >
@@ -72,9 +72,9 @@ export function MarkerDefs() {
             key={`fsm-${k}`}
             id={`wf-arrow-filled-sm-${k}`}
             viewBox="0 0 5 4"
-            markerWidth={5}
-            markerHeight={4}
-            refX={5}
+            markerWidth={3.75}
+            markerHeight={3}
+            refX={4}
             refY={2}
             orient="auto-start-reverse"
           >
@@ -86,9 +86,9 @@ export function MarkerDefs() {
             key={`osm-${k}`}
             id={`wf-arrow-open-sm-${k}`}
             viewBox="0 0 6 5"
-            markerWidth={6}
-            markerHeight={5}
-            refX={6}
+            markerWidth={4.5}
+            markerHeight={3.75}
+            refX={5}
             refY={2.5}
             orient="auto-start-reverse"
           >
