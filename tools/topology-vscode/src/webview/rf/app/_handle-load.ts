@@ -4,6 +4,7 @@ import { specToFlow } from "../adapter";
 import { clearSpecHistory, patchViewerState, setSpec, viewerState } from "../../state";
 import { scheduleViewSave } from "../../save";
 import { migrateLegacyFields } from "./_migrate-legacy-fields";
+import { reconcileSelection } from "./_reconcile-selection";
 import type { AppCtx } from "./_ctx";
 
 // Fresh "load" message: parse, install spec, kick the renderer, then
@@ -32,8 +33,7 @@ export function handleLoad(ctx: AppCtx, text: string) {
     ctx.lastSpec.current = next;
     postLog("load", { nodes: next.nodes.length, edges: next.edges.length });
     const flow = specToFlow(next, viewerState.folds, viewerState);
-    const presentIds = new Set(flow.nodes.map((n) => n.id));
-    const filtered = (viewerState.lastSelectionIds ?? []).filter((id) => presentIds.has(id));
+    const filtered = reconcileSelection(viewerState.lastSelectionIds, flow.nodes.map((n) => n.id));
     const sel = new Set(filtered);
     if (sel.size > 0) {
       flow.nodes = flow.nodes.map((n) => sel.has(n.id) ? { ...n, selected: true } : n);

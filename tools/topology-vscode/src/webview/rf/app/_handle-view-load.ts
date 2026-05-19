@@ -3,6 +3,7 @@ import { markViewSynced, scheduleViewSave } from "../../save";
 import { clearViewerHistory, patchViewerState, setViewerState } from "../../state";
 import { parseViewerState, serializeViewerState } from "../../viewerState";
 import { resolveViewLoadViewport } from "./_resolve-view-load-viewport";
+import { reconcileSelection } from "./_reconcile-selection";
 import type { AppCtx } from "./_ctx";
 
 // "view-load" sidecar message: install viewerState, reconcile selection
@@ -28,11 +29,9 @@ export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
   }
   // Always reconcile selection — empty case clears stale `selected`
   // flags from a prior render.
-  const savedSel = new Set(next.lastSelectionIds ?? []);
   ctx.setNodes((ns) => {
     if (ns.length === 0) return ns;
-    const present = new Set(ns.map((n) => n.id));
-    const reconciled = [...savedSel].filter((id) => present.has(id));
+    const reconciled = reconcileSelection(next.lastSelectionIds, ns.map((n) => n.id));
     const want = new Set(reconciled);
     patchViewerState((v) => { v.lastSelectionIds = reconciled.length > 0 ? reconciled : undefined; });
     return ns.map((n) => {
