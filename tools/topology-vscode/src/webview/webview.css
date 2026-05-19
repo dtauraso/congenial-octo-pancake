@@ -92,11 +92,12 @@ html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-fami
   cursor: text; min-width: 40px;
 }
 .palette-panel {
-  position: fixed; top: 48px; left: 8px; width: 160px;
+  position: fixed; top: 48px; left: 8px; bottom: 200px; width: 160px;
   padding: 8px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px;
   font-size: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 10;
-  max-height: calc(100vh - 224px); overflow-y: auto;
+  overflow: hidden;
 }
+.palette-panel.collapsed { bottom: auto; overflow: visible; }
 .palette-panel.collapsed { width: auto; padding: 4px; }
 .palette-header { font-weight: 600; color: #444; display: flex; align-items: center; gap: 6px; }
 .palette-fold {
@@ -104,7 +105,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-fami
   padding: 0 6px; cursor: pointer; font-size: 11px; line-height: 1.4; color: #444;
 }
 .palette-fold:hover { background: #f0f0f0; }
-.palette-list { display: flex; flex-direction: column; gap: 2px; }
+.palette-list { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; flex: 1; }
 .palette-item {
   display: flex; align-items: center; gap: 6px;
   padding: 4px 6px; border: 1px solid #eee; border-radius: 4px;
