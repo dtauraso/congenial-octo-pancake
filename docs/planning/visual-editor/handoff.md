@@ -9,17 +9,33 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, editor-chrome cleanup merged to main)
+## State at handoff (2026-05-18, force-delegate hook on main)
 
-**Active branch:** `main`. `task/strip-editor-chrome` merged via
+**Active branch:** `main`. Latest commit `e81bba6` adds a PreToolUse
+hook that hard-blocks executor-style work after 2 inline lookups.
+Earlier in the session, `task/strip-editor-chrome` merged via
 `--no-ff` (commit `4f34395`) and deleted locally and on remote.
 
 ## What landed on main this session
+
+- `e81bba6` Added `scripts/force-delegate-hook.py` + wired into
+  `.claude/settings.json` PreToolUse. Counts Read/Grep/Glob and
+  search-style Bash (grep|rg|find|ls|cat|head|tail|awk|sed) per
+  session; 3rd qualifying call returns
+  `permissionDecision: "deny"` with a message instructing the model
+  to spawn an Agent subagent. Counter resets on Task/Agent. Existing
+  soft `UserPromptSubmit` reminder via `delegate-reminder-hook.py`
+  is retained. Manual escape: `rm /tmp/claude-delegate-*.count`.
+
+Editor chrome cleanup sweep (earlier this session) — removed
+dead/distracting UI panels and tightened the remaining chrome. Net:
+-981 lines inserted, +109.
 
 Editor chrome cleanup sweep — removed dead/distracting UI panels and
 tightened the remaining chrome. Net: -981 lines inserted, +109.
 
 - `d05d237` Removed ViewsPanel (saved-views panel).
+
 - `07057ff` Removed React Flow MiniMap.
 - `1106648` Removed compare-with feature (CompareToolbar,
   diff-decorate/*, compare-load host messages, comparison state,
