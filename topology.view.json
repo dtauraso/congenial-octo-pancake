@@ -1,8 +1,8 @@
 {
   "camera": {
-    "x": 116.54149171955834,
-    "y": -180.84741011406726,
-    "zoom": 1.1942331690542816
+    "x": 140.07124507590538,
+    "y": -212.08738493879798,
+    "zoom": 1.2563749536369906
   },
   "views": [],
   "folds": [],
@@ -65,10 +65,10 @@
     }
   },
   "edges": {
-    "i0.inhibitOut->inhibitRight0.left": {
+    "i0ToInhibitRight0": {
       "route": "snake-v"
     },
-    "i1.inhibitOut->inhibitRight0.right": {
+    "i1ToInhibitRight0": {
       "route": "snake-v"
     }
   }
