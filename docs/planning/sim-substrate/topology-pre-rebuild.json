@@ -64,11 +64,11 @@
       }
     },
     {
-      "id": "in0.out->readGate.chainIn",
+      "id": "in0.out->readGate.i0In",
       "source": "in08",
       "sourceHandle": "out",
       "target": "readGate1",
-      "targetHandle": "chainIn",
+      "targetHandle": "i0In",
       "kind": "chain",
       "label": "inputToReadGate",
       "data": {
