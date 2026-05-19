@@ -70,6 +70,7 @@ export function parseNode(v: unknown, path: string): Node {
     data: o.data,
     inputs: opt(o.inputs, (x) => parsePorts(x, `${path}.inputs`)),
     outputs: opt(o.outputs, (x) => parsePorts(x, `${path}.outputs`)),
+    initialSlots: opt(o.initialSlots, (x) => stateMap(x, `${path}.initialSlots`)),
   };
 }
 
