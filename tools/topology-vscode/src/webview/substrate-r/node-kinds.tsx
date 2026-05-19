@@ -291,7 +291,7 @@ export function ChainInhibitorBody({
 // This is a one-fill shift-register pattern.
 
 export function RegisterBody({
-  nodeRef, outWireRef, slotId = "slot", initialSlots, traceId,
+  nodeRef, outWireRef, slotId = "in", initialSlots, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef?: RefObject<WireHandle | null>;

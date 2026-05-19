@@ -83,7 +83,7 @@ export const NODE_KIND_PORTS: Record<RNodeKind, KindPorts> = {
   readgate: { inputs: ["value", "ack"], outputs: ["gated"] },
   chainInhibitor: { inputs: ["in"], outputs: ["inhibitOut", "out"] },
   inhibitrightgate: { inputs: ["left", "right"], outputs: ["out"] },
-  register: { inputs: ["slot"], outputs: ["out"] },
+  register: { inputs: ["in"], outputs: ["out"] },
 };
 
 export function parseSpec(spec: RTopologySpec): RTopologySpec {
