@@ -244,7 +244,6 @@ export interface WireProps {
   pauseAxis?: PauseAxis;
   traceId?: string;
   value?: unknown;
-  seed?: unknown;
 }
 
 // ── WireLoop ────────────────────────────────────────────────────────
@@ -370,7 +369,7 @@ class WireLoop {
 }
 
 export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
-  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId, value, seed }, ref,
+  { pathD, arcLength, stroke = "#888", strokeDasharray, markerEnd, destNodeRef, destSlotId, pauseAxis, traceId, value }, ref,
 ) {
   const phaseRef = useRef<Phase>(initialPhase);
   const [phase, setPhase] = useState<Phase>(initialPhase);
@@ -480,21 +479,6 @@ export const Wire = forwardRef<WireHandle, WireProps>(function Wire(
   useLayoutEffect(() => {
     wireLoopRef.current?.reposition();
   }, [pathD, arcLength]);
-
-  // One-shot seed: if a seed value is configured, deliver it through the
-  // normal wire.load path so the value enters in-flight, animates, and
-  // writes the destination slot on arrival — one delivery path, not two.
-  // Used by ring topologies to break chicken-and-egg startup deadlock.
-  // Re-runs on seed/load changes; a ref guard ensures we only load once.
-  const seededRef = useRef(false);
-  useEffect(() => {
-    if (seededRef.current) return;
-    if (seed === undefined) return;
-    if (phaseRef.current.kind !== "empty") return;
-    seededRef.current = true;
-    if (traceId) postLog("trace.seed", { wire: traceId, slot: destSlotId, value: seed });
-    load(seed);
-  }, [seed, destSlotId, traceId, load]);
 
   // Ref callback for the <path> element — constructs/disposes WireLoop.
   const pathRefCallback = useCallback((el: SVGPathElement | null) => {
