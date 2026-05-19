@@ -49,7 +49,7 @@ export function AppView(p: AppViewProps) {
         nodeTypes={RF_NODE_TYPES}
       >
         <Background gap={24} />
-        <Controls position="bottom-right" />
+        <Controls position="bottom-left" />
       </ReactFlow>
       <AlignGuides guides={p.guides} />
       <MarkerDefs />
