@@ -27,35 +27,25 @@ func checkIdent(field, value string) error {
 }
 
 type NodeData struct {
-	Init []int `json:"init,omitempty"`
+	Init         []int          `json:"init,omitempty"`
+	InitialSlots map[string]int `json:"initialSlots,omitempty"`
 }
 
 type Node struct {
-	ID    string    `json:"id"`
-	Type  string    `json:"type"`
-	Index *int      `json:"index,omitempty"`
-	Data  *NodeData `json:"data,omitempty"`
-}
-
-type EdgeData struct {
-	Init []int `json:"init,omitempty"`
+	ID           string         `json:"id"`
+	Type         string         `json:"type"`
+	Index        *int           `json:"index,omitempty"`
+	Data         *NodeData      `json:"data,omitempty"`
+	InitialSlots map[string]int `json:"initialSlots,omitempty"`
 }
 
 type Edge struct {
-	Label        string    `json:"label"`
-	Source       string    `json:"source"`
-	SourceHandle string    `json:"sourceHandle"`
-	Target       string    `json:"target"`
-	TargetHandle string    `json:"targetHandle"`
-	Kind         string    `json:"kind"`
-	Data         *EdgeData `json:"data,omitempty"`
-}
-
-func (e Edge) InitVals() []int {
-	if e.Data == nil {
-		return nil
-	}
-	return e.Data.Init
+	Label        string `json:"label"`
+	Source       string `json:"source"`
+	SourceHandle string `json:"sourceHandle"`
+	Target       string `json:"target"`
+	TargetHandle string `json:"targetHandle"`
+	Kind         string `json:"kind"`
 }
 
 type Spec struct {
@@ -76,6 +66,9 @@ type NodeBind struct {
 	Outputs map[string]PortBind
 	HasInputChan bool // node has an external Input channel pre-loaded with init values
 	InputField   string
+	// SlotFields maps initialSlots slot names that are struct int fields (not channels)
+	// to the Go struct field name to emit.
+	SlotFields map[string]string
 }
 
 var REGISTRY = map[string]NodeBind{
@@ -88,7 +81,7 @@ var REGISTRY = map[string]NodeBind{
 		Pkg: "github.com/dtauraso/wirefold/nodes/ReadGateNode", Alias: "RGN", Struct: "ReadGateNode",
 		Inputs: map[string]PortBind{
 			"i0In": {Field: "FromValue"},
-			"ack":  {Field: "FromAck"},
+			"i1In": {Field: "FromAck"},
 		},
 		Outputs: map[string]PortBind{"out": {Field: "ToLatch"}},
 	},
@@ -100,6 +93,7 @@ var REGISTRY = map[string]NodeBind{
 			"ack":        {Field: "ToAck"},
 			"inhibitOut": {Field: "ToEdge", Multi: true},
 		},
+		SlotFields: map[string]string{"held": "HeldValue"},
 	},
 	"InhibitRightGate": {
 		Pkg: "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode", Alias: "IRG", Struct: "InhibitRightGateNode",
@@ -211,15 +205,31 @@ func generate(spec Spec) (string, error) {
 		fmt.Fprintf(&b, "\t%s := make(chan int, 1)\n", e.Label)
 	}
 
-	// 2. Edge priming (for cycle-closer feedback channels).
+	// 2. Node slot priming — pre-load input channels for initialSlots entries that
+	//    map to a port (not a struct field). This replaces the retired EdgeData.Init
+	//    edge-priming path.
 	primed := false
-	for _, e := range spec.Edges {
-		for _, v := range e.InitVals() {
+	for _, n := range spec.Nodes {
+		slots := nodeInitialSlots(n)
+		if len(slots) == 0 {
+			continue
+		}
+		bind := REGISTRY[n.Type]
+		for _, slotName := range sortedKeys(slots) {
+			// Skip struct-field slots; those are emitted in the node literal.
+			if _, isField := bind.SlotFields[slotName]; isField {
+				continue
+			}
+			// Must be an input port — look up the channel name.
+			ch, ok := inEdges[n.ID][slotName]
+			if !ok {
+				return "", fmt.Errorf("node %q initialSlots: slot %q has no incoming edge", n.ID, slotName)
+			}
 			if !primed {
-				b.WriteString("\n\t// Edge priming\n")
+				b.WriteString("\n\t// Node slot priming\n")
 				primed = true
 			}
-			fmt.Fprintf(&b, "\t%s <- %d\n", e.Label, v)
+			fmt.Fprintf(&b, "\t%s <- %d\n", ch, slots[slotName])
 		}
 	}
 
@@ -281,6 +291,15 @@ func generate(spec Spec) (string, error) {
 		fields = append(fields, fmt.Sprintf("Name: %q", n.ID))
 		if bind.HasInputChan {
 			fields = append(fields, fmt.Sprintf("%s: %sInput", bind.InputField, n.ID))
+		}
+		// Struct-field slots from initialSlots (e.g. HeldValue on ChainInhibitor).
+		slots := nodeInitialSlots(n)
+		for _, slotName := range sortedKeys(slots) {
+			goField, isField := bind.SlotFields[slotName]
+			if !isField {
+				continue
+			}
+			fields = append(fields, fmt.Sprintf("%s: %d", goField, slots[slotName]))
 		}
 		for _, port := range sortedKeys(bind.Inputs) {
 			pb := bind.Inputs[port]
@@ -346,6 +365,20 @@ func writeSpecSummary(b *strings.Builder, spec Spec) {
 		fmt.Fprintf(b, "//   %-*s  %s.%s -> %s.%s\n",
 			labelWidth, e.Label, e.Source, e.SourceHandle, e.Target, e.TargetHandle)
 	}
+}
+
+// nodeInitialSlots merges top-level and data.initialSlots, top-level wins on conflict.
+func nodeInitialSlots(n Node) map[string]int {
+	merged := map[string]int{}
+	if n.Data != nil {
+		for k, v := range n.Data.InitialSlots {
+			merged[k] = v
+		}
+	}
+	for k, v := range n.InitialSlots {
+		merged[k] = v
+	}
+	return merged
 }
 
 func sortedKeys[V any](m map[string]V) []string {
