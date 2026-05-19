@@ -9,79 +9,115 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-19, run-start-concept landed)
+## State at handoff (2026-05-19, ReadGate rename landed and verified live)
 
-**Active branch:** `main`. No active task branch.
+**Active branch:** `task/runtime-editor-port-alignment`. Pushed.
+11 commits ahead of main.
 
-`task/run-start-concept` merged to `main` at `a75770c` and deleted
-locally and on remote.
+Animation verified working in the live editor after rename
+(David confirmed). Build, typecheck, `go build ./...`, Trace tests,
+topogen tests all clean.
 
-`task/runtime-editor-port-alignment` exists locally only (never pushed
-after merge). Has stashed `topology.view.json` drift (`git stash list`
-will show entries). Decision needed — see Next concrete step.
+## What landed on the branch this session
 
-## What landed on `main` this session (run-start-concept, commit `a75770c`)
+Two phases on top of 6 prior scaffolding commits:
 
-- **`data.initialSlots` field** added to node spec. Node construction
-  fills named slots directly at startup; replaces edge-side `data.seed`.
-- **Bootstrap node pattern** established: a kind-`input` node
-  (`bootstrap_rg`) wired into `readGate1.i1In` provides ring tick-0
-  entry without a shared driver.
-- **Audit-page hack #2 reclassified**: InputBody self-RAF is the
-  substrate model (each node kind owns its own RAF loop); not a hack.
-- **ChainInhibitor synchronous shift rule preserved**: one-emit-per-input
-  maintained throughout.
-- **Edge-side `data.seed` retired**: Wire.tsx seed path and `seededRef`
-  deleted entirely.
+**Phase 1 — kill hardcoded port-name literals (`01a4c2c`):**
 
-## Parked follow-ups (do not lose these)
+`node-kinds.tsx` no longer hardcodes `outWireRefs["out"]` etc.
+Output-wire-ref lookups now derive from `NODE_KIND_PORTS` in
+`tools/topology-vscode/src/webview/substrate-r/spec.ts`, which is
+the single source of truth. The three-string coupling
+(`port.name` ↔ edge `sourceHandle` ↔ literal in dispatch) is now
+two strings.
 
-1. **ChainInhibitorBody `useState(null)` display state** — parallel to
-   the real `held` slot; can be deleted — slot is source of truth.
-2. **ring-5node.json e2e fixture** — still uses old-style `data.seed`
-   format; migrate to `initialSlots` schema.
-3. **ReadGate port-alignment branch** (`task/runtime-editor-port-alignment`,
-   local only, stashed): `ack` → `i1In` rename happened as a side-effect
-   of the run-start branch (Go registry already updated). Reassess
-   whether remaining work on that branch is still needed or retire it.
-4. **Topogen one-shot Input** (`repeat=false`): propagated to TS only;
-   Go side currently disabled (Run button faded). Registry will need a
-   one-shot if/when Go runtime returns.
-5. **`held=null` visual ambivalence** (David's note): held slot is
-   born-empty for i0, visibly null in some indicator. Tolerated for now.
+**Phase 2 — ReadGate port rename, fully semantic (`5505974` / `d75aec5` / `8a994cb`):**
+
+- TS: `i0In` → `value`, `i1In` → `ack`, `out` → `gated` (topology.json
+  + spec.ts + node-types.ts + e2e fixtures + trace fixtures).
+- Go: struct fields renamed across both sides — `FromValue` → `ValueCh`,
+  `FromAck` → `AckCh`, `ToLatch` → `Gated`. `Ch` suffix on two of three
+  to avoid collision with existing same-named fields (`Value int`,
+  `HasAck bool`). `Gated` is clean (no collision).
+- topogen registry mapping + all testdata fixtures updated.
+- `nodes/Line/Line.go` bootstrap pre-send (`i1AckToReadGate <- 1`)
+  also renamed.
+
+**Hot-fix (`69a6b29`):** Phase 2 left `NODE_KIND_PORTS.readgate` at
+`inputs: ["slot"], outputs: []` (the stale default). ReadGate's body
+polls slot names from this table, so the bootstrap pulse reached
+ReadGate but it never fired (fills arrived under `value`/`ack` while
+the body looked for `slot`). One-line fix.
+
+**Housekeeping (`c8f91d0`):** trivial e2e test description casing
+(`"chaininhibitor"` → `"chainInhibitor"`) + view.json camera drift.
+
+## Substrate clarification (worth keeping)
+
+`bootstrap_rg` is the substrate-clean TS analog of Go's
+`i1AckToReadGate <- 1` pre-send in `nodes/Line/Line.go:31`. Both
+implementations need a bootstrap; Go hides it in harness wiring, TS
+promotes it to a first-class topology node. The asymmetry observed
+mid-session (Go "didn't need" bootstrap) was a layer confusion — Go
+has it, in the setup struct rather than the graph.
+
+Earlier mid-session diagnosis went down a wrong branch claiming Go's
+ReadGate did partial-firing via `default` select. **It does not** —
+Go's ReadGate accumulates `HasValue`/`HasAck` flags and only emits
+when both are set, identical to TS. The 2026-05-17 partial-0 removal
+(`f273f6a`, recorded in `feedback_readgate_partial_0_is_spec`) is the
+spec for both runtimes.
+
+## NODE_KIND_PORTS audit result
+
+Audited every kind for the same staleness class that bit ReadGate.
+**Clean.** All other bodies resolve slot names parametrically via
+`slotIds` / `nodePorts()` with per-node `ports` override fallback;
+ReadGate's body was the one that read NODE_KIND_PORTS directly.
+
+## Parked follow-ups (from prior session)
+
+1. **ChainInhibitorBody `useState(null)` display state** — parallel
+   to the real `held` slot; can be deleted.
+2. **ring-5node.json e2e fixture** — was migrated to renamed ports
+   as part of Phase 2; verify it still uses the post-rename schema
+   if touched.
+3. **Topogen one-shot Input** (`repeat=false`): TS only; Go side
+   currently disabled (Run button faded).
+4. **`held=null` visual ambivalence**: tolerated.
 
 ## Next concrete step
 
-User direction needed. Options:
-- Resume `task/runtime-editor-port-alignment`: apply stashed
-  `topology.view.json` drift and assess remaining port-rename work
-  (Go registry `ack` → `i1In` already done; check what's left).
-- Pick a parked follow-up above (items 1 or 2 are mechanical and cheap).
-- Pivot to a new friction-driven task.
+Branch is ready to merge into `main`. Suggested final steps:
+
+1. Quick visual sanity pass in the editor (you already confirmed
+   animation works — this is a "click around once more" step).
+2. Merge `task/runtime-editor-port-alignment` into `main`
+   (sign-off required per CLAUDE.md). Delete local + remote branch.
+3. Update `feedback_readgate_partial_0_is_spec` memory if anything
+   in the rename touches that contract (it doesn't, but worth a
+   re-read).
+
+Alternative: pick a parked follow-up (item 1 is mechanical and cheap).
 
 ## Working-tree state
 
-`topology.view.json` on `main` has unstaged camera/position drift —
-intentionally not committed. Stash entries on
-`task/runtime-editor-port-alignment` also touch this file. Resolve
-before the next substantive change.
+Clean.
 
 ## Substrate model state
 
-MODEL.md (as of 2026-05-17 / `485f041`): no global round, tick, or
-simultaneity layer. Local slot-phase coordination. Banned vocab
-(tick/round/step/cohort/lap) enforced in substrate-r/ by vocab check
-script. The 2026-05-18 design rule still stands: node struct fields
-and port names are topology-instance-specific.
+MODEL.md unchanged. No global round / tick / simultaneity layer.
+Local slot-phase coordination. Banned vocab enforced.
+The 2026-05-18 instance-specific naming rule is now applied to
+ReadGate as well as ChainInhibitor.
 
 ## Dev-loop
 
 After any substrate-r edit: `npm run build` (tsc alone doesn't
-refresh `out/webview.js`). Live log at `.probe/webview-log.jsonl`;
-clear with `: > .probe/webview-log.jsonl` between runs (NOT before
-reading the current run). Cwd for tsc/tests/check-loc/build:
-`tools/topology-vscode/`. Go runtime is currently disabled in the
-editor UI; `go build ./...` still works for sanity checks.
+refresh `out/webview.js`). Live log at `.probe/webview-log.jsonl`.
+Cwd for tsc/tests/check-loc/build: `tools/topology-vscode/`.
+Go runtime is currently disabled in the editor UI (Run button
+faded); `go build ./...` still works for sanity checks.
 
 ## ALWAYS clause
 
