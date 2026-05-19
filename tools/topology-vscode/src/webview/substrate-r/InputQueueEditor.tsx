@@ -4,6 +4,7 @@
 
 import { useState, useCallback } from "react";
 import type * as React from "react";
+import { useReactFlow } from "reactflow";
 import { mutateSpec } from "../state";
 import { scheduleSave, flushSave } from "../save";
 
@@ -15,6 +16,7 @@ interface Props {
 
 export function InputQueueEditor({ nodeId, initialQueue, onHeightChange }: Props) {
   const [open, setOpen] = useState(false);
+  const rf = useReactFlow();
 
   const toggle = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
@@ -32,8 +34,15 @@ export function InputQueueEditor({ nodeId, initialQueue, onHeightChange }: Props
       if (!node) return;
       node.data = { ...(node.data as Record<string, unknown> ?? {}), init: ints };
     });
+    rf.setNodes((nodes) =>
+      nodes.map((n) =>
+        n.id === nodeId
+          ? { ...n, data: { ...n.data, nodeData: { ...(n.data.nodeData ?? {}), init: ints } } }
+          : n
+      )
+    );
     scheduleSave();
-  }, [nodeId]);
+  }, [nodeId, rf]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
