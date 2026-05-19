@@ -55,6 +55,15 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Read|Grep|Glob|Bash|Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/force-delegate-hook.py"
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {
