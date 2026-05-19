@@ -4,7 +4,6 @@ html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-fami
 .node.dragging { cursor: grabbing; }
 .node text { pointer-events: none; user-select: none; }
 .toolbar { position: fixed; top: 8px; left: 8px; padding: 6px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; display: flex; gap: 12px; align-items: center; z-index: 10; }
-.views-panel { z-index: 10; }
 .timeline-panel { z-index: 10; }
 .rf-anim-overlay { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
 /* Dim the inner body, not the wrapper, so box-shadow / outline halos
@@ -29,40 +28,6 @@ html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-fami
 .run-ok { color: #2e7d32; }
 .run-error { color: #c62828; font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .runner-probe-stuck { color: #c62828; font-weight: 600; margin-left: 8px; cursor: text; user-select: text; }
-
-.views-panel {
-  position: fixed; top: 8px; right: 8px; width: 180px;
-  padding: 8px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px;
-  font-size: 12px; display: flex; flex-direction: column; gap: 6px;
-}
-.views-header { font-weight: 600; color: #444; }
-.views-save {
-  border: 1px solid #ddd; background: #fafafa; border-radius: 4px;
-  padding: 4px 6px; cursor: pointer; text-align: left; font: inherit; color: #333;
-}
-.views-save:hover { background: #f0f0f0; }
-.views-name-input {
-  border: 1px solid #1976d2; border-radius: 4px; padding: 4px 6px;
-  font: inherit; outline: none;
-}
-.views-list { display: flex; flex-direction: column; gap: 2px; }
-.views-empty { color: #999; font-style: italic; padding: 2px 4px; }
-.views-row {
-  display: flex; align-items: center; gap: 4px;
-  border-radius: 4px; padding: 1px;
-}
-.views-row.active { background: #e3f2fd; }
-.views-name {
-  flex: 1; text-align: left; border: none; background: transparent;
-  padding: 3px 6px; cursor: pointer; font: inherit; color: #222;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.views-name:hover { background: #f0f0f0; border-radius: 3px; }
-.views-del {
-  border: none; background: transparent; color: #999; cursor: pointer;
-  padding: 0 4px; font-size: 14px; line-height: 1;
-}
-.views-del:hover { color: #c62828; }
 
 .node.dim, g[data-edge-id].dim { opacity: 0.15; transition: opacity 0.18s ease; }
 .node:not(.dim), g[data-edge-id]:not(.dim) { transition: opacity 0.18s ease; }

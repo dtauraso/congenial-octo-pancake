@@ -7,7 +7,6 @@ import { specToFlow } from "./adapter";
 import { RunButton } from "./panels/RunButton";
 import { SaveLifecycle } from "../SaveLifecycle";
 import { TimelinePanel } from "./panels/TimelinePanel";
-import { ViewsPanel } from "./panels/ViewsPanel";
 import { scheduleViewSave } from "../save";
 import { patchViewerState, useDimmed, viewerState } from "../state";
 import { AppView } from "./app/AppView";
@@ -143,8 +142,7 @@ export default function App() {
       <SaveLifecycle />
       <Inner />
       <RunButton />
-      <ViewsPanel />
-      <TimelinePanel />
+<TimelinePanel />
     </ReactFlowProvider>
   );
 }
