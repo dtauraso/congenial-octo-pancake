@@ -9,7 +9,7 @@
 //   right  InhibitRightGate
 //
 // Edges:
-//   srcToGate          src.out -> gate.chainIn
+//   srcToGate          src.out -> gate.i0In
 //   gateToInhib        gate.out -> inhib.in
 //   inhibAckToGate     inhib.out -> gate.ack
 //   inhibToRightLeft   inhib.inhibitOut -> right.left

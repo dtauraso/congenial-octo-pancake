@@ -1,7 +1,7 @@
 // Scenario: the full 5-node ring topology flows end-to-end.
 // Observable: Input fires, then ReadGate fires (signal traverses ring).
 // Both are observable via the [wirefold] trace.* console channel.
-// The ring needs the feedback edge seed (i1.out->readGate.chainIn2,
+// The ring needs the feedback edge seed (i1.out->readGate.i1In,
 // seed:1) to break the startup deadlock.
 
 import { test, expect } from "@playwright/test";

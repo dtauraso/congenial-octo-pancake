@@ -92,11 +92,11 @@
       }
     },
     {
-      "id": "in0.out->readGate.chainIn",
+      "id": "in0.out->readGate.i0In",
       "source": "in0test",
       "sourceHandle": "out",
       "target": "readGate14",
-      "targetHandle": "chainIn",
+      "targetHandle": "i0In",
       "kind": "chain",
       "label": "inputToReadGate"
     },
@@ -154,7 +154,7 @@
           "in0test"
         ],
         "departs": [
-          "in0.out->readGate.chainIn"
+          "in0.out->readGate.i0In"
         ]
       },
       {
@@ -167,7 +167,7 @@
           "readGate.out->i0.in"
         ],
         "arrives": [
-          "in0.out->readGate.chainIn"
+          "in0.out->readGate.i0In"
         ]
       },
       {

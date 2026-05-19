@@ -1,7 +1,7 @@
 // Phase 8 Chunk 4 — ReadGate cross-language fixture parity.
 //
-// ReadGate is an AndGate variant whose output equals chainIn (TS:
-// makeJoin(["chainIn","ack"], "out", a => a)). The Go ReadGateNode
+// ReadGate is an AndGate variant whose output equals i0In (TS:
+// makeJoin(["i0In","ack"], "out", a => a)). The Go ReadGateNode
 // already existed with Trace wired; this test pins it against the
 // TS-authored canonical fixture.
 

@@ -6,10 +6,10 @@
     "title": "C1 — Lateral Cascade Fixture (Detail)",
     "nodes": [
       {"id": "in_A",  "role": "input",            "lane": "A"},
-      {"id": "ci_A",  "role": "chaininhibitor",    "lane": "A"},
+      {"id": "ci_A",  "role": "chainInhibitor",    "lane": "A"},
       {"id": "irg_A", "role": "inhibitrightgate",  "lane": "A"},
       {"id": "in_B",  "role": "input",             "lane": "B"},
-      {"id": "ci_B",  "role": "chaininhibitor",    "lane": "B"},
+      {"id": "ci_B",  "role": "chainInhibitor",    "lane": "B"},
       {"id": "irg_B", "role": "inhibitrightgate",  "lane": "B"}
     ],
     "edges": [
@@ -33,7 +33,7 @@
 
   <desc>
 in_A, in_B        — input nodes; each produces one value into its lane
-ci_A, ci_B        — chaininhibitor; lockstep fan-out: out (to same-lane IRG.left) + inhibitOut (to opposite-lane IRG.right)
+ci_A, ci_B        — chainInhibitor; lockstep fan-out: out (to same-lane IRG.left) + inhibitOut (to opposite-lane IRG.right)
 irg_A, irg_B      — inhibitrightgate; fires on L-alone; drains silent when R arrives first or simultaneously
 cross-wires       — ci_A.inhibitOut→irg_B.right (dashed orange); ci_B.inhibitOut→irg_A.right (dashed orange)
 C1 zone           — HEADLINE: covered with WEAKENED contract — asserts both IRG.right slots end empty (inhibit consumed)
@@ -47,7 +47,7 @@ C1 zone           — HEADLINE: covered with WEAKENED contract — asserts both 
 
     /* ── Node shapes ─────────────────────────────────────────── */
     .shape-input            { fill: #e0e0e0; stroke: #666;    stroke-width: 2; }
-    .shape-chaininhibitor   { fill: #fff3e0; stroke: #e65100; stroke-width: 2; }
+    .shape-chainInhibitor   { fill: #fff3e0; stroke: #e65100; stroke-width: 2; }
     .shape-inhibitrightgate { fill: #f3e5f5; stroke: #7b1fa2; stroke-width: 2; }
 
     /* ── Node text ───────────────────────────────────────────── */
@@ -124,10 +124,10 @@ C1 zone           — HEADLINE: covered with WEAKENED contract — asserts both 
     <text x="125" y="163" font-weight="100" class="node-type" fill="#888" stroke="none">[value]</text>
   </g>
 
-  <g id="node-ci-A" data-role="chaininhibitor" data-lane="A">
-    <rect x="240" y="108" width="130" height="64" rx="6" class="shape-chaininhibitor"/>
+  <g id="node-ci-A" data-role="chainInhibitor" data-lane="A">
+    <rect x="240" y="108" width="130" height="64" rx="6" class="shape-chainInhibitor"/>
     <text x="305" y="130" font-weight="100" class="node-title" fill="#e65100" stroke="none">ci_A</text>
-    <text x="305" y="146" font-weight="100" class="node-sublabel" fill="#bf360c" stroke="none">chaininhibitor</text>
+    <text x="305" y="146" font-weight="100" class="node-sublabel" fill="#bf360c" stroke="none">chainInhibitor</text>
     <text x="305" y="161" font-weight="100" class="node-type" fill="#bf360c" stroke="none">out + inhibitOut</text>
   </g>
 
@@ -152,10 +152,10 @@ C1 zone           — HEADLINE: covered with WEAKENED contract — asserts both 
     <text x="125" y="323" font-weight="100" class="node-type" fill="#888" stroke="none">[value]</text>
   </g>
 
-  <g id="node-ci-B" data-role="chaininhibitor" data-lane="B">
-    <rect x="240" y="268" width="130" height="64" rx="6" class="shape-chaininhibitor"/>
+  <g id="node-ci-B" data-role="chainInhibitor" data-lane="B">
+    <rect x="240" y="268" width="130" height="64" rx="6" class="shape-chainInhibitor"/>
     <text x="305" y="290" font-weight="100" class="node-title" fill="#e65100" stroke="none">ci_B</text>
-    <text x="305" y="306" font-weight="100" class="node-sublabel" fill="#bf360c" stroke="none">chaininhibitor</text>
+    <text x="305" y="306" font-weight="100" class="node-sublabel" fill="#bf360c" stroke="none">chainInhibitor</text>
     <text x="305" y="321" font-weight="100" class="node-type" fill="#bf360c" stroke="none">out + inhibitOut</text>
   </g>
 

@@ -31,7 +31,7 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 			case v := <-g.FromValue:
 				g.Value = v
 				g.HasValue = true
-				s.Trace.Recv(g.Name, "chainIn", v)
+				s.Trace.Recv(g.Name, "i0In", v)
 			default:
 			}
 		}

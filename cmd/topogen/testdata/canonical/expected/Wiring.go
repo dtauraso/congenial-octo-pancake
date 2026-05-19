@@ -13,7 +13,7 @@
 //   readGateToI0      readGate14.out -> i0Test3.in
 //   i0ToI1            i0Test3.out -> i1.in
 //   i1AckToReadGate   i1.out -> readGate14.ack
-//   inputToReadGate   in0test.out -> readGate14.chainIn
+//   inputToReadGate   in0test.out -> readGate14.i0In
 //   i0ToInhibitRight  i0Test3.inhibitOut -> inhibitRight0.left
 //   i1ToInhibitRight  i1.inhibitOut -> inhibitRight0.right
 

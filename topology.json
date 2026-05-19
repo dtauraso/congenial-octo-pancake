@@ -24,13 +24,13 @@
       "type": "ReadGate",
       "inputs": [
         {
-          "name": "chainIn",
+          "name": "i0In",
           "kind": "chain",
           "side": "left",
           "slot": 1
         },
         {
-          "name": "chainIn2",
+          "name": "i1In",
           "kind": "chain",
           "side": "bottom",
           "slot": 1
@@ -125,11 +125,11 @@
   ],
   "edges": [
     {
-      "id": "in0.out->readGate.chainIn",
+      "id": "in0.out->readGate.i0In",
       "source": "in08",
       "sourceHandle": "out",
       "target": "readGate1",
-      "targetHandle": "chainIn",
+      "targetHandle": "i0In",
       "kind": "chain",
       "label": "inputToReadGate",
       "data": {
@@ -187,11 +187,11 @@
       }
     },
     {
-      "id": "i1.out->readGate.chainIn2",
+      "id": "i1.out->readGate.i1In",
       "source": "i1",
       "sourceHandle": "out",
       "target": "readGate1",
-      "targetHandle": "chainIn2",
+      "targetHandle": "i1In",
       "kind": "chain",
       "label": "i1ToReadGate",
       "lane": -69.0549836800538,

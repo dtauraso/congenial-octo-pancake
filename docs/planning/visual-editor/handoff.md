@@ -9,118 +9,114 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, inert-node indicator landed)
+## State at handoff (2026-05-19, chain-inhibitor convergence landed)
 
-**Active branch:** `main`. Latest commit `fc0fe4e` merges
-`task/inert-node-indicator` via `--no-ff`; branch deleted locally
-and on remote.
+**Active branch:** `task/navigation-tax`. NOT merged. 9 commits on
+top of `main` (`af4bdf8`). Pushed.
 
 ## What landed on main this session
 
-- `fc0fe4e` (merge of `7c139f6`) — Visual "inert" indicator on
-  nodes whose required output wire is unconnected. `REQUIRED_OUT_WIRES`
-  map + `isKindInert()` helper in `node-kinds.tsx`; `RSubstrateNode`
-  applies `r-substrate-node--inert` class (opacity 0.5 + dashed
-  outline). Marked kinds: `input`, `relay`, `chaininhibitor`, `join`,
-  `readgate`, `register`. `inhibitrightgate` intentionally excluded —
-  it fires without an out wire.
-- `8b22ddc` — `scripts/force-delegate-hook.py` now exempts subagent
-  sessions (detected via `parent_tool_use_id` on the hook payload).
-  Prior behavior was blocking executor work inside the delegate
-  itself, defeating the point.
-- `b464486` — Wire-grab feature confirmed working; retired from
-  parked list.
-- `d649f12` — ChainInhibitor fan-out back-pressure parked item
-  retired. Upstream channel already retries-until-accepted, so the
-  `canAccept` guards in `ChainInhibitorBody` (node-kinds.tsx:225-226)
-  stay but the framing of "unsolved fan-out" was wrong.
+Nothing. All work is on `task/navigation-tax`.
 
-## Next action
+## What's on `task/navigation-tax` (new this session)
 
-None queued. Drive the editor and let friction pick the next task.
-Carried-forward friction signals:
+The chain-inhibitor naming-convergence pipeline (step 3 from
+`naming-pass.html`) ran end-to-end across the five boundaries
+(Go / topogen / JSON / TS editor / SVG), plus a full-repo doc sweep:
 
-- **Process hygiene.** Start each new task by checking out a fresh
-  `task/...` branch off `main`, not by committing on whichever
-  branch HEAD happens to be on.
-- **Schema-parser-parity reminder.** When adding a route/spec
-  variant, update `Wire.tsx`, the parser, the type, and the legacy
-  migrator in the same commit. See `feedback_schema_parser_parity`.
-- **Subagent staging hygiene.** Spot-check `git status` after a
-  subagent commit; verify `git show <sha> --stat` against the
-  agent's reported "files touched" to catch unstaged-fixup bugs.
+- `c6f7d23` — Wiring.go `i0Test` → `i0` (drop fixture-leaked suffix).
+- `bd3c42b` — Go port keys `chainIn` / `chainIn2` → `i0In` / `i1In`.
+- `d73eaae` — JSON fixtures port rename (topology.json, e2e, parseSpec).
+- `732b156` — TS editor lowercase → camelCase + port keys + ReadGate trace label.
+- `596645a` — cleanup of stragglers (e2e runtime check string, testdata edge ids, planning JSON).
+- `7e364ce` — planning SVGs (`lateral-cascade.svg`, `overview.svg`) lowercase → camelCase.
+- `49f5aa0` — full-repo cleanup: `firing-rule-fix-spec.{html,md}`, `recommendations.md`, and renamed `scenario-chaininhibitor-held.spec.ts` → `scenario-chainInhibitor-held.spec.ts`.
 
-## Parked (not open; revisit when friction returns)
+Decisions recorded:
 
-- **Marker overshoot/undershoot tuning** beyond -1px. Settled on
-  -1px; the lever is `refX` in `MarkerDefs.tsx`.
-- **Grow port on zero-input nodes** (decided 2026-05-18 not to do).
-- **Pacing-by-pixel-length / wire-length-dependent firing** — item 9
-  in `recommendations.md`. Do NOT reach for a clock primitive,
-  barrier, or sequence-tagged values; MODEL.md has no logical-tick
-  view.
-- **Obstacle-aware edge routing.** `pickShape` only knows handle
-  sides and endpoint coordinates; no body-intersection check.
-- **Auto-pick for snake-v.** Override is set by hand at both call
-  sites; promote to geometry-driven auto-pick if a third
-  hand-overridden case appears.
+- Canonical noun: `ChainInhibitor`, case-flexed per host language.
+- Ports: `chainIn` / `chainIn2` → `i0In` / `i1In` (instance-specific,
+  per 2026-05-18 rule).
+- Instance var: `i0Test` → `i0`.
+- `TransferInhibitor` kept distinct (separate node kind).
+- `spec.ts` `case "chaininhibitor"` retained — intentional
+  toLowerCase normalization, not drift.
 
-## Security / supply-chain posture
+Verification: `go build ./...`, `go test ./...`, `tsc --noEmit`, and
+`npm run build` all green after the cleanup commit.
 
-Shai-Hulud npm worm check (2026-05-18): clean. None of the indicator
-strings, filenames, or affected package names present in the tree;
-`package.json` has no lifecycle scripts; `--ignore-scripts` is no
-longer enforced in CI (CI removed). Dep surface is narrow (React +
-Zustand + Immer + esbuild + Vitest + Playwright); not in the worm's
-blast radius. To re-introduce CI later, the audit step should use
-`npm ci --ignore-scripts` and `npm audit --audit-level=moderate`.
+## Remaining `chaininhibitor` lowercase refs (intentional)
 
-## What's actually working
+- `tools/topology-vscode/src/webview/substrate-r/spec.ts:21` —
+  `case "chaininhibitor": return "chainInhibitor"`. Normalization
+  for legacy saved files; keep.
+- `docs/planning/visual-editor/handoff.md` (this file) —
+  meta-references describing the rename itself.
 
-- End-to-end ring animation with real input values flowing through.
-- ReadGate pass-through emits `slots[0]`'s consumed value.
-- Edge seed delivers once to dest slot at wire mount.
-- Drag-to-move ports: 12 snap positions, swap on collision, edges
-  follow via `updateNodeInternals`.
-- Wire drop onto a saturated node grows a new input port at the
-  nearest free snap position; round-trips through save/reload.
-- Edge routes pick themselves from topology (handle sides + dx/dy);
-  same-side-bottom pairs use the "below" corridor; horizontal-side
-  pairs that need a detour use the V-H-V `snake-v` corridor.
-- Lane handle reveals on hover within 16px, drag adjusts `lane`
-  live along the route's lane axis, mouse-up persists via
-  `scheduleSave`.
-- Edge-route overrides (`route: "snake-v"` etc.) round-trip through
-  save/reload via `topology.view.json` edges block.
-- Arrow markers auto-shrink (and drop entirely below 5px) based on
-  the *final segment* of the route.
-- NodePalette folds/unfolds with a sideways button; zoom controls
-  at bottom-left clear the play/pause button; palette list scrolls
-  internally without overlapping controls.
-- Wire-grab feature working.
-- Nodes with a missing required output wire render with an inert
-  indicator (opacity 0.5 + dashed outline).
-- No comparison toolbar, no MiniMap, no LegendPanel, no ViewsPanel.
-- `tsc --noEmit` clean; `npm run build` clean; `check:loc` clean;
-  `check-substrate-vocab` clean.
+## Other open task branches
+
+- `task/runtime-editor-port-alignment` — has `6811c5` (revert of the
+  readGate port rename — restored the animation) and `ec11b0b`
+  (disabled the Run button: faded, unclickable). Findings (A) and
+  (B) from the prior handoff remain deferred: Go runtime is
+  intentionally inert via the disabled Run button; the visual editor
+  is the only runtime exercised. Will revisit when `go run .` is
+  reactivated.
+
+## Working-tree state
+
+`topology.view.json` carries unstaged camera/position drift from a
+prior branch — untouched on this branch and intentionally not
+committed. Either revert it before the next commit or land it as its
+own single-purpose commit if the user wants the camera tweak.
+
+## Next concrete step
+
+Convergence is done for ChainInhibitor. Options for next:
+
+1. **Merge `task/navigation-tax` into main.** Six clean rename
+   commits + the audit/naming-pass HTML artifacts. Requires user
+   sign-off (merge into shared `main`).
+2. **Run the same naming-pass pipeline on another concept.**
+   Candidates surfaced during this pass:
+   - `TransferInhibitor` (parallel kind, may have similar drift)
+   - `inhibitrightgate` (lowercase form spotted in planning SVGs)
+   - Wiring.go instance vars beyond `i0`/`i1` if any drift remains
+3. **Pivot to a different friction.** The parked list below has
+   open items.
+
+State the next step before acting; the convergence loop has no more
+queued mechanical work to drain.
+
+## Parked (revisit when friction returns)
+
+- Go runtime: re-enabling Run button, fixing topogen `data.seed`
+  honoring (finding B from prior handoff), Wiring.go ring deadlock.
+  All deferred while substrate work continues in the webview.
+- Marker overshoot tuning, grow port on zero-input nodes, pacing by
+  pixel length, obstacle-aware routing, auto-pick for snake-v,
+  multi-digit ints in Input queue editor.
+- A memory entry for "ChainInhibitor heldRef is a third
+  instance of the run-start hack family" (third hack in
+  `animation-audit.html`, not yet recorded).
 
 ## Substrate model state
 
-MODEL.md (as of 2026-05-17 / `485f041`) has no global round, tick, or
-simultaneity layer. Coordination is local via slot phases. Any
-reasoning that reaches for a clock primitive, barrier, sequence-tagged
-values, or "logical view" is drift — the substrate has one view.
-Banned vocabulary includes tick/round/step/cohort/lap; the vocab check
-script enforces this in substrate-r/.
+MODEL.md (as of 2026-05-17 / `485f041`): no global round, tick, or
+simultaneity layer. Local slot-phase coordination. Banned vocab
+(tick/round/step/cohort/lap) enforced in substrate-r/ by vocab check
+script. The 2026-05-18 design rule still stands: node struct fields
+and port names are topology-instance-specific; the editor renames
+them when the topology changes.
 
 ## Dev-loop
 
-After any substrate-r edit: `npm run build` (tsc alone doesn't refresh
-`out/webview.js`). Live log at `.probe/webview-log.jsonl`; clear with
-`: > .probe/webview-log.jsonl` between runs (NOT before reading the
-current run).
-
-Cwd for tsc/tests/check-loc/build: `tools/topology-vscode/`.
+After any substrate-r edit: `npm run build` (tsc alone doesn't
+refresh `out/webview.js`). Live log at `.probe/webview-log.jsonl`;
+clear with `: > .probe/webview-log.jsonl` between runs (NOT before
+reading the current run). Cwd for tsc/tests/check-loc/build:
+`tools/topology-vscode/`. Go runtime is currently disabled in the
+editor UI; `go build ./...` still works for sanity checks.
 
 ## ALWAYS clause
 
