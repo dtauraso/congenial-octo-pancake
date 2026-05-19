@@ -166,6 +166,12 @@ All defined in `<defs>`, identical geometry (`M0,0 L8,3 L0,6`, 8×6, refX=8 refY
 - `arrow` (#333), `arrow-blue` (#2266aa, unused, legacy), `arrow-indigo` (#283593), `arrow-green` (#2e7d32), `arrow-orange` (#e65100), `arrow-magenta` (#7b1fa2), `arrow-teal` (#00838f).
 - `arrow-blue-open` is the exception: **10×8**, fill `none`, stroke `#2266aa` 1.2 — the read-port marker.
 
+**Dynamic editor markers** (`MarkerDefs.tsx`) generate two size variants per kind:
+- **md** (default): filled 8×6, open 10×8 — as above.
+- **sm** (small): filled 5×4 (`M0,0 L5,2 L0,4 Z`, refX=5 refY=2), open 6×5 (`M0,0 L6,2.5 L0,5`, refX=6 refY=2.5).
+
+`RSubstrateEdge` auto-selects `sm` when the approximate path pixel length is below **12 px** (≈ 8 × strokeWidth at 1.5) so that the arrowhead does not dominate or visually overflow a very short edge.
+
 ## 10. Metadata & Legend Layer
 
 - `<metadata>` right after the opening tag: JSON with `nodes[]` (id, role, optional index), `edges[]` (id, source, target, kind), and optional `timing[]` (step with `t` fraction and `event` string). This is the authoritative spec; the graphics render it.

@@ -9,42 +9,40 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, snake-v merged to main)
+## State at handoff (2026-05-18, short-edge-small-markers merged to main)
 
-**Active branch:** `main`. `task/snake-v-route` merged via `--no-ff`
-and deleted locally and on remote. Working tree clean.
+**Active branch:** `main`. `task/short-edge-small-markers` merged via
+`--no-ff` and deleted locally and on remote. Working tree clean.
 
 ## What landed on main this session
 
-Merge commit on `main` brings four commits from `task/snake-v-route`:
+Two task branches merged in sequence; the second (this session)
+brings three commits via `task/short-edge-small-markers`:
 
-- `03ede91` **feat(wire):** add `snake-v` edge route — a V–H–V dogleg
-  (vertical exit → horizontal corridor through `midY` → vertical
-  entry). Mirrors the existing H–V–H `snake` across x=y, for
-  horizontal-side (left/right) handle pairs. Touches `Wire.tsx`
-  (`EdgeRoute` type, `pickShape`, `snakeVD`, `buildEdgePathD`,
-  `edgeMidpoint`), `RSubstrateEdge.tsx` (`showHandle` guard),
-  `LaneDragHandle.tsx` (existing `ns-resize`/y-delta branch covers
-  snake-v).
-- `22d8fa0` **feat(view):** explicit `route: "snake-v"` override on
-  edge `i1.inhibitOut->inhibitRight0.right` in `topology.view.json`.
-- `97e5279` **fix(schema):** accept `snake-v` in the viewerState
-  parser, `EdgeView` type, and legacy-field migrator. Without this,
-  `route: "snake-v"` survives in memory but is dropped on save→reload.
-  (Schema-parser-parity rule: when adding a route variant, update all
-  three call sites in the same commit.)
-- `e9a0ba7` **docs(claude):** add the "~15-line tight delegate-prompt"
-  rule to `CLAUDE.md` (Model routing section) and `memory/`.
+- `d8e9886` **feat(markers):** auto-shrink arrow marker on short edges
+  — adds `sm` marker set (5x4 filled, 6x5 open) to `MarkerDefs.tsx`,
+  exports `markerEndUrl(kind, arrowStyle, size?)`, and selects `sm`
+  in `RSubstrateEdge.tsx` when the edge is below threshold. Docs
+  section 9 updated in `svg-style-guide.md`.
+- `d827f36` **feat(markers):** shrink by final-segment length, sm at
+  3/4, -1px undershoot. The shrink decision now keys off
+  `finalSegmentLength` (the leg the arrow sits on) rather than total
+  path length — snake-v with a short vertical entry leg now picks
+  `sm` even when total path is long. `sm` boxes scaled to 3/4
+  (filled 3.75x3, open 4.5x3.75). All four markers nudged refX -1px
+  (md 7/9, sm 4/5) so the tip sits just inside the handle dot.
+- `a3e5096` **chore(ci):** drop manual periodic-checks workflow —
+  `workflow_dispatch`-only, duplicated locally-run commands, no
+  observed use. `.github/` removed entirely (no dependabot either,
+  per user choice to rely on UI-toggled Dependabot alerts).
 
-Topology side: the two top↔bottom inhibitor edges (`i0.inhibitOut→
-inhibitRight0.left` and `i1.inhibitOut→inhibitRight0.right`) now use
-the snake-v override and render V–H–V, rotated across x=y / y=-x from
-the previous H–V–H. User confirmed working.
+Topology side: `topology.view.json` reflects a new camera/zoom and a
+moved `inhibitRight0` position from this session's editor drive.
 
 ## Next action
 
 None queued. Drive the editor and let friction pick the next task.
-Carried-forward friction signals:
+Carried-forward friction signals (unchanged from prior handoff):
 
 - **Inert nodes by construction.** A `ReadGate` with no outgoing
   `out` edge bails on `!wire` and silently no-ops — no visual signal
@@ -57,47 +55,41 @@ Carried-forward friction signals:
 - **Two pre-existing TS diagnostics in `Wire.tsx`** (`getPhaseKind`
   unused, `value` unused) — line numbers drift each edit pass. Worth
   a small cleanup commit if the next session has slack.
-- **Schema-parser-parity reminder.** Today's session caught a
-  near-miss: the `snake-v` route was added to `Wire.tsx` first; the
-  override appeared to work in memory but would have been silently
-  dropped on save→reload until the parser/type/migrator triple was
-  patched. The feedback memory `feedback_schema_parser_parity`
-  covers this — re-read it before adding any route/spec variant.
+- **Schema-parser-parity reminder.** When adding a route/spec
+  variant, update `Wire.tsx`, the parser, the type, and the legacy
+  migrator in the same commit. See `feedback_schema_parser_parity`.
 
 ## Parked (not open; revisit when friction returns)
 
+- **Marker overshoot/undershoot tuning** beyond -1px. This session
+  experimented (overshoot 10px, undershoot 5/3/1) and settled on
+  -1px. If the visual gap to the handle dot becomes friction again,
+  the lever is `refX` in `MarkerDefs.tsx`.
 - **Grow port on zero-input nodes** (decided 2026-05-18 not to do).
-  `Generic`/`Input` can't grow today; user accepted this.
-- **Wire-grab feature** (discussed 2026-05-18). A wire whose path
-  animates with the pulse, plus a node that "grabs" the wire and
-  hands the endpoint off — runtime topology mutation. Visual-only
-  half is ~1 day; handoff half needs a substrate-model answer first
-  (what "held" means locally, what triggers grab/release, whether
-  dangling endpoints are legal). Cheapest discovery move: build the
-  visual-only animation, author a held wire by hand in
-  `topology.json`, use the breakage list as the design spec.
+- **Wire-grab feature.** Visual half ~1 day; handoff half needs a
+  substrate-model answer (what "held" means locally).
 - **Fan-out back-pressure on ChainInhibitor** still unsolved. Naive
   `wire.canAccept && inhibitWire.canAccept` gate broke animation
-  both times tried. Trace deadlock if retried.
+  both times tried.
 - **Pacing-by-pixel-length / wire-length-dependent firing** — item 9
-  in [recommendations.md](recommendations.md). 2026-05-17 audit
-  found no active firing-rule divergence; two artifacts noted (dead
-  `fanout-convergence.ts` reads `wire.phase`; ChainInhibitor's
-  two-load pattern can lose the `inhibitOut` token, masked today by
-  wire lengths making both wires accept on the same frame). Do NOT
-  reach for a clock primitive, barrier, or sequence-tagged values;
-  MODEL.md has no logical-tick view.
+  in `recommendations.md`. Do NOT reach for a clock primitive,
+  barrier, or sequence-tagged values; MODEL.md has no logical-tick
+  view.
 - **Obstacle-aware edge routing.** `pickShape` only knows handle
-  sides and endpoint coordinates; it doesn't check whether the
-  chosen route crosses other node bodies. If that becomes friction,
-  thread `useStore((s) => s.nodes)` into the picker and add a
-  bbox-intersection check.
-- **Auto-pick for snake-v.** `pickShape` returns `snake-v` for
-  horizontal-side pairs, but vertical-side pairs in the "snake"
-  branch don't have an auto-pick rule to choose snake-v based on
-  geometry (e.g. when a V–H–V detour would be cleaner than H–V–H).
-  Today both call sites set the override by hand. Promote to
-  geometry-driven auto-pick if a third hand-overridden case appears.
+  sides and endpoint coordinates; no body-intersection check.
+- **Auto-pick for snake-v.** Override is set by hand at both call
+  sites; promote to geometry-driven auto-pick if a third
+  hand-overridden case appears.
+
+## Security / supply-chain posture
+
+Shai-Hulud npm worm check (2026-05-18): clean. None of the indicator
+strings, filenames, or affected package names present in the tree;
+`package.json` has no lifecycle scripts; `--ignore-scripts` is no
+longer enforced in CI (CI removed). Dep surface is narrow (React +
+Zustand + Immer + esbuild + Vitest + Playwright); not in the worm's
+blast radius. To re-introduce CI later, the audit step should use
+`npm ci --ignore-scripts` and `npm audit --audit-level=moderate`.
 
 ## What's actually working
 
@@ -110,12 +102,15 @@ Carried-forward friction signals:
   nearest free snap position; round-trips through save/reload.
 - Edge routes pick themselves from topology (handle sides + dx/dy);
   same-side-bottom pairs use the "below" corridor; horizontal-side
-  pairs that need a detour use the V–H–V `snake-v` corridor.
+  pairs that need a detour use the V-H-V `snake-v` corridor.
 - Lane handle reveals on hover within 16px, drag adjusts `lane`
   live along the route's lane axis, mouse-up persists via
   `scheduleSave`.
 - Edge-route overrides (`route: "snake-v"` etc.) round-trip through
   save/reload via `topology.view.json` edges block.
+- Arrow markers auto-shrink (and drop entirely below 5px) based on
+  the *final segment* of the route — so short entry legs on long
+  doglegs get small arrows.
 - `tsc --noEmit` clean except two pre-existing Wire.tsx warnings;
   `npm run build` clean; `check:loc` clean; `check-substrate-vocab`
   clean.
