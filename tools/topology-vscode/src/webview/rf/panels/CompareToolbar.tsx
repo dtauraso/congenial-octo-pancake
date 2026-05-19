@@ -2,7 +2,7 @@
 // it can read/write React state directly. The buttons post compare-head /
 // compare-file messages to the host; the receive side lives in app.tsx.
 
-import { vscode } from "../vscode-api";
+import { vscode } from "../../vscode-api";
 
 export type CompareMode = "off" | "A-live" | "A-other" | "B-onion";
 

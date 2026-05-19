@@ -4,7 +4,7 @@ import { specToFlow } from "../adapter";
 import { IDENT_RE } from "../../rename-core";
 import { scheduleSave, scheduleViewSave } from "../../save";
 import { mutateSpec, patchViewerState, spec, viewerState } from "../../state";
-import { PALETTE_DATA_TYPE } from "../NodePalette";
+import { PALETTE_DATA_TYPE } from "../panels/NodePalette";
 import type { AppCtx } from "./_ctx";
 
 export function useDragDrop(ctx: AppCtx) {

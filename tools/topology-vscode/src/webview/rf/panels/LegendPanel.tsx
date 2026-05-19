@@ -1,5 +1,5 @@
-import { KIND_COLORS, type LegendRow } from "../../schema";
-import { dashForKind } from "./edge-style";
+import { KIND_COLORS, type LegendRow } from "../../../schema";
+import { dashForKind } from "../edge-style";
 
 // Renders spec.legend[] as a fixed-position panel in the canvas
 // corner, mirroring the cascade SVG's legend block (style-guide §10).

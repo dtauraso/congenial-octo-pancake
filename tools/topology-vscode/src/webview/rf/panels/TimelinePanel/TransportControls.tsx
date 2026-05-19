@@ -2,7 +2,7 @@
 // Reads halted state and calls halt/resume directly via the
 // SubstrateProvider context — no postMessage.
 
-import { useRegistry } from "../../substrate-r/registry";
+import { useRegistry } from "../../../substrate-r/registry";
 
 export function TransportControls({ label }: { label: string }) {
   const { driver } = useRegistry();

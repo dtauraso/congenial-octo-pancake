@@ -1,8 +1,8 @@
 import ReactFlow, { Background, Controls, MiniMap, SelectionMode } from "reactflow";
-import { CompareToolbar } from "../CompareToolbar";
-import { LegendPanel } from "../LegendPanel";
+import { CompareToolbar } from "../panels/CompareToolbar";
+import { LegendPanel } from "../panels/LegendPanel";
 import { MarkerDefs } from "../MarkerDefs";
-import { NodePalette } from "../NodePalette";
+import { NodePalette } from "../panels/NodePalette";
 import { spec } from "../../state";
 import { AlignGuides } from "./AlignGuides";
 import { EdgeContextMenu } from "./EdgeContextMenu";

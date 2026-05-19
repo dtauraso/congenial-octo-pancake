@@ -5,8 +5,8 @@
 
 import { useState } from "react";
 import { useReactFlow } from "reactflow";
-import { NODE_TYPES } from "../../schema";
-import { scheduleViewSave } from "../save";
+import { NODE_TYPES } from "../../../schema";
+import { scheduleViewSave } from "../../save";
 import {
   getSpec,
   getViewerState,
@@ -14,9 +14,9 @@ import {
   setDimmed,
   setView,
   useViewerState,
-} from "../state";
-import type { SavedView } from "../viewerState";
-import { boxToViewport, viewportToBox, type ViewBox } from "../rf/camera";
+} from "../../state";
+import type { SavedView } from "../../viewerState";
+import { boxToViewport, viewportToBox, type ViewBox } from "../camera";
 
 function paneSize(): { width: number; height: number } | null {
   const pane = document.querySelector<HTMLElement>(".react-flow");
