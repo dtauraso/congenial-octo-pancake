@@ -70,7 +70,11 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
           ctx.setLastAppliedVersion(document.version);
         }
         await topogen.write();
-      } catch { return; }
+      } catch (err) {
+        console.error("topology editor: run pre-write failed", err);
+        post({ type: "save-error", message: toErrorMessage(err) });
+        return;
+      }
       runner.run();
       return;
     case "run-cancel":
