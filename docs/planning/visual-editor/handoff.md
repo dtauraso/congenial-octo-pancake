@@ -83,8 +83,6 @@ Carried-forward friction signals (unchanged from prior handoff):
   -1px. If the visual gap to the handle dot becomes friction again,
   the lever is `refX` in `MarkerDefs.tsx`.
 - **Grow port on zero-input nodes** (decided 2026-05-18 not to do).
-- **Wire-grab feature.** Visual half ~1 day; handoff half needs a
-  substrate-model answer (what "held" means locally).
 - **Pacing-by-pixel-length / wire-length-dependent firing** — item 9
   in `recommendations.md`. Do NOT reach for a clock primitive,
   barrier, or sequence-tagged values; MODEL.md has no logical-tick
