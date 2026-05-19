@@ -15,7 +15,7 @@ import {
   setView,
   useViewerState,
 } from "../../state";
-import type { SavedView } from "../../viewerState";
+import type { SavedView } from "../../state/viewer/types";
 import { boxToViewport, viewportToBox, type ViewBox } from "../camera";
 
 function paneSize(): { width: number; height: number } | null {

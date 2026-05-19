@@ -1,5 +1,5 @@
 import { spec, viewerState } from "./state";
-import { serializeViewerState } from "./viewerState";
+import { serializeViewerState } from "./state/viewer/types";
 import type { TopogenStatus } from "../messages";
 import { vscode } from "./vscode-api";
 

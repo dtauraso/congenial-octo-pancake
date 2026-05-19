@@ -1,6 +1,6 @@
 import type { Edge as RFEdge, Node as RFNode } from "reactflow";
 import { KIND_COLORS, NODE_TYPES, type Node as SpecNode, type Spec } from "../../../schema";
-import type { Fold, ViewerState } from "../../viewerState";
+import type { Fold, ViewerState } from "../../state/viewer/types";
 import { COLLAPSED_FOLD_W, COLLAPSED_FOLD_H, expandedBounds } from "./_bounds";
 
 // Fold-aware spec→flow conversion. Folds are viewer-only state; they never

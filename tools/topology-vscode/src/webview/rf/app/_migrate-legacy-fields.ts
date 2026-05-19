@@ -6,7 +6,7 @@
 // "View wins" — if topology.view.json already populated view.nodes[id] we
 // leave it alone; the legacy spec field is simply dropped on next save.
 
-import type { ViewerState, NodeView, EdgeView } from "../../viewerState";
+import type { ViewerState, NodeView, EdgeView } from "../../state/viewer/types";
 
 type RawNode = {
   id?: unknown;

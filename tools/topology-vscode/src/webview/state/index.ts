@@ -1,4 +1,4 @@
 export { spec, viewerState, nodeById } from "./store";
-export * from "./selectors";
-export * from "./mutators";
+export * from "./spec/selectors";
+export * from "./spec/mutators";
 export * from "./history";

@@ -2,7 +2,7 @@
 // unit tests can exercise it without standing up the webview.
 
 import type { Spec } from "../schema";
-import type { ViewerState } from "./viewerState";
+import type { ViewerState } from "./state/viewer/types";
 
 export const IDENT_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 

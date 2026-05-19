@@ -1,11 +1,11 @@
 // Parser helpers for parseViewerState. Kept separate to stay under the
 // 100-LOC file size target (viewerState.ts owns types + public API).
 
-import type { StateValue } from "../schema";
+import type { StateValue } from "../../../schema";
 import type {
   Camera, EdgeView, Fold, LegacyCameraBox,
   NodeView, SavedView,
-} from "./viewerState";
+} from "./types";
 
 export const isObj = (v: unknown): v is Record<string, unknown> =>
   v !== null && typeof v === "object" && !Array.isArray(v);

@@ -1,5 +1,5 @@
 import { NODE_TYPES, type Node as SpecNode } from "../../../schema";
-import type { Fold, NodeView } from "../../viewerState";
+import type { Fold, NodeView } from "../../state/viewer/types";
 
 export const COLLAPSED_FOLD_W = 140;
 export const COLLAPSED_FOLD_H = 60;
