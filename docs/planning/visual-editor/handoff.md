@@ -9,118 +9,124 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, inert-node indicator landed)
+## State at handoff (2026-05-19, navigation-tax pass in flight)
 
-**Active branch:** `main`. Latest commit `fc0fe4e` merges
-`task/inert-node-indicator` via `--no-ff`; branch deleted locally
-and on remote.
+**Active branch:** `task/navigation-tax`. NOT merged. 1 commit on
+top of `main` (`af4bdf8`). Pushed.
 
 ## What landed on main this session
 
-- `fc0fe4e` (merge of `7c139f6`) — Visual "inert" indicator on
-  nodes whose required output wire is unconnected. `REQUIRED_OUT_WIRES`
-  map + `isKindInert()` helper in `node-kinds.tsx`; `RSubstrateNode`
-  applies `r-substrate-node--inert` class (opacity 0.5 + dashed
-  outline). Marked kinds: `input`, `relay`, `chaininhibitor`, `join`,
-  `readgate`, `register`. `inhibitrightgate` intentionally excluded —
-  it fires without an out wire.
-- `8b22ddc` — `scripts/force-delegate-hook.py` now exempts subagent
-  sessions (detected via `parent_tool_use_id` on the hook payload).
-  Prior behavior was blocking executor work inside the delegate
-  itself, defeating the point.
-- `b464486` — Wire-grab feature confirmed working; retired from
-  parked list.
-- `d649f12` — ChainInhibitor fan-out back-pressure parked item
-  retired. Upstream channel already retries-until-accepted, so the
-  `canAccept` guards in `ChainInhibitorBody` (node-kinds.tsx:225-226)
-  stay but the framing of "unsolved fan-out" was wrong.
+Nothing. All work is on task branches.
 
-## Next action
+## What's on `task/navigation-tax`
 
-None queued. Drive the editor and let friction pick the next task.
-Carried-forward friction signals:
+- `bf16279` — `animation-audit.html` and `naming-pass.html` at repo
+  root. Tabbed HTML artifacts with SVG diagrams. The first audits
+  start/continuation hacks (wire seed prefill, InputBody self-start
+  RAF, ChainInhibitor heldRef) and proposes "slots can be born
+  filled" as the unifying fix. The second documents the naming
+  convention used to reduce **navigation tax** (canonical noun per
+  concept across Go / topogen / JSON / editor / SVG; channel name
+  encodes endpoints; SVG groups carry `data-role` + `data-index`).
+  See `naming-pass.html` for the five-step convergence pipeline and
+  the pre-commit checklist.
 
-- **Process hygiene.** Start each new task by checking out a fresh
-  `task/...` branch off `main`, not by committing on whichever
-  branch HEAD happens to be on.
-- **Schema-parser-parity reminder.** When adding a route/spec
-  variant, update `Wire.tsx`, the parser, the type, and the legacy
-  migrator in the same commit. See `feedback_schema_parser_parity`.
-- **Subagent staging hygiene.** Spot-check `git status` after a
-  subagent commit; verify `git show <sha> --stat` against the
-  agent's reported "files touched" to catch unstaged-fixup bugs.
+## Other open task branches
 
-## Parked (not open; revisit when friction returns)
+- `task/runtime-editor-port-alignment` — has `6811c5` (revert of the
+  readGate port rename — restored the animation) and `ec11b0b`
+  (disabled the Run button: faded, unclickable). Findings (A) and
+  (B) from the prior handoff are now deferred: Go runtime is
+  intentionally inert via the disabled Run button; the visual editor
+  is the only runtime exercised. Will revisit when `go run .` is
+  reactivated.
 
-- **Marker overshoot/undershoot tuning** beyond -1px. Settled on
-  -1px; the lever is `refX` in `MarkerDefs.tsx`.
-- **Grow port on zero-input nodes** (decided 2026-05-18 not to do).
-- **Pacing-by-pixel-length / wire-length-dependent firing** — item 9
-  in `recommendations.md`. Do NOT reach for a clock primitive,
-  barrier, or sequence-tagged values; MODEL.md has no logical-tick
-  view.
-- **Obstacle-aware edge routing.** `pickShape` only knows handle
-  sides and endpoint coordinates; no body-intersection check.
-- **Auto-pick for snake-v.** Override is set by hand at both call
-  sites; promote to geometry-driven auto-pick if a third
-  hand-overridden case appears.
+## Carried-forward work — chain-inhibitor naming convergence
 
-## Security / supply-chain posture
+The naming-pass pipeline calls for picking one bounded concept and
+converging its vocabulary across all five boundaries. **Chosen
+concept:** chain-inhibitor. **Step 1 (map) done this session.** Step
+2 (decide canonical noun) is next — user-driven, not delegated.
 
-Shai-Hulud npm worm check (2026-05-18): clean. None of the indicator
-strings, filenames, or affected package names present in the tree;
-`package.json` has no lifecycle scripts; `--ignore-scripts` is no
-longer enforced in CI (CI removed). Dep surface is narrow (React +
-Zustand + Immer + esbuild + Vitest + Playwright); not in the worm's
-blast radius. To re-introduce CI later, the audit step should use
-`npm ci --ignore-scripts` and `npm audit --audit-level=moderate`.
+### Drift map (haiku Explore subagent, 2026-05-19)
 
-## What's actually working
+Seven distinct spellings of the same concept, by frequency:
 
-- End-to-end ring animation with real input values flowing through.
-- ReadGate pass-through emits `slots[0]`'s consumed value.
-- Edge seed delivers once to dest slot at wire mount.
-- Drag-to-move ports: 12 snap positions, swap on collision, edges
-  follow via `updateNodeInternals`.
-- Wire drop onto a saturated node grows a new input port at the
-  nearest free snap position; round-trips through save/reload.
-- Edge routes pick themselves from topology (handle sides + dx/dy);
-  same-side-bottom pairs use the "below" corridor; horizontal-side
-  pairs that need a detour use the V-H-V `snake-v` corridor.
-- Lane handle reveals on hover within 16px, drag adjusts `lane`
-  live along the route's lane axis, mouse-up persists via
-  `scheduleSave`.
-- Edge-route overrides (`route: "snake-v"` etc.) round-trip through
-  save/reload via `topology.view.json` edges block.
-- Arrow markers auto-shrink (and drop entirely below 5px) based on
-  the *final segment* of the route.
-- NodePalette folds/unfolds with a sideways button; zoom controls
-  at bottom-left clear the play/pause button; palette list scrolls
-  internally without overlapping controls.
-- Wire-grab feature working.
-- Nodes with a missing required output wire render with an inert
-  indicator (opacity 0.5 + dashed outline).
-- No comparison toolbar, no MiniMap, no LegendPanel, no ViewsPanel.
-- `tsc --noEmit` clean; `npm run build` clean; `check:loc` clean;
-  `check-substrate-vocab` clean.
+| spelling | rough count | where |
+|---|---|---|
+| `chaininhibitor` (lowercase) | 45+ | TS RNodeKind, SVG `data-role`, trace logs, portspec keys |
+| `ChainInhibitor` (PascalCase) | 30+ | Go struct/type, JSON node type, TS `NODE_TYPES` registry |
+| `chainInhibitor` (camelCase) | 3 | JSON node ids in `topology.view.json` (`chainInhibitor0/1/2`) |
+| `chainIn` | 11 | JSON input port, Go topogen registry key, TS `NODE_TYPES` port |
+| `chainIn2` | 3 | JSON feedback-port name in `topology.json` |
+| `ChainInhibitorBody` | 5 | TS React component (`node-kinds.tsx`) |
+| `ChainInhibitorNode` | 5+ | Go package/struct (`ChainInhibitorNode.go`) |
+
+Also noted: instance variables in `Wiring.go` are `i0Test` (not
+`i0`) and `i1` — drift inside the instance naming too. Channel
+names already follow the endpoint convention (`readGateToI0`,
+`i0ToI1`, `i1AckToReadGate`, `i0ToInhibitRight`).
+
+### Next concrete step (step 2 of the pipeline)
+
+User picks the canonical noun. Suggested ladder (assistant has no
+preference — judgment call):
+
+- **Concept name** for the node kind: `ChainInhibitor` everywhere,
+  with case flexed only where the host language demands
+  (`chainInhibitor` in JSON ids, `ChainInhibitor` in Go types, etc).
+  Retire `chaininhibitor` lowercase form entirely — pick `RNodeKind`
+  strings to match the JSON convention (`"chainInhibitor"`).
+- **Port names** on the kind: `chainIn` / `chainIn2` are
+  direction-only and ambiguous. Per Rule 3 in `naming-pass.html`:
+  rename to concept-carrying names. Suggested:
+  `prevStageIn` / `feedbackIn` (or the topology-instance-specific
+  form: `i0In` / `i1Out`, matching the project rule established
+  2026-05-18).
+- **Instance variables** in `Wiring.go`: `i0Test` → `i0`. Drop the
+  `Test` suffix; it leaked from a test fixture.
+
+Once chosen, steps 3–5 (edit per boundary, verify, grep check) are
+mechanical — delegate to sonnet subagents one boundary at a time
+with the clone-as-insurance pattern.
+
+## Working-tree state
+
+`topology.view.json` carries unstaged camera/position drift carried
+across from the prior branch. Untouched on this branch — do not
+commit it as part of any navigation-tax work; either revert it
+before the next commit on this branch, or land it as its own
+single-purpose commit if the user wants to keep the camera tweak.
+
+## Parked (revisit when friction returns)
+
+- Go runtime: re-enabling Run button, fixing topogen `data.seed`
+  honoring (finding B from prior handoff), Wiring.go ring deadlock.
+  All deferred while substrate work continues in the webview.
+- Marker overshoot tuning, grow port on zero-input nodes, pacing by
+  pixel length, obstacle-aware routing, auto-pick for snake-v,
+  multi-digit ints in Input queue editor.
+- A memory entry for "ChainInhibitor heldRef is a third
+  instance of the run-start hack family" (third hack in
+  `animation-audit.html`, not yet recorded).
 
 ## Substrate model state
 
-MODEL.md (as of 2026-05-17 / `485f041`) has no global round, tick, or
-simultaneity layer. Coordination is local via slot phases. Any
-reasoning that reaches for a clock primitive, barrier, sequence-tagged
-values, or "logical view" is drift — the substrate has one view.
-Banned vocabulary includes tick/round/step/cohort/lap; the vocab check
-script enforces this in substrate-r/.
+MODEL.md (as of 2026-05-17 / `485f041`): no global round, tick, or
+simultaneity layer. Local slot-phase coordination. Banned vocab
+(tick/round/step/cohort/lap) enforced in substrate-r/ by vocab check
+script. The 2026-05-18 design rule still stands: node struct fields
+and port names are topology-instance-specific; the editor renames
+them when the topology changes.
 
 ## Dev-loop
 
-After any substrate-r edit: `npm run build` (tsc alone doesn't refresh
-`out/webview.js`). Live log at `.probe/webview-log.jsonl`; clear with
-`: > .probe/webview-log.jsonl` between runs (NOT before reading the
-current run).
-
-Cwd for tsc/tests/check-loc/build: `tools/topology-vscode/`.
+After any substrate-r edit: `npm run build` (tsc alone doesn't
+refresh `out/webview.js`). Live log at `.probe/webview-log.jsonl`;
+clear with `: > .probe/webview-log.jsonl` between runs (NOT before
+reading the current run). Cwd for tsc/tests/check-loc/build:
+`tools/topology-vscode/`. Go runtime is currently disabled in the
+editor UI; `go build ./...` still works for sanity checks.
 
 ## ALWAYS clause
 
