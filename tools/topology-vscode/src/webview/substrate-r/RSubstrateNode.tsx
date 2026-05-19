@@ -107,7 +107,7 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
         position: "relative",
         minWidth: width,
         width: "max-content",
-        height,
+        minHeight: height,
         background: data?.fill ?? "#ffffff",
         color: "#1a1a1a",
         border: `${selected ? 2 : 1}px solid ${data?.stroke ?? "#888"}`,
