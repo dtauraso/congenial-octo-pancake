@@ -9,57 +9,32 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, plugin-org-cleanup merged to main)
+## State at handoff (2026-05-18, firing-rule-guards merged to main)
 
-**Active branch:** `main`. `task/plugin-org-cleanup` merged via
-`--no-ff` (commit `b823687`) and deleted locally and on remote.
-Working tree clean.
+**Active branch:** `main`. `task/firing-rule-guards` merged via
+`--no-ff` (commit `0e344d8`) and deleted locally and on remote.
+Working tree has `topology.view.json` modified (carryover) and two
+untracked spec files kept on disk but not committed:
+`docs/planning/visual-editor/firing-rule-fix-spec.md` and
+`firing-rule-fix-spec.html`.
 
 ## What landed on main this session
 
-Organizational audit (delegated, narrow category list) surfaced seven
-inefficiencies in the plugin source tree; all seven landed on
-`task/plugin-org-cleanup` plus one follow-up fix:
+Firing-rule precondition guards: five node bodies that previously
+consumed slots and loaded outputs without checking slot-phase or
+canAccept were fixed. MODEL.md gained the formal contract; node-kinds.tsx
+got guards matching the ReadGateBody reference impl.
 
-- `1b43b07` **refactor(plugin):** merge `src/compareLoader.ts` into
-  `src/extension/compare-load.ts` (removed pass-through layer).
-- `189c930` **refactor(plugin):** split `vscode` postMessage singleton
-  out of `webview/save.ts` into `webview/vscode-api.ts`. Only 3
-  importers wanted the singleton; the audit's "12" was high.
-- `9918a41` **refactor(plugin):** remove `webview/state.ts` and
-  `webview/rf/diff-decorate.ts` barrel/subdir name collisions by
-  moving each barrel into the matching subdir's `index.ts`. The 23
-  `"./state"` / `"./diff-decorate"` import sites resolve to the index
-  automatically; no churn.
-- `a145c85` **refactor(plugin):** same fix for `src/schema.ts` →
-  `src/schema/index.ts`.
-- `a309923` **refactor(plugin):** consolidate overlay panels under
-  `webview/rf/panels/`. Folded `webview/panels/` (RunButton,
-  TimelinePanel, ViewsPanel) and four loose `rf/` panels
-  (LegendPanel, NodePalette, ManualTakeButton, CompareToolbar) into
-  one directory. The previous split was historical, not principled —
-  every overlay renders inside the RF editor and reads RF state.
-- `c946f2b` **refactor(plugin):** align `state/` layout with the
-  runtime `Scope = "spec" | "viewer"` peer model.
-  `webview/viewerState.ts` and `webview/viewerState.parse.ts` moved
-  to `state/viewer/types.ts` and `state/viewer/parse.ts`;
-  `state/mutators.ts` and `state/selectors.ts` moved into
-  `state/spec/`. Shared `store.ts` and `history.ts` stay at the top
-  (they own both undo stacks).
-- `40885b6` **refactor(plugin):** group pure mutation engines under
-  `webview/state/ops/`. `delete-core.ts`, `fold-core.ts`,
-  `rename-core.ts`, `diff-core.ts` → `state/ops/delete.ts` etc. The
-  `-core` suffix was redundant once the directory carried that
-  meaning. Kept separate from `state/spec/mutators.ts` (the latter is
-  store-coupled and transactional; the ops are pure functions
-  testable without standing up the webview — see `delete.ts:1-3`).
-- `8551051` **fix(plugin):** repair import paths inside `state/ops/`
-  files. Subagent's prior commit moved the files via `git mv` but
-  left the rewritten relative-import edits unstaged; tsc/build passed
-  locally only because the working tree had the fixups. New
-  cautionary case for `feedback_verify_subagent_commits` — the
-  failure mode there was *under-staging*, opposite of the
-  prior-recorded *over-staging* case.
+- `e973785` **contract(substrate):** MODEL.md "Firing rule and slot
+  writes" section gained an "Output-readiness precondition" blockquote
+  mandating that a body must check `slotPhase === "filled"` on all
+  required input slots and `wire.canAccept` on all output wires before
+  calling `consume`/`load`.
+- `1de86e1` **fix(substrate):** slot-phase + canAccept guards added to
+  RelayBody, RegisterBody, JoinBody, InhibitRightGateBody (fire branch
+  only), and ChainInhibitorBody (both wire and inhibitWire).
+  ReadGateBody was already correct and is unchanged. Animation
+  verified by user: ring still circulates.
 
 `tsc --noEmit` clean; `npm run build` clean.
 
