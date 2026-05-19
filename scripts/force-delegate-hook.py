@@ -39,6 +39,14 @@ def main() -> int:
     except Exception:
         return 0
 
+    # Exempt subagent sessions. The hook exists to push the main
+    # (Opus) session to delegate; once inside a subagent, the
+    # subagent IS the delegation and needs to do executor work
+    # freely. Claude Code sets parent_tool_use_id on tool calls
+    # made inside a subagent invocation.
+    if data.get("parent_tool_use_id"):
+        return 0
+
     tool = data.get("tool_name", "")
     session_id = data.get("session_id", "default")
     path = counter_path(session_id)
