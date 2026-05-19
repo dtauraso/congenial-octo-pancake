@@ -5,7 +5,7 @@
 
 import type { Edge as RFEdge, Node as RFNode } from "reactflow";
 import { KIND_COLORS, type Spec } from "../../../schema";
-import { diffSpecs } from "../../diff-core";
+import { diffSpecs } from "../../state/ops/diff";
 import type { Fold, ViewerState } from "../../state/viewer/types";
 import { specToFlow } from "../adapter";
 import { CONNECTOR_PREFIX, GHOST_PREFIX, appendClass, ghostNode } from "./ghost";

@@ -11,7 +11,7 @@
 
 import { mutateBoth, mutateSpec, patchViewerState, getSpec, getViewerState } from "./state";
 import { scheduleSave, scheduleViewSave } from "./save";
-import { applyRename } from "./rename-core";
+import { applyRename } from "./state/ops/rename";
 
 type RerenderFn = () => void;
 

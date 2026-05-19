@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { NODE_TYPES } from "../../../schema";
 import { specToFlow } from "../adapter";
-import { IDENT_RE } from "../../rename-core";
+import { IDENT_RE } from "../../state/ops/rename";
 import { scheduleSave, scheduleViewSave } from "../../save";
 import { mutateSpec, patchViewerState, spec, viewerState } from "../../state";
 import { PALETTE_DATA_TYPE } from "../panels/NodePalette";
