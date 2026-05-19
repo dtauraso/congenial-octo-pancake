@@ -8,8 +8,8 @@ import { parseSpec } from "../src/schema";
 
 const okNode = { id: "n", type: "ChainInhibitor" };
 const okEdge = {
-  id: "e", source: "n", sourceHandle: "out",
-  target: "n", targetHandle: "i0In", kind: "chain",
+  id: "e", source: "n", sourceHandle: "ToNext",
+  target: "n", targetHandle: "FromPrev", kind: "chain",
 };
 
 describe("parseSpec rejects", () => {
@@ -93,6 +93,38 @@ it("legend row with bad kind", () => {
         notes: [{ x: 0, y: 0 }],
       }),
     ).toThrow(/spec\.notes\[0\]\.text/);
+  });
+});
+
+describe("parseSpec view orphan-edge-key detection", () => {
+  it("throws when view.edges contains a key not in spec edges", () => {
+    expect(() =>
+      parseSpec(
+        { nodes: [okNode], edges: [okEdge] },
+        { edges: { "ghost-edge": {} } },
+      ),
+    ).toThrow(/view edge key "ghost-edge" has no matching edge in spec/);
+  });
+
+  it("accepts when view.edges keys match spec edge ids", () => {
+    expect(() =>
+      parseSpec(
+        { nodes: [okNode], edges: [okEdge] },
+        { edges: { [okEdge.id]: { route: "snake-v" } } },
+      ),
+    ).not.toThrow();
+  });
+
+  it("accepts when view has no edges key", () => {
+    expect(() =>
+      parseSpec({ nodes: [okNode], edges: [okEdge] }, {}),
+    ).not.toThrow();
+  });
+
+  it("accepts when view argument is omitted", () => {
+    expect(() =>
+      parseSpec({ nodes: [okNode], edges: [okEdge] }),
+    ).not.toThrow();
   });
 });
 

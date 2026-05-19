@@ -19,9 +19,9 @@
     {
       "id": "inToI0",
       "source": "in0",
-      "sourceHandle": "out",
+      "sourceHandle": "ToOut",
       "target": "i0",
-      "targetHandle": "in",
+      "targetHandle": "FromPrev",
       "kind": "chain",
       "label": "inToI0",
       "valueLabel": "v",

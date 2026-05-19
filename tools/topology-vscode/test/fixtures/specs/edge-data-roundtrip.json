@@ -18,18 +18,18 @@
     {
       "id": "inToReadGate",
       "source": "in0",
-      "sourceHandle": "out",
+      "sourceHandle": "ToOut",
       "target": "readGate",
-      "targetHandle": "i0In",
+      "targetHandle": "FromValue",
       "kind": "chain",
       "data": { "slots": 1 }
     },
     {
       "id": "readGateToI0",
       "source": "readGate",
-      "sourceHandle": "out",
+      "sourceHandle": "ToGated",
       "target": "i0",
-      "targetHandle": "in",
+      "targetHandle": "FromPrev",
       "kind": "chain",
       "data": { "delay": 2, "init": [1] }
     }

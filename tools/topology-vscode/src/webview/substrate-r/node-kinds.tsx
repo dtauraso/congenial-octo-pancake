@@ -12,13 +12,14 @@ import { useCallback, useEffect, useRef, useState, type RefObject, type ReactNod
 import { Node, type NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
 import type { RNodeKind } from "./spec";
+import { NODE_KIND_PORTS } from "./spec";
 import { postLog } from "../log/post";
 
 export function InhibitRightGateBody({
   nodeRef,
   outWireRef,
-  leftSlotId = "left",
-  rightSlotId = "right",
+  leftSlotId = "FromLeft",
+  rightSlotId = "FromRight",
   initialSlots,
   traceId,
 }: {
@@ -75,17 +76,19 @@ export interface KindBodyCtx {
   traceId?: string;
 }
 
-// Required output wire names per kind.
+// Required output wire names per kind — derived from NODE_KIND_PORTS so port names
+// are declared in exactly one place (spec.ts).
 // A kind is "inert" when any of these wires is unconnected (wireRef.current === null).
 // inhibitrightgate has no required out wire — it fires (inhibiting) even without one.
-const REQUIRED_OUT_WIRES: Partial<Record<RNodeKind, string[]>> = {
-  input:            ["out"],
-  relay:            ["out"],
-  chainInhibitor:   ["out"],
-  join:             ["out"],
-  readgate:         ["out"],
-  register:         ["out"],
-};
+// readgate outputs are optional (variable-arity: instances may omit the out port).
+const KINDS_WITH_REQUIRED_OUTPUTS: ReadonlyArray<RNodeKind> = [
+  "input", "relay", "chainInhibitor", "join", "readgate", "register",
+];
+const REQUIRED_OUT_WIRES: Partial<Record<RNodeKind, string[]>> = Object.fromEntries(
+  KINDS_WITH_REQUIRED_OUTPUTS
+    .filter((k) => NODE_KIND_PORTS[k].outputs.length > 0)
+    .map((k) => [k, NODE_KIND_PORTS[k].outputs])
+);
 
 export function isKindInert(
   kind: RNodeKind,
@@ -100,21 +103,23 @@ export function isKindInert(
 // RSubstrateNode is the only caller — one switch, one path.
 export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
   const { nodeRef, outWireRefs, slotIds, initialQueue, initialSlots, repeat, traceId } = ctx;
+  const kp = NODE_KIND_PORTS[kind];
   switch (kind) {
     case "input":
-      return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} initialQueue={initialQueue} repeat={repeat} traceId={traceId} />;
+      return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs[kp.outputs[0]]} initialQueue={initialQueue} repeat={repeat} traceId={traceId} />;
     case "relay":
-      return <RelayBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} initialSlots={initialSlots} traceId={traceId} />;
+      return <RelayBody nodeRef={nodeRef} outWireRef={outWireRefs[kp.outputs[0]]} slotId={slotIds[0]} initialSlots={initialSlots} traceId={traceId} />;
     case "chainInhibitor":
-      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} inhibitOutWireRef={outWireRefs["inhibitOut"]} slotId={slotIds[0]} initialSlots={initialSlots} traceId={traceId} />;
+      // outputs[0]="inhibitOut", outputs[1]="out" per NODE_KIND_PORTS
+      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRefs[kp.outputs[1]]} inhibitOutWireRef={outWireRefs[kp.outputs[0]]} slotId={slotIds[0]} initialSlots={initialSlots} traceId={traceId} />;
     case "join":
-      return <JoinBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotAId={slotIds[0]} slotBId={slotIds[1]} initialSlots={initialSlots} traceId={traceId} />;
+      return <JoinBody nodeRef={nodeRef} outWireRef={outWireRefs[kp.outputs[0]]} slotAId={slotIds[0]} slotBId={slotIds[1]} initialSlots={initialSlots} traceId={traceId} />;
     case "readgate":
-      return <ReadGateBody nodeRef={nodeRef} slotIds={slotIds} initialSlots={initialSlots} outWireRef={outWireRefs["out"]} traceId={traceId} />;
+      return <ReadGateBody nodeRef={nodeRef} slotIds={slotIds} initialSlots={initialSlots} outWireRef={outWireRefs[kp.outputs[0]]} traceId={traceId} />;
     case "inhibitrightgate":
-      return <InhibitRightGateBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} leftSlotId={slotIds[0]} rightSlotId={slotIds[1]} initialSlots={initialSlots} traceId={traceId} />;
+      return <InhibitRightGateBody nodeRef={nodeRef} outWireRef={outWireRefs[kp.outputs[0]]} leftSlotId={slotIds[0]} rightSlotId={slotIds[1]} initialSlots={initialSlots} traceId={traceId} />;
     case "register":
-      return <RegisterBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} initialSlots={initialSlots} traceId={traceId} />;
+      return <RegisterBody nodeRef={nodeRef} outWireRef={outWireRefs[kp.outputs[0]]} slotId={slotIds[0]} initialSlots={initialSlots} traceId={traceId} />;
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -133,6 +138,10 @@ export function InputBody({
 }) {
   const initialQueueRef = useRef(initialQueue);
   const remainingRef = useRef<unknown[]>([...initialQueue]);
+
+  useEffect(() => {
+    initialQueueRef.current = initialQueue;
+  }, [initialQueue]);
 
   const run = useCallback(() => {
     const wire = outWireRef.current;
@@ -158,7 +167,7 @@ export function InputBody({
 }
 
 export function RelayBody({
-  nodeRef, outWireRef, slotId = "slot", initialSlots, traceId,
+  nodeRef, outWireRef, slotId = "FromIn", initialSlots, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
@@ -187,7 +196,7 @@ export function RelayBody({
 }
 
 export function JoinBody({
-  nodeRef, outWireRef, slotAId = "a", slotBId = "b", initialSlots, traceId,
+  nodeRef, outWireRef, slotAId = "FromA", slotBId = "FromB", initialSlots, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
@@ -223,7 +232,7 @@ export function JoinBody({
 // as the new held. Atomic — all preconditions checked before commit.
 
 export function ChainInhibitorBody({
-  nodeRef, outWireRef, inhibitOutWireRef, slotId = "in", initialSlots, traceId,
+  nodeRef, outWireRef, inhibitOutWireRef, slotId = "FromPrev", initialSlots, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
@@ -282,7 +291,7 @@ export function ChainInhibitorBody({
 // This is a one-fill shift-register pattern.
 
 export function RegisterBody({
-  nodeRef, outWireRef, slotId = "slot", initialSlots, traceId,
+  nodeRef, outWireRef, slotId = "FromIn", initialSlots, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef?: RefObject<WireHandle | null>;

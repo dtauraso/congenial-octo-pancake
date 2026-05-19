@@ -31,13 +31,13 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
   Input: {
     role: "input",
     inputs: [],
-    outputs: [{ name: "out", kind: "chain" }],
+    outputs: [{ name: "ToOut", kind: "chain" }],
     shape: "rect", fill: "#e0e0e0", stroke: "#666", width: 80, height: 60,
   },
   Relay: {
     role: "relay",
-    inputs: [{ name: "slot", kind: "chain" }],
-    outputs: [{ name: "out", kind: "chain" }],
+    inputs: [{ name: "FromIn", kind: "chain" }],
+    outputs: [{ name: "ToOut", kind: "chain" }],
     shape: "rect", fill: "#e8f5e9", stroke: "#2e7d32", width: 70, height: 40,
   },
   ReadLatch: {
@@ -49,17 +49,17 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
   },
   ChainInhibitor: {
     role: "inhibitor",
-    inputs: [{ name: "in", kind: "chain" }],
+    inputs: [{ name: "FromPrev", kind: "chain" }],
     outputs: [
-      { name: "inhibitOut", kind: "inhibit-in" },
-      { name: "out", kind: "chain" },
+      { name: "ToEdge", kind: "inhibit-in" },
+      { name: "ToNext", kind: "chain" },
     ],
     shape: "rect", fill: "#fff3e0", stroke: "#e65100", width: 90, height: 60,
   },
   InhibitRightGate: {
     role: "inhibit-right-gate",
-    inputs: [{ name: "left", kind: "inhibit-in" }, { name: "right", kind: "inhibit-in" }],
-    outputs: [{ name: "out", kind: "and-out" }],
+    inputs: [{ name: "FromLeft", kind: "inhibit-in" }, { name: "FromRight", kind: "inhibit-in" }],
+    outputs: [{ name: "ToPassed", kind: "and-out" }],
     shape: "rect", fill: "#fce4ec", stroke: "#880e4f", width: 110, height: 36,
   },
   DetectorLatch: {
@@ -102,8 +102,8 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
   },
   ReadGate: {
     role: "and-gate",
-    inputs: [{ name: "i0In", kind: "chain" }],
-    outputs: [{ name: "out", kind: "chain" }],
+    inputs: [{ name: "FromValue", kind: "chain" }, { name: "FromAck", kind: "chain" }],
+    outputs: [{ name: "ToGated", kind: "chain" }],
     shape: "rect", fill: "#f3e5f5", stroke: "#7b1fa2", width: 70, height: 40,
   },
   EdgeNode: {

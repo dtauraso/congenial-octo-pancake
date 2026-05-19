@@ -12,7 +12,7 @@
       "inputs": [],
       "outputs": [
         {
-          "name": "out",
+          "name": "ToOut",
           "kind": "chain",
           "side": "right",
           "slot": 1
@@ -24,13 +24,13 @@
       "type": "ReadGate",
       "inputs": [
         {
-          "name": "i0In",
+          "name": "FromValue",
           "kind": "chain",
           "side": "left",
           "slot": 1
         },
         {
-          "name": "i1In",
+          "name": "FromAck",
           "kind": "chain",
           "side": "bottom",
           "slot": 1
@@ -38,7 +38,7 @@
       ],
       "outputs": [
         {
-          "name": "out",
+          "name": "ToGated",
           "kind": "chain",
           "side": "right",
           "slot": 1
@@ -53,7 +53,7 @@
       },
       "inputs": [
         {
-          "name": "in",
+          "name": "FromPrev",
           "kind": "chain",
           "side": "left",
           "slot": 1
@@ -61,13 +61,13 @@
       ],
       "outputs": [
         {
-          "name": "inhibitOut",
+          "name": "ToEdge",
           "kind": "inhibit-in",
           "side": "top",
           "slot": 1
         },
         {
-          "name": "out",
+          "name": "ToNext",
           "kind": "chain",
           "side": "right",
           "slot": 1
@@ -82,7 +82,7 @@
       },
       "inputs": [
         {
-          "name": "in",
+          "name": "FromPrev",
           "kind": "chain",
           "side": "left",
           "slot": 1
@@ -90,13 +90,13 @@
       ],
       "outputs": [
         {
-          "name": "inhibitOut",
+          "name": "ToEdge",
           "kind": "inhibit-in",
           "side": "top",
           "slot": 1
         },
         {
-          "name": "out",
+          "name": "ToNext",
           "kind": "chain",
           "side": "bottom",
           "slot": 1
@@ -108,13 +108,13 @@
       "type": "InhibitRightGate",
       "inputs": [
         {
-          "name": "left",
+          "name": "FromLeft",
           "kind": "inhibit-in",
           "side": "bottom",
           "slot": 0
         },
         {
-          "name": "right",
+          "name": "FromRight",
           "kind": "inhibit-in",
           "side": "bottom",
           "slot": 2
@@ -132,7 +132,7 @@
       "inputs": [],
       "outputs": [
         {
-          "name": "out",
+          "name": "ToOut",
           "kind": "chain",
           "side": "right",
           "slot": 1
@@ -142,35 +142,35 @@
   ],
   "edges": [
     {
-      "id": "in0.out->readGate.i0In",
+      "id": "in08ToReadGate1",
       "source": "in08",
-      "sourceHandle": "out",
+      "sourceHandle": "ToOut",
       "target": "readGate1",
-      "targetHandle": "i0In",
+      "targetHandle": "FromValue",
       "kind": "chain",
-      "label": "inputToReadGate",
+      "label": "in08ToReadGate1",
       "data": {
         "slots": 1
       }
     },
     {
-      "id": "readGate.out->i0.in",
+      "id": "readGate1ToI0",
       "source": "readGate1",
-      "sourceHandle": "out",
+      "sourceHandle": "ToGated",
       "target": "i0",
-      "targetHandle": "in",
+      "targetHandle": "FromPrev",
       "kind": "chain",
-      "label": "readGateToI0",
+      "label": "readGate1ToI0",
       "data": {
         "slots": 1
       }
     },
     {
-      "id": "i0.out->i1.in",
+      "id": "i0ToI1",
       "source": "i0",
-      "sourceHandle": "out",
+      "sourceHandle": "ToNext",
       "target": "i1",
-      "targetHandle": "in",
+      "targetHandle": "FromPrev",
       "kind": "chain",
       "label": "i0ToI1",
       "data": {
@@ -178,38 +178,38 @@
       }
     },
     {
-      "id": "i0.inhibitOut->inhibitRight0.left",
+      "id": "i0ToInhibitRight0",
       "source": "i0",
-      "sourceHandle": "inhibitOut",
+      "sourceHandle": "ToEdge",
       "target": "inhibitRight0",
-      "targetHandle": "left",
+      "targetHandle": "FromLeft",
       "kind": "inhibit-in",
-      "label": "i0InhibitToRight0Left",
+      "label": "i0ToInhibitRight0",
       "lane": 0,
       "data": {
         "slots": 1
       }
     },
     {
-      "id": "i1.inhibitOut->inhibitRight0.right",
+      "id": "i1ToInhibitRight0",
       "source": "i1",
-      "sourceHandle": "inhibitOut",
+      "sourceHandle": "ToEdge",
       "target": "inhibitRight0",
-      "targetHandle": "right",
+      "targetHandle": "FromRight",
       "kind": "inhibit-in",
-      "label": "i1InhibitToRight0Right",
+      "label": "i1ToInhibitRight0",
       "data": {
         "slots": 1
       }
     },
     {
-      "id": "i1.out->readGate.i1In",
+      "id": "i1ToReadGate1",
       "source": "i1",
-      "sourceHandle": "out",
+      "sourceHandle": "ToNext",
       "target": "readGate1",
-      "targetHandle": "i1In",
+      "targetHandle": "FromAck",
       "kind": "chain",
-      "label": "i1ToReadGate",
+      "label": "i1ToReadGate1",
       "lane": -69.0549836800538,
       "data": {
         "slots": 1,
@@ -217,13 +217,13 @@
       }
     },
     {
-      "id": "bootstrap_rg.out->readGate1.i1In",
+      "id": "bootstrapRgToReadGate1",
       "source": "bootstrap_rg",
-      "sourceHandle": "out",
+      "sourceHandle": "ToOut",
       "target": "readGate1",
-      "targetHandle": "i1In",
+      "targetHandle": "FromAck",
       "kind": "chain",
-      "label": "bootstrapRgToReadGate",
+      "label": "bootstrapRgToReadGate1",
       "data": {
         "slots": 1
       }

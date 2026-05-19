@@ -59,31 +59,31 @@
   ],
   "edges": [
     {
-      "id": "readGate.out->i0.in",
+      "id": "readGate14ToI0Test3",
       "source": "readGate14",
-      "sourceHandle": "out",
+      "sourceHandle": "ToGated",
       "target": "i0Test3",
-      "targetHandle": "in",
+      "targetHandle": "FromPrev",
       "kind": "chain",
-      "label": "readGateToI0"
+      "label": "readGate14ToI0Test3"
     },
     {
-      "id": "i0.out->i1.in",
+      "id": "i0Test3ToI1",
       "source": "i0Test3",
-      "sourceHandle": "out",
+      "sourceHandle": "ToNext",
       "target": "i1",
-      "targetHandle": "in",
+      "targetHandle": "FromPrev",
       "kind": "chain",
-      "label": "i0ToI1"
+      "label": "i0Test3ToI1"
     },
     {
-      "id": "i1.out->readGate.ack",
+      "id": "i1ToReadGate14",
       "source": "i1",
-      "sourceHandle": "out",
+      "sourceHandle": "ToNext",
       "target": "readGate14",
-      "targetHandle": "ack",
+      "targetHandle": "FromAck",
       "kind": "feedback-ack",
-      "label": "i1AckToReadGate",
+      "label": "i1ToReadGate14",
       "route": "below",
       "data": {
         "init": [
@@ -92,31 +92,31 @@
       }
     },
     {
-      "id": "in0.out->readGate.i0In",
+      "id": "in0testToReadGate14",
       "source": "in0test",
-      "sourceHandle": "out",
+      "sourceHandle": "ToOut",
       "target": "readGate14",
-      "targetHandle": "i0In",
+      "targetHandle": "FromValue",
       "kind": "chain",
-      "label": "inputToReadGate"
+      "label": "in0testToReadGate14"
     },
     {
-      "id": "i0.inhibitOut->inhibitRight0.left",
+      "id": "i0Test3ToInhibitRight0",
       "source": "i0Test3",
-      "sourceHandle": "inhibitOut",
+      "sourceHandle": "ToEdge",
       "target": "inhibitRight0",
-      "targetHandle": "left",
+      "targetHandle": "FromLeft",
       "kind": "inhibit-in",
-      "label": "i0ToInhibitRight"
+      "label": "i0Test3ToInhibitRight0"
     },
     {
-      "id": "i1.inhibitOut->inhibitRight0.right",
+      "id": "i1ToInhibitRight0",
       "source": "i1",
-      "sourceHandle": "inhibitOut",
+      "sourceHandle": "ToEdge",
       "target": "inhibitRight0",
-      "targetHandle": "right",
+      "targetHandle": "FromRight",
       "kind": "inhibit-in",
-      "label": "i1ToInhibitRight"
+      "label": "i1ToInhibitRight0"
     }
   ],
   "timing": {
@@ -154,7 +154,7 @@
           "in0test"
         ],
         "departs": [
-          "in0.out->readGate.i0In"
+          "in0.out->readGate.value"
         ]
       },
       {
@@ -164,10 +164,10 @@
           "readGate14"
         ],
         "departs": [
-          "readGate.out->i0.in"
+          "readGate.gated->i0.in"
         ],
         "arrives": [
-          "in0.out->readGate.i0In"
+          "in0.out->readGate.value"
         ]
       },
       {
@@ -181,7 +181,7 @@
           "i0.inhibitOut->inhibitRight0.left"
         ],
         "arrives": [
-          "readGate.out->i0.in"
+          "readGate.gated->i0.in"
         ],
         "state": {
           "i0Test3": {

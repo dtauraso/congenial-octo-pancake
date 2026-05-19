@@ -7,8 +7,8 @@
 // and data.outputs[i]) tinted by KIND_COLORS; body uses data.fill /
 // data.stroke / data.width / data.height per the spec's node-types.ts.
 
-import { useEffect, useMemo, useRef, type RefObject } from "react";
-import { useStore, type NodeProps } from "reactflow";
+import { useCallback, useEffect, useMemo, useRef, type RefObject } from "react";
+import { useStore, useUpdateNodeInternals, type NodeProps } from "reactflow";
 import { shallow } from "zustand/shallow";
 import type * as React from "react";
 import type { EdgeKind } from "../../schema";
@@ -19,6 +19,7 @@ import { useRegistry } from "./registry";
 import { toRNodeKind } from "./spec";
 import { postLog } from "../log/post";
 import { PortRim } from "../rf/PortRim";
+import { InputQueueEditor } from "./InputQueueEditor";
 
 interface PortDef { name: string; kind: EdgeKind; side?: "left" | "right" | "top" | "bottom"; slot?: 0 | 1 | 2 }
 
@@ -96,6 +97,8 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
   const height = data?.height ?? 50;
   const radius = data?.shape === "pill" ? height / 2 : 4;
   const isInert = kind ? isKindInert(kind, outWireRefs) : false;
+  const updateNodeInternals = useUpdateNodeInternals();
+  const onHeightChange = useCallback(() => updateNodeInternals(id), [id, updateNodeInternals]);
 
   return (
     <div
@@ -104,7 +107,7 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
         position: "relative",
         minWidth: width,
         width: "max-content",
-        height,
+        minHeight: height,
         background: data?.fill ?? "#ffffff",
         color: "#1a1a1a",
         border: `${selected ? 2 : 1}px solid ${data?.stroke ?? "#888"}`,
@@ -128,6 +131,13 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
         })}
       </div>
       {data?.sublabel && <div style={{ fontSize: 9, opacity: 0.7 }}>{data.sublabel}</div>}
+      {kind === "input" && (
+        <InputQueueEditor
+          nodeId={id}
+          initialQueue={data?.nodeData?.init ?? []}
+          onHeightChange={onHeightChange}
+        />
+      )}
     </div>
   );
 }

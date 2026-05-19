@@ -1,11 +1,14 @@
 {
   "camera": {
-    "x": 247.36193364008162,
-    "y": -181.80486863183265,
-    "zoom": 0.9484339015046425
+    "x": 143.4651456033388,
+    "y": -229.6988966793889,
+    "zoom": 1.2476186716956994
   },
   "views": [],
   "folds": [],
+  "lastSelectionIds": [
+    "bootstrap_rg"
+  ],
   "nodes": {
     "in08": {
       "x": 27.895407566498463,
@@ -62,10 +65,10 @@
     }
   },
   "edges": {
-    "i0.inhibitOut->inhibitRight0.left": {
+    "i0ToInhibitRight0": {
       "route": "snake-v"
     },
-    "i1.inhibitOut->inhibitRight0.right": {
+    "i1ToInhibitRight0": {
       "route": "snake-v"
     }
   }

@@ -7,48 +7,48 @@
   ],
   "edges": [
     {
-      "id": "src->gate",
+      "id": "srcToGate",
       "source": "src",
-      "sourceHandle": "out",
+      "sourceHandle": "ToOut",
       "target": "gate",
-      "targetHandle": "i0In",
+      "targetHandle": "FromValue",
       "kind": "chain",
       "label": "srcToGate"
     },
     {
-      "id": "gate->inhib",
+      "id": "gateToInhib",
       "source": "gate",
-      "sourceHandle": "out",
+      "sourceHandle": "ToGated",
       "target": "inhib",
-      "targetHandle": "in",
+      "targetHandle": "FromPrev",
       "kind": "chain",
       "label": "gateToInhib"
     },
     {
-      "id": "inhib->gate",
+      "id": "inhibToGate",
       "source": "inhib",
-      "sourceHandle": "out",
+      "sourceHandle": "ToNext",
       "target": "gate",
-      "targetHandle": "ack",
+      "targetHandle": "FromAck",
       "kind": "feedback-ack",
-      "label": "inhibAckToGate",
+      "label": "inhibToGate",
       "data": { "init": [1] }
     },
     {
-      "id": "inhib->right.left",
+      "id": "inhibToRightLeft",
       "source": "inhib",
-      "sourceHandle": "inhibitOut",
+      "sourceHandle": "ToEdge",
       "target": "right",
-      "targetHandle": "left",
+      "targetHandle": "FromLeft",
       "kind": "inhibit-in",
       "label": "inhibToRightLeft"
     },
     {
-      "id": "inhib->right.right",
+      "id": "inhibToRightRight",
       "source": "inhib",
-      "sourceHandle": "inhibitOut",
+      "sourceHandle": "ToEdge",
       "target": "right",
-      "targetHandle": "right",
+      "targetHandle": "FromRight",
       "kind": "inhibit-in",
       "label": "inhibToRightRight"
     }

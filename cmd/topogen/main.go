@@ -74,37 +74,37 @@ type NodeBind struct {
 var REGISTRY = map[string]NodeBind{
 	"Input": {
 		Pkg: "github.com/dtauraso/wirefold/nodes/InputNode", Alias: "INN", Struct: "InputNode",
-		Outputs:      map[string]PortBind{"out": {Field: "ToNext"}},
+		Outputs:      map[string]PortBind{"ToOut": {Field: "ToNext"}},
 		HasInputChan: true, InputField: "Input",
 	},
 	"ReadGate": {
 		Pkg: "github.com/dtauraso/wirefold/nodes/ReadGateNode", Alias: "RGN", Struct: "ReadGateNode",
 		Inputs: map[string]PortBind{
-			"i0In": {Field: "FromValue"},
-			"i1In": {Field: "FromAck"},
+			"FromValue": {Field: "FromValue"},
+			"FromAck":   {Field: "FromAck"},
 		},
-		Outputs: map[string]PortBind{"out": {Field: "ToLatch"}},
+		Outputs: map[string]PortBind{"ToGated": {Field: "ToGated"}},
 	},
 	"ChainInhibitor": {
 		Pkg: "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode", Alias: "CI", Struct: "ChainInhibitorNode",
-		Inputs: map[string]PortBind{"in": {Field: "FromPrev"}},
+		Inputs: map[string]PortBind{"FromPrev": {Field: "FromPrev"}},
 		Outputs: map[string]PortBind{
-			"out":        {Field: "ToNext"},
-			"ack":        {Field: "ToAck"},
-			"inhibitOut": {Field: "ToEdge", Multi: true},
+			"ToNext": {Field: "ToNext"},
+			"ToAck":  {Field: "ToAck"},
+			"ToEdge": {Field: "ToEdge", Multi: true},
 		},
 		SlotFields: map[string]string{"held": "HeldValue"},
 	},
 	"InhibitRightGate": {
 		Pkg: "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode", Alias: "IRG", Struct: "InhibitRightGateNode",
-		Inputs:  map[string]PortBind{"left": {Field: "FromLeft"}, "right": {Field: "FromRight"}},
-		Outputs: map[string]PortBind{"out": {Field: "ToOut"}},
+		Inputs:  map[string]PortBind{"FromLeft": {Field: "FromLeft"}, "FromRight": {Field: "FromRight"}},
+		Outputs: map[string]PortBind{"ToPassed": {Field: "ToPassed"}},
 	},
 }
 
 func main() {
 	in := flag.String("in", "topology.json", "spec file")
-	out := flag.String("out", "Wiring/wiring.go", "output file")
+	out := flag.String("out", "nodes/Wiring/Wiring.go", "output file")
 	check := flag.Bool("check", false, "validate spec and codegen without writing the output file")
 	flag.Parse()
 

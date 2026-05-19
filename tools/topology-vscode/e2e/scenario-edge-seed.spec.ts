@@ -1,7 +1,7 @@
 // Scenario: a wire with data.seed fills the destination slot at mount.
 // Observable: the [wirefold] trace.seed log appears with the correct
 // wire id and value, and the seed does NOT require any user action.
-// Fixture: ring-5node — edges i1.out->readGate.i1In and
+// Fixture: ring-5node — edges i1.out->readGate.ack and
 // i1.inhibitOut->inhibitRight0.right both carry seed:1.
 
 import { test, expect } from "@playwright/test";
@@ -32,7 +32,7 @@ test("edge-seed: wires with seed:1 log trace.seed at mount", async ({ page }) =>
   // Both seeded edges must log trace.seed shortly after mount.
   await expect.poll(
     () => logs.some((l) =>
-      l.includes("trace.seed") && l.includes("i1.out->readGate.i1In")),
+      l.includes("trace.seed") && l.includes("i1.out->readGate.ack")),
     { timeout: 3000, message: () => `seed log absent for i1->readGate; logs:\n${logs.join("\n")}` },
   ).toBe(true);
 

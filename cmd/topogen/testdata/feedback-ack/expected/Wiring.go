@@ -9,11 +9,11 @@
 //   right  InhibitRightGate
 //
 // Edges:
-//   srcToGate          src.out -> gate.i0In
-//   gateToInhib        gate.out -> inhib.in
-//   inhibAckToGate     inhib.out -> gate.ack
-//   inhibToRightLeft   inhib.inhibitOut -> right.left
-//   inhibToRightRight  inhib.inhibitOut -> right.right
+//   srcToGate          src.ToOut -> gate.FromValue
+//   gateToInhib        gate.ToGated -> inhib.FromPrev
+//   inhibToGate        inhib.ToNext -> gate.FromAck
+//   inhibToRightLeft   inhib.ToEdge -> right.FromLeft
+//   inhibToRightRight  inhib.ToEdge -> right.FromRight
 
 package Wiring
 
@@ -29,12 +29,9 @@ func Wire() []S.Node {
 	// Channels
 	srcToGate := make(chan int, 1)
 	gateToInhib := make(chan int, 1)
-	inhibAckToGate := make(chan int, 1)
+	inhibToGate := make(chan int, 1)
 	inhibToRightLeft := make(chan int, 1)
 	inhibToRightRight := make(chan int, 1)
-
-	// Edge priming
-	inhibAckToGate <- 1
 
 	// Input externals
 	srcInput := make(chan int, 2)
@@ -42,14 +39,14 @@ func Wire() []S.Node {
 	srcInput <- 2
 
 	// Dead-end outputs
-	inhibAck := make(chan int, 1)
-	rightOut := make(chan int, 1)
+	inhibToAck := make(chan int, 1)
+	rightToPassed := make(chan int, 1)
 
 	// Nodes
 	src := INN.InputNode{Id: 0, Name: "src", Input: srcInput, ToNext: srcToGate}
-	gate := RGN.ReadGateNode{Id: 0, Name: "gate", FromAck: inhibAckToGate, FromValue: srcToGate, ToLatch: gateToInhib}
-	inhib := CI.ChainInhibitorNode{Id: 0, Name: "inhib", FromPrev: gateToInhib, ToAck: inhibAck, ToEdge: []chan<- int{inhibToRightLeft, inhibToRightRight}, ToNext: inhibAckToGate}
-	right := IRG.InhibitRightGateNode{Id: 0, Name: "right", FromLeft: inhibToRightLeft, FromRight: inhibToRightRight, ToOut: rightOut}
+	gate := RGN.ReadGateNode{Id: 0, Name: "gate", FromAck: inhibToGate, FromValue: srcToGate, ToGated: gateToInhib}
+	inhib := CI.ChainInhibitorNode{Id: 0, Name: "inhib", FromPrev: gateToInhib, ToAck: inhibToAck, ToEdge: []chan<- int{inhibToRightLeft, inhibToRightRight}, ToNext: inhibToGate}
+	right := IRG.InhibitRightGateNode{Id: 0, Name: "right", FromLeft: inhibToRightLeft, FromRight: inhibToRightRight, ToPassed: rightToPassed}
 
 	return []S.Node{&src, &gate, &inhib, &right}
 }
