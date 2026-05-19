@@ -14,7 +14,7 @@ import type * as React from "react";
 import type { EdgeKind } from "../../schema";
 import type { NodeHandle } from "./Node";
 import type { WireHandle } from "./Wire";
-import { renderKindBody } from "./node-kinds";
+import { renderKindBody, isKindInert } from "./node-kinds";
 import { useRegistry } from "./registry";
 import { toRNodeKind } from "./spec";
 import { postLog } from "../log/post";
@@ -95,9 +95,11 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
   const width = data?.width ?? 90;
   const height = data?.height ?? 50;
   const radius = data?.shape === "pill" ? height / 2 : 4;
+  const isInert = kind ? isKindInert(kind, outWireRefs) : false;
 
   return (
     <div
+      className={isInert ? "r-substrate-node--inert" : undefined}
       style={{
         position: "relative",
         minWidth: width,
