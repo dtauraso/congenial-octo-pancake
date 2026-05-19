@@ -9,43 +9,59 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, plugin-hygiene-fixes merged to main)
+## State at handoff (2026-05-18, plugin-org-cleanup merged to main)
 
-**Active branch:** `main`. `task/plugin-hygiene-fixes` merged via
-`--no-ff` and deleted locally and on remote. Working tree clean.
+**Active branch:** `main`. `task/plugin-org-cleanup` merged via
+`--no-ff` (commit `b823687`) and deleted locally and on remote.
+Working tree clean.
 
 ## What landed on main this session
 
-Hygiene pass driven by a delegated code-smell audit. Four refactor
-commits via `task/plugin-hygiene-fixes`, merged `12f5445`:
+Organizational audit (delegated, narrow category list) surfaced seven
+inefficiencies in the plugin source tree; all seven landed on
+`task/plugin-org-cleanup` plus one follow-up fix:
 
-- `793266c` **refactor(plugin):** extract `toErrorMessage` util to
-  `src/utils/error.ts`; dedupe inline `err instanceof Error ? …`
-  pattern across `compareLoader.ts`, `extension/handle-message.ts`
-  (replacing local `errMsg`), and
-  `webview/rf/app/_use-host-messages.ts`.
-- `064df07` **refactor(plugin):** extract `reconcileSelection` helper
-  to `webview/rf/app/_reconcile-selection.ts`; replace two near-
-  identical blocks in `_handle-load.ts` and `_handle-view-load.ts`.
-- `211192d` **refactor(plugin):** surface previously-swallowed
-  run-dispatch error — `extension/handle-message.ts:72` no longer
-  silently `catch { return }` on topogen write/runner setup; posts
-  `save-error` to the webview (existing message type, also used by
-  save and view-save handlers) plus `console.error` host-side.
-- `29b801a` **refactor(plugin):** extract magic numbers into existing
-  `_constants.ts` — `FIT_VIEW_DURATION_MS`, `FIT_VIEW_PADDING`,
-  `FIT_VIEW_PADDING_WIDE`, `FIT_VIEW_MAX_ZOOM`, `FLASH_TIMEOUT_MS`.
-  Replaces inline literals in `_use-fit-view.ts` and
-  `_use-undo-redo.ts`.
+- `1b43b07` **refactor(plugin):** merge `src/compareLoader.ts` into
+  `src/extension/compare-load.ts` (removed pass-through layer).
+- `189c930` **refactor(plugin):** split `vscode` postMessage singleton
+  out of `webview/save.ts` into `webview/vscode-api.ts`. Only 3
+  importers wanted the singleton; the audit's "12" was high.
+- `9918a41` **refactor(plugin):** remove `webview/state.ts` and
+  `webview/rf/diff-decorate.ts` barrel/subdir name collisions by
+  moving each barrel into the matching subdir's `index.ts`. The 23
+  `"./state"` / `"./diff-decorate"` import sites resolve to the index
+  automatically; no churn.
+- `a145c85` **refactor(plugin):** same fix for `src/schema.ts` →
+  `src/schema/index.ts`.
+- `a309923` **refactor(plugin):** consolidate overlay panels under
+  `webview/rf/panels/`. Folded `webview/panels/` (RunButton,
+  TimelinePanel, ViewsPanel) and four loose `rf/` panels
+  (LegendPanel, NodePalette, ManualTakeButton, CompareToolbar) into
+  one directory. The previous split was historical, not principled —
+  every overlay renders inside the RF editor and reads RF state.
+- `c946f2b` **refactor(plugin):** align `state/` layout with the
+  runtime `Scope = "spec" | "viewer"` peer model.
+  `webview/viewerState.ts` and `webview/viewerState.parse.ts` moved
+  to `state/viewer/types.ts` and `state/viewer/parse.ts`;
+  `state/mutators.ts` and `state/selectors.ts` moved into
+  `state/spec/`. Shared `store.ts` and `history.ts` stay at the top
+  (they own both undo stacks).
+- `40885b6` **refactor(plugin):** group pure mutation engines under
+  `webview/state/ops/`. `delete-core.ts`, `fold-core.ts`,
+  `rename-core.ts`, `diff-core.ts` → `state/ops/delete.ts` etc. The
+  `-core` suffix was redundant once the directory carried that
+  meaning. Kept separate from `state/spec/mutators.ts` (the latter is
+  store-coupled and transactional; the ops are pure functions
+  testable without standing up the webview — see `delete.ts:1-3`).
+- `8551051` **fix(plugin):** repair import paths inside `state/ops/`
+  files. Subagent's prior commit moved the files via `git mv` but
+  left the rewritten relative-import edits unstaged; tsc/build passed
+  locally only because the working tree had the fixups. New
+  cautionary case for `feedback_verify_subagent_commits` — the
+  failure mode there was *under-staging*, opposite of the
+  prior-recorded *over-staging* case.
 
-83 tests pass; `npm run build` clean.
-
-Audit caveat worth carrying forward: a second-pass audit over a
-larger category list (38 categories + substrate vocab) reported
-"clean" on the four items above. The first audit was correct; the
-second was over-charitable. When delegating audits, request the
-narrower, sharper category list — broad-sweep audits encourage the
-agent to declare clean rather than triage.
+`tsc --noEmit` clean; `npm run build` clean.
 
 ## Next action
 
@@ -66,12 +82,13 @@ Carried-forward friction signals (unchanged from prior handoff):
 - **Schema-parser-parity reminder.** When adding a route/spec
   variant, update `Wire.tsx`, the parser, the type, and the legacy
   migrator in the same commit. See `feedback_schema_parser_parity`.
-- **Pending working-tree edits** before this session existed on
-  `task/short-edge-small-markers` (MarkerDefs.tsx, RSubstrateEdge.tsx,
-  topology.view.json). Stash reported "no local changes" when
-  switching branches, so they appear to have already been folded
-  into the merged commits. Verify with `git status` next session;
-  if they reappear, decide whether to commit or discard.
+- **Subagent staging hygiene.** A subagent on this branch left
+  required edits unstaged after `git mv` and committed only the
+  renames, breaking the pushed commit. The local working tree had
+  the fixups so `tsc`/`build` passed inline. Spot-checking
+  `git status` after a subagent commit catches this; verifying
+  `git show <sha> --stat` against the agent's reported "files
+  touched" catches it more reliably.
 
 ## Parked (not open; revisit when friction returns)
 
