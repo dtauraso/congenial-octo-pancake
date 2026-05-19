@@ -104,7 +104,7 @@ var REGISTRY = map[string]NodeBind{
 
 func main() {
 	in := flag.String("in", "topology.json", "spec file")
-	out := flag.String("out", "Wiring/wiring.go", "output file")
+	out := flag.String("out", "nodes/Wiring/Wiring.go", "output file")
 	check := flag.Bool("check", false, "validate spec and codegen without writing the output file")
 	flag.Parse()
 
