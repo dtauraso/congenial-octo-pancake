@@ -10,12 +10,12 @@
 //   inhibitRight0  InhibitRightGate
 //
 // Edges:
-//   readGateToI0      readGate14.gated -> i0Test3.in
-//   i0ToI1            i0Test3.out -> i1.in
-//   i1AckToReadGate   i1.out -> readGate14.ack
-//   inputToReadGate   in0test.out -> readGate14.value
-//   i0ToInhibitRight  i0Test3.inhibitOut -> inhibitRight0.left
-//   i1ToInhibitRight  i1.inhibitOut -> inhibitRight0.right
+//   readGate14ToI0Test3     readGate14.ToGated -> i0Test3.FromPrev
+//   i0Test3ToI1             i0Test3.ToNext -> i1.FromPrev
+//   i1ToReadGate14          i1.ToNext -> readGate14.FromAck
+//   in0testToReadGate14     in0test.ToOut -> readGate14.FromValue
+//   i0Test3ToInhibitRight0  i0Test3.ToEdge -> inhibitRight0.FromLeft
+//   i1ToInhibitRight0       i1.ToEdge -> inhibitRight0.FromRight
 
 package Wiring
 
@@ -29,12 +29,12 @@ import (
 
 func Wire() []S.Node {
 	// Channels
-	readGateToI0 := make(chan int, 1)
-	i0ToI1 := make(chan int, 1)
-	i1AckToReadGate := make(chan int, 1)
-	inputToReadGate := make(chan int, 1)
-	i0ToInhibitRight := make(chan int, 1)
-	i1ToInhibitRight := make(chan int, 1)
+	readGate14ToI0Test3 := make(chan int, 1)
+	i0Test3ToI1 := make(chan int, 1)
+	i1ToReadGate14 := make(chan int, 1)
+	in0testToReadGate14 := make(chan int, 1)
+	i0Test3ToInhibitRight0 := make(chan int, 1)
+	i1ToInhibitRight0 := make(chan int, 1)
 
 	// Input externals
 	in0testInput := make(chan int, 3)
@@ -43,16 +43,16 @@ func Wire() []S.Node {
 	in0testInput <- 0
 
 	// Dead-end outputs
-	i0Test3Ack := make(chan int, 1)
-	i1Ack := make(chan int, 1)
-	inhibitRight0Passed := make(chan int, 1)
+	i0Test3ToAck := make(chan int, 1)
+	i1ToAck := make(chan int, 1)
+	inhibitRight0ToPassed := make(chan int, 1)
 
 	// Nodes
-	in0test := INN.InputNode{Id: 0, Name: "in0test", Input: in0testInput, ToNext: inputToReadGate}
-	readGate14 := RGN.ReadGateNode{Id: 0, Name: "readGate14", FromAck: i1AckToReadGate, FromValue: inputToReadGate, ToGated: readGateToI0}
-	i0Test3 := CI.ChainInhibitorNode{Id: 0, Name: "i0Test3", FromPrev: readGateToI0, ToAck: i0Test3Ack, ToEdge: []chan<- int{i0ToInhibitRight}, ToNext: i0ToI1}
-	i1 := CI.ChainInhibitorNode{Id: 1, Name: "i1", FromPrev: i0ToI1, ToAck: i1Ack, ToEdge: []chan<- int{i1ToInhibitRight}, ToNext: i1AckToReadGate}
-	inhibitRight0 := IRG.InhibitRightGateNode{Id: 0, Name: "inhibitRight0", FromLeft: i0ToInhibitRight, FromRight: i1ToInhibitRight, ToPassed: inhibitRight0Passed}
+	in0test := INN.InputNode{Id: 0, Name: "in0test", Input: in0testInput, ToNext: in0testToReadGate14}
+	readGate14 := RGN.ReadGateNode{Id: 0, Name: "readGate14", FromAck: i1ToReadGate14, FromValue: in0testToReadGate14, ToGated: readGate14ToI0Test3}
+	i0Test3 := CI.ChainInhibitorNode{Id: 0, Name: "i0Test3", FromPrev: readGate14ToI0Test3, ToAck: i0Test3ToAck, ToEdge: []chan<- int{i0Test3ToInhibitRight0}, ToNext: i0Test3ToI1}
+	i1 := CI.ChainInhibitorNode{Id: 1, Name: "i1", FromPrev: i0Test3ToI1, ToAck: i1ToAck, ToEdge: []chan<- int{i1ToInhibitRight0}, ToNext: i1ToReadGate14}
+	inhibitRight0 := IRG.InhibitRightGateNode{Id: 0, Name: "inhibitRight0", FromLeft: i0Test3ToInhibitRight0, FromRight: i1ToInhibitRight0, ToPassed: inhibitRight0ToPassed}
 
 	return []S.Node{&in0test, &readGate14, &i0Test3, &i1, &inhibitRight0}
 }
