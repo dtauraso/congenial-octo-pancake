@@ -27,6 +27,8 @@ export function RunButton() {
         className="run-btn"
         title={running ? "stop the running process" : "go run . in repo root"}
         onClick={onRun}
+        disabled
+        style={{ opacity: 0.4, cursor: "not-allowed" }}
       >
         {running ? "■ stop" : "▶ run"}
       </button>
