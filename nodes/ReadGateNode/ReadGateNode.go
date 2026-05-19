@@ -12,9 +12,9 @@ type ReadGateNode struct {
 	HasValue  bool
 	AckVal    int
 	HasAck    bool
-	ValueCh   <-chan int
-	AckCh     <-chan int
-	Gated     chan<- int
+	FromValue <-chan int
+	FromAck   <-chan int
+	ToGated   chan<- int
 }
 
 func (g *ReadGateNode) Update(s *S.SafeWorker) {
@@ -28,20 +28,20 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 
 		if !g.HasValue {
 			select {
-			case v := <-g.ValueCh:
+			case v := <-g.FromValue:
 				g.Value = v
 				g.HasValue = true
-				s.Trace.Recv(g.Name, "value", v)
+				s.Trace.Recv(g.Name, "FromValue", v)
 			default:
 			}
 		}
 
 		if !g.HasAck {
 			select {
-			case v := <-g.AckCh:
+			case v := <-g.FromAck:
 				g.AckVal = v
 				g.HasAck = true
-				s.Trace.Recv(g.Name, "ack", v)
+				s.Trace.Recv(g.Name, "FromAck", v)
 			default:
 			}
 		}
@@ -49,8 +49,8 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 		if g.HasValue && g.HasAck {
 			fmt.Printf("%s: value=%d ack=%d → %d\n", g.Name, g.Value, g.AckVal, g.Value)
 			s.Trace.Fire(g.Name)
-			S.Send(g.Gated, g.Value)
-			s.Trace.Send(g.Name, "gated", g.Value)
+			S.Send(g.ToGated, g.Value)
+			s.Trace.Send(g.Name, "ToGated", g.Value)
 			g.HasValue = false
 			g.HasAck = false
 		}

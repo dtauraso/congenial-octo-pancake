@@ -49,7 +49,7 @@ func Wire() []S.Node {
 
 	// Nodes
 	in0test := INN.InputNode{Id: 0, Name: "in0test", Input: in0testInput, ToNext: inputToReadGate}
-	readGate14 := RGN.ReadGateNode{Id: 0, Name: "readGate14", AckCh: i1AckToReadGate, ValueCh: inputToReadGate, Gated: readGateToI0}
+	readGate14 := RGN.ReadGateNode{Id: 0, Name: "readGate14", FromAck: i1AckToReadGate, FromValue: inputToReadGate, ToGated: readGateToI0}
 	i0Test3 := CI.ChainInhibitorNode{Id: 0, Name: "i0Test3", FromPrev: readGateToI0, ToAck: i0Test3Ack, ToEdge: []chan<- int{i0ToInhibitRight}, ToNext: i0ToI1}
 	i1 := CI.ChainInhibitorNode{Id: 1, Name: "i1", FromPrev: i0ToI1, ToAck: i1Ack, ToEdge: []chan<- int{i1ToInhibitRight}, ToNext: i1AckToReadGate}
 	inhibitRight0 := IRG.InhibitRightGateNode{Id: 0, Name: "inhibitRight0", FromLeft: i0ToInhibitRight, FromRight: i1ToInhibitRight, ToPassed: inhibitRight0Passed}

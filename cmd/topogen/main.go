@@ -80,10 +80,10 @@ var REGISTRY = map[string]NodeBind{
 	"ReadGate": {
 		Pkg: "github.com/dtauraso/wirefold/nodes/ReadGateNode", Alias: "RGN", Struct: "ReadGateNode",
 		Inputs: map[string]PortBind{
-			"value": {Field: "ValueCh"},
-			"ack": {Field: "AckCh"},
+			"value": {Field: "FromValue"},
+			"ack":   {Field: "FromAck"},
 		},
-		Outputs: map[string]PortBind{"gated": {Field: "Gated"}},
+		Outputs: map[string]PortBind{"gated": {Field: "ToGated"}},
 	},
 	"ChainInhibitor": {
 		Pkg: "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode", Alias: "CI", Struct: "ChainInhibitorNode",
