@@ -1,4 +1,4 @@
-import ReactFlow, { Background, Controls, MiniMap, SelectionMode } from "reactflow";
+import ReactFlow, { Background, Controls, SelectionMode } from "reactflow";
 import { CompareToolbar } from "../panels/CompareToolbar";
 import { LegendPanel } from "../panels/LegendPanel";
 import { MarkerDefs } from "../MarkerDefs";
@@ -54,7 +54,6 @@ export function AppView(p: AppViewProps) {
       >
         <Background gap={24} />
         <Controls />
-        <MiniMap pannable zoomable />
       </ReactFlow>
       <AlignGuides guides={p.guides} />
       <MarkerDefs />
