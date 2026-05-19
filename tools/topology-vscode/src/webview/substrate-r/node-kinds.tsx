@@ -18,8 +18,8 @@ import { postLog } from "../log/post";
 export function InhibitRightGateBody({
   nodeRef,
   outWireRef,
-  leftSlotId = "left",
-  rightSlotId = "right",
+  leftSlotId = "FromLeft",
+  rightSlotId = "FromRight",
   initialSlots,
   traceId,
 }: {
@@ -167,7 +167,7 @@ export function InputBody({
 }
 
 export function RelayBody({
-  nodeRef, outWireRef, slotId = "in", initialSlots, traceId,
+  nodeRef, outWireRef, slotId = "FromIn", initialSlots, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
@@ -196,7 +196,7 @@ export function RelayBody({
 }
 
 export function JoinBody({
-  nodeRef, outWireRef, slotAId = "a", slotBId = "b", initialSlots, traceId,
+  nodeRef, outWireRef, slotAId = "FromA", slotBId = "FromB", initialSlots, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
@@ -232,7 +232,7 @@ export function JoinBody({
 // as the new held. Atomic — all preconditions checked before commit.
 
 export function ChainInhibitorBody({
-  nodeRef, outWireRef, inhibitOutWireRef, slotId = "in", initialSlots, traceId,
+  nodeRef, outWireRef, inhibitOutWireRef, slotId = "FromPrev", initialSlots, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
@@ -291,7 +291,7 @@ export function ChainInhibitorBody({
 // This is a one-fill shift-register pattern.
 
 export function RegisterBody({
-  nodeRef, outWireRef, slotId = "in", initialSlots, traceId,
+  nodeRef, outWireRef, slotId = "FromIn", initialSlots, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef?: RefObject<WireHandle | null>;

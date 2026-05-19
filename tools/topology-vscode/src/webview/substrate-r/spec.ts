@@ -77,13 +77,13 @@ export interface RTopologySpec {
 export interface KindPorts { inputs: string[]; outputs: string[] }
 
 export const NODE_KIND_PORTS: Record<RNodeKind, KindPorts> = {
-  input:    { inputs: [],      outputs: ["out"] },
-  relay:    { inputs: ["in"], outputs: ["out"] },
-  join:     { inputs: ["a", "b"], outputs: ["joined"] },
-  readgate: { inputs: ["value", "ack"], outputs: ["gated"] },
-  chainInhibitor: { inputs: ["in"], outputs: ["inhibitOut", "out"] },
-  inhibitrightgate: { inputs: ["left", "right"], outputs: ["passed"] },
-  register: { inputs: ["in"], outputs: ["out"] },
+  input:    { inputs: [],                      outputs: ["ToOut"] },
+  relay:    { inputs: ["FromIn"],              outputs: ["ToOut"] },
+  join:     { inputs: ["FromA", "FromB"],      outputs: ["ToJoined"] },
+  readgate: { inputs: ["FromValue", "FromAck"], outputs: ["ToGated"] },
+  chainInhibitor: { inputs: ["FromPrev"],      outputs: ["ToEdge", "ToNext"] },
+  inhibitrightgate: { inputs: ["FromLeft", "FromRight"], outputs: ["ToPassed"] },
+  register: { inputs: ["FromIn"],              outputs: ["ToOut"] },
 };
 
 export function parseSpec(spec: RTopologySpec): RTopologySpec {
