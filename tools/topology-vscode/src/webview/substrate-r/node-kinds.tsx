@@ -167,7 +167,7 @@ export function InputBody({
 }
 
 export function RelayBody({
-  nodeRef, outWireRef, slotId = "slot", initialSlots, traceId,
+  nodeRef, outWireRef, slotId = "in", initialSlots, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;

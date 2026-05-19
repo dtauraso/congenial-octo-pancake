@@ -78,7 +78,7 @@ export interface KindPorts { inputs: string[]; outputs: string[] }
 
 export const NODE_KIND_PORTS: Record<RNodeKind, KindPorts> = {
   input:    { inputs: [],      outputs: ["out"] },
-  relay:    { inputs: ["slot"], outputs: ["out"] },
+  relay:    { inputs: ["in"], outputs: ["out"] },
   join:     { inputs: ["a", "b"], outputs: ["out"] },
   readgate: { inputs: ["value", "ack"], outputs: ["gated"] },
   chainInhibitor: { inputs: ["in"], outputs: ["inhibitOut", "out"] },

@@ -36,7 +36,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
   },
   Relay: {
     role: "relay",
-    inputs: [{ name: "slot", kind: "chain" }],
+    inputs: [{ name: "in", kind: "chain" }],
     outputs: [{ name: "out", kind: "chain" }],
     shape: "rect", fill: "#e8f5e9", stroke: "#2e7d32", width: 70, height: 40,
   },
