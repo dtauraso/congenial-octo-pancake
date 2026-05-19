@@ -11,6 +11,7 @@ import { parseWebviewToHost, type HostToWebviewMsg, type WebviewToHostMsg } from
 import { applyEdit } from "./html";
 import { appendWebviewLog } from "./webview-log";
 import { handleCompareFile, handleCompareHead } from "./compare-load";
+import { toErrorMessage } from "../utils/error";
 
 export type MessageCtx = {
   document: vscode.TextDocument;
@@ -50,12 +51,12 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
         ctx.setLastAppliedVersion(document.version);
         topogen.schedule();
       } catch (err) {
-        post({ type: "save-error", message: errMsg(err) });
+        post({ type: "save-error", message: toErrorMessage(err) });
       }
       return;
     case "view-save":
       try { await writeSidecar(sidecarUri, msg.text); }
-      catch (err) { post({ type: "save-error", message: errMsg(err) }); }
+      catch (err) { post({ type: "save-error", message: toErrorMessage(err) }); }
       return;
     case "run":
       try {
@@ -87,6 +88,3 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
   }
 }
 
-function errMsg(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}

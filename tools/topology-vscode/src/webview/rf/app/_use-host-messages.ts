@@ -7,6 +7,7 @@ import { vscode } from "../../save";
 import { getSpec, viewerState } from "../../state";
 import type { CompareMode } from "../CompareToolbar";
 import type { AppCtx } from "./_ctx";
+import { toErrorMessage } from "../../../utils/error";
 import { handleLoad } from "./_handle-load";
 import { handleViewLoad } from "./_handle-view-load";
 import { installHostMessageRouter } from "./_install-host-message-router";
@@ -54,8 +55,7 @@ export function useHostMessages(ctx: AppCtx, c: CompareSetters) {
             c.setCompareError(null);
             c.setCompareMode("A-live");
           } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            c.setCompareError(`could not parse ${label}: ${message}`);
+            c.setCompareError(`could not parse ${label}: ${toErrorMessage(err)}`);
           }
         },
         compareError: (message) => c.setCompareError(message),

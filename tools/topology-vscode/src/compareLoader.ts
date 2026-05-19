@@ -4,6 +4,7 @@
 import * as cp from "child_process";
 import * as path from "path";
 import * as vscode from "vscode";
+import { toErrorMessage } from "./utils/error";
 
 export type CompareSource = "head" | "file";
 
@@ -23,8 +24,7 @@ export async function loadHeadVersion(docUri: vscode.Uri): Promise<CompareResult
     const text = await execGit(`git show HEAD:${shellQuote(rel)}`, root.trim());
     return { ok: true, source: "head", text, label: `HEAD:${rel}` };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, source: "head", message };
+    return { ok: false, source: "head", message: toErrorMessage(err) };
   }
 }
 
@@ -43,8 +43,7 @@ export async function loadFileVersion(docUri: vscode.Uri): Promise<CompareResult
     const label = vscode.workspace.asRelativePath(target, false);
     return { ok: true, source: "file", text, label };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, source: "file", message };
+    return { ok: false, source: "file", message: toErrorMessage(err) };
   }
 }
 
