@@ -2,8 +2,8 @@
 // unit tests can exercise it without standing up the webview. Mirrors
 // rename-core.ts in shape.
 
-import type { Spec } from "../schema";
-import type { ViewerState } from "./state/viewer/types";
+import type { Spec } from "../../../schema";
+import type { ViewerState } from "../viewer/types";
 
 // Mutates spec and viewerState in place. Removes the listed nodes and
 // edges, plus any edges incident to deleted nodes (RF surfaces them

@@ -5,7 +5,7 @@
 // or toggling a fold never changes the spec. The flat Wiring/ package the
 // generator emits is byte-identical before and after a fold operation.
 
-import type { Fold, ViewerState } from "./state/viewer/types";
+import type { Fold, ViewerState } from "../viewer/types";
 
 export function nextFoldId(viewerState: ViewerState): string {
   const taken = new Set((viewerState.folds ?? []).map((f) => f.id));

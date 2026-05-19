@@ -1,8 +1,8 @@
 // Pure rename logic, separated from the DOM-driven editor in rename.ts so
 // unit tests can exercise it without standing up the webview.
 
-import type { Spec } from "../schema";
-import type { ViewerState } from "./state/viewer/types";
+import type { Spec } from "../../../schema";
+import type { ViewerState } from "../viewer/types";
 
 export const IDENT_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
