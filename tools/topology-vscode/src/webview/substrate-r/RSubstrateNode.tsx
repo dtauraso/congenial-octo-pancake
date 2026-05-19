@@ -33,7 +33,7 @@ interface RSubstrateNodeData {
   height?: number;
   inputs?: PortDef[];
   outputs?: PortDef[];
-  nodeData?: { init?: unknown[]; seed?: unknown };
+  nodeData?: { init?: unknown[]; initialSlots?: Record<string, unknown>; repeat?: boolean };
 }
 
 
@@ -122,7 +122,8 @@ export function RSubstrateNode(props: NodeProps<RSubstrateNodeData>) {
           outWireRefs,
           slotIds: inputs.map((p) => p.name),
           initialQueue: data?.nodeData?.init ?? [],
-          seed: data?.nodeData?.seed,
+          initialSlots: data?.nodeData?.initialSlots,
+          repeat: data?.nodeData?.repeat,
           traceId: id,
         })}
       </div>

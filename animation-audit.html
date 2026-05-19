@@ -282,27 +282,28 @@ Frame: <strong>MODEL.md</strong> (local slot-phase coordination, no global tick)
     <text x="500" y="145" font-size="10" font-weight="600" fill="#c62828" stroke="none">Source: Wire.tsx:490–497</text>
   </g>
 
-  <!-- Site 2: InputBody self-start RAF (middle) -->
-  <g data-role="hack-site" data-index="2">
-    <text x="20" y="190" font-size="12" font-weight="600" fill="#c62828" stroke="none">② InputBody self-start RAF — source with no input fires on mount</text>
+  <!-- Site 2: InputBody self-start RAF (middle) — WITHDRAWN, not a hack -->
+  <g data-role="hack-site" data-index="2" opacity="0.5">
+    <text x="20" y="190" font-size="12" font-weight="600" fill="#555" stroke="none">② InputBody self-start RAF — WITHDRAWN (not a hack)</text>
 
-    <rect x="80" y="210" width="160" height="70" rx="6" fill="#fff3e0" stroke="#e65100" stroke-width="2"/>
-    <text x="160" y="232" text-anchor="middle" font-size="12" font-weight="500" fill="#e65100" stroke="none">Input node</text>
-    <text x="160" y="248" text-anchor="middle" font-size="9" font-weight="300" fill="#666" stroke="none">queue: [1, 0, 1, …]</text>
+    <rect x="80" y="210" width="160" height="70" rx="6" fill="#f5f5f5" stroke="#aaa" stroke-width="2"/>
+    <text x="160" y="232" text-anchor="middle" font-size="12" font-weight="500" fill="#888" stroke="none">Input node</text>
+    <text x="160" y="248" text-anchor="middle" font-size="9" font-weight="300" fill="#888" stroke="none">queue: [1, 0, 1, …]</text>
 
     <!-- self-RAF -->
-    <path d="M225,260 q35,-15 30,15 q-5,30 -30,-15" fill="none" stroke="#c62828" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#hk-arr-hack)"/>
-    <text x="270" y="278" font-size="10" font-weight="600" fill="#c62828" stroke="none">RAF kicks on mount</text>
+    <path d="M225,260 q35,-15 30,15 q-5,30 -30,-15" fill="none" stroke="#aaa" stroke-width="2" stroke-dasharray="4 3"/>
+    <text x="270" y="278" font-size="10" font-weight="600" fill="#aaa" stroke="none">RAF on mount</text>
 
     <!-- output wire -->
-    <line x1="240" y1="240" x2="380" y2="240" stroke="#283593" stroke-width="2" marker-end="url(#hk-arr)"/>
-    <rect x="380" y="220" width="100" height="40" rx="6" fill="#fff3e0" stroke="#e65100" stroke-width="2"/>
-    <text x="430" y="245" text-anchor="middle" font-size="11" font-weight="300" fill="#e65100" stroke="none">downstream</text>
+    <line x1="240" y1="240" x2="380" y2="240" stroke="#aaa" stroke-width="2"/>
+    <rect x="380" y="220" width="100" height="40" rx="6" fill="#f5f5f5" stroke="#aaa" stroke-width="2"/>
+    <text x="430" y="245" text-anchor="middle" font-size="11" font-weight="300" fill="#888" stroke="none">downstream</text>
 
-    <text x="540" y="225" font-size="10" font-weight="300" fill="#444" stroke="none">Other bodies fire when a slot fills.</text>
-    <text x="540" y="239" font-size="10" font-weight="300" fill="#444" stroke="none">Input has no inputs — its firing</text>
-    <text x="540" y="253" font-size="10" font-weight="300" fill="#444" stroke="none">condition is &ldquo;mount happened.&rdquo;</text>
-    <text x="540" y="275" font-size="10" font-weight="600" fill="#c62828" stroke="none">Source: node-kinds.tsx:150–155</text>
+    <text x="540" y="218" font-size="10" font-weight="300" fill="#555" stroke="none">Re-evaluated: structurally identical to</text>
+    <text x="540" y="232" font-size="10" font-weight="300" fill="#555" stroke="none">RelayBody/JoinBody — same RAF loop on</text>
+    <text x="540" y="246" font-size="10" font-weight="300" fill="#555" stroke="none">mount, same precondition-gated polling.</text>
+    <text x="540" y="260" font-size="10" font-weight="300" fill="#555" stroke="none">Precondition: wire.canAccept + queue non-empty.</text>
+    <text x="540" y="278" font-size="10" font-weight="600" fill="#2e7d32" stroke="none">Self-RAF is the standard substrate pattern.</text>
   </g>
 
   <!-- Site 3: ChainInhibitor heldRef (bottom) -->
@@ -320,14 +321,14 @@ Frame: <strong>MODEL.md</strong> (local slot-phase coordination, no global tick)
     <text x="300" y="352" font-size="10" font-weight="600" fill="#c62828" stroke="none">Source: node-kinds.tsx:233–234</text>
   </g>
 </svg>
-<figcaption><strong>Figure 3.</strong> The three hack sites. Each injects a value (or a fire event) at React mount, standing in for a missing run-start concept. <code>project_runstart_concept_needed</code> already flags #1 and #2; #3 is the same shape and worth recording.</figcaption>
+<figcaption><strong>Figure 3.</strong> Hack sites #1 and #3. Site #2 (InputBody self-start RAF) was re-evaluated and withdrawn — it is structurally identical to RelayBody/JoinBody (same RAF loop on mount, precondition-gated polling) and is the standard substrate pattern, not a mount-time special case. <code>project_runstart_concept_needed</code> flags #1; #3 is the same shape and worth recording.</figcaption>
 </figure>
 
 <table>
 <thead><tr><th>Mechanism</th><th>What&rsquo;s missing</th><th>Why it&rsquo;s a hack</th></tr></thead>
 <tbody>
 <tr class="row-hack"><td>Wire seed prefill on mount (<code>Wire.tsx:490–497</code>)</td><td>A real run-start / tick-0 event for feedback edges</td><td>Pre-fills a feedback wire at React-mount time to break ring deadlock. Dest slot receives a value no node produced. After the rename revert, this is the <em>only</em> reason the animation works.</td></tr>
-<tr class="row-hack"><td>InputBody self-start RAF (<code>node-kinds.tsx:150–155</code>)</td><td>A shared &ldquo;run started&rdquo; signal</td><td>Other bodies&rsquo; firing condition is &ldquo;slot filled&rdquo; — a real local event. Input has no inputs, so its firing condition collapses to &ldquo;mount happened.&rdquo;</td></tr>
+<tr style="opacity:0.5"><td><s>InputBody self-start RAF (<code>node-kinds.tsx:150–155</code>)</s></td><td><em>Withdrawn</em></td><td>Re-evaluated: structurally identical to RelayBody/JoinBody. Precondition is local <code>canAccept + queue non-empty</code>; self-RAF is the standard substrate pattern per MODEL.md, not a mount-time special case.</td></tr>
 <tr class="row-hack"><td>ChainInhibitorBody <code>heldRef = seed</code> (<code>node-kinds.tsx:233–234</code>)</td><td>An initial-value wire (or the same run-start concept)</td><td>Held state is pre-populated at mount instead of arriving through a wire. Same shape: a value appears with no producer.</td></tr>
 </tbody>
 </table>
@@ -337,7 +338,7 @@ Frame: <strong>MODEL.md</strong> (local slot-phase coordination, no global tick)
 <section class="tab-panel" id="tab-sug1">
 <h2><span class="tag tag-rec">RECOMMENDED</span> Suggestion 1 — slots can be born filled</h2>
 
-<p>Add an optional <code>initialValue</code> to the slot spec. At substrate construction, any slot with <code>initialValue</code> starts in <code>slotPhase === "filled"</code> carrying that value. Running and starting become the same rule applied to a slot that happens to already be filled.</p>
+<p>Add an optional <code>initialValue</code> to the slot spec. At substrate construction, any slot with <code>initialValue</code> starts in <code>slotPhase === "filled"</code> carrying that value. Running and starting become the same rule applied to a slot that happens to already be filled. <em>Applies to hack sites #1 (Wire seed) and #3 (ChainInhibitor heldRef) only — site #2 (InputBody RAF) was withdrawn as not a hack.</em></p>
 
 <figure class="diagram">
 <svg viewBox="0 0 900 360" role="img" aria-label="Before and after: slots born filled">
@@ -349,32 +350,32 @@ Frame: <strong>MODEL.md</strong> (local slot-phase coordination, no global tick)
 
   <!-- BEFORE row -->
   <g data-role="before">
-    <text x="20" y="28" font-size="13" font-weight="600" fill="#c62828" stroke="none">BEFORE — three different mount hacks</text>
+    <text x="20" y="28" font-size="13" font-weight="600" fill="#c62828" stroke="none">BEFORE — two mount hacks</text>
 
-    <g><rect x="40" y="50" width="240" height="80" rx="6" fill="#ffebee" stroke="#c62828" stroke-width="1.5" stroke-dasharray="4 3"/>
-       <text x="160" y="72" text-anchor="middle" font-size="11" font-weight="600" fill="#c62828" stroke="none">Wire seed (in Wire.tsx)</text>
-       <text x="160" y="92" text-anchor="middle" font-size="10" font-weight="300" fill="#444" stroke="none">useEffect on mount</text>
-       <text x="160" y="108" text-anchor="middle" font-size="10" font-weight="300" fill="#444" stroke="none">seededRef guard + load()</text>
+    <g><rect x="170" y="50" width="240" height="80" rx="6" fill="#ffebee" stroke="#c62828" stroke-width="1.5" stroke-dasharray="4 3"/>
+       <text x="290" y="72" text-anchor="middle" font-size="11" font-weight="600" fill="#c62828" stroke="none">Wire seed (in Wire.tsx)</text>
+       <text x="290" y="92" text-anchor="middle" font-size="10" font-weight="300" fill="#444" stroke="none">useEffect on mount</text>
+       <text x="290" y="108" text-anchor="middle" font-size="10" font-weight="300" fill="#444" stroke="none">seededRef guard + load()</text>
     </g>
-    <g><rect x="300" y="50" width="240" height="80" rx="6" fill="#ffebee" stroke="#c62828" stroke-width="1.5" stroke-dasharray="4 3"/>
-       <text x="420" y="72" text-anchor="middle" font-size="11" font-weight="600" fill="#c62828" stroke="none">InputBody RAF (in node-kinds)</text>
-       <text x="420" y="92" text-anchor="middle" font-size="10" font-weight="300" fill="#444" stroke="none">useEffect kicks RAF</text>
-       <text x="420" y="108" text-anchor="middle" font-size="10" font-weight="300" fill="#444" stroke="none">no slot-filled trigger</text>
+    <g opacity="0.35"><rect x="430" y="50" width="240" height="80" rx="6" fill="#f5f5f5" stroke="#aaa" stroke-width="1.5" stroke-dasharray="4 3"/>
+       <text x="550" y="65" text-anchor="middle" font-size="11" font-weight="600" fill="#888" stroke="none">InputBody RAF</text>
+       <text x="550" y="82" text-anchor="middle" font-size="10" font-weight="300" fill="#888" stroke="none">WITHDRAWN — standard</text>
+       <text x="550" y="98" text-anchor="middle" font-size="10" font-weight="300" fill="#888" stroke="none">substrate pattern</text>
     </g>
-    <g><rect x="560" y="50" width="240" height="80" rx="6" fill="#ffebee" stroke="#c62828" stroke-width="1.5" stroke-dasharray="4 3"/>
-       <text x="680" y="72" text-anchor="middle" font-size="11" font-weight="600" fill="#c62828" stroke="none">heldRef init (in node-kinds)</text>
-       <text x="680" y="92" text-anchor="middle" font-size="10" font-weight="300" fill="#444" stroke="none">useRef(seed ?? null)</text>
-       <text x="680" y="108" text-anchor="middle" font-size="10" font-weight="300" fill="#444" stroke="none">parallel to slot state</text>
+    <g><rect x="680" y="50" width="200" height="80" rx="6" fill="#ffebee" stroke="#c62828" stroke-width="1.5" stroke-dasharray="4 3"/>
+       <text x="780" y="72" text-anchor="middle" font-size="11" font-weight="600" fill="#c62828" stroke="none">heldRef init (in node-kinds)</text>
+       <text x="780" y="92" text-anchor="middle" font-size="10" font-weight="300" fill="#444" stroke="none">useRef(seed ?? null)</text>
+       <text x="780" y="108" text-anchor="middle" font-size="10" font-weight="300" fill="#444" stroke="none">parallel to slot state</text>
     </g>
   </g>
 
   <!-- Down arrow -->
   <path d="M450,150 L450,200" stroke="#1565c0" stroke-width="3" marker-end="url(#s1-arr)" fill="none"/>
-  <text x="470" y="180" font-size="12" font-weight="600" fill="#1565c0" stroke="none">one concept: slot.initialValue</text>
+  <text x="470" y="180" font-size="12" font-weight="600" fill="#1565c0" stroke="none">one concept: slot.initialValue (fixes #1 + #3)</text>
 
   <!-- AFTER row -->
   <g data-role="after">
-    <text x="20" y="232" font-size="13" font-weight="600" fill="#2e7d32" stroke="none">AFTER — one mechanism for all three</text>
+    <text x="20" y="232" font-size="13" font-weight="600" fill="#2e7d32" stroke="none">AFTER — one mechanism for both hacks (#1 and #3)</text>
 
     <!-- One unified box -->
     <rect x="80" y="250" width="720" height="90" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
@@ -386,10 +387,10 @@ Frame: <strong>MODEL.md</strong> (local slot-phase coordination, no global tick)
       <text x="200" y="306" text-anchor="middle" font-size="10" font-weight="300" fill="#111" stroke="none">readGate.i1In slot</text>
       <text x="200" y="322" text-anchor="middle" font-size="10" font-weight="600" fill="#00838f" stroke="none">born filled · v=0</text>
     </g>
-    <g data-role="slot-example">
-      <rect x="310" y="290" width="180" height="40" rx="4" fill="white" stroke="#00838f" stroke-width="1.5"/>
-      <text x="400" y="306" text-anchor="middle" font-size="10" font-weight="300" fill="#111" stroke="none">in08.out slot</text>
-      <text x="400" y="322" text-anchor="middle" font-size="10" font-weight="600" fill="#00838f" stroke="none">born filled · v=queue[0]</text>
+    <g data-role="slot-example" opacity="0.35">
+      <rect x="310" y="290" width="180" height="40" rx="4" fill="#f5f5f5" stroke="#aaa" stroke-width="1.5"/>
+      <text x="400" y="306" text-anchor="middle" font-size="10" font-weight="300" fill="#888" stroke="none">in08 (withdrawn — #2)</text>
+      <text x="400" y="322" text-anchor="middle" font-size="10" font-weight="600" fill="#aaa" stroke="none">standard pattern, no change</text>
     </g>
     <g data-role="slot-example">
       <rect x="510" y="290" width="180" height="40" rx="4" fill="white" stroke="#00838f" stroke-width="1.5"/>
@@ -399,14 +400,14 @@ Frame: <strong>MODEL.md</strong> (local slot-phase coordination, no global tick)
     <text x="730" y="320" font-size="10" font-weight="300" fill="#2e7d32" stroke="none">… same rule</text>
   </g>
 </svg>
-<figcaption><strong>Figure 4.</strong> Promoting initial-value to a slot-level concept. Three hack sites collapse into one mechanism. Bodies still see slots in <code>"filled"</code> on their first poll — running and starting are the same rule.</figcaption>
+<figcaption><strong>Figure 4.</strong> Promoting initial-value to a slot-level concept. Hack sites #1 and #3 collapse into one mechanism. (#2 was withdrawn — InputBody self-start RAF is the standard substrate pattern.) Bodies still see slots in <code>"filled"</code> on their first poll — running and starting are the same rule.</figcaption>
 </figure>
 
 <h3>Consequences</h3>
 <ul>
   <li><strong>Wire seed</strong> &rarr; declared on the edge as &ldquo;dest slot born filled with X.&rdquo; The <code>useEffect</code> + <code>seededRef</code> in <code>Wire.tsx</code> goes away.</li>
   <li><strong>ChainInhibitor heldRef</strong> &rarr; the held slot is born filled with <code>seed</code>. No parallel <code>useRef</code>.</li>
-  <li><strong>InputBody self-start</strong> &rarr; uninteresting. Input&rsquo;s output slot is born filled with its first queued value; the body&rsquo;s RAF does what every body does. No special kickoff.</li>
+  <li><strong>InputBody self-start</strong> &rarr; not a hack; no change needed. Self-RAF on mount is the standard substrate pattern (identical to RelayBody/JoinBody); precondition is local <code>canAccept + queue non-empty</code>. Site #2 was withdrawn.</li>
   <li><strong>topogen finding (B) disappears.</strong> topogen generates <code>ch &lt;- initialValue</code> from the slot spec, the same way substrate-r honors it. One concept, both runtimes.</li>
 </ul>
 </section>

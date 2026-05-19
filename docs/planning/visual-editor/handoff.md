@@ -9,96 +9,62 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-19, chain-inhibitor convergence landed)
+## State at handoff (2026-05-19, run-start-concept ready to merge)
 
-**Active branch:** `task/navigation-tax`. NOT merged. 9 commits on
-top of `main` (`af4bdf8`). Pushed.
+**Active branch:** `task/run-start-concept`. NOT yet merged. 11 commits
+on top of `main`. Pushed.
 
-## What landed on main this session
+## What landed on `task/run-start-concept` (new this session)
 
-Nothing. All work is on `task/navigation-tax`.
+Substrate-clean fix for the three audit hacks identified in
+`animation-audit.html`:
 
-## What's on `task/navigation-tax` (new this session)
+- **Hack #1 (Wire seed prefill) — retired.** `data.seed` on edges is
+  gone. New mechanism: `data.initialSlots: { slotId: value }` on nodes.
+  Node construction fills those slots directly; Wire.tsx seed path and
+  `seededRef` deleted entirely.
+- **Hack #2 (InputBody self-RAF) — reclassified, not changed.** Audit
+  page itself reclassified this as not-a-hack. Self-RAF is the substrate
+  model: each node kind owns its own RAF loop (`InputBody`, `RelayBody`,
+  `JoinBody`). No shared driver.
+- **Hack #3 (ChainInhibitor heldRef) — retired.** `heldRef` replaced by
+  `data.initialSlots.held`. Bootstrap source node (`bootstrap_rg`,
+  kind: `input`) wired into `readGate1.i1In` provides the ring tick-0
+  entry; `bootstrap_right` was added then dropped once
+  `inhibitRight0` took the ring input directly.
+- **ChainInhibitor synchronous shift rule preserved**: one-emit-per-input
+  maintained throughout.
 
-The chain-inhibitor naming-convergence pipeline (step 3 from
-`naming-pass.html`) ran end-to-end across the five boundaries
-(Go / topogen / JSON / TS editor / SVG), plus a full-repo doc sweep:
+Commits: `e465d12` through `bb042ea` (11 total — `git log main..HEAD --oneline`).
 
-- `c6f7d23` — Wiring.go `i0Test` → `i0` (drop fixture-leaked suffix).
-- `bd3c42b` — Go port keys `chainIn` / `chainIn2` → `i0In` / `i1In`.
-- `d73eaae` — JSON fixtures port rename (topology.json, e2e, parseSpec).
-- `732b156` — TS editor lowercase → camelCase + port keys + ReadGate trace label.
-- `596645a` — cleanup of stragglers (e2e runtime check string, testdata edge ids, planning JSON).
-- `7e364ce` — planning SVGs (`lateral-cascade.svg`, `overview.svg`) lowercase → camelCase.
-- `49f5aa0` — full-repo cleanup: `firing-rule-fix-spec.{html,md}`, `recommendations.md`, and renamed `scenario-chaininhibitor-held.spec.ts` → `scenario-chainInhibitor-held.spec.ts`.
+## Parked follow-ups (do not lose these)
 
-Decisions recorded:
-
-- Canonical noun: `ChainInhibitor`, case-flexed per host language.
-- Ports: `chainIn` / `chainIn2` → `i0In` / `i1In` (instance-specific,
-  per 2026-05-18 rule).
-- Instance var: `i0Test` → `i0`.
-- `TransferInhibitor` kept distinct (separate node kind).
-- `spec.ts` `case "chaininhibitor"` retained — intentional
-  toLowerCase normalization, not drift.
-
-Verification: `go build ./...`, `go test ./...`, `tsc --noEmit`, and
-`npm run build` all green after the cleanup commit.
-
-## Remaining `chaininhibitor` lowercase refs (intentional)
-
-- `tools/topology-vscode/src/webview/substrate-r/spec.ts:21` —
-  `case "chaininhibitor": return "chainInhibitor"`. Normalization
-  for legacy saved files; keep.
-- `docs/planning/visual-editor/handoff.md` (this file) —
-  meta-references describing the rename itself.
-
-## Other open task branches
-
-- `task/runtime-editor-port-alignment` — has `6811c5` (revert of the
-  readGate port rename — restored the animation) and `ec11b0b`
-  (disabled the Run button: faded, unclickable). Findings (A) and
-  (B) from the prior handoff remain deferred: Go runtime is
-  intentionally inert via the disabled Run button; the visual editor
-  is the only runtime exercised. Will revisit when `go run .` is
-  reactivated.
-
-## Working-tree state
-
-`topology.view.json` carries unstaged camera/position drift from a
-prior branch — untouched on this branch and intentionally not
-committed. Either revert it before the next commit or land it as its
-own single-purpose commit if the user wants the camera tweak.
+1. **ChainInhibitorBody `useState(null)` display state** — parallel to
+   the real `held` slot, can be deleted; slot is source of truth.
+2. **ring-5node.json e2e fixture** — still uses old-style `data.seed`
+   format; migrate to `initialSlots` schema.
+3. **ReadGate port-alignment branch** (`task/runtime-editor-port-alignment`,
+   stashed): `ack` → `i1In` rename happened as side-effect of this
+   branch. Verify whether that branch is still needed or can be retired.
+4. **Topogen one-shot Input** (`repeat=false`): propagated to TS only;
+   Go side currently disabled (Run button faded). Registry will need a
+   one-shot if/when Go runtime returns.
+5. **`held=null` visual ambivalence** (David's note): held slot is
+   born-empty for i0, visibly null in some indicator. Tolerated for now.
 
 ## Next concrete step
 
-Convergence is done for ChainInhibitor. Options for next:
+User approved → merge `task/run-start-concept` into `main`, delete
+branch locally and on remote (per `feedback_branch_cleanup`). Then
+revisit `task/runtime-editor-port-alignment`.
 
-1. **Merge `task/navigation-tax` into main.** Six clean rename
-   commits + the audit/naming-pass HTML artifacts. Requires user
-   sign-off (merge into shared `main`).
-2. **Run the same naming-pass pipeline on another concept.**
-   Candidates surfaced during this pass:
-   - `TransferInhibitor` (parallel kind, may have similar drift)
-   - `inhibitrightgate` (lowercase form spotted in planning SVGs)
-   - Wiring.go instance vars beyond `i0`/`i1` if any drift remains
-3. **Pivot to a different friction.** The parked list below has
-   open items.
+Do not merge without explicit user go-ahead.
 
-State the next step before acting; the convergence loop has no more
-queued mechanical work to drain.
+## Working-tree state
 
-## Parked (revisit when friction returns)
-
-- Go runtime: re-enabling Run button, fixing topogen `data.seed`
-  honoring (finding B from prior handoff), Wiring.go ring deadlock.
-  All deferred while substrate work continues in the webview.
-- Marker overshoot tuning, grow port on zero-input nodes, pacing by
-  pixel length, obstacle-aware routing, auto-pick for snake-v,
-  multi-digit ints in Input queue editor.
-- A memory entry for "ChainInhibitor heldRef is a third
-  instance of the run-start hack family" (third hack in
-  `animation-audit.html`, not yet recorded).
+`topology.view.json` carries unstaged camera/position drift —
+intentionally not committed. Revert or land as a single-purpose commit
+before the next substantive change.
 
 ## Substrate model state
 
@@ -106,8 +72,7 @@ MODEL.md (as of 2026-05-17 / `485f041`): no global round, tick, or
 simultaneity layer. Local slot-phase coordination. Banned vocab
 (tick/round/step/cohort/lap) enforced in substrate-r/ by vocab check
 script. The 2026-05-18 design rule still stands: node struct fields
-and port names are topology-instance-specific; the editor renames
-them when the topology changes.
+and port names are topology-instance-specific.
 
 ## Dev-loop
 

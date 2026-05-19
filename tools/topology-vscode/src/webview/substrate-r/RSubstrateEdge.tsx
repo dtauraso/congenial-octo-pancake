@@ -56,7 +56,6 @@ interface RSubstrateEdgeData {
   label?: string;
   valueLabel?: string;
   value?: unknown;
-  seed?: unknown;
 }
 
 export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
@@ -117,7 +116,6 @@ export function RSubstrateEdge(props: EdgeProps<RSubstrateEdgeData>) {
         pauseAxis={registry.driver.pauseAxis}
         traceId={id}
         value={data?.value}
-        seed={data?.seed}
       />
       <EdgeLabels
         mid={mid}

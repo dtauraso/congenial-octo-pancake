@@ -55,7 +55,7 @@
       "targetHandle": "right",
       "kind": "inhibit-in",
       "label": "i1InhibitToRight0Right",
-      "data": { "slots": 1, "seed": 1 }
+      "data": { "slots": 1 }
     },
     {
       "id": "i1.out->readGate.i1In",
@@ -65,7 +65,7 @@
       "targetHandle": "i1In",
       "kind": "chain",
       "label": "i1ToReadGate",
-      "data": { "slots": 1, "seed": 1 }
+      "data": { "slots": 1 }
     }
   ],
   "timing": { "duration": "12s" }

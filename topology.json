@@ -49,7 +49,7 @@
       "id": "i0",
       "type": "ChainInhibitor",
       "data": {
-        "seed": 0
+        "initialSlots": { "held": 0 }
       },
       "inputs": [
         {
@@ -78,7 +78,7 @@
       "id": "i1",
       "type": "ChainInhibitor",
       "data": {
-        "seed": 0
+        "initialSlots": { "held": 0 }
       },
       "inputs": [
         {
@@ -121,6 +121,23 @@
         }
       ],
       "outputs": []
+    },
+    {
+      "id": "bootstrap_rg",
+      "type": "Input",
+      "data": {
+        "init": [1],
+        "repeat": false
+      },
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "out",
+          "kind": "chain",
+          "side": "right",
+          "slot": 1
+        }
+      ]
     }
   ],
   "edges": [
@@ -182,8 +199,7 @@
       "kind": "inhibit-in",
       "label": "i1InhibitToRight0Right",
       "data": {
-        "slots": 1,
-        "seed": 1
+        "slots": 1
       }
     },
     {
@@ -197,8 +213,19 @@
       "lane": -69.0549836800538,
       "data": {
         "slots": 1,
-        "seed": 1,
         "route": "below"
+      }
+    },
+    {
+      "id": "bootstrap_rg.out->readGate1.i1In",
+      "source": "bootstrap_rg",
+      "sourceHandle": "out",
+      "target": "readGate1",
+      "targetHandle": "i1In",
+      "kind": "chain",
+      "label": "bootstrapRgToReadGate",
+      "data": {
+        "slots": 1
       }
     }
   ],

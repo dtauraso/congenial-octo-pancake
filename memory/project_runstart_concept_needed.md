@@ -70,10 +70,30 @@ The self-RAF is not a redundant hack — it IS the mechanism. The
 feedback memory `feedback_run_is_input_only.md` states the same: node
 bodies self-wake via their own RAF loop. No code change at this site.
 
-**Consequence for "what happens at tick 0"**: seed arrival is now one
-wire.load call, observable via the animation. The diagnostic friction
-of tracing across dest.fill vs wire.load is gone for the seed side.
-The InputBody self-trigger at mount is still a special case (it fires
-as soon as its outWire canAccept, with no structural relationship to
-seed arrival or ReadGate filling), but this is the model — there is
-no shared start signal, and that is intentional.
+## Resolution (2026-05-19) — fully resolved
+
+**Status: fully resolved (2026-05-19).** Branch `task/run-start-concept`
+(11 commits, `e465d12`–`bb042ea`) addressed all three audit hacks:
+
+- **Hack #1 (Wire seed prefill) — retired.** `data.seed` on edges is
+  gone. New mechanism: `data.initialSlots: { slotId: value }` on nodes.
+  Node construction fills those slots at mount; Wire.tsx seed path and
+  `seededRef` deleted. Topogen updated to emit `initialSlots`; old
+  `EdgeData.Init` field retired.
+- **Hack #2 (InputBody self-RAF) — reclassified, not changed.** The
+  audit page itself (commit `c54523f`) reclassified this as not-a-hack.
+  Self-RAF is the substrate model: every node kind owns its own RAF
+  polling loop. This is structurally identical to `RelayBody` and
+  `JoinBody`. No code change warranted or made.
+- **Hack #3 (ChainInhibitor heldRef) — retired.** `heldRef` replaced
+  by `data.initialSlots.held`. Ring tick-0 entry now uses an explicit
+  Bootstrap source node (`bootstrap_rg`, kind: `input`) wired into
+  `readGate1.i1In`; `bootstrap_right` was briefly added then dropped
+  once `inhibitRight0` took the ring input directly. ChainInhibitor's
+  synchronous shift rule (one-emit-per-input) preserved throughout.
+
+**Remaining follow-ups (not regressions):**
+- `ChainInhibitorBody useState(null)` display state: parallel to real
+  `held` slot, can be deleted in a future pass.
+- `ring-5node.json` e2e fixture: still uses old-style `data.seed`;
+  migrate to `initialSlots` schema.
