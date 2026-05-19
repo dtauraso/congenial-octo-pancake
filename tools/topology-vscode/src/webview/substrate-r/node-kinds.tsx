@@ -71,7 +71,6 @@ export interface KindBodyCtx {
   slotIds: string[];
   initialQueue: unknown[];
   initialSlots?: Record<string, unknown>;
-  seed?: unknown;
   traceId?: string;
 }
 
@@ -99,14 +98,14 @@ export function isKindInert(
 // Single dispatch from validated kind to body component.
 // RSubstrateNode is the only caller — one switch, one path.
 export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
-  const { nodeRef, outWireRefs, slotIds, initialQueue, initialSlots, seed, traceId } = ctx;
+  const { nodeRef, outWireRefs, slotIds, initialQueue, initialSlots, traceId } = ctx;
   switch (kind) {
     case "input":
       return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} initialQueue={initialQueue} traceId={traceId} />;
     case "relay":
       return <RelayBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} initialSlots={initialSlots} traceId={traceId} />;
     case "chainInhibitor":
-      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} inhibitOutWireRef={outWireRefs["inhibitOut"]} slotId={slotIds[0]} initialSlots={initialSlots} seed={seed} traceId={traceId} />;
+      return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} inhibitOutWireRef={outWireRefs["inhibitOut"]} slotId={slotIds[0]} initialSlots={initialSlots} traceId={traceId} />;
     case "join":
       return <JoinBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotAId={slotIds[0]} slotBId={slotIds[1]} initialSlots={initialSlots} traceId={traceId} />;
     case "readgate":
@@ -222,18 +221,16 @@ export function JoinBody({
 // as the new held. Atomic — all preconditions checked before commit.
 
 export function ChainInhibitorBody({
-  nodeRef, outWireRef, inhibitOutWireRef, slotId = "in", initialSlots, seed, traceId,
+  nodeRef, outWireRef, inhibitOutWireRef, slotId = "in", initialSlots, traceId,
 }: {
   nodeRef: RefObject<NodeHandle | null>;
   outWireRef: RefObject<WireHandle | null>;
   inhibitOutWireRef?: RefObject<WireHandle | null>;
   slotId?: string;
   initialSlots?: Record<string, unknown>;
-  seed?: unknown;
   traceId?: string;
 }) {
-  const heldRef = useRef<unknown>(seed ?? null);
-  const [heldDisplay, setHeldDisplay] = useState<unknown>(seed ?? null);
+  const [heldDisplay, setHeldDisplay] = useState<unknown>(null);
   const lastSkipReasonRef = useRef<string | null>(null);
 
   const run = useCallback(() => {
@@ -247,13 +244,14 @@ export function ChainInhibitorBody({
       }
       return;
     }
+    if (node.slotPhase("held") !== "filled") return;
     lastSkipReasonRef.current = null;
     const inhibitWire = inhibitOutWireRef?.current ?? null;
     if (!wire.canAccept) return;
     if (inhibitWire && !inhibitWire.canAccept) return;
     const incoming = node.consume(slotId);
-    const emitted = heldRef.current;
-    heldRef.current = incoming;
+    const emitted = node.consume("held");
+    node.fill("held", incoming);
     setHeldDisplay(incoming);
     if (traceId) postLog("trace.chainInhibitor.fire", { node: traceId, incoming, emitted });
     wire.load(emitted);
@@ -269,7 +267,7 @@ export function ChainInhibitorBody({
 
   return (
     <>
-      <Node ref={nodeRef} slots={[slotId]} initialSlots={initialSlots} onRun={run} traceId={traceId} />
+      <Node ref={nodeRef} slots={[slotId, "held"]} initialSlots={initialSlots} onRun={run} traceId={traceId} />
       <span style={{ position: "absolute", bottom: 4, left: 0, right: 0, fontWeight: 600, fontSize: 13, color: "#bf360c", textAlign: "center", pointerEvents: "none" }}>
         {`held=${heldDisplay}`}
       </span>

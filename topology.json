@@ -50,7 +50,7 @@
       "id": "i0",
       "type": "ChainInhibitor",
       "data": {
-        "seed": 0
+        "initialSlots": { "held": 0 }
       },
       "inputs": [
         {
@@ -79,7 +79,7 @@
       "id": "i1",
       "type": "ChainInhibitor",
       "data": {
-        "seed": 0
+        "initialSlots": { "held": 0 }
       },
       "inputs": [
         {
