@@ -9,43 +9,41 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-19, run-start-concept ready to merge)
+## State at handoff (2026-05-19, run-start-concept landed)
 
-**Active branch:** `task/run-start-concept`. NOT yet merged. 11 commits
-on top of `main`. Pushed.
+**Active branch:** `main`. No active task branch.
 
-## What landed on `task/run-start-concept` (new this session)
+`task/run-start-concept` merged to `main` at `a75770c` and deleted
+locally and on remote.
 
-Substrate-clean fix for the three audit hacks identified in
-`animation-audit.html`:
+`task/runtime-editor-port-alignment` exists locally only (never pushed
+after merge). Has stashed `topology.view.json` drift (`git stash list`
+will show entries). Decision needed — see Next concrete step.
 
-- **Hack #1 (Wire seed prefill) — retired.** `data.seed` on edges is
-  gone. New mechanism: `data.initialSlots: { slotId: value }` on nodes.
-  Node construction fills those slots directly; Wire.tsx seed path and
-  `seededRef` deleted entirely.
-- **Hack #2 (InputBody self-RAF) — reclassified, not changed.** Audit
-  page itself reclassified this as not-a-hack. Self-RAF is the substrate
-  model: each node kind owns its own RAF loop (`InputBody`, `RelayBody`,
-  `JoinBody`). No shared driver.
-- **Hack #3 (ChainInhibitor heldRef) — retired.** `heldRef` replaced by
-  `data.initialSlots.held`. Bootstrap source node (`bootstrap_rg`,
-  kind: `input`) wired into `readGate1.i1In` provides the ring tick-0
-  entry; `bootstrap_right` was added then dropped once
-  `inhibitRight0` took the ring input directly.
+## What landed on `main` this session (run-start-concept, commit `a75770c`)
+
+- **`data.initialSlots` field** added to node spec. Node construction
+  fills named slots directly at startup; replaces edge-side `data.seed`.
+- **Bootstrap node pattern** established: a kind-`input` node
+  (`bootstrap_rg`) wired into `readGate1.i1In` provides ring tick-0
+  entry without a shared driver.
+- **Audit-page hack #2 reclassified**: InputBody self-RAF is the
+  substrate model (each node kind owns its own RAF loop); not a hack.
 - **ChainInhibitor synchronous shift rule preserved**: one-emit-per-input
   maintained throughout.
-
-Commits: `e465d12` through `bb042ea` (11 total — `git log main..HEAD --oneline`).
+- **Edge-side `data.seed` retired**: Wire.tsx seed path and `seededRef`
+  deleted entirely.
 
 ## Parked follow-ups (do not lose these)
 
 1. **ChainInhibitorBody `useState(null)` display state** — parallel to
-   the real `held` slot, can be deleted; slot is source of truth.
+   the real `held` slot; can be deleted — slot is source of truth.
 2. **ring-5node.json e2e fixture** — still uses old-style `data.seed`
    format; migrate to `initialSlots` schema.
 3. **ReadGate port-alignment branch** (`task/runtime-editor-port-alignment`,
-   stashed): `ack` → `i1In` rename happened as side-effect of this
-   branch. Verify whether that branch is still needed or can be retired.
+   local only, stashed): `ack` → `i1In` rename happened as a side-effect
+   of the run-start branch (Go registry already updated). Reassess
+   whether remaining work on that branch is still needed or retire it.
 4. **Topogen one-shot Input** (`repeat=false`): propagated to TS only;
    Go side currently disabled (Run button faded). Registry will need a
    one-shot if/when Go runtime returns.
@@ -54,16 +52,18 @@ Commits: `e465d12` through `bb042ea` (11 total — `git log main..HEAD --oneline
 
 ## Next concrete step
 
-User approved → merge `task/run-start-concept` into `main`, delete
-branch locally and on remote (per `feedback_branch_cleanup`). Then
-revisit `task/runtime-editor-port-alignment`.
-
-Do not merge without explicit user go-ahead.
+User direction needed. Options:
+- Resume `task/runtime-editor-port-alignment`: apply stashed
+  `topology.view.json` drift and assess remaining port-rename work
+  (Go registry `ack` → `i1In` already done; check what's left).
+- Pick a parked follow-up above (items 1 or 2 are mechanical and cheap).
+- Pivot to a new friction-driven task.
 
 ## Working-tree state
 
-`topology.view.json` carries unstaged camera/position drift —
-intentionally not committed. Revert or land as a single-purpose commit
+`topology.view.json` on `main` has unstaged camera/position drift —
+intentionally not committed. Stash entries on
+`task/runtime-editor-port-alignment` also touch this file. Resolve
 before the next substantive change.
 
 ## Substrate model state
