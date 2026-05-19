@@ -1,7 +1,7 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { Edge as RFEdge, Node as RFNode, ReactFlowInstance } from "reactflow";
 import type { Spec } from "../../../schema";
-import type { CompareMode } from "../CompareToolbar";
+import type { CompareMode } from "../panels/CompareToolbar";
 
 // Bundle of refs / setters / helpers shared across the app's hooks.
 // Built once inside Inner() and threaded through each useXxx hook so

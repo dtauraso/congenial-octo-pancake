@@ -4,7 +4,7 @@ import type {
   EdgeChange, NodeChange, Viewport,
 } from "reactflow";
 import type { EdgeKind } from "../../../schema";
-import type { CompareMode } from "../CompareToolbar";
+import type { CompareMode } from "../panels/CompareToolbar";
 import type { EdgeMenu } from "./_use-edge-handlers";
 
 export type AppViewProps = {

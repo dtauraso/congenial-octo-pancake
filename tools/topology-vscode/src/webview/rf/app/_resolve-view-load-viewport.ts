@@ -5,7 +5,7 @@
 // to one ctx.rf.setViewport invocation.
 
 import { boxToViewport } from "../camera";
-import { isLegacyCamera, type Camera, type LegacyCameraBox } from "../../viewerState";
+import { isLegacyCamera, type Camera, type LegacyCameraBox } from "../../state/viewer/types";
 
 export type Viewport = { x: number; y: number; zoom: number };
 

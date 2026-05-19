@@ -1,5 +1,5 @@
 import type { Spec } from "../../schema";
-import type { ViewerState } from "../viewerState";
+import type { ViewerState } from "./viewer/types";
 import { useStore } from "./store";
 
 export function undoSpec(): Spec | null {

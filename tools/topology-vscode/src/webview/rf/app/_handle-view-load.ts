@@ -1,7 +1,7 @@
 import { specToFlow } from "../adapter";
 import { markViewSynced, scheduleViewSave } from "../../save";
 import { clearViewerHistory, patchViewerState, setViewerState } from "../../state";
-import { parseViewerState, serializeViewerState } from "../../viewerState";
+import { parseViewerState, serializeViewerState } from "../../state/viewer/types";
 import { resolveViewLoadViewport } from "./_resolve-view-load-viewport";
 import { reconcileSelection } from "./_reconcile-selection";
 import type { AppCtx } from "./_ctx";

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { Node, Spec } from "../../schema";
 import type { RunStatus } from "../../messages";
-import { DEFAULT_VIEWER_STATE, type ViewerState } from "../viewerState";
+import { DEFAULT_VIEWER_STATE, type ViewerState } from "./viewer/types";
 
 // Webview-local: idle is the pre-first-run default. The wire RunStatus has
 // no idle variant (the host only emits running/ok/error/cancelled).

@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
-import { vscode } from "../save";
-import { spec, useRunStatus } from "../state";
-import { flushActiveInlineEdit } from "../inline-edit";
+import { vscode } from "../../vscode-api";
+import { spec, useRunStatus } from "../../state";
+import { flushActiveInlineEdit } from "../../inline-edit";
 
 export function RunButton() {
   const status = useRunStatus();

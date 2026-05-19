@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import type { Spec } from "../../../schema";
-import type { CompareMode } from "../CompareToolbar";
+import type { CompareMode } from "../panels/CompareToolbar";
 
 // Pure state shell for Inner(): the pile of useState/useRef/useEffect
 // declarations that aren't worth a hook of their own (compare-mode

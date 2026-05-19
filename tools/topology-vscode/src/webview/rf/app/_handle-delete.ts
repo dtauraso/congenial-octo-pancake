@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import type { Edge as RFEdge, Node as RFNode } from "reactflow";
-import { applyDelete } from "../../delete-core";
+import { applyDelete } from "../../state/ops/delete";
 import { flushViewSave, scheduleSave, scheduleViewSave } from "../../save";
 import { getSpec, mutateBoth, mutateViewer, viewerState } from "../../state";
 import type { AppCtx } from "./_ctx";

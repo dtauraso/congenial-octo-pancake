@@ -2,7 +2,7 @@ import type { Edge as RFEdge, Node as RFNode } from "reactflow";
 import type { Spec } from "../../../schema";
 import { decorateForCompare, decorateForOnion } from "../diff-decorate";
 import { viewerState } from "../../state";
-import type { CompareMode } from "../CompareToolbar";
+import type { CompareMode } from "../panels/CompareToolbar";
 
 // Compose dim + diff decoration. When compareMode is "off" the live
 // nodes/edges drive RF directly. In A-live we keep the live state and

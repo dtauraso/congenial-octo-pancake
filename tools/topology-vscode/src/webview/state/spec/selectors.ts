@@ -1,6 +1,6 @@
-import type { Spec } from "../../schema";
-import type { ViewerState } from "../viewerState";
-import { useStore, type RunStatusUI, type Scope } from "./store";
+import type { Spec } from "../../../schema";
+import type { ViewerState } from "../viewer/types";
+import { useStore, type RunStatusUI, type Scope } from "../store";
 
 // ---- Plain getters (non-React) ----
 export const getSpec = (): Spec => useStore.getState().spec;

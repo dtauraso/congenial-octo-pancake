@@ -2,7 +2,7 @@
 // renderer can decorate from this output without round-tripping through the
 // flow model. See docs/planning/visual-editor/phase-5.md.
 
-import type { Spec } from "../schema";
+import type { Spec } from "../../../schema";
 
 // Position fields (x, y) moved to topology.view.json in audit #15.
 // "moved" detection would require comparing view state across snapshots;

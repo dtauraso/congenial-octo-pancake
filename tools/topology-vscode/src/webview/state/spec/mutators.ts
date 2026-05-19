@@ -1,7 +1,7 @@
 import { produce } from "immer";
-import type { Spec } from "../../schema";
-import type { ViewerState } from "../viewerState";
-import { useStore, withCap, type RunStatusUI, type Scope, type View } from "./store";
+import type { Spec } from "../../../schema";
+import type { ViewerState } from "../viewer/types";
+import { useStore, withCap, type RunStatusUI, type Scope, type View } from "../store";
 
 // ---- Setters ----
 export function setSpec(next: Spec) {

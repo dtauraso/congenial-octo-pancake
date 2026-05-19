@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import type { Node as RFNode } from "reactflow";
-import { createFold, toggleFold } from "../../fold-core";
+import { createFold, toggleFold } from "../../state/ops/fold";
 import { beginEditSublabel, beginRenameNodeId } from "../../inline-edit";
 import { flushViewSave } from "../../save";
 import { mutateViewer, spec, viewerState } from "../../state";

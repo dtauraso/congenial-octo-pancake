@@ -2,12 +2,12 @@
 // spec; topogen ignores them entirely. See visual-editor-plan.md §"Spec vs
 // viewer state" for the policy.
 
-import type { StateValue } from "../schema";
+import type { StateValue } from "../../../schema";
 import {
   isObj, isStrArr,
   parseCamera, parseSavedView, parseFold,
   collect, parseNodeViews, parseEdgeViews,
-} from "./viewerState.parse";
+} from "./parse";
 
 // Canonical camera is React Flow's pan/zoom: `{x, y, zoom}`. The lit-html
 // era persisted an SVG viewBox `{x, y, w, h}`; we still read those on load

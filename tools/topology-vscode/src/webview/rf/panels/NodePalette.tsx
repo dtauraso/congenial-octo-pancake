@@ -1,5 +1,5 @@
-import { NODE_TYPES } from "../../schema";
-import { useStore } from "../state/store";
+import { NODE_TYPES } from "../../../schema";
+import { useStore } from "../../state/store";
 
 // Drag a palette item into the canvas to mint a new node of that type at
 // the drop coordinates. The actual mint happens in app.tsx onDrop, which

@@ -3,7 +3,7 @@
 // are otherwise invisible. Surface as counts on the fold's data so the
 // collapsed placeholder can render a badge.
 
-import type { Fold } from "../../viewerState";
+import type { Fold } from "../../state/viewer/types";
 
 export type FoldDiffCounts = { added: number; removed: number; moved: number };
 
