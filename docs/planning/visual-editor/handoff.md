@@ -9,79 +9,51 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, force-delegate hook on main)
+## State at handoff (2026-05-18, inert-node indicator landed)
 
-**Active branch:** `main`. Latest commit `e81bba6` adds a PreToolUse
-hook that hard-blocks executor-style work after 2 inline lookups.
-Earlier in the session, `task/strip-editor-chrome` merged via
-`--no-ff` (commit `4f34395`) and deleted locally and on remote.
+**Active branch:** `main`. Latest commit `fc0fe4e` merges
+`task/inert-node-indicator` via `--no-ff`; branch deleted locally
+and on remote.
 
 ## What landed on main this session
 
-- `e81bba6` Added `scripts/force-delegate-hook.py` + wired into
-  `.claude/settings.json` PreToolUse. Counts Read/Grep/Glob and
-  search-style Bash (grep|rg|find|ls|cat|head|tail|awk|sed) per
-  session; 3rd qualifying call returns
-  `permissionDecision: "deny"` with a message instructing the model
-  to spawn an Agent subagent. Counter resets on Task/Agent. Existing
-  soft `UserPromptSubmit` reminder via `delegate-reminder-hook.py`
-  is retained. Manual escape: `rm /tmp/claude-delegate-*.count`.
-
-Editor chrome cleanup sweep (earlier this session) — removed
-dead/distracting UI panels and tightened the remaining chrome. Net:
--981 lines inserted, +109.
-
-Editor chrome cleanup sweep — removed dead/distracting UI panels and
-tightened the remaining chrome. Net: -981 lines inserted, +109.
-
-- `d05d237` Removed ViewsPanel (saved-views panel).
-
-- `07057ff` Removed React Flow MiniMap.
-- `1106648` Removed compare-with feature (CompareToolbar,
-  diff-decorate/*, compare-load host messages, comparison state,
-  isReadOnlyView guards, simplified decorate()).
-- `9085d25` Shrunk play/pause panel to button-sized; removed
-  placeholder time label.
-- `b46ce2f` Removed LegendPanel.
-- `02ae033`, `8da7b11` Added sideways fold button to NodePalette
-  (left-anchored so position is stable across toggle).
-- `7bf416e`, `fe07bff` Moved zoom controls to bottom-left with 56px
-  offset to clear play/pause.
-- `8db7844`, `3ad8155` Capped palette height so it doesn't overlap
-  zoom controls; list scrolls internally.
-
-`tsc --noEmit` clean; `npm run build` clean.
+- `fc0fe4e` (merge of `7c139f6`) — Visual "inert" indicator on
+  nodes whose required output wire is unconnected. `REQUIRED_OUT_WIRES`
+  map + `isKindInert()` helper in `node-kinds.tsx`; `RSubstrateNode`
+  applies `r-substrate-node--inert` class (opacity 0.5 + dashed
+  outline). Marked kinds: `input`, `relay`, `chaininhibitor`, `join`,
+  `readgate`, `register`. `inhibitrightgate` intentionally excluded —
+  it fires without an out wire.
+- `8b22ddc` — `scripts/force-delegate-hook.py` now exempts subagent
+  sessions (detected via `parent_tool_use_id` on the hook payload).
+  Prior behavior was blocking executor work inside the delegate
+  itself, defeating the point.
+- `b464486` — Wire-grab feature confirmed working; retired from
+  parked list.
+- `d649f12` — ChainInhibitor fan-out back-pressure parked item
+  retired. Upstream channel already retries-until-accepted, so the
+  `canAccept` guards in `ChainInhibitorBody` (node-kinds.tsx:225-226)
+  stay but the framing of "unsolved fan-out" was wrong.
 
 ## Next action
 
 None queued. Drive the editor and let friction pick the next task.
-Carried-forward friction signals (unchanged from prior handoff):
+Carried-forward friction signals:
 
-- **Inert nodes by construction.** A `ReadGate` with no outgoing
-  `out` edge bails on `!wire` and silently no-ops — no visual signal
-  that it's dead. Candidate fix per
-  `feedback_enforce_required_inputs`: model-enforced required
-  output, or a visual "inert" indicator.
 - **Process hygiene.** Start each new task by checking out a fresh
   `task/...` branch off `main`, not by committing on whichever
   branch HEAD happens to be on.
 - **Schema-parser-parity reminder.** When adding a route/spec
   variant, update `Wire.tsx`, the parser, the type, and the legacy
   migrator in the same commit. See `feedback_schema_parser_parity`.
-- **Subagent staging hygiene.** A subagent on this branch left
-  required edits unstaged after `git mv` and committed only the
-  renames, breaking the pushed commit. The local working tree had
-  the fixups so `tsc`/`build` passed inline. Spot-checking
-  `git status` after a subagent commit catches this; verifying
-  `git show <sha> --stat` against the agent's reported "files
-  touched" catches it more reliably.
+- **Subagent staging hygiene.** Spot-check `git status` after a
+  subagent commit; verify `git show <sha> --stat` against the
+  agent's reported "files touched" to catch unstaged-fixup bugs.
 
 ## Parked (not open; revisit when friction returns)
 
-- **Marker overshoot/undershoot tuning** beyond -1px. This session
-  experimented (overshoot 10px, undershoot 5/3/1) and settled on
-  -1px. If the visual gap to the handle dot becomes friction again,
-  the lever is `refX` in `MarkerDefs.tsx`.
+- **Marker overshoot/undershoot tuning** beyond -1px. Settled on
+  -1px; the lever is `refX` in `MarkerDefs.tsx`.
 - **Grow port on zero-input nodes** (decided 2026-05-18 not to do).
 - **Pacing-by-pixel-length / wire-length-dependent firing** — item 9
   in `recommendations.md`. Do NOT reach for a clock primitive,
@@ -121,11 +93,13 @@ blast radius. To re-introduce CI later, the audit step should use
 - Edge-route overrides (`route: "snake-v"` etc.) round-trip through
   save/reload via `topology.view.json` edges block.
 - Arrow markers auto-shrink (and drop entirely below 5px) based on
-  the *final segment* of the route — so short entry legs on long
-  doglegs get small arrows.
+  the *final segment* of the route.
 - NodePalette folds/unfolds with a sideways button; zoom controls
   at bottom-left clear the play/pause button; palette list scrolls
   internally without overlapping controls.
+- Wire-grab feature working.
+- Nodes with a missing required output wire render with an inert
+  indicator (opacity 0.5 + dashed outline).
 - No comparison toolbar, no MiniMap, no LegendPanel, no ViewsPanel.
 - `tsc --noEmit` clean; `npm run build` clean; `check:loc` clean;
   `check-substrate-vocab` clean.
