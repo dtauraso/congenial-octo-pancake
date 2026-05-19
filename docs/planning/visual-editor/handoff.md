@@ -85,9 +85,6 @@ Carried-forward friction signals (unchanged from prior handoff):
 - **Grow port on zero-input nodes** (decided 2026-05-18 not to do).
 - **Wire-grab feature.** Visual half ~1 day; handoff half needs a
   substrate-model answer (what "held" means locally).
-- **Fan-out back-pressure on ChainInhibitor** still unsolved. Naive
-  `wire.canAccept && inhibitWire.canAccept` gate broke animation
-  both times tried.
 - **Pacing-by-pixel-length / wire-length-dependent firing** — item 9
   in `recommendations.md`. Do NOT reach for a clock primitive,
   barrier, or sequence-tagged values; MODEL.md has no logical-tick
