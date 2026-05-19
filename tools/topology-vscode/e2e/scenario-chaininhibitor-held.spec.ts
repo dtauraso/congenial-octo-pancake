@@ -19,7 +19,7 @@ declare global {
   }
 }
 
-test("chaininhibitor: held= label renders at mount", async ({ page }) => {
+test("chainInhibitor: held= label renders at mount", async ({ page }) => {
   const fixture = readFileSync(
     resolve(HERE, "fixtures/three-node-with-edges.json"), "utf-8",
   );

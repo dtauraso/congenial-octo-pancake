@@ -78,7 +78,7 @@ export interface KindBodyCtx {
 const REQUIRED_OUT_WIRES: Partial<Record<RNodeKind, string[]>> = {
   input:            ["out"],
   relay:            ["out"],
-  chaininhibitor:   ["out"],
+  chainInhibitor:   ["out"],
   join:             ["out"],
   readgate:         ["out"],
   register:         ["out"],
@@ -102,7 +102,7 @@ export function renderKindBody(kind: RNodeKind, ctx: KindBodyCtx): ReactNode {
       return <InputBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} initialQueue={initialQueue} traceId={traceId} />;
     case "relay":
       return <RelayBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotId={slotIds[0]} traceId={traceId} />;
-    case "chaininhibitor":
+    case "chainInhibitor":
       return <ChainInhibitorBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} inhibitOutWireRef={outWireRefs["inhibitOut"]} slotId={slotIds[0]} seed={seed} traceId={traceId} />;
     case "join":
       return <JoinBody nodeRef={nodeRef} outWireRef={outWireRefs["out"]} slotAId={slotIds[0]} slotBId={slotIds[1]} traceId={traceId} />;
@@ -236,7 +236,7 @@ export function ChainInhibitorBody({
     if (!node || !wire) return;
     if (node.slotPhase(slotId) !== "filled") {
       if (traceId && lastSkipReasonRef.current !== "slot-not-filled") {
-        postLog("trace.chaininhibitor.skip", { node: traceId, reason: "slot-not-filled" });
+        postLog("trace.chainInhibitor.skip", { node: traceId, reason: "slot-not-filled" });
         lastSkipReasonRef.current = "slot-not-filled";
       }
       return;
@@ -249,7 +249,7 @@ export function ChainInhibitorBody({
     const emitted = heldRef.current;
     heldRef.current = incoming;
     setHeldDisplay(incoming);
-    if (traceId) postLog("trace.chaininhibitor.fire", { node: traceId, incoming, emitted });
+    if (traceId) postLog("trace.chainInhibitor.fire", { node: traceId, incoming, emitted });
     wire.load(emitted);
     if (inhibitWire) inhibitWire.load(emitted);
   }, [nodeRef, outWireRef, inhibitOutWireRef, slotId, traceId]);
