@@ -1,9 +1,6 @@
-import ReactFlow, { Background, Controls, MiniMap, SelectionMode } from "reactflow";
-import { CompareToolbar } from "../panels/CompareToolbar";
-import { LegendPanel } from "../panels/LegendPanel";
+import ReactFlow, { Background, Controls, SelectionMode } from "reactflow";
 import { MarkerDefs } from "../MarkerDefs";
 import { NodePalette } from "../panels/NodePalette";
-import { spec } from "../../state";
 import { AlignGuides } from "./AlignGuides";
 import { EdgeContextMenu } from "./EdgeContextMenu";
 import { EDGE_TYPES, RF_NODE_TYPES } from "./_constants";
@@ -13,7 +10,6 @@ export function AppView(p: AppViewProps) {
   return (
     <div
       ref={p.paneRef}
-      className={p.ghostFront ? "ghost-front" : undefined}
       style={{ position: "absolute", inset: 0 }}
       onDragOver={p.onDragOver}
       onDrop={p.onDrop}
@@ -53,20 +49,11 @@ export function AppView(p: AppViewProps) {
         nodeTypes={RF_NODE_TYPES}
       >
         <Background gap={24} />
-        <Controls />
-        <MiniMap pannable zoomable />
+        <Controls position="bottom-left" />
       </ReactFlow>
       <AlignGuides guides={p.guides} />
       <MarkerDefs />
-      <LegendPanel rows={spec.legend ?? []} />
       <NodePalette />
-      <CompareToolbar
-        mode={p.compareMode}
-        label={p.comparisonLabel}
-        error={p.compareError}
-        onSetMode={p.setCompareMode}
-        onClose={p.closeCompare}
-      />
       {p.edgeMenu && (
         <EdgeContextMenu
           x={p.edgeMenu.x}

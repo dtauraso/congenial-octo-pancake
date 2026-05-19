@@ -4,7 +4,7 @@
 
 import { useRegistry } from "../../../substrate-r/registry";
 
-export function TransportControls({ label }: { label: string }) {
+export function TransportControls() {
   const { driver } = useRegistry();
   const paused = driver.halted;
   const onPlayPause = () => {
@@ -12,16 +12,13 @@ export function TransportControls({ label }: { label: string }) {
     else driver.halt();
   };
   return (
-    <>
-      <button
-        type="button"
-        className="timeline-play"
-        title={paused ? "play" : "pause"}
-        onClick={onPlayPause}
-      >
-        {paused ? "▶" : "⏸"}
-      </button>
-      <span className="timeline-time">{label}</span>
-    </>
+    <button
+      type="button"
+      className="timeline-play"
+      title={paused ? "play" : "pause"}
+      onClick={onPlayPause}
+    >
+      {paused ? "▶" : "⏸"}
+    </button>
   );
 }

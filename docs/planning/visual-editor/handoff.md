@@ -51,9 +51,6 @@ Carried-forward friction signals (unchanged from prior handoff):
 - **Process hygiene.** Start each new task by checking out a fresh
   `task/...` branch off `main`, not by committing on whichever
   branch HEAD happens to be on.
-- **Two pre-existing TS diagnostics in `Wire.tsx`** (`getPhaseKind`
-  unused, `value` unused) — line numbers drift each edit pass. Worth
-  a small cleanup commit if the next session has slack.
 - **Schema-parser-parity reminder.** When adding a route/spec
   variant, update `Wire.tsx`, the parser, the type, and the legacy
   migrator in the same commit. See `feedback_schema_parser_parity`.
@@ -117,9 +114,8 @@ blast radius. To re-introduce CI later, the audit step should use
 - Arrow markers auto-shrink (and drop entirely below 5px) based on
   the *final segment* of the route — so short entry legs on long
   doglegs get small arrows.
-- `tsc --noEmit` clean except two pre-existing Wire.tsx warnings;
-  `npm run build` clean; `check:loc` clean; `check-substrate-vocab`
-  clean.
+- `tsc --noEmit` clean; `npm run build` clean; `check:loc` clean;
+  `check-substrate-vocab` clean.
 
 ## Substrate model state
 

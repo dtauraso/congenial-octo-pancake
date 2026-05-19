@@ -15,7 +15,6 @@ export function useDragDrop(ctx: AppCtx) {
   }, []);
 
   const onDrop = useCallback((ev: React.DragEvent) => {
-    if (ctx.isReadOnlyView()) return;
     const type = ev.dataTransfer.getData(PALETTE_DATA_TYPE);
     if (!type || !NODE_TYPES[type]) return;
     ev.preventDefault();

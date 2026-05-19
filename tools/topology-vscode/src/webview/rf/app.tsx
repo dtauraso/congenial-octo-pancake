@@ -7,7 +7,6 @@ import { specToFlow } from "./adapter";
 import { RunButton } from "./panels/RunButton";
 import { SaveLifecycle } from "../SaveLifecycle";
 import { TimelinePanel } from "./panels/TimelinePanel";
-import { ViewsPanel } from "./panels/ViewsPanel";
 import { scheduleViewSave } from "../save";
 import { patchViewerState, useDimmed, viewerState } from "../state";
 import { AppView } from "./app/AppView";
@@ -43,24 +42,12 @@ function Inner() {
     setNodes, setEdges,
     lastSpec: s.lastSpec, reconnectOk: s.reconnectOk, paneRef: s.paneRef,
     flashIdsRef: s.flashIdsRef, flashTimerRef: s.flashTimerRef,
-    compareModeRef: s.compareModeRef,
-    isReadOnlyView: () => s.compareModeRef.current === "A-other",
     rebuildFlow, rf,
-  }), [rebuildFlow, rf, s.compareModeRef, s.flashIdsRef, s.flashTimerRef, s.lastSpec, s.paneRef, s.reconnectOk]);
+  }), [rebuildFlow, rf, s.flashIdsRef, s.flashTimerRef, s.lastSpec, s.paneRef, s.reconnectOk]);
 
-  useUndoRedo(ctx, s.compareMode !== "A-other");
+  useUndoRedo(ctx, true);
   useFitViewHotkeys(rf);
-  // Stable identity is load-bearing: useHostMessages' effect deps include
-  // this object, and a fresh literal each render re-runs the effect, which
-  // re-posts {type:"ready"} → host re-sends view-load → setViewport snaps
-  // the camera back mid-pan.
-  const compareSetters = useMemo(() => ({
-    setComparisonSpec: s.setComparisonSpec,
-    setComparisonLabel: s.setComparisonLabel,
-    setCompareMode: s.setCompareMode,
-    setCompareError: s.setCompareError,
-  }), [s.setComparisonSpec, s.setComparisonLabel, s.setCompareMode, s.setCompareError]);
-  useHostMessages(ctx, compareSetters);
+  useHostMessages(ctx);
 
   const onMoveEnd = useCallback((_: unknown, vp: Viewport) => {
     patchViewerState((v) => { v.camera = { x: vp.x, y: vp.y, zoom: vp.zoom }; });
@@ -80,11 +67,6 @@ function Inner() {
 
   const edgeH = useEdgeHandlers(ctx);
   const delH = useDeleteHandlers(ctx);
-  // RF v11's useKeyPress ignores Backspace/Delete when activeElement is
-  // the focused node DOM itself, which is what happens when a
-  // fold-placeholder is clicked (it grabs focus, then RF declines to
-  // fire its global delete). Handle the keystroke ourselves: if any
-  // fold is selected, dispatch onNodesDelete with those folds.
   useEffect(() => {
     const handler = (ev: KeyboardEvent) => {
       if (ev.key !== "Backspace" && ev.key !== "Delete") return;
@@ -103,21 +85,15 @@ function Inner() {
   const dragH = useNodeDrag(ctx, guides, setGuides);
   const ctxH = useNodeContextHandlers(ctx);
 
-  const closeCompare = useCallback(() => {
-    s.setComparisonSpec(null); s.setComparisonLabel(null);
-    s.setCompareMode("off"); s.setCompareError(null);
-  }, [s]);
-
-  const styled = decorate(nodes, edges, dimmed, s.comparisonSpec, s.compareMode, s.lastSpec.current);
+  const styled = decorate(nodes, edges, dimmed);
   const edgeActions = useMemo(() => ({ setEdgeLane: edgeH.setEdgeLane }), [edgeH.setEdgeLane]);
 
   return (
     <EdgeActionsCtx.Provider value={edgeActions}>
     <AppView
-      paneRef={s.paneRef} ghostFront={s.ghostFront}
+      paneRef={s.paneRef}
       styledNodes={styled.nodes} styledEdges={styled.edges}
       guides={guides} edgeMenu={edgeH.edgeMenu}
-      compareMode={s.compareMode} comparisonLabel={s.comparisonLabel} compareError={s.compareError}
       onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
       onMoveEnd={onMoveEnd} onSelectionChange={onSelectionChange}
       onNodeDoubleClick={ctxH.onNodeDoubleClick}
@@ -130,7 +106,6 @@ function Inner() {
       onReconnectStart={edgeH.onReconnectStart} onReconnectEnd={edgeH.onReconnectEnd}
       onEdgeContextMenu={edgeH.onEdgeContextMenu}
       closeEdgeMenu={edgeH.closeEdgeMenu} setEdgeKind={edgeH.setEdgeKind}
-      setCompareMode={s.setCompareMode} closeCompare={closeCompare}
       onDragOver={ddH.onDragOver} onDrop={ddH.onDrop}
     />
     </EdgeActionsCtx.Provider>
@@ -143,8 +118,7 @@ export default function App() {
       <SaveLifecycle />
       <Inner />
       <RunButton />
-      <ViewsPanel />
-      <TimelinePanel />
+<TimelinePanel />
     </ReactFlowProvider>
   );
 }

@@ -43,7 +43,6 @@ export function useEdgeHandlers(ctx: AppCtx) {
   const closeEdgeMenu = useCallback(() => setEdgeMenu(null), []);
 
   const setEdgeKind = useCallback((edgeId: string, kind: EdgeKind) => {
-    if (ctx.isReadOnlyView()) return;
     if (!ctx.lastSpec.current) return;
     if (!spec.edges.some((e) => e.id === edgeId)) return;
     const next = mutateSpec((s) => {
@@ -59,7 +58,6 @@ export function useEdgeHandlers(ctx: AppCtx) {
   }, [ctx]);
 
   const setEdgeLane = useCallback((edgeId: string, lane: number) => {
-    if (ctx.isReadOnlyView()) return;
     if (!ctx.lastSpec.current) return;
     if (!spec.edges.some((e) => e.id === edgeId)) return;
     const next = mutateSpec((s) => {

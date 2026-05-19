@@ -7,7 +7,6 @@ import type { AppCtx } from "./_ctx";
 
 export function useDeleteHandlers(ctx: AppCtx) {
   const handleDelete = useCallback((nodeIds: string[], edgeIds: string[]) => {
-    if (ctx.isReadOnlyView()) return;
     if (!ctx.lastSpec.current) return;
     if (nodeIds.length === 0 && edgeIds.length === 0) return;
     // mutateBoth: applyDelete patches both spec and viewerState (orphan

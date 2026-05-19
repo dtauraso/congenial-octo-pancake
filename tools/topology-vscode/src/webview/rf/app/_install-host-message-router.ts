@@ -7,8 +7,6 @@ import type { WebviewToHostMsg } from "../../../messages";
 
 export type HostMessageHandlers = {
   load: (text: string) => void;
-  compareLoad: (msg: { text: string; label: string }) => void;
-  compareError: (message: string) => void;
   viewLoad: (text: string | undefined) => void;
 };
 
@@ -32,9 +30,6 @@ export function installHostMessageRouter(
     const msg = parseHostToWebview(e.data);
     if (!msg) return;
     if (msg.type === "load") handlers.load(msg.text);
-    else if (msg.type === "compare-load")
-      handlers.compareLoad({ text: msg.text, label: msg.label });
-    else if (msg.type === "compare-error") handlers.compareError(msg.message);
     else if (msg.type === "view-load") handlers.viewLoad(msg.text);
   };
   deps.addEventListener("message", handler);

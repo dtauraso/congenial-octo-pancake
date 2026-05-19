@@ -14,7 +14,6 @@ export function useNodeDrag(
   setGuides: (g: Guides) => void,
 ) {
   const onNodeDrag = useCallback((_ev: React.MouseEvent, node: RFNode) => {
-    if (ctx.isReadOnlyView()) return;
     if (node.type === "fold") {
       // Fold placeholder dimensions vary; skipping keeps the matcher
       // honest and avoids guides that snap to a moving target.
@@ -40,7 +39,6 @@ export function useNodeDrag(
 
   const onNodeDragStop = useCallback((_ev: React.MouseEvent, node: RFNode) => {
     setGuides({ vx: null, hy: null });
-    if (ctx.isReadOnlyView()) return;
     if (node.type === "fold") {
       // Persist fold-placeholder drags back into viewerState.folds so
       // the position survives reload (folds live in the sidecar).

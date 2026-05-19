@@ -17,7 +17,6 @@ function nextInputName(existingNames: string[]): string {
 }
 
 export function onConnectImpl(ctx: AppCtx, conn: Connection) {
-  if (ctx.isReadOnlyView()) return;
   if (!conn.source || !conn.target || !conn.sourceHandle || !conn.targetHandle) return;
   if (!ctx.lastSpec.current) return;
   const srcNode = spec.nodes.find((n) => n.id === conn.source);
