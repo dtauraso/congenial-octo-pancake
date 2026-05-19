@@ -1,8 +1,6 @@
 import ReactFlow, { Background, Controls, SelectionMode } from "reactflow";
-import { LegendPanel } from "../panels/LegendPanel";
 import { MarkerDefs } from "../MarkerDefs";
 import { NodePalette } from "../panels/NodePalette";
-import { spec } from "../../state";
 import { AlignGuides } from "./AlignGuides";
 import { EdgeContextMenu } from "./EdgeContextMenu";
 import { EDGE_TYPES, RF_NODE_TYPES } from "./_constants";
@@ -55,7 +53,6 @@ export function AppView(p: AppViewProps) {
       </ReactFlow>
       <AlignGuides guides={p.guides} />
       <MarkerDefs />
-      <LegendPanel rows={spec.legend ?? []} />
       <NodePalette />
       {p.edgeMenu && (
         <EdgeContextMenu
