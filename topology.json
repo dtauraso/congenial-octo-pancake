@@ -138,23 +138,6 @@
           "slot": 1
         }
       ]
-    },
-    {
-      "id": "bootstrap_right",
-      "type": "Input",
-      "data": {
-        "init": [1],
-        "repeat": false
-      },
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "out",
-          "kind": "chain",
-          "side": "right",
-          "slot": 1
-        }
-      ]
     }
   ],
   "edges": [
@@ -241,18 +224,6 @@
       "targetHandle": "i1In",
       "kind": "chain",
       "label": "bootstrapRgToReadGate",
-      "data": {
-        "slots": 1
-      }
-    },
-    {
-      "id": "bootstrap_right.out->inhibitRight0.right",
-      "source": "bootstrap_right",
-      "sourceHandle": "out",
-      "target": "inhibitRight0",
-      "targetHandle": "right",
-      "kind": "inhibit-in",
-      "label": "bootstrapRightToInhibitRight0",
       "data": {
         "slots": 1
       }
