@@ -11,7 +11,7 @@ handoff.md is exempt from the 100-LOC budget.
 
 ## State at handoff (2026-05-19, chain-inhibitor convergence landed)
 
-**Active branch:** `task/navigation-tax`. NOT merged. 7 commits on
+**Active branch:** `task/navigation-tax`. NOT merged. 9 commits on
 top of `main` (`af4bdf8`). Pushed.
 
 ## What landed on main this session
@@ -22,7 +22,7 @@ Nothing. All work is on `task/navigation-tax`.
 
 The chain-inhibitor naming-convergence pipeline (step 3 from
 `naming-pass.html`) ran end-to-end across the five boundaries
-(Go / topogen / JSON / TS editor / SVG). Six commits:
+(Go / topogen / JSON / TS editor / SVG), plus a full-repo doc sweep:
 
 - `c6f7d23` — Wiring.go `i0Test` → `i0` (drop fixture-leaked suffix).
 - `bd3c42b` — Go port keys `chainIn` / `chainIn2` → `i0In` / `i1In`.
@@ -30,6 +30,7 @@ The chain-inhibitor naming-convergence pipeline (step 3 from
 - `732b156` — TS editor lowercase → camelCase + port keys + ReadGate trace label.
 - `596645a` — cleanup of stragglers (e2e runtime check string, testdata edge ids, planning JSON).
 - `7e364ce` — planning SVGs (`lateral-cascade.svg`, `overview.svg`) lowercase → camelCase.
+- `49f5aa0` — full-repo cleanup: `firing-rule-fix-spec.{html,md}`, `recommendations.md`, and renamed `scenario-chaininhibitor-held.spec.ts` → `scenario-chainInhibitor-held.spec.ts`.
 
 Decisions recorded:
 
@@ -44,18 +45,13 @@ Decisions recorded:
 Verification: `go build ./...`, `go test ./...`, `tsc --noEmit`, and
 `npm run build` all green after the cleanup commit.
 
-## Known stale references (out of scope, historical)
+## Remaining `chaininhibitor` lowercase refs (intentional)
 
-These planning docs still contain `chaininhibitor` lowercase and were
-intentionally left as point-in-time records:
-
-- `docs/planning/visual-editor/recommendations.md` (scenario filename)
-- `docs/planning/visual-editor/firing-rule-fix-spec.html` / `.md`
-  (postLog trace string `trace.chaininhibitor.fire` — actual code now
-  emits `trace.chainInhibitor.fire`)
-
-If a future task touches those specs, normalize then. Don't sweep
-purely for sweep's sake.
+- `tools/topology-vscode/src/webview/substrate-r/spec.ts:21` —
+  `case "chaininhibitor": return "chainInhibitor"`. Normalization
+  for legacy saved files; keep.
+- `docs/planning/visual-editor/handoff.md` (this file) —
+  meta-references describing the rename itself.
 
 ## Other open task branches
 
