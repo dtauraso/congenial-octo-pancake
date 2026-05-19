@@ -33,11 +33,13 @@ export function InhibitRightGateBody({
     if (!node) return;
     // Inhibition rule: consume both slots; fire output only when left arrived
     // and right did not. Primitives are silent no-ops on empty slots.
-    const leftFilled = node.slotPhase(leftSlotId) === "filled";
+    const leftFilled  = node.slotPhase(leftSlotId)  === "filled";
     const rightFilled = node.slotPhase(rightSlotId) === "filled";
+    if (!leftFilled && !rightFilled) return;
+    const wire = outWireRef?.current ?? null;
+    if (leftFilled && !rightFilled && !wire?.canAccept) return;
     const leftValue = node.consume(leftSlotId);
     node.consume(rightSlotId);
-    const wire = outWireRef?.current ?? null;
     if (leftFilled && !rightFilled && wire) {
       if (traceId) postLog("trace.inhibitrightgate.fire", { node: traceId });
       lastSkipReasonRef.current = null;
@@ -142,6 +144,8 @@ export function RelayBody({
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
+    if (node.slotPhase(slotId) !== "filled") return;
+    if (!wire.canAccept) return;
     const value = node.consume(slotId);
     wire.load(value);
   }, [nodeRef, outWireRef, slotId]);
@@ -169,6 +173,9 @@ export function JoinBody({
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
+    if (node.slotPhase(slotAId) !== "filled") return;
+    if (node.slotPhase(slotBId) !== "filled") return;
+    if (!wire.canAccept) return;
     const va = node.consume(slotAId);
     const vb = node.consume(slotBId);
     wire.load([va, vb]);
@@ -214,7 +221,9 @@ export function ChainInhibitorBody({
       return;
     }
     lastSkipReasonRef.current = null;
-    const inhibitWire = inhibitOutWireRef?.current;
+    const inhibitWire = inhibitOutWireRef?.current ?? null;
+    if (!wire.canAccept) return;
+    if (inhibitWire && !inhibitWire.canAccept) return;
     const incoming = node.consume(slotId);
     const emitted = heldRef.current;
     heldRef.current = incoming;
@@ -259,6 +268,8 @@ export function RegisterBody({
     const node = nodeRef.current;
     const wire = outWireRef?.current;
     if (!node || !wire) return;
+    if (node.slotPhase(slotId) !== "filled") return;
+    if (!wire.canAccept) return;
     const incoming = node.consume(slotId);
     const emitted = heldRef.current;
     heldRef.current = incoming;
