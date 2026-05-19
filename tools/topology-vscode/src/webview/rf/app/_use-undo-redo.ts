@@ -6,6 +6,7 @@ import { scheduleSave, scheduleViewSave } from "../../save";
 import {
   getLastScope, redoSpec, redoViewer, setLastScope, undoSpec, undoViewer, viewerState,
 } from "../../state";
+import { FLASH_TIMEOUT_MS } from "./_constants";
 import type { AppCtx } from "./_ctx";
 
 export function useUndoRedo(ctx: AppCtx, hotkeysEnabled: boolean) {
@@ -31,7 +32,7 @@ export function useUndoRedo(ctx: AppCtx, hotkeysEnabled: boolean) {
           setNodes(f.nodes);
           setEdges(f.edges);
         }
-      }, 1500);
+      }, FLASH_TIMEOUT_MS);
     }
     setNodes(flow.nodes);
     setEdges(flow.edges);
