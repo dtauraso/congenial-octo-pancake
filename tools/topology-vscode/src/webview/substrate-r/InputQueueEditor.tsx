@@ -5,7 +5,7 @@
 import { useState, useCallback } from "react";
 import type * as React from "react";
 import { mutateSpec } from "../state";
-import { scheduleSave } from "../save";
+import { scheduleSave, flushSave } from "../save";
 
 interface Props {
   nodeId: string;
@@ -26,14 +26,21 @@ export function InputQueueEditor({ nodeId, initialQueue, onHeightChange }: Props
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
-    const chars = e.target.value.split("").map((c) => c);
+    const ints = e.target.value.split("").map(Number).filter((n) => !Number.isNaN(n));
     mutateSpec((s) => {
       const node = s.nodes.find((n) => n.id === nodeId);
       if (!node) return;
-      node.data = { ...(node.data as Record<string, unknown> ?? {}), init: chars };
+      node.data = { ...(node.data as Record<string, unknown> ?? {}), init: ints };
     });
     scheduleSave();
   }, [nodeId]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      flushSave();
+    }
+  }, []);
 
   const stopProp = useCallback((e: React.PointerEvent | React.MouseEvent) => {
     e.stopPropagation();
@@ -65,6 +72,7 @@ export function InputQueueEditor({ nodeId, initialQueue, onHeightChange }: Props
           type="text"
           defaultValue={queueString}
           onChange={handleChange}
+          onKeyDown={handleKeyDown}
           onPointerDown={stopProp}
           onClick={stopProp}
           className="nodrag nopan"

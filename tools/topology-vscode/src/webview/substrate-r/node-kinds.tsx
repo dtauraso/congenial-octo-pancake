@@ -134,6 +134,10 @@ export function InputBody({
   const initialQueueRef = useRef(initialQueue);
   const remainingRef = useRef<unknown[]>([...initialQueue]);
 
+  useEffect(() => {
+    initialQueueRef.current = initialQueue;
+  }, [initialQueue]);
+
   const run = useCallback(() => {
     const wire = outWireRef.current;
     if (!wire) return;
