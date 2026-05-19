@@ -9,32 +9,30 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-18, firing-rule-guards merged to main)
+## State at handoff (2026-05-18, editor-chrome cleanup merged to main)
 
-**Active branch:** `main`. `task/firing-rule-guards` merged via
-`--no-ff` (commit `0e344d8`) and deleted locally and on remote.
-Working tree has `topology.view.json` modified (carryover) and two
-untracked spec files kept on disk but not committed:
-`docs/planning/visual-editor/firing-rule-fix-spec.md` and
-`firing-rule-fix-spec.html`.
+**Active branch:** `main`. `task/strip-editor-chrome` merged via
+`--no-ff` (commit `4f34395`) and deleted locally and on remote.
 
 ## What landed on main this session
 
-Firing-rule precondition guards: five node bodies that previously
-consumed slots and loaded outputs without checking slot-phase or
-canAccept were fixed. MODEL.md gained the formal contract; node-kinds.tsx
-got guards matching the ReadGateBody reference impl.
+Editor chrome cleanup sweep — removed dead/distracting UI panels and
+tightened the remaining chrome. Net: -981 lines inserted, +109.
 
-- `e973785` **contract(substrate):** MODEL.md "Firing rule and slot
-  writes" section gained an "Output-readiness precondition" blockquote
-  mandating that a body must check `slotPhase === "filled"` on all
-  required input slots and `wire.canAccept` on all output wires before
-  calling `consume`/`load`.
-- `1de86e1` **fix(substrate):** slot-phase + canAccept guards added to
-  RelayBody, RegisterBody, JoinBody, InhibitRightGateBody (fire branch
-  only), and ChainInhibitorBody (both wire and inhibitWire).
-  ReadGateBody was already correct and is unchanged. Animation
-  verified by user: ring still circulates.
+- `d05d237` Removed ViewsPanel (saved-views panel).
+- `07057ff` Removed React Flow MiniMap.
+- `1106648` Removed compare-with feature (CompareToolbar,
+  diff-decorate/*, compare-load host messages, comparison state,
+  isReadOnlyView guards, simplified decorate()).
+- `9085d25` Shrunk play/pause panel to button-sized; removed
+  placeholder time label.
+- `b46ce2f` Removed LegendPanel.
+- `02ae033`, `8da7b11` Added sideways fold button to NodePalette
+  (left-anchored so position is stable across toggle).
+- `7bf416e`, `fe07bff` Moved zoom controls to bottom-left with 56px
+  offset to clear play/pause.
+- `8db7844`, `3ad8155` Capped palette height so it doesn't overlap
+  zoom controls; list scrolls internally.
 
 `tsc --noEmit` clean; `npm run build` clean.
 
@@ -114,6 +112,10 @@ blast radius. To re-introduce CI later, the audit step should use
 - Arrow markers auto-shrink (and drop entirely below 5px) based on
   the *final segment* of the route — so short entry legs on long
   doglegs get small arrows.
+- NodePalette folds/unfolds with a sideways button; zoom controls
+  at bottom-left clear the play/pause button; palette list scrolls
+  internally without overlapping controls.
+- No comparison toolbar, no MiniMap, no LegendPanel, no ViewsPanel.
 - `tsc --noEmit` clean; `npm run build` clean; `check:loc` clean;
   `check-substrate-vocab` clean.
 
