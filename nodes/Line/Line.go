@@ -30,7 +30,7 @@ func (l *Line) Setup() {
 	// Prime ack so first input flows through
 	i1AckToReadGate <- 1
 
-	readGate := RGN.ReadGateNode{Id: 0, ValueCh: inputToReadGate, FromAck: i1AckToReadGate, ToLatch: readGateToI0}
+	readGate := RGN.ReadGateNode{Id: 0, ValueCh: inputToReadGate, AckCh: i1AckToReadGate, ToLatch: readGateToI0}
 
 	i0ToI1 := make(chan int, 1)
 	i0ToInhibitRight := make(chan int, 1)

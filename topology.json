@@ -30,7 +30,7 @@
           "slot": 1
         },
         {
-          "name": "i1In",
+          "name": "ack",
           "kind": "chain",
           "side": "bottom",
           "slot": 1
@@ -203,11 +203,11 @@
       }
     },
     {
-      "id": "i1.out->readGate.i1In",
+      "id": "i1.out->readGate.ack",
       "source": "i1",
       "sourceHandle": "out",
       "target": "readGate1",
-      "targetHandle": "i1In",
+      "targetHandle": "ack",
       "kind": "chain",
       "label": "i1ToReadGate",
       "lane": -69.0549836800538,
@@ -217,11 +217,11 @@
       }
     },
     {
-      "id": "bootstrap_rg.out->readGate1.i1In",
+      "id": "bootstrap_rg.out->readGate1.ack",
       "source": "bootstrap_rg",
       "sourceHandle": "out",
       "target": "readGate1",
-      "targetHandle": "i1In",
+      "targetHandle": "ack",
       "kind": "chain",
       "label": "bootstrapRgToReadGate",
       "data": {

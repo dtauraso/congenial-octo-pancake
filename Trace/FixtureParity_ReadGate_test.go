@@ -58,7 +58,7 @@ func TestParity_FixtureMatch_ReadGate(t *testing.T) {
 	ackIn := make(chan int, 1)
 	rgOut := make(chan int, 1)
 
-	rg := RG.ReadGateNode{Name: "rg", ValueCh: chainIn, FromAck: ackIn, ToLatch: rgOut}
+	rg := RG.ReadGateNode{Name: "rg", ValueCh: chainIn, AckCh: ackIn, ToLatch: rgOut}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)

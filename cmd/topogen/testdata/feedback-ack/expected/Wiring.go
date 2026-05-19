@@ -44,7 +44,7 @@ func Wire() []S.Node {
 
 	// Nodes
 	src := INN.InputNode{Id: 0, Name: "src", Input: srcInput, ToNext: srcToGate}
-	gate := RGN.ReadGateNode{Id: 0, Name: "gate", ValueCh: srcToGate, ToLatch: gateToInhib}
+	gate := RGN.ReadGateNode{Id: 0, Name: "gate", AckCh: inhibAckToGate, ValueCh: srcToGate, ToLatch: gateToInhib}
 	inhib := CI.ChainInhibitorNode{Id: 0, Name: "inhib", FromPrev: gateToInhib, ToAck: inhibAck, ToEdge: []chan<- int{inhibToRightLeft, inhibToRightRight}, ToNext: inhibAckToGate}
 	right := IRG.InhibitRightGateNode{Id: 0, Name: "right", FromLeft: inhibToRightLeft, FromRight: inhibToRightRight, ToOut: rightOut}
 
