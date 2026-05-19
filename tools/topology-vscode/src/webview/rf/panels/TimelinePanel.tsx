@@ -7,7 +7,7 @@ import { TransportControls } from "./TimelinePanel/TransportControls";
 export function TimelinePanel() {
   return (
     <div className="timeline-panel" data-undo-scope="viewer">
-      <TransportControls label="—" />
+      <TransportControls />
     </div>
   );
 }
