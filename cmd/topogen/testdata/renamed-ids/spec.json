@@ -96,7 +96,7 @@
       "source": "in0test",
       "sourceHandle": "out",
       "target": "readGate14",
-      "targetHandle": "chainIn",
+      "targetHandle": "i0In",
       "kind": "chain",
       "label": "inputToReadGate"
     },

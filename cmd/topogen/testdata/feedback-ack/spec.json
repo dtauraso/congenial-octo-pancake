@@ -11,7 +11,7 @@
       "source": "src",
       "sourceHandle": "out",
       "target": "gate",
-      "targetHandle": "chainIn",
+      "targetHandle": "i0In",
       "kind": "chain",
       "label": "srcToGate"
     },
