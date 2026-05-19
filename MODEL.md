@@ -101,6 +101,18 @@ wire geometry. "Atomic cascade" holds only in tests where
 event still happens; its visible duration is zero). RAF pacing is the
 observation window, not an independent clock competing for authority.
 
+> **Output-readiness precondition.** Before consuming any slot, a node
+> body must verify two conditions locally: (a) every input slot it
+> intends to consume is in `filled` phase, and (b) every destination
+> wire it intends to load reports `canAccept === true`. Both checks
+> are read-only observations of local state — no signal crosses to
+> another node. If either condition is unmet, the body returns
+> without consuming anything and re-observes on the next poll frame.
+> A body that consumes a slot before verifying `canAccept` loses the
+> value silently when the wire no-ops the load; this is a contract
+> violation, not a retry. The precondition is all-or-nothing: partial
+> consumption is not permitted.
+
 ## React surface realization
 
 - **`<Wire>`** renders the SVG path and runs the RAF pulse animation
