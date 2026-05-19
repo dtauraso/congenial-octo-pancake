@@ -36,10 +36,6 @@ func Wire() []S.Node {
 	i1InhibitToRight0Right := make(chan int, 1)
 	i1ToReadGate := make(chan int, 1)
 
-	// Node slot priming
-	i1ToReadGate <- 1
-	i1InhibitToRight0Right <- 1
-
 	// Input externals
 	in08Input := make(chan int, 2)
 	in08Input <- 0

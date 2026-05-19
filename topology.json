@@ -22,7 +22,6 @@
     {
       "id": "readGate1",
       "type": "ReadGate",
-      "initialSlots": { "i1In": 1 },
       "inputs": [
         {
           "name": "i0In",
@@ -107,7 +106,6 @@
     {
       "id": "inhibitRight0",
       "type": "InhibitRightGate",
-      "initialSlots": { "right": 1 },
       "inputs": [
         {
           "name": "left",
