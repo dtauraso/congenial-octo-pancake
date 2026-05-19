@@ -237,25 +237,31 @@ export function ChainInhibitorBody({
     const node = nodeRef.current;
     const wire = outWireRef.current;
     if (!node || !wire) return;
-    if (node.slotPhase(slotId) !== "filled") {
+    const inhibitWire = inhibitOutWireRef?.current ?? null;
+
+    // Rule A (emit): held filled && canAccept — runs first so existing held
+    // is consumed before Rule B potentially refills it this same frame.
+    if (node.slotPhase("held") === "filled" && wire.canAccept && (!inhibitWire || inhibitWire.canAccept)) {
+      lastSkipReasonRef.current = null;
+      const emitted = node.consume("held");
+      if (traceId) postLog("trace.chainInhibitor.emit", { node: traceId, emitted });
+      wire.load(emitted);
+      if (inhibitWire) inhibitWire.load(emitted);
+    }
+
+    // Rule B (refill): slot filled && held empty — may fill held for next frame
+    // (or immediately if Rule A just cleared it above).
+    if (node.slotPhase(slotId) === "filled" && node.slotPhase("held") === "empty") {
+      const incoming = node.consume(slotId);
+      node.fill("held", incoming);
+      setHeldDisplay(incoming);
+      if (traceId) postLog("trace.chainInhibitor.refill", { node: traceId, incoming });
+    } else if (node.slotPhase(slotId) !== "filled") {
       if (traceId && lastSkipReasonRef.current !== "slot-not-filled") {
         postLog("trace.chainInhibitor.skip", { node: traceId, reason: "slot-not-filled" });
         lastSkipReasonRef.current = "slot-not-filled";
       }
-      return;
     }
-    if (node.slotPhase("held") !== "filled") return;
-    lastSkipReasonRef.current = null;
-    const inhibitWire = inhibitOutWireRef?.current ?? null;
-    if (!wire.canAccept) return;
-    if (inhibitWire && !inhibitWire.canAccept) return;
-    const incoming = node.consume(slotId);
-    const emitted = node.consume("held");
-    node.fill("held", incoming);
-    setHeldDisplay(incoming);
-    if (traceId) postLog("trace.chainInhibitor.fire", { node: traceId, incoming, emitted });
-    wire.load(emitted);
-    if (inhibitWire) inhibitWire.load(emitted);
   }, [nodeRef, outWireRef, inhibitOutWireRef, slotId, traceId]);
 
   useEffect(() => {
