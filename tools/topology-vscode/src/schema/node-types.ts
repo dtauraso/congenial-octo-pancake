@@ -59,7 +59,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
   InhibitRightGate: {
     role: "inhibit-right-gate",
     inputs: [{ name: "left", kind: "inhibit-in" }, { name: "right", kind: "inhibit-in" }],
-    outputs: [{ name: "out", kind: "and-out" }],
+    outputs: [{ name: "passed", kind: "and-out" }],
     shape: "rect", fill: "#fce4ec", stroke: "#880e4f", width: 110, height: 36,
   },
   DetectorLatch: {

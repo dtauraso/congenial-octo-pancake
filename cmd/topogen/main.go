@@ -98,7 +98,7 @@ var REGISTRY = map[string]NodeBind{
 	"InhibitRightGate": {
 		Pkg: "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode", Alias: "IRG", Struct: "InhibitRightGateNode",
 		Inputs:  map[string]PortBind{"left": {Field: "FromLeft"}, "right": {Field: "FromRight"}},
-		Outputs: map[string]PortBind{"out": {Field: "ToOut"}},
+		Outputs: map[string]PortBind{"passed": {Field: "ToPassed"}},
 	},
 }
 

@@ -42,7 +42,7 @@ func (l *Line) Setup() {
 	i1.ToAck = i1AckToReadGate
 	i1.ToEdge = []chan<- int{i1ToInhibitRight}
 
-	inhibitRight := IRG.InhibitRightGateNode{Id: 0, FromLeft: i0ToInhibitRight, FromRight: i1ToInhibitRight, ToOut: make(chan int, 1)}
+	inhibitRight := IRG.InhibitRightGateNode{Id: 0, FromLeft: i0ToInhibitRight, FromRight: i1ToInhibitRight, ToPassed: make(chan int, 1)}
 
 	l.Line = []S.Node{&input_node, &readGate, &i0, &i1, &inhibitRight}
 }

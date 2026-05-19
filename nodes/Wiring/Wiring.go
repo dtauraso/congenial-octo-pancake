@@ -49,14 +49,14 @@ func Wire() []S.Node {
 	// Dead-end outputs
 	i0Ack := make(chan int, 1)
 	i1Ack := make(chan int, 1)
-	inhibitRight0Out := make(chan int, 1)
+	inhibitRight0Passed := make(chan int, 1)
 
 	// Nodes
 	in08 := INN.InputNode{Id: 0, Name: "in08", Input: in08Input, ToNext: inputToReadGate}
 	readGate1 := RGN.ReadGateNode{Id: 0, Name: "readGate1", ValueCh: inputToReadGate, AckCh: bootstrapRgToReadGate, Gated: readGateToI0}
 	i0 := CI.ChainInhibitorNode{Id: 0, Name: "i0", HeldValue: 0, FromPrev: readGateToI0, ToAck: i0Ack, ToEdge: []chan<- int{i0InhibitToRight0Left}, ToNext: i0ToI1}
 	i1 := CI.ChainInhibitorNode{Id: 0, Name: "i1", HeldValue: 0, FromPrev: i0ToI1, ToAck: i1Ack, ToEdge: []chan<- int{i1InhibitToRight0Right}, ToNext: i1ToReadGate}
-	inhibitRight0 := IRG.InhibitRightGateNode{Id: 0, Name: "inhibitRight0", FromLeft: i0InhibitToRight0Left, FromRight: i1InhibitToRight0Right, ToOut: inhibitRight0Out}
+	inhibitRight0 := IRG.InhibitRightGateNode{Id: 0, Name: "inhibitRight0", FromLeft: i0InhibitToRight0Left, FromRight: i1InhibitToRight0Right, ToPassed: inhibitRight0Passed}
 	bootstrap_rg := INN.InputNode{Id: 0, Name: "bootstrap_rg", Input: bootstrap_rgInput, ToNext: bootstrapRgToReadGate}
 
 	return []S.Node{&in08, &readGate1, &i0, &i1, &inhibitRight0, &bootstrap_rg}

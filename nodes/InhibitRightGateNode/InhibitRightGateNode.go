@@ -15,7 +15,7 @@ type InhibitRightGateNode struct {
 	HasRight bool
 	FromLeft  <-chan int
 	FromRight <-chan int
-	ToOut     chan<- int
+	ToPassed  chan<- int
 }
 
 func (g *InhibitRightGateNode) Update(s *S.SafeWorker) {
@@ -54,8 +54,8 @@ func (g *InhibitRightGateNode) Update(s *S.SafeWorker) {
 			}
 			fmt.Printf("%s: left=%d right=%d → %d\n", g.Name, g.Left, g.Right, result)
 			s.Trace.Fire(g.Name)
-			S.Send(g.ToOut, result)
-			s.Trace.Send(g.Name, "out", result)
+			S.Send(g.ToPassed, result)
+			s.Trace.Send(g.Name, "passed", result)
 			g.HasLeft = false
 			g.HasRight = false
 		}

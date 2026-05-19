@@ -49,7 +49,7 @@ func TestParity_FixtureMatch_InhibitRightGate(t *testing.T) {
 	}
 
 	em := BuildEdgeMap([]EdgeLite{
-		{ID: "irgOut", SourceNode: "irg", SourceHandle: "out"},
+		{ID: "irgOut", SourceNode: "irg", SourceHandle: "passed"},
 	})
 
 	tr := New(64)
@@ -58,7 +58,7 @@ func TestParity_FixtureMatch_InhibitRightGate(t *testing.T) {
 	rightIn := make(chan int, 1)
 	out := make(chan int, 1)
 
-	irg := IRG.InhibitRightGateNode{Name: "irg", FromLeft: leftIn, FromRight: rightIn, ToOut: out}
+	irg := IRG.InhibitRightGateNode{Name: "irg", FromLeft: leftIn, FromRight: rightIn, ToPassed: out}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)

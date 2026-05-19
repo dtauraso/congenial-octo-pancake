@@ -40,13 +40,13 @@ func Wire() []S.Node {
 
 	// Dead-end outputs
 	inhibAck := make(chan int, 1)
-	rightOut := make(chan int, 1)
+	rightPassed := make(chan int, 1)
 
 	// Nodes
 	src := INN.InputNode{Id: 0, Name: "src", Input: srcInput, ToNext: srcToGate}
 	gate := RGN.ReadGateNode{Id: 0, Name: "gate", AckCh: inhibAckToGate, ValueCh: srcToGate, Gated: gateToInhib}
 	inhib := CI.ChainInhibitorNode{Id: 0, Name: "inhib", FromPrev: gateToInhib, ToAck: inhibAck, ToEdge: []chan<- int{inhibToRightLeft, inhibToRightRight}, ToNext: inhibAckToGate}
-	right := IRG.InhibitRightGateNode{Id: 0, Name: "right", FromLeft: inhibToRightLeft, FromRight: inhibToRightRight, ToOut: rightOut}
+	right := IRG.InhibitRightGateNode{Id: 0, Name: "right", FromLeft: inhibToRightLeft, FromRight: inhibToRightRight, ToPassed: rightPassed}
 
 	return []S.Node{&src, &gate, &inhib, &right}
 }

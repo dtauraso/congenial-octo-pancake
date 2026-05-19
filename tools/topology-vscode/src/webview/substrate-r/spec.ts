@@ -82,7 +82,7 @@ export const NODE_KIND_PORTS: Record<RNodeKind, KindPorts> = {
   join:     { inputs: ["a", "b"], outputs: ["joined"] },
   readgate: { inputs: ["value", "ack"], outputs: ["gated"] },
   chainInhibitor: { inputs: ["in"], outputs: ["inhibitOut", "out"] },
-  inhibitrightgate: { inputs: ["left", "right"], outputs: ["out"] },
+  inhibitrightgate: { inputs: ["left", "right"], outputs: ["passed"] },
   register: { inputs: ["in"], outputs: ["out"] },
 };
 
