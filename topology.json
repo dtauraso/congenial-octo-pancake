@@ -48,9 +48,6 @@
     {
       "id": "i0",
       "type": "ChainInhibitor",
-      "data": {
-        "initialSlots": { "held": 0 }
-      },
       "inputs": [
         {
           "name": "in",
