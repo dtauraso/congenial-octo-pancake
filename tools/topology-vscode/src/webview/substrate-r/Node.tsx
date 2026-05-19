@@ -28,6 +28,7 @@ export interface NodeHandle {
 
 export interface NodeProps {
   slots?: string[];
+  initialSlots?: Record<string, unknown>;
   onRun?: () => void;
   onConsume?: (slotId: string, value: unknown) => void;
   traceId?: string;
@@ -40,18 +41,25 @@ interface SlotState {
 }
 
 export const Node = forwardRef<NodeHandle, NodeProps>(function Node(
-  { slots = [], onRun, onConsume, traceId }, ref,
+  { slots = [], initialSlots, onRun, onConsume, traceId }, ref,
 ) {
   const onRunRef = useRef(onRun);
   onRunRef.current = onRun;
   const onConsumeRef = useRef(onConsume);
   onConsumeRef.current = onConsume;
 
+  const initialSlotsKey = initialSlots ? JSON.stringify(initialSlots) : "";
   const slotMap = useMemo(() => {
     const m = new Map<string, SlotState>();
-    for (const id of slots) m.set(id, { phase: "empty", value: undefined, listeners: new Set() });
+    for (const id of slots) {
+      const hasInit = initialSlots && Object.prototype.hasOwnProperty.call(initialSlots, id);
+      m.set(id, hasInit
+        ? { phase: "filled", value: initialSlots![id], listeners: new Set() }
+        : { phase: "empty", value: undefined, listeners: new Set() });
+    }
     return m;
-  }, [slots.join("|")]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slots.join("|"), initialSlotsKey]);
 
   const get = (slotId: string): SlotState => {
     const s = slotMap.get(slotId);
