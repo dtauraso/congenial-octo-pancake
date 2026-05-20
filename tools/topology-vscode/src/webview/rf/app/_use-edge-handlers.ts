@@ -1,10 +1,11 @@
 import { useCallback, useState } from "react";
 import type { Connection, Edge as RFEdge } from "reactflow";
 import type { EdgeKind } from "../../../schema";
-import { specToFlow } from "../adapter";
+import { KIND_COLORS } from "../../../schema";
 import { scheduleSave } from "../../save";
-import { mutateSpec, spec, viewerState } from "../../state";
-import { useStore } from "../../state/store";
+import { mutateSpec, spec } from "../../state";
+import { pushSnapshot } from "../history";
+import { rfSetEdges } from "../rf-imperative";
 import type { AppCtx } from "./_ctx";
 import { onConnectImpl } from "./_on-connect";
 import { onReconnectImpl } from "./_on-reconnect";
@@ -46,14 +47,18 @@ export function useEdgeHandlers(ctx: AppCtx) {
   const setEdgeKind = useCallback((edgeId: string, kind: EdgeKind) => {
     if (!ctx.lastSpec.current) return;
     if (!spec.edges.some((e) => e.id === edgeId)) return;
-    const next = mutateSpec((s) => {
+    pushSnapshot();
+    mutateSpec((s) => {
       const e = s.edges.find((x) => x.id === edgeId);
       if (e) e.kind = kind;
     });
-    ctx.lastSpec.current = next;
-    const flow = specToFlow(next, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
-    ctx.setNodes(flow.nodes);
-    ctx.setEdges(flow.edges);
+    rfSetEdges((es) => es.map((e) =>
+      e.id !== edgeId ? e : {
+        ...e,
+        style: { ...e.style, stroke: KIND_COLORS[kind] ?? "#888" },
+        data: { ...e.data, kind },
+      }
+    ));
     scheduleSave();
     setEdgeMenu(null);
   }, [ctx]);
