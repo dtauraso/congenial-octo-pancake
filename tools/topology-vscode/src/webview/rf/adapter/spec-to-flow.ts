@@ -3,6 +3,8 @@ import { KIND_COLORS, NODE_TYPES, type Node as SpecNode, type Spec } from "../..
 import type { Fold, ViewerState } from "../../state/viewer/types";
 import { COLLAPSED_FOLD_W, COLLAPSED_FOLD_H, expandedBounds } from "./_bounds";
 
+const RF_NODE_TYPE_MAP: Record<string, string> = { Input: "input" };
+
 // Fold-aware spec→flow conversion. Folds are viewer-only state; they never
 // touch the spec (topogen ignores topology.view.json). Edges that cross a
 // collapsed fold boundary are re-routed onto the fold placeholder *only in
@@ -76,7 +78,7 @@ export function specToFlow(
     const nv = vs.nodes?.[n.id];
     return {
       id: n.id,
-      type: "animated",
+      type: RF_NODE_TYPE_MAP[n.type] ?? "animated",
       position: { x: nv?.x ?? 0, y: nv?.y ?? 0 },
       data: {
         label: n.id,
