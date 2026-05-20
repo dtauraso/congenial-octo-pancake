@@ -33,7 +33,7 @@ import type { ViewerState } from "../src/webview/viewerState";
 const initial: Spec = {
   nodes: [
     { id: "in", type: "Input", x: 0, y: 0 },
-    { id: "rl", type: "ReadLatch", x: 1, y: 0 },
+    { id: "rl", type: "ReadGate", x: 1, y: 0 },
   ],
   edges: [{ id: "e1", source: "in", target: "rl" }],
 };

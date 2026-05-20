@@ -1,8 +1,7 @@
 // Phase 7 Chunk 4 — Go-side parity test.
 //
-// Hand-wires a small Input → ChainInhibitor topology (Go-supported
-// node types only — the chunk-1 fixture's ReadLatch isn't in the Go
-// node set), runs it with tracing, runs the resolver against a
+// Hand-wires a small Input → ChainInhibitor topology, runs it with
+// tracing, runs the resolver against a
 // hand-built EdgeMap, and asserts the canonical event sequence's
 // projection matches a hand-coded expected sequence.
 //

@@ -33,7 +33,8 @@ handoff.md is exempt from the 100-LOC budget.
      (editor-only; `Loader-registered: no`). Side effect: SPEC being
      authoritative gave ChainInhibitor new `ToAck`/`ToEdgeNew`
      handles and ReadLatch new `ToAck` — these were prior Open
-     Questions and now match the Go ports.
+     Questions and now match the Go ports. (ReadLatch's `ToAck`
+     handle became moot when ReadLatch was deleted.)
    - `f246e9c` — folded each kind's `register.go` (init + populate)
      into the kind's body file. `register.go` removed everywhere.
 

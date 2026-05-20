@@ -9,7 +9,7 @@ extract it incrementally.
 
 | File | Class | Leaks (file:line + note) |
 |------|-------|---------------------------|
-| `../tools/topology-vscode/src/schema.ts` | PLUGIN | L4–14, L131–242: `NODE_TYPES` registry hardcodes all 12 wirefold node types (ReadLatch, ChainInhibitor, StreakDetector, SyncGate, ReadGate, AndGate, EdgeNode, Partition, …). L154–240: `role` strings are wirefold domain concepts. Port kinds (`feedback-ack`, `edge-connection`, `inhibit-in`, `and-out`) are wirefold-specific. L245–255: `KIND_COLORS` maps wirefold edge semantics to colors. |
+| `../tools/topology-vscode/src/schema.ts` | PLUGIN | L4–14, L131–242: `NODE_TYPES` registry hardcodes wirefold node types (ChainInhibitor, StreakDetector, SyncGate, ReadGate, AndGate, EdgeNode, Partition, …). L154–240: `role` strings are wirefold domain concepts. Port kinds (`feedback-ack`, `edge-connection`, `inhibit-in`, `and-out`) are wirefold-specific. L245–255: `KIND_COLORS` maps wirefold edge semantics to colors. |
 | `../tools/topology-vscode/src/sim/handlers.ts` | PLUGIN | L22–30: `__has_${port}` buffer pattern. L40–51: ChainInhibitor handler (`inhibitOut`/`readNew`/`held`). L76–85: ReadGate/SyncGate/AndGate join logic with wirefold port names. L87–105: EdgeNode XOR contrast detector. L127–158: StreakBreak/Streak detectors. L160–195: Partition state machine. L199–241: `HANDLERS`, `GATE_TYPES`, `MOTION_TYPES` enumerate wirefold types. |
 | `../tools/topology-vscode/src/sim/simulator.ts` | CORE | Pure event-stepping; calls `getHandler()` and `NODE_TYPES` generically (L251–254). |
 | `../tools/topology-vscode/src/sim/runner.ts` | CORE | Wall-clock runner; publishes FireEvent/EmitEvent renderer-agnostically. |

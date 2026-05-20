@@ -39,7 +39,7 @@ function edge(id: string, source: string, target: string, kind: Edge["kind"] = "
 const initialSpec: Spec = {
   nodes: [
     { id: "a", type: "Input", x: 0, y: 0 },
-    { id: "b", type: "ReadLatch", x: 1, y: 0 },
+    { id: "b", type: "ReadGate", x: 1, y: 0 },
     { id: "c", type: "ChainInhibitor", x: 2, y: 0 },
   ],
   edges: [edge("aToB", "a", "b"), edge("bToC", "b", "c")],

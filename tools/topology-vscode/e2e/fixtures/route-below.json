@@ -1,13 +1,13 @@
 {
   "nodes": [
     { "id": "a", "type": "ChainInhibitor", "x": 100, "y": 200 },
-    { "id": "b", "type": "ReadLatch", "x": 400, "y": 200 }
+    { "id": "b", "type": "ChainInhibitor", "x": 400, "y": 200 }
   ],
   "edges": [
     {
       "id": "e",
       "source": "b",
-      "sourceHandle": "ack",
+      "sourceHandle": "ToAck",
       "target": "a",
       "targetHandle": "in",
       "kind": "feedback-ack",

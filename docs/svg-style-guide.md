@@ -155,7 +155,7 @@ Conventions:
 
 ## 8. Edge Naming
 
-- camelCase for signal flow: `inputToReadLatch`, `sbd0DoneToSyncGate`, `detectorLatchAckToReadGate`.
+- camelCase for signal flow: `inputToChainInhibitor`, `sbd0DoneToSyncGate`, `detectorAckToReadGate`.
 - hyphen-segmented for qualified reads: `i0-sbd0-old`, `i0-sbd0-new`.
 - IDs of edge groups follow `id="edge-<name>"`; edge name matches the `id` field inside `<metadata>` JSON.
 - Channel names encode both endpoints (house rule from [CLAUDE.md](../CLAUDE.md)).

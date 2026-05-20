@@ -51,7 +51,7 @@ beforeEach(() => {
 describe("spec undo/redo (Tier 2)", () => {
   it("undo restores prior spec byte-for-byte", () => {
     const before = JSON.stringify(getSpec());
-    mutateSpec((s) => { s.nodes.push({ id: "rl", type: "ReadLatch", x: 1, y: 0 }); });
+    mutateSpec((s) => { s.nodes.push({ id: "rl", type: "ReadGate", x: 1, y: 0 }); });
     expect(JSON.stringify(getSpec())).not.toBe(before);
     expect(canUndoSpec()).toBe(true);
     undoSpec();
@@ -59,7 +59,7 @@ describe("spec undo/redo (Tier 2)", () => {
   });
 
   it("redo replays the undone edit", () => {
-    mutateSpec((s) => { s.nodes.push({ id: "rl", type: "ReadLatch", x: 1, y: 0 }); });
+    mutateSpec((s) => { s.nodes.push({ id: "rl", type: "ReadGate", x: 1, y: 0 }); });
     const after = JSON.stringify(getSpec());
     undoSpec();
     expect(canRedoSpec()).toBe(true);
@@ -77,7 +77,7 @@ describe("spec undo/redo (Tier 2)", () => {
 
   it("undo/redo does not touch viewer state", () => {
     const viewerBefore = JSON.stringify(viewerState);
-    mutateSpec((s) => { s.nodes.push({ id: "rl", type: "ReadLatch", x: 1, y: 0 }); });
+    mutateSpec((s) => { s.nodes.push({ id: "rl", type: "ReadGate", x: 1, y: 0 }); });
     expect(JSON.stringify(viewerState)).toBe(viewerBefore);
     undoSpec();
     expect(JSON.stringify(viewerState)).toBe(viewerBefore);
@@ -132,7 +132,7 @@ describe("viewer undo/redo (Tier 2)", () => {
   it("the two stacks are independent — spec mutation leaves viewer history alone", () => {
     mutateViewer((s) => { s.views = [...(s.views ?? []), { name: "v3", nodeIds: ["in"] }]; });
     const viewerBefore = JSON.stringify(viewerState);
-    mutateSpec((s) => { s.nodes.push({ id: "rl", type: "ReadLatch", x: 1, y: 0 }); });
+    mutateSpec((s) => { s.nodes.push({ id: "rl", type: "ReadGate", x: 1, y: 0 }); });
     undoSpec();
     // Spec was rolled back, but viewer history must be exactly where the
     // viewer mutation left it — both content and stack depth.
