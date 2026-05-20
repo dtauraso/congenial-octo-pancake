@@ -8,6 +8,7 @@
 //   undo() / redo()      — restore previous/next RF state
 
 import type { ReactFlowInstance, Node as RFNode, Edge as RFEdge } from "reactflow";
+import { rfSetNodes, rfSetEdges } from "./rf-imperative";
 
 const HISTORY_LIMIT = 50;
 
@@ -38,8 +39,8 @@ export function undo() {
   const current = { nodes: _rf.getNodes(), edges: _rf.getEdges() };
   const prev = past.pop()!;
   future.push(current);
-  _rf.setNodes(prev.nodes);
-  _rf.setEdges(prev.edges);
+  rfSetNodes(() => prev.nodes);
+  rfSetEdges(() => prev.edges);
 }
 
 export function redo() {
@@ -47,8 +48,8 @@ export function redo() {
   const current = { nodes: _rf.getNodes(), edges: _rf.getEdges() };
   const next = future.pop()!;
   past.push(current);
-  _rf.setNodes(next.nodes);
-  _rf.setEdges(next.edges);
+  rfSetNodes(() => next.nodes);
+  rfSetEdges(() => next.edges);
 }
 
 export function canUndo() { return past.length > 0; }
