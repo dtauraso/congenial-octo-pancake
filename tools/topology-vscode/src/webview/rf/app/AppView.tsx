@@ -22,6 +22,7 @@ export function AppView(p: AppViewProps) {
         onNodeDoubleClick={p.onNodeDoubleClick}
         onNodeContextMenu={p.onNodeContextMenu}
         onSelectionContextMenu={p.onSelectionContextMenu}
+        onNodeDragStart={p.onNodeDragStart}
         onNodeDrag={p.onNodeDrag}
         onNodeDragStop={p.onNodeDragStop}
         onNodesDelete={p.onNodesDelete}

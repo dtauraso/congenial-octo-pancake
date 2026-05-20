@@ -15,6 +15,11 @@ export function useNodeDrag(
   guides: Guides,
   setGuides: (g: Guides) => void,
 ) {
+  const onNodeDragStart = useCallback((_ev: React.MouseEvent, _node: RFNode) => {
+    // Capture pre-drag state so undo restores to before the drag began.
+    pushSnapshot();
+  }, []);
+
   const onNodeDrag = useCallback((_ev: React.MouseEvent, node: RFNode) => {
     if (node.type === "fold") {
       // Fold placeholder dimensions vary; skipping keeps the matcher
@@ -45,7 +50,6 @@ export function useNodeDrag(
       // Persist fold-placeholder drags back to RF node data so the
       // position is available for serialization.
       if (!viewerState.folds?.some((x) => x.id === node.id)) return;
-      pushSnapshot();
       rfSetNodes((ns) => ns.map((n) =>
         n.id === node.id
           ? { ...n, data: { ...n.data, position: [node.position.x, node.position.y] } }
@@ -55,7 +59,6 @@ export function useNodeDrag(
       return;
     }
     // Persist dragged position to viewerState so the view sidecar survives reload.
-    pushSnapshot();
     patchViewerState((v) => {
       if (!v.nodes) v.nodes = {};
       const existing = v.nodes[node.id] ?? { x: 0, y: 0 };
@@ -65,5 +68,5 @@ export function useNodeDrag(
     scheduleSave();
   }, [ctx, setGuides]);
 
-  return { onNodeDrag, onNodeDragStop };
+  return { onNodeDragStart, onNodeDrag, onNodeDragStop };
 }

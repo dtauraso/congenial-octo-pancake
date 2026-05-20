@@ -17,6 +17,7 @@ export type AppViewProps = {
   onNodeDoubleClick: (ev: React.MouseEvent, n: RFNode) => void;
   onNodeContextMenu: (ev: React.MouseEvent, n: RFNode) => void;
   onSelectionContextMenu: (ev: React.MouseEvent, n: RFNode[]) => void;
+  onNodeDragStart: (ev: React.MouseEvent, n: RFNode) => void;
   onNodeDrag: (ev: React.MouseEvent, n: RFNode) => void;
   onNodeDragStop: (ev: React.MouseEvent, n: RFNode) => void;
   onNodesDelete: (n: RFNode[]) => void;

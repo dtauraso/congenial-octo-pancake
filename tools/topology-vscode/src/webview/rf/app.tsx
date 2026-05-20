@@ -116,6 +116,7 @@ function Inner() {
       onNodeDoubleClick={ctxH.onNodeDoubleClick}
       onNodeContextMenu={ctxH.onNodeContextMenu}
       onSelectionContextMenu={ctxH.onSelectionContextMenu}
+      onNodeDragStart={dragH.onNodeDragStart}
       onNodeDrag={dragH.onNodeDrag} onNodeDragStop={dragH.onNodeDragStop}
       onNodesDelete={delH.onNodesDelete} onEdgesDelete={delH.onEdgesDelete}
       onConnect={edgeH.onConnect} isValidConnection={edgeH.isValidConnection}
