@@ -88,14 +88,24 @@ type InputNode struct {
 	Name   string
 	Init   []int
 	ToNext chan<- int
-	i      int
+}
+```
+
+Update body uses a local index:
+
+```go
+for i := 0; i < len(n.Init); {
+    select {
+    case n.ToNext <- n.Init[i]:
+        i++
+    }
 }
 ```
 
 - **Inputs:** none — source node; no inbound channel
 - **Outputs:** `ToNext chan<- int` — forwards each value downstream
-- **State:** `Init []int` (seed sequence), `i int` (current index)
-- **Firing rule:** iterate `Init` by index; non-blocking send each value to `ToNext`; goroutine exits when index reaches `len(Init)` (drained)
+- **State:** `Init []int` (seed sequence); no index field — local index iterates Init inside `Update`
+- **Firing rule:** local index iterates `Init`; blocking send each `Init[i]` to `ToNext`; goroutine exits when index reaches `len(Init)` (drained)
 - **Populate:** `populateInput` copies `data.Init` directly into the `Init` slice; no chan allocation
 
 #### RF (node-defs entry)
