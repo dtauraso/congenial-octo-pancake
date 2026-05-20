@@ -10,10 +10,11 @@ import { ReadGateNode } from "../nodes/ReadGateNode";
 import { ReadLatchNode } from "../nodes/ReadLatchNode";
 import { PartitionNode } from "../nodes/PartitionNode";
 import { EdgeNode } from "../nodes/EdgeNode";
+import { InhibitorNode } from "../nodes/InhibitorNode";
 import { SubstrateEdge } from "../edges/SubstrateEdge";
 
 export const EDGE_TYPES = { animated: RSubstrateEdge, substrate: SubstrateEdge };
-export const RF_NODE_TYPES = { animated: RSubstrateNode, fold: FoldNode, note: NoteNode, input: InputNode, relay: RelayNode, join: JoinNode, readGate: ReadGateNode, readLatch: ReadLatchNode, partition: PartitionNode, edgeNode: EdgeNode };
+export const RF_NODE_TYPES = { animated: RSubstrateNode, fold: FoldNode, note: NoteNode, input: InputNode, relay: RelayNode, join: JoinNode, readGate: ReadGateNode, readLatch: ReadLatchNode, partition: PartitionNode, edgeNode: EdgeNode, inhibitor: InhibitorNode };
 
 // Alignment-guide tolerance is in flow units; 4 covers off-grid drag
 // noise without firing on every near-miss.
