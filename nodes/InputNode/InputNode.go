@@ -10,22 +10,21 @@ type InputNode struct {
 	Name   string
 	Init   []int
 	ToNext chan<- int
-	i      int
 }
 
 func (n *InputNode) Update(s *S.SafeWorker) {
 	defer s.Wg.Done()
-	for n.i < len(n.Init) {
+	for i := 0; i < len(n.Init); {
 		select {
 		case <-s.Ctx.Done():
 			return
 		default:
 		}
 		select {
-		case n.ToNext <- n.Init[n.i]:
+		case n.ToNext <- n.Init[i]:
 			s.Trace.Fire(n.Name)
-			s.Trace.Send(n.Name, "ToOut", n.Init[n.i])
-			n.i++
+			s.Trace.Send(n.Name, "ToOut", n.Init[i])
+			i++
 		default:
 		}
 	}
