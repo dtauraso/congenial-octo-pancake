@@ -5,6 +5,7 @@
 
 import type { TraceEvent } from "../../messages";
 import { rfSetNodes, rfSetEdges, rfGetEdges } from "./rf-imperative";
+import { postLog } from "../log/post";
 
 export function handleTraceEvent(event: TraceEvent): void {
   const { step, kind, node, port, value } = event;
@@ -35,6 +36,7 @@ export function handleTraceEvent(event: TraceEvent): void {
         (e) => e.source === node && e.sourceHandle === port,
       )?.id;
       console.log(`[pump] send step=${step} node=${node} port=${port} edgeId=${edgeId ?? "NO-MATCH"} edges=[${edges.map(e => `${e.source}:${e.sourceHandle}`).join(",")}]`);
+      postLog("phase4.pump", { layer: "pump", step, node, port: port ?? null, edgeId: edgeId ?? null });
       if (!edgeId) return; // no matching edge — topology mismatch, skip silently
       rfSetEdges((es) =>
         es.map((e) =>

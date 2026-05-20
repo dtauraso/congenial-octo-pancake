@@ -4,6 +4,7 @@
 // No substrate logic — component renders whatever data says.
 
 import { useEffect, useRef, useState } from "react";
+import { postLog } from "../../log/post";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from "reactflow";
 import { KIND_COLORS } from "../../../schema";
 import type { EdgeKind } from "../../../schema/types";
@@ -43,6 +44,7 @@ export function SubstrateEdge({
     if (!pulse) return;
     if (pulse.simStep === lastPulseStep.current) return;
     console.log(`[edge] pulse start id=${id} step=${pulse.simStep} value=${pulse.value}`);
+    postLog("phase4.edge", { layer: "edge", id, step: pulse.simStep, value: pulse.value });
     lastPulseStep.current = pulse.simStep;
 
     const start = performance.now();

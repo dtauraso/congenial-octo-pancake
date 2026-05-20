@@ -3,6 +3,7 @@
 // Extracted so contracts.md C1/C3 can assert behavior without a DOM.
 
 import { parseHostToWebview } from "../../../messages";
+import { postLog } from "../../log/post";
 import type { TraceEvent, WebviewToHostMsg } from "../../../messages";
 
 export type HostMessageHandlers = {
@@ -34,6 +35,7 @@ export function installHostMessageRouter(
     else if (msg.type === "view-load") handlers.viewLoad(msg.text);
     else if (msg.type === "trace-event") {
       console.log(`[webview-msg] trace-event step=${msg.event.step} kind=${msg.event.kind} node=${msg.event.node} port=${msg.event.port ?? "-"}`);
+      postLog("phase4.webview-msg", { layer: "webview-msg", step: msg.event.step, kind: msg.event.kind, node: msg.event.node, port: msg.event.port ?? null });
       handlers.traceEvent?.(msg.event);
     }
   };
