@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import type { Node as RFNode } from "reactflow";
 import { NODE_TYPES } from "../../../schema";
 import { scheduleSave, scheduleViewSave } from "../../save";
-import { viewerState } from "../viewer-state";
+import { patchViewerState, viewerState } from "../viewer-state";
 import { pushSnapshot } from "../history";
 import { rfSetNodes } from "../rf-imperative";
 import { ALIGN_TOL } from "./_constants";
@@ -54,7 +54,15 @@ export function useNodeDrag(
       scheduleViewSave();
       return;
     }
-    // RF tracks node position natively via node.position — no viewerState write needed.
+    // Persist dragged position to viewerState so the view sidecar survives reload.
+    pushSnapshot();
+    patchViewerState((v) => {
+      if (!v.nodes) v.nodes = {};
+      const existing = v.nodes[node.id] ?? { x: 0, y: 0 };
+      v.nodes[node.id] = { ...existing, x: node.position.x, y: node.position.y };
+    });
+    scheduleViewSave();
+    scheduleSave();
   }, [ctx, setGuides]);
 
   return { onNodeDrag, onNodeDragStop };
