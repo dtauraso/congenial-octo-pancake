@@ -81,6 +81,19 @@ Worth scrutinizing before the audit table is filled:
 ### Input
 
 #### Go
+
+```go
+type InputNode struct {
+	Id        int
+	Name      string
+	Input     <-chan int
+	ToNext    chan<- int
+	value     int
+	hasValue  bool
+	sentValue bool
+}
+```
+
 - **Inputs:** `Input <-chan int` — external seed values
 - **Outputs:** `ToNext chan<- int` — forwards buffered value downstream
 - **State:** `Value int`, `HasValue bool`, `SentValue bool`
@@ -88,6 +101,11 @@ Worth scrutinizing before the audit table is filled:
 - **Populate:** `populateInput` builds `Input` chan from `data.init`, pre-loads it before the loop starts
 
 #### RF (node-defs entry)
+
+```ts
+input: { defaultLabel: "input", bg: "#1a1f2e", border: "#3fb950", text: "#c9d1d9", accent: "#3fb950", minWidth: 90, sources: [{ id: "ToOut" }], displays: ["queue", "repeat"] },
+```
+
 - **Visual:** label `"input"`, accent `#3fb950`, minWidth 90
 - **Handles:** targets [], sources [`ToOut`]
 - **Displays:** `["queue", "repeat"]`
@@ -100,6 +118,21 @@ Worth scrutinizing before the audit table is filled:
 ### ReadGate
 
 #### Go
+
+```go
+type ReadGateNode struct {
+	Id        int
+	Name      string
+	Value     int
+	HasValue  bool
+	AckVal    int
+	HasAck    bool
+	FromValue <-chan int
+	FromAck   <-chan int
+	ToGated   chan<- int
+}
+```
+
 - **Inputs:** `FromValue <-chan int` — value to gate, `FromAck <-chan int` — ack signal
 - **Outputs:** `ToGated chan<- int` — passes value through when both inputs arrive
 - **State:** `Value int`, `HasValue bool`, `AckVal int`, `HasAck bool`
@@ -107,6 +140,11 @@ Worth scrutinizing before the audit table is filled:
 - **Populate:** none
 
 #### RF (node-defs entry)
+
+```ts
+readGate: { defaultLabel: "readgate", bg: "#f3e5f5", border: "#7b1fa2", text: "#4a148c", accent: "#7b1fa2", minWidth: 70, sublabel: "val / ack", targets: [{ id: "FromValue" }, { id: "FromAck" }], sources: [{ id: "ToGated" }] },
+```
+
 - **Visual:** label `"readgate"`, accent `#7b1fa2`, minWidth 70, sublabel `"val / ack"`
 - **Handles:** targets [`FromValue`, `FromAck`], sources [`ToGated`]
 - **Displays:** none
@@ -119,6 +157,20 @@ Worth scrutinizing before the audit table is filled:
 ### ChainInhibitor
 
 #### Go
+
+```go
+type ChainInhibitorNode struct {
+	Id         int
+	Name       string
+	HeldValue  int
+	FromPrev   <-chan int
+	ToNext     chan<- int
+	ToAck      chan<- int
+	ToEdge     []chan<- int
+	ToEdgeNew  []chan<- int
+}
+```
+
 - **Inputs:** `FromPrev <-chan int` — incoming value to hold
 - **Outputs:** `ToNext chan<- int`, `ToAck chan<- int`, `ToEdge []chan<- int` — old value fan-out, `ToEdgeNew []chan<- int` — new value fan-out
 - **State:** `HeldValue int`
@@ -126,6 +178,11 @@ Worth scrutinizing before the audit table is filled:
 - **Populate:** `populateChainInhibitor` seeds `HeldValue` from `data.InitialSlots["held"]`; ensures `ToEdge` has at least one channel
 
 #### RF (node-defs entry)
+
+```ts
+chainInhibitor: { defaultLabel: "chainInhibitor", bg: "#fff3e0", border: "#e65100", text: "#bf360c", accent: "#e65100", minWidth: 90, targets: [{ id: "FromPrev" }], sources: [{ id: "ToNext" }, { id: "ToAck" }, { id: "ToEdge" }, { id: "ToEdgeNew" }], displays: ["held"] },
+```
+
 - **Visual:** label `"chainInhibitor"`, accent `#e65100`, minWidth 90
 - **Handles:** targets [`FromPrev`], sources [`ToNext`, `ToAck`, `ToEdge`, `ToEdgeNew`]
 - **Displays:** `["held"]`
@@ -138,6 +195,21 @@ Worth scrutinizing before the audit table is filled:
 ### InhibitRightGate
 
 #### Go
+
+```go
+type InhibitRightGateNode struct {
+	Id       int
+	Name     string
+	Left     int
+	HasLeft  bool
+	Right    int
+	HasRight bool
+	FromLeft  <-chan int
+	FromRight <-chan int
+	ToPassed  chan<- int
+}
+```
+
 - **Inputs:** `FromLeft <-chan int` — pass signal, `FromRight <-chan int` — inhibit signal
 - **Outputs:** `ToPassed chan<- int` — emits 1 when left passes and right is absent
 - **State:** `Left int`, `HasLeft bool`, `Right int`, `HasRight bool`
@@ -145,6 +217,11 @@ Worth scrutinizing before the audit table is filled:
 - **Populate:** none
 
 #### RF (node-defs entry)
+
+```ts
+inhibitRightGate: { defaultLabel: "inhibitRightGate", bg: "#fce4ec", border: "#880e4f", text: "#880e4f", accent: "#880e4f", minWidth: 110, sublabel: "L pass / R inhibit", targets: [{ id: "FromLeft" }, { id: "FromRight", accent: "#f48fb1" }], sources: [{ id: "ToPassed" }] },
+```
+
 - **Visual:** label `"inhibitRightGate"`, accent `#880e4f`, minWidth 110, sublabel `"L pass / R inhibit"`
 - **Handles:** targets [`FromLeft`, `FromRight` (accent `#f48fb1`)], sources [`ToPassed`]
 - **Displays:** none
