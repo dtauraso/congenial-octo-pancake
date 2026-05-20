@@ -84,21 +84,19 @@ Worth scrutinizing before the audit table is filled:
 
 ```go
 type InputNode struct {
-	Id        int
-	Name      string
-	Input     <-chan int
-	ToNext    chan<- int
-	value     int
-	hasValue  bool
-	sentValue bool
+	Id     int
+	Name   string
+	Init   []int
+	ToNext chan<- int
+	i      int
 }
 ```
 
-- **Inputs:** `Input <-chan int` — external seed values
-- **Outputs:** `ToNext chan<- int` — forwards buffered value downstream
-- **State:** `Value int`, `HasValue bool`, `SentValue bool`
-- **Firing rule:** non-blocking poll `Input` → buffer value; non-blocking send `ToNext` → flush
-- **Populate:** `populateInput` builds `Input` chan from `data.init`, pre-loads it before the loop starts
+- **Inputs:** none — source node; no inbound channel
+- **Outputs:** `ToNext chan<- int` — forwards each value downstream
+- **State:** `Init []int` (seed sequence), `i int` (current index)
+- **Firing rule:** iterate `Init` by index; non-blocking send each value to `ToNext`; goroutine exits when index reaches `len(Init)` (drained)
+- **Populate:** `populateInput` copies `data.Init` directly into the `Init` slice; no chan allocation
 
 #### RF (node-defs entry)
 
@@ -122,7 +120,7 @@ input: {
 - **Displays:** `["queue", "repeat"]`
 
 #### Drift
-- RF handle id `ToOut` vs Go field `ToNext`
+- RF handle id `ToOut` vs Go field `ToNext` (mismatch still present post-redesign)
 
 ---
 
@@ -286,6 +284,10 @@ inhibitRightGate: {
 
 #### Drift
 - none — handle ids `FromLeft`, `FromRight`, `ToPassed` match Go fields exactly
+
+## Follow-ups
+
+- **Line.go hand-wiring** (deferred): `Line.go` still constructs its topology with struct literals and manual chan allocation (e.g. `InputNode{Init: []int{0, 1, 0}, ...}`). Long-term this should move into a JSON file loaded via `Wiring.LoadTopology`, so there is one construction path instead of two.
 
 ## Migration plan template
 
