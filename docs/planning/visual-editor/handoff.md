@@ -9,102 +9,119 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-19, post-merge, idle)
+## State at handoff (2026-05-19, post-migration, idle)
 
-**Active branch:** `main` at `308a452`. No active task branch.
+**Active branch:** `main` at `3b52e22`. No active task branch.
 
-`task/runtime-editor-port-alignment` merged via `308a452` and deleted
-locally and on remote.
+The RF migration plan completed this session. All four phases landed:
 
-## What landed on main this session
+- **Phase 1 — POC verified** (`a0e1b07`): substrate runs inside RF.
+- **Phase 2 — RF-native kinds, substrate-r deleted** (`ff510ab`).
+- **Phase 3 — RF-only state, Zustand removed** (`05c3732`).
+- **Phase 4 — Go runtime drives editor via trace stream + pump** (`1fb8bd4`).
 
-**Option A naming sweep** — port (field) names and channel ids unified
-across TS and Go.
+Plus a post-migration architecture conformance audit (`23a6ba5`) and a
+chore that moved pre-migration HTML audits to `docs/archive/`
+(`3b52e22`).
 
-- **Port (field) names**: PascalCase directional, matching Go struct
-  fields verbatim. `FromValue` / `FromAck` / `ToGated` / `FromPrev` /
-  `ToNext` / `ToEdge` / `FromLeft` / `FromRight` / `ToPassed` /
-  `FromIn` / `FromA` / `FromB` / `ToJoined` / `ToOut`.
-- **Edge / channel ids**: camelCase `<srcInstance>To<DestInstance>`.
-  E.g. `in08ToReadGate1`, `i0ToI1`, `i0ToInhibitRight0`,
-  `bootstrapRgToReadGate1`. Same form in Go's `Wiring.go` / `Line.go`
-  channel variables.
-- **`topology.json` ports**: per-instance `ports:` override; TS
-  `NODE_KIND_PORTS` defaults serve as arity-only placeholders.
+## Architecture at handoff
 
-**Phase 1 refactor** killed hardcoded output-port-name string literals
-in `node-kinds.tsx` — output wire refs now derive from
-`NODE_KIND_PORTS`, the single source of truth. The three-string
-coupling (`port.name` ↔ edge `sourceHandle` ↔ literal in dispatch)
-is now two strings.
+**Editor (TS / React Flow):**
 
-**View-state durability**: orphan view-edge-key detection landed.
-`_handle-view-load.ts` warns + emits probe entry
-`view.orphan-edge-key { key, knownEdgeIds }` at load. `parseSpec(input,
-view?)` throws on orphan when view is threaded through. The editor's
-load path uses the warning; future batch tooling can use strict mode.
+- Each substrate node kind is a static RF custom node under
+  `tools/topology-vscode/src/webview/rf/nodes/<Kind>Node.tsx` (14 of
+  them) — render only, no simulation.
+- `rf/edges/SubstrateEdge.tsx` renders the wire path + animates the
+  pulse circle from `edge.data.pulse`.
+- Per-kind nodes glow on fire via `rf/nodes/use-fire-flash.ts`
+  reading `node.data.lastFire`.
+- State lives in RF + a handful of thin module-level helpers under
+  `rf/`: `folds-state.ts`, `viewer-state.ts`, `run-status-state.ts`,
+  `dimmed-state.ts`, `rf-imperative.ts`, `history.ts` (RF-snapshot
+  undo/redo), `pump.ts` (51-LOC trace-event translator).
+- Save/load via `spec-to-flow.ts` (forward) and `flow-to-spec.ts`
+  (reverse). `topology.json` is the persistence format (RF-native shape).
 
-## Substrate clarification (worth keeping)
+**Runtime (Go):** the only canonical runtime. Goroutines + channels.
+Slot phase, wire backpressure, the entire substrate model lives here
+(`nodes/<Kind>/`, `Wiring_gen.go`, etc.). Trace events stream from Go
+stdout → extension parser → webview pump → RF state writes →
+component animation. No TS substrate logic anywhere.
 
-`bootstrap_rg` is the substrate-clean TS analog of Go's
-`i1AckToReadGate <- 1` pre-send in `nodes/Line/Line.go:31`. Both
-implementations need a bootstrap; Go hides it in harness wiring, TS
-promotes it to a first-class topology node.
+**Banned-vocabulary rule (from CLAUDE.md):** slot / phase /
+backpressure / canAccept / wire.load belong to Go now. If TS code
+outside `pump.ts` starts accumulating any of them, that is drift.
 
-Both Go's and TS's ReadGate require both inputs before emitting
-(no partial-firing). The 2026-05-17 partial-0 removal (`f273f6a`,
-see `feedback_readgate_partial_0_is_spec`) is the spec for both
-runtimes.
+## Audit verdict
 
-## Parked follow-ups (carry to next task)
+The conformance audit (2026-05-19) found zero substrate-shaped TS code,
+zero graph state outside RF, pump is 51 LOC of pure translation, all
+trace event kinds handled, no carve-out files. Only finding was stale
+documentation, which was fixed in the audit's own merge commit.
 
-1. **ChainInhibitor `ToEdgeNew`** field is Go-only; TS substrate has
-   no declaration (port `readNew` referenced only by trace fixtures).
-   Either declare in TS or delete from Go as vestigial.
-2. **ChainInhibitor `ToAck`** field generates dead-end channel vars
-   (`i0ToAck`, `i1ToAck`) per topogen's `id + capitalize(field)`
-   pattern; functional but inconsistent with semantic naming.
-3. **ChainInhibitorBody `useState(null)`** display state — parallel
-   to the real `held` slot; can be deleted.
-4. **Topogen one-shot Input** (`repeat=false`): TS only; Go side
-   disabled (Run button faded).
-5. **`held=null` visual ambivalence** — tolerated.
-6. **8 vitest test files failing to load** with missing-module errors
-   (`rename-core`, `fold-core`) — pre-existing on main, unrelated to
-   any work this session. Worth a triage pass.
+## Parked follow-ups
+
+1. **Rename UX** — double-click-to-rename was unreliable post-Phase 3
+   (the fix in `68e1897` added a `wrapper` fallback selector but the
+   user couldn't trigger it in verification). Not a regression that
+   blocks anything; iterate when convenient.
+2. **`TransportControls` play button** — still stubbed inert
+   (commit `bd697fe`). It controls timeline replay, separate from the
+   live Run button. Wire it once a replay-from-trace mode is wanted.
+3. **`lastRecv` visualization** — pump writes `node.data.lastRecv`
+   but no kind renders it. Decide whether nodes should pulse on recv
+   in addition to fire, or drop the field.
+4. **`RF_NODE_TYPE_MAP` duplication** — the palette drop site
+   (`_use-drag-drop.ts`) inlines a copy of the kind→RF-type map that
+   lives in `spec-to-flow.ts`. Export from one place.
+5. **Undo/redo timing nuances** — basic mutations work, but some
+   edge cases (rapid sequences, fold-collapse with selection) may
+   double-snapshot or miss snapshots. Probe `.probe/webview-log.jsonl`
+   when iterating.
+6. **Stale memory entries** — several `feedback_*` / `project_*`
+   memory files reference substrate-r concepts (e.g.,
+   `feedback_substrate_landing_requires_editor_path`,
+   `feedback_run_is_input_only`,
+   `feedback_per_emit_simtime_anchoring`,
+   `feedback_edge_seed_required_for_rings`,
+   `project_runstart_concept_needed`). They predate the migration and
+   should be reviewed and removed or rewritten to point at Go.
 
 ## Next concrete step
 
-Idle on main. User direction needed. Cheap / mechanical options:
+Idle on main. No task in flight. Friction-driven from here per the
+post-v0 posture: open `topology.json` in the editor, drive features,
+log friction into `session-log.md`, and let real problems pick the
+next task branch.
 
-- **Parked item 3** (delete `useState(null)` display state) — smallest
-  reasonable task; concept-bounded edit in one file.
-- **Parked item 1** (declare `readNew` / `ToEdgeNew` in TS, or delete
-  on Go side as vestigial) — design choice first, then small edit.
-- **Parked item 6** (triage the 8 failing-to-load vitest files) —
-  read-only diagnosis; possibly just a missing-file restore.
-
-Otherwise: pivot to a friction-driven task from real-world editor use
-(log into [session-log.md](session-log.md)).
+If picking from the parked list, **#6 (stale memory)** is the cheapest
+and highest leverage — it's read by every future session.
 
 ## Working-tree state
 
-Clean.
-
-## Substrate model state
-
-MODEL.md unchanged. No global round / tick / simultaneity layer.
-Local slot-phase coordination. Banned vocab enforced. The
-2026-05-18 instance-specific naming rule is now applied uniformly:
-field names directional per kind; channel ids instance-pair-specific.
+`topology.json` and `topology.view.json` have uncommitted modifications
+from in-session editor testing; user opted to keep them rather than
+revert. Not blocking; they'll either be committed or reverted on
+demand later.
 
 ## Dev-loop
 
-After any substrate-r edit: `npm run build` (tsc alone doesn't
-refresh `out/webview.js`). Live log at `.probe/webview-log.jsonl`.
-Cwd for tsc/tests/check-loc/build: `tools/topology-vscode/`. Go
-runtime is currently disabled in the editor UI (Run button faded);
-`go build ./...` still works for sanity checks.
+After any TS edit: `npm run build` (tsc alone doesn't refresh
+`out/webview.js`). Live probe log at `.probe/webview-log.jsonl`. The
+Phase 4 trace pipeline writes additional events there with `phase4.*`
+labels and to `.probe/phase4-pump.jsonl` (extension side). Cwd for
+tsc/tests/check-loc/build: `tools/topology-vscode/`. Go side:
+`go build ./...` from repo root; `go run .` runs the canonical
+topology and streams trace JSONL to stdout. The editor's Run button
+invokes the same path via the extension subprocess.
+
+## Substrate model state
+
+MODEL.md and CLAUDE.md were rewritten in the audit commit to reflect
+the post-migration architecture (Go owns the substrate; pump is the
+sole TS translator; RF nodes/edges are render-only). The banned
+vocabulary rule still applies, but now pointed at the Go side. No
+TS-side carve-out remains.
 
 ## ALWAYS clause
 
