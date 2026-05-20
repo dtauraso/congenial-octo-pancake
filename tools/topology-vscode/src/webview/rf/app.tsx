@@ -32,6 +32,7 @@ function Inner() {
   const [edges, setEdges] = useState<RFEdge[]>([]);
   const dimmed = useDimmed();
 
+  const rf = useReactFlow();
   // Expose setNodes/setEdges imperatively for non-React callers (inline-edit).
   useEffect(() => { registerRFSetters(setNodes, setEdges); }, []);
   // Register RF instance for snapshot-based history.
@@ -40,7 +41,6 @@ function Inner() {
   useHotkeys("mod+z", (e) => { e.preventDefault(); rfUndo(); }, { enableOnContentEditable: false });
   useHotkeys("mod+shift+z, mod+y", (e) => { e.preventDefault(); rfRedo(); }, { enableOnContentEditable: false });
   const s = useInnerState();
-  const rf = useReactFlow();
   const [guides, setGuides] = useState<{ vx: number | null; hy: number | null }>({ vx: null, hy: null });
 
   // Hydrate RF viewport from persisted camera on mount. view-load will
