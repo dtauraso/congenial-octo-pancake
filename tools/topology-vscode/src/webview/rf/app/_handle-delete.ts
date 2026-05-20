@@ -9,6 +9,19 @@ export function useDeleteHandlers(ctx: AppCtx) {
   const handleDelete = useCallback((nodeIds: string[], edgeIds: string[]) => {
     if (!ctx.lastSpec.current) return;
     if (nodeIds.length === 0 && edgeIds.length === 0) return;
+
+    // Pre-compute cascade so RF setNodes/setEdges can mirror applyDelete's
+    // incident-edge removal without a second spec scan.
+    const delNodes = new Set(nodeIds);
+    const delEdges = new Set(edgeIds);
+    for (const e of getSpec().edges) {
+      if (delNodes.has(e.source) || delNodes.has(e.target)) delEdges.add(e.id);
+    }
+
+    // RF mutation (parallel with mutateBoth — temporary dual-write).
+    ctx.setNodes((ns) => ns.filter((n) => !delNodes.has(n.id)));
+    ctx.setEdges((es) => es.filter((e) => !delEdges.has(e.id)));
+
     // mutateBoth: applyDelete patches both spec and viewerState (orphan
     // cleanup in views/folds/lastSelectionIds). Cmd-Z must restore both
     // surfaces in one step.
