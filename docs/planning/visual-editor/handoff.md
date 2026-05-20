@@ -9,20 +9,27 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-19, post-migration, idle)
+## State at handoff (2026-05-19, post-codegen-removal, idle)
 
-**Active branch:** `main` at `3b52e22`. No active task branch.
+**Active branch:** `main` at `cdd6196`. No active task branch.
 
-The RF migration plan completed this session. All four phases landed:
+This session removed the `topogen` codegen step. The Go runtime now reads
+`topology.json` at startup via `nodes/Wiring/loader.go` + `builders.go`
+and assembles the mesh in memory. No more generated `Wiring.go`, no
+more `cmd/topogen` subprocess on every Run, no more `topogend` daemon,
+no more TS `topogenRunner`. Net −1785 / +611 LOC across the merge.
 
-- **Phase 1 — POC verified** (`a0e1b07`): substrate runs inside RF.
-- **Phase 2 — RF-native kinds, substrate-r deleted** (`ff510ab`).
-- **Phase 3 — RF-only state, Zustand removed** (`05c3732`).
-- **Phase 4 — Go runtime drives editor via trace stream + pump** (`1fb8bd4`).
+Run pipeline now:
+- Editor "Run" → extension saves `topology.json` → spawns `go run .` →
+  `main.go` calls `LoadTopology("topology.json")` → trace streams →
+  pump → RF state writes → animation.
 
-Plus a post-migration architecture conformance audit (`23a6ba5`) and a
-chore that moved pre-migration HTML audits to `docs/archive/`
-(`3b52e22`).
+Verified end-to-end in the editor: Reload Window is required after
+extension-host code changes (Cmd+R), but Run then works.
+
+Prior context still applies: the RF migration (Phases 1–4) completed
+earlier and the conformance audit (`23a6ba5`) found zero substrate-
+shaped TS code outside `pump.ts`.
 
 ## Architecture at handoff
 
