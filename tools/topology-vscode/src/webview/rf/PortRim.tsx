@@ -15,6 +15,7 @@ import { KIND_COLORS } from "../../schema";
 import type { EdgeKind } from "../../schema";
 import { mutateSpec } from "../state";
 import { scheduleSave } from "../save";
+import { pushSnapshot } from "./history";
 import { NODE_TYPES } from "../../schema/node-types";
 import {
   type Side, type ActiveDrag, SLOT_PCT,
@@ -87,6 +88,7 @@ export function PortRim({ nodeId, inputs, outputs, width, height }: Props) {
       const n = nearestSnap(computeSnapPoints(rect, width, height), ev.clientX, ev.clientY);
       setDrag(null);
       if (n.side === curSide && n.slot === curSlot) return;
+      pushSnapshot();
       const allRF = [
         ...inputs.map((p) => ({ p, inp: true })),
         ...outputs.map((p) => ({ p, inp: false })),
