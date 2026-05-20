@@ -13,11 +13,6 @@ type Line struct {
 }
 
 func (l *Line) Setup() {
-	input := make(chan int, 3)
-	input <- 0
-	input <- 1
-	input <- 0
-
 	// Cascade-copy chain: in0 -> readGate -> i0 -> i1
 	// readGate: AND(in0 ready, i1 ack) → forwards value directly to i0
 	// i1 acks readGate after receiving → backpressure
@@ -25,7 +20,7 @@ func (l *Line) Setup() {
 	inputNodeToReadGate := make(chan int, 1)
 	i1ToReadGate := make(chan int, 1)
 	readGateToI0 := make(chan int, 1)
-	inputNode := INN.InputNode{Id: 0, Input: input, ToNext: inputNodeToReadGate}
+	inputNode := INN.InputNode{Id: 0, Init: []int{0, 1, 0}, ToNext: inputNodeToReadGate}
 
 	// Prime ack so first input flows through
 	i1ToReadGate <- 1

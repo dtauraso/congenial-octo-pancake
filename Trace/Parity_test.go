@@ -47,22 +47,19 @@ func TestParity_InputThroughChainInhibitor(t *testing.T) {
 	// dead-end channels. The resolver should drop sends on those
 	// dead-end ports because they have no spec edge.
 	edges := []EdgeLite{
-		{ID: "inToCi", SourceNode: "in", SourceHandle: "out"},
+		{ID: "inToCi", SourceNode: "in", SourceHandle: "ToOut"},
 	}
 	em := BuildEdgeMap(edges)
 
 	tr := New(64)
 	defer tr.Close()
 
-	inputCh := make(chan int, 1)
 	inToCi := make(chan int, 1)
 	ciAck := make(chan int, 1)
 	ciOut := make(chan int, 1)
 
-	in := INN.InputNode{Id: 0, Name: "in", Input: inputCh, ToNext: inToCi}
+	in := INN.InputNode{Id: 0, Name: "in", Init: []int{7}, ToNext: inToCi}
 	ci := CI.ChainInhibitorNode{Id: 0, Name: "ci", FromPrev: inToCi, ToAck: ciAck, ToNext: ciOut}
-
-	inputCh <- 7
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)
@@ -90,7 +87,7 @@ func TestParity_InputThroughChainInhibitor(t *testing.T) {
 	}
 
 	// Expected projection. Per-side ordering:
-	//   in: recv(Input,7)  fire  send(out,7)
+	//   in: fire  send(out,7)
 	//   ci: recv(in,7)     fire  send(out,0 — initial held)
 	// ci's sends on `ack` and `out`'s dead-end neighbors are dropped
 	// by Resolve (only `inToCi` is in the EdgeMap, but that edge's
@@ -98,7 +95,6 @@ func TestParity_InputThroughChainInhibitor(t *testing.T) {
 	// no edges with source=ci, so ALL of ci's sends drop).
 	//
 	// So the canonical sequence is:
-	//   recv:in/Input=7
 	//   fire:in
 	//   send:inToCi=7
 	//   recv:ci/in=7
@@ -109,9 +105,8 @@ func TestParity_InputThroughChainInhibitor(t *testing.T) {
 	// expected projections plus a per-node ordering check, not a
 	// strict global sequence.
 	want := map[string]int{
-		"recv:in/Input=7": 1,
-		"fire:in":         1,
-		"send:inToCi=7":   1,
+		"fire:in":       1,
+		"send:inToCi=7": 1,
 		"recv:ci/in=7":    1,
 		"fire:ci":         1,
 	}
@@ -155,7 +150,7 @@ func TestParity_InputThroughChainInhibitor(t *testing.T) {
 			}
 		}
 	}
-	if s := per["in"]; s == nil || !(s.recv < s.fire && s.fire < s.send) {
+	if s := per["in"]; s == nil || !(s.fire < s.send) {
 		t.Errorf("in: per-node order broken: %+v", s)
 	}
 	if s := per["ci"]; s == nil || !(s.recv < s.fire) {

@@ -88,15 +88,12 @@ func TestEndToEnd_InputThroughChainInhibitor(t *testing.T) {
 	tr := New(64)
 	defer tr.Close()
 
-	inputCh := make(chan int, 1)
 	inToCi := make(chan int, 1)
 	ciAck := make(chan int, 1)
 	ciOut := make(chan int, 1)
 
-	in := INN.InputNode{Id: 0, Name: "in", Input: inputCh, ToNext: inToCi}
+	in := INN.InputNode{Id: 0, Name: "in", Init: []int{7}, ToNext: inToCi}
 	ci := CI.ChainInhibitorNode{Id: 0, Name: "ci", FromPrev: inToCi, ToAck: ciAck, ToNext: ciOut}
-
-	inputCh <- 7
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)
@@ -120,48 +117,67 @@ func TestEndToEnd_InputThroughChainInhibitor(t *testing.T) {
 	tr.Close()
 
 	events := tr.Events()
-	// Every node must have produced at least: recv, fire, send.
 	byNode := map[string][]Event{}
 	for _, e := range events {
 		byNode[e.Node] = append(byNode[e.Node], e)
 	}
-	for _, name := range []string{"in", "ci"} {
-		seq := byNode[name]
-		if len(seq) < 3 {
-			t.Errorf("%s: got %d events, want ≥3 (recv/fire/send): %v", name, len(seq), seq)
-			continue
-		}
-		// Per-node order: recv must precede fire which precedes send.
-		// Multiple sends after one fire (CI fans out) are fine.
-		var recvIdx, fireIdx, sendIdx = -1, -1, -1
-		for i, e := range seq {
-			switch e.Kind {
-			case KindRecv:
-				if recvIdx < 0 {
-					recvIdx = i
-				}
-			case KindFire:
-				if fireIdx < 0 {
-					fireIdx = i
-				}
-			case KindSend:
-				if sendIdx < 0 {
-					sendIdx = i
+
+	// in: fire → send (no recv; values come from Init slice)
+	{
+		seq := byNode["in"]
+		if len(seq) < 2 {
+			t.Errorf("in: got %d events, want ≥2 (fire/send): %v", len(seq), seq)
+		} else {
+			var fireIdx, sendIdx = -1, -1
+			for i, e := range seq {
+				switch e.Kind {
+				case KindFire:
+					if fireIdx < 0 {
+						fireIdx = i
+					}
+				case KindSend:
+					if sendIdx < 0 {
+						sendIdx = i
+					}
 				}
 			}
-		}
-		if !(recvIdx < fireIdx && fireIdx < sendIdx) {
-			t.Errorf("%s: per-node order broken (recv@%d, fire@%d, send@%d) in %v",
-				name, recvIdx, fireIdx, sendIdx, seq)
-		}
-	}
-	// in's recv must carry value 7; ci's send on out must carry 0
-	// (the held value before update — initial held=0).
-	for _, e := range byNode["in"] {
-		if e.Kind == KindRecv && e.Value != 7 {
-			t.Errorf("in.recv value=%d, want 7", e.Value)
+			if !(fireIdx < sendIdx) {
+				t.Errorf("in: per-node order broken (fire@%d, send@%d) in %v", fireIdx, sendIdx, seq)
+			}
 		}
 	}
+
+	// ci: recv → fire → send
+	{
+		seq := byNode["ci"]
+		if len(seq) < 3 {
+			t.Errorf("ci: got %d events, want ≥3 (recv/fire/send): %v", len(seq), seq)
+		} else {
+			var recvIdx, fireIdx, sendIdx = -1, -1, -1
+			for i, e := range seq {
+				switch e.Kind {
+				case KindRecv:
+					if recvIdx < 0 {
+						recvIdx = i
+					}
+				case KindFire:
+					if fireIdx < 0 {
+						fireIdx = i
+					}
+				case KindSend:
+					if sendIdx < 0 {
+						sendIdx = i
+					}
+				}
+			}
+			if !(recvIdx < fireIdx && fireIdx < sendIdx) {
+				t.Errorf("ci: per-node order broken (recv@%d, fire@%d, send@%d) in %v",
+					recvIdx, fireIdx, sendIdx, seq)
+			}
+		}
+	}
+
+	// ci's send on out must carry 0 (the held value before update — initial held=0).
 	for _, e := range byNode["ci"] {
 		if e.Kind == KindSend && e.Port == "out" && e.Value != 0 {
 			t.Errorf("ci.send out value=%d, want 0 (initial held)", e.Value)

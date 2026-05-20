@@ -1,7 +1,7 @@
 // Phase 8 Chunk 10 — InputNode cross-language fixture parity.
 //
-// Source node: pulls values off an external Input channel, emits each
-// to ToNext. Trace order per value is recv(Input) → fire → send(out).
+// Source node: emits values from Init slice to ToNext.
+// Trace order per value is fire → send(out).
 // Fixture pins three values (0, 1, 0) mirroring Wiring.go's seed.
 
 package Trace_test
@@ -48,18 +48,14 @@ func TestParity_FixtureMatch_InputNode(t *testing.T) {
 	}
 
 	em := BuildEdgeMap([]EdgeLite{
-		{ID: "in0Out", SourceNode: "in0", SourceHandle: "out"},
+		{ID: "in0Out", SourceNode: "in0", SourceHandle: "ToOut"},
 	})
 
 	tr := New(64)
 
-	input := make(chan int, 3)
 	toNext := make(chan int, 3)
-	input <- 0
-	input <- 1
-	input <- 0
 
-	in := INN.InputNode{Name: "in0", Input: input, ToNext: toNext}
+	in := INN.InputNode{Name: "in0", Init: []int{0, 1, 0}, ToNext: toNext}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)
@@ -120,19 +116,15 @@ func TestParity_FixtureMatch_InputNode(t *testing.T) {
 		t.Logf("want fixture:  %+v", want)
 	}
 
-	type seen struct{ recv, fire, send int }
+	type seen struct{ fire, send int }
 	per := map[string]*seen{}
 	for i, e := range canonical {
 		ps := per[e.Node]
 		if ps == nil {
-			ps = &seen{recv: -1, fire: -1, send: -1}
+			ps = &seen{fire: -1, send: -1}
 			per[e.Node] = ps
 		}
 		switch e.Kind {
-		case KindRecv:
-			if ps.recv < 0 {
-				ps.recv = i
-			}
 		case KindFire:
 			if ps.fire < 0 {
 				ps.fire = i
@@ -143,7 +135,7 @@ func TestParity_FixtureMatch_InputNode(t *testing.T) {
 			}
 		}
 	}
-	if ps := per["in0"]; ps == nil || !(ps.recv < ps.fire && ps.fire < ps.send) {
+	if ps := per["in0"]; ps == nil || !(ps.fire < ps.send) {
 		t.Errorf("in0: per-node order broken: %+v", ps)
 	}
 }

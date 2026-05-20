@@ -6,17 +6,9 @@
 |------|-----------|--------------|-------------|------------|------|
 | ToNext | out | int | single | ToOut | right |
 
-## Loader-managed channels
-
-| Name | Element type | Source |
-|------|--------------|--------|
-| Input | int | `data.init: []int` (pre-filled at load time; not wirable) |
-
 ## Firing rule
 
-On each cycle: if no value is buffered, poll Input non-blocking. If a value is received, buffer it. If a value is buffered and has not yet been sent, attempt a non-blocking send on ToNext. On success, clear the buffer.
-
-Each value from the `data.init` queue is forwarded once to ToNext in order.
+On each Update call: iterate through `Init` slice by index. For each value, attempt a non-blocking send on ToNext. On success, advance the index. Exits when all values have been sent or context is cancelled.
 
 ## View
 

@@ -1,71 +1,41 @@
 package InputNode
 
 import (
-	"fmt"
-
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	"github.com/dtauraso/wirefold/nodes/Wiring"
 )
 
 type InputNode struct {
-	Id        int
-	Name      string
-	Input     <-chan int
-	ToNext    chan<- int
-	value     int
-	hasValue  bool
-	sentValue bool
+	Id     int
+	Name   string
+	Init   []int
+	ToNext chan<- int
+	i      int
 }
 
 func (n *InputNode) Update(s *S.SafeWorker) {
 	defer s.Wg.Done()
-	for {
+	for n.i < len(n.Init) {
 		select {
 		case <-s.Ctx.Done():
 			return
 		default:
 		}
-
-		if !n.hasValue {
-			select {
-			case v := <-n.Input:
-				n.value = v
-				n.hasValue = true
-				n.sentValue = false
-				s.Trace.Recv(n.Name, "Input", v)
-			default:
-			}
-		}
-
-		if n.hasValue && !n.sentValue {
-			select {
-			case n.ToNext <- n.value:
-				n.sentValue = true
-				n.hasValue = false
-				fmt.Printf("%s: sent %d\n", n.Name, n.value)
-				s.Trace.Fire(n.Name)
-				s.Trace.Send(n.Name, "ToOut", n.value)
-			default:
-			}
+		select {
+		case n.ToNext <- n.Init[n.i]:
+			s.Trace.Fire(n.Name)
+			s.Trace.Send(n.Name, "ToOut", n.Init[n.i])
+			n.i++
+		default:
 		}
 	}
 }
 
 func populateInput(id int, name string, data *Wiring.NodeData, node any) {
 	n := node.(*InputNode)
-	init := []int{}
 	if data != nil {
-		init = data.Init
+		n.Init = append([]int(nil), data.Init...)
 	}
-	buf := len(init)
-	if buf < 1 {
-		buf = 1
-	}
-	ch := make(chan int, buf)
-	for _, v := range init {
-		ch <- v
-	}
-	n.Input = ch
 }
 
 func init() {
