@@ -9,6 +9,7 @@ import { SaveLifecycle } from "../SaveLifecycle";
 import { TimelinePanel } from "./panels/TimelinePanel";
 import { scheduleViewSave } from "../save";
 import { patchViewerState, useDimmed, viewerState } from "../state";
+import { isLegacyCamera } from "../state/viewer/types";
 import { AppView } from "./app/AppView";
 import { decorate } from "./app/_decorate";
 import { useDeleteHandlers } from "./app/_handle-delete";
@@ -30,6 +31,16 @@ function Inner() {
   const s = useInnerState();
   const rf = useReactFlow();
   const [guides, setGuides] = useState<{ vx: number | null; hy: number | null }>({ vx: null, hy: null });
+
+  // Hydrate RF viewport from persisted camera on mount. view-load will
+  // overwrite this once the sidecar message arrives; this covers the gap
+  // before that message fires (or when there is no sidecar).
+  useEffect(() => {
+    const cam = viewerState.camera;
+    if (!cam || isLegacyCamera(cam)) return;
+    rf.setViewport({ x: cam.x, y: cam.y, zoom: cam.zoom });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const rebuildFlow = useCallback(() => {
     if (!s.lastSpec.current) return;
