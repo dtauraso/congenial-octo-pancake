@@ -9,21 +9,17 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-20, post ChainInhibitor ToNext consolidation)
+## State at handoff (2026-05-20, post Populator API removal)
 
-**Active branch:** `task/kind-audit-consolidation` at `55a4092`. Rebased
-onto `main` (which is at `409193c` after `task/firing-rule-unit-tests-spec`
-merged and was deleted local + remote).
+**Active branch:** `task/remove-populator-api` at `d1f0156`.
 
 ### What landed since last handoff
 
-- **`b4dcabc`** refactor(ChainInhibitor): consolidate outputs into ToNext
-  fanout — removed `ToEdge`, `ToReadGate`, `ToNextChainInhibitorNode`;
-  replaced with single `ToNext []chan<- int` fanout. ReadGate's
-  `FromChainInhibitor` now receives the held int (arrival is the gate;
-  value discarded).
-- **`55a4092`** docs(kind-audit): updated ChainInhibitor + ReadGate sections
-  for new shape.
+- **`d1f0156`** refactor(Wiring): replace Populator API with wire struct tags —
+  deleted `Populator` type, `populate` field on `kindEntry`, third arg from
+  `Register`. Non-channel fields use `wire:"data.<key>"` or
+  `wire:"data.initialSlots.<key>"` struct tags. `InputNode.Init` and
+  `ChainInhibitorNode.HeldValue` migrated.
 
 ### Surviving kinds (4)
 
@@ -47,7 +43,10 @@ Go architecture before execution.
 ## Adding a kind (3 files)
 
 1. `nodes/<Kind>/<Kind>.go` — struct + firing rule + `init() {
-   Wiring.Register("Kind", func() any { return &Struct{} }, populate) }`.
+   Wiring.Register("Kind", func() any { return &Struct{} }) }`.
+   Non-channel fields read from `data.*` JSON use struct tags:
+   - `wire:"data.<key>"` — copies `NodeData.<Key>` (e.g. `[]int` from `data.init`)
+   - `wire:"data.initialSlots.<key>"` — reads `NodeData.InitialSlots[key]` (int)
 2. `nodes/<Kind>/SPEC.md` — ports table, View section, firing rule,
    runtime status (per `nodes/SPEC-FORMAT.md`).
 3. `main.go` — one blank import line: `_ "github.com/dtauraso/wirefold/nodes/<Kind>"`.
@@ -63,7 +62,7 @@ prebuild). `builders.go` is not touched.
 - **Runtime (Go):** `main.go` blank-imports the 4 kinds; each `init()`
   calls `Wiring.Register`. `Wiring.LoadTopology` parses `topology.json`
   and uses reflection on each registered struct to build the port manifest.
-  `populate` is a per-kind hook for non-channel fields.
+  Non-channel fields are populated from `data.*` JSON via `wire:` struct tags.
 - **Editor-only kinds (no Go body):** Relay, Join.
 
 ## Next options (priority order — pick on friction)
@@ -72,10 +71,7 @@ prebuild). `builders.go` is not touched.
 architecture, then execute. Payload `{primary, secondary}`, new `register`
 kind, ReadGate slot-fill emit rule. Doc must be rewritten before any code.
 
-**(b) Struct-tag populates** — remove Populator API; wire `Init` from
-struct tags. Input is the only remaining `populate` user.
-
-**(c) Go-AST port parsing** — derive port names from Go structs instead of
+**(b) Go-AST port parsing** — derive port names from Go structs instead of
 SPEC.md tables. Eliminates dual-maintenance.
 
 ## Parked follow-ups
