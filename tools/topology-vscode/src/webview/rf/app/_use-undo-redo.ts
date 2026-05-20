@@ -1,5 +1,4 @@
 import { useCallback, useEffect } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
 import type { Spec } from "../../../schema";
 import { specToFlow } from "../adapter";
 import { scheduleSave, scheduleViewSave } from "../../save";
@@ -84,8 +83,7 @@ export function useUndoRedo(ctx: AppCtx, hotkeysEnabled: boolean) {
     };
   }, [flashTimerRef]);
 
-  useHotkeys("mod+z", (e) => { e.preventDefault(); undoRedo(true); },
-    { enabled: hotkeysEnabled, enableOnContentEditable: false });
-  useHotkeys("mod+shift+z, mod+y", (e) => { e.preventDefault(); undoRedo(false); },
-    { enabled: hotkeysEnabled, enableOnContentEditable: false });
+  // Hotkeys removed: Cmd-Z / Cmd-Shift-Z are now wired in Inner() via the
+  // RF-snapshot history (rf/history.ts). The Zustand-backed undoRedo() path
+  // is dead once nothing calls it; history.ts stacks remain in place for now.
 }

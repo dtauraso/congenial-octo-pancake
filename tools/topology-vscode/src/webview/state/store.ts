@@ -11,6 +11,9 @@ export type RunStatusUI = RunStatus | { state: "idle" };
 // produces a fresh tree per edit), so pushing the prior reference is
 // enough — no extra cloning needed. Cap is generous; the failure mode if
 // it filled would be losing the oldest history, not corruption.
+// NOTE (phase-3 migration): the undo/redo hotkeys were moved to rf/history.ts
+// (RF-snapshot-based). These Zustand stacks are no longer wired to any
+// keyboard handler; they stay in place pending a cleanup commit.
 export const UNDO_LIMIT = 50;
 export type SpecEntry = { snapshot: Spec; txnId?: number };
 export type ViewerEntry = { snapshot: ViewerState; txnId?: number };
