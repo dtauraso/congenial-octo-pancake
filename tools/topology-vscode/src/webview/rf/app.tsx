@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlowProvider, applyEdgeChanges, applyNodeChanges, useReactFlow,
-  type Edge as RFEdge, type EdgeChange, type Node as RFNode, type NodeChange, type Viewport,
+  type Edge as RFEdge, type EdgeChange, type Node as RFNode, type NodeChange,
 } from "reactflow";
 import { specToFlow } from "./adapter";
 import { RunButton } from "./panels/RunButton";
@@ -73,10 +73,6 @@ function Inner() {
   useFitViewHotkeys(rf);
   useHostMessages(ctx);
 
-  const onMoveEnd = useCallback((_: unknown, vp: Viewport) => {
-    patchViewerState((v) => { v.camera = { x: vp.x, y: vp.y, zoom: vp.zoom }; });
-    scheduleViewSave();
-  }, []);
   const onNodesChange = useCallback(
     (c: NodeChange[]) => setNodes((ns) => applyNodeChanges(c, ns)), []);
   const onEdgesChange = useCallback(
@@ -119,7 +115,7 @@ function Inner() {
       styledNodes={styled.nodes} styledEdges={styled.edges}
       guides={guides} edgeMenu={edgeH.edgeMenu}
       onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-      onMoveEnd={onMoveEnd} onSelectionChange={onSelectionChange}
+      onSelectionChange={onSelectionChange}
       onNodeDoubleClick={ctxH.onNodeDoubleClick}
       onNodeContextMenu={ctxH.onNodeContextMenu}
       onSelectionContextMenu={ctxH.onSelectionContextMenu}
