@@ -11,6 +11,7 @@ import type { AppCtx } from "./_ctx";
 import { handleLoad } from "./_handle-load";
 import { handleViewLoad } from "./_handle-view-load";
 import { installHostMessageRouter } from "./_install-host-message-router";
+import { handleTraceEvent } from "../pump";
 
 export function useHostMessages(ctx: AppCtx) {
   // Inline-edit rerender hook: after an inline edit commits (rename/sublabel),
@@ -39,6 +40,7 @@ export function useHostMessages(ctx: AppCtx) {
       {
         load: (text) => handleLoad(ctx, text),
         viewLoad: (text) => handleViewLoad(ctx, text),
+        traceEvent: handleTraceEvent,
       },
     );
   }, [ctx]);

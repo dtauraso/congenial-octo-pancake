@@ -3,11 +3,12 @@
 // Extracted so contracts.md C1/C3 can assert behavior without a DOM.
 
 import { parseHostToWebview } from "../../../messages";
-import type { WebviewToHostMsg } from "../../../messages";
+import type { TraceEvent, WebviewToHostMsg } from "../../../messages";
 
 export type HostMessageHandlers = {
   load: (text: string) => void;
   viewLoad: (text: string | undefined) => void;
+  traceEvent?: (event: TraceEvent) => void;
 };
 
 export type RouterDeps = {
@@ -31,6 +32,7 @@ export function installHostMessageRouter(
     if (!msg) return;
     if (msg.type === "load") handlers.load(msg.text);
     else if (msg.type === "view-load") handlers.viewLoad(msg.text);
+    else if (msg.type === "trace-event") handlers.traceEvent?.(msg.event);
   };
   deps.addEventListener("message", handler);
   deps.postMessage({ type: "ready" });
