@@ -57,5 +57,5 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 }
 
 func init() {
-	Wiring.Register("ReadGate", func() any { return &ReadGateNode{} }, nil)
+	Wiring.Register("ReadGate", func() any { return &ReadGateNode{} })
 }

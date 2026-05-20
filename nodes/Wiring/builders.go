@@ -7,8 +7,9 @@
 //   - []chan<- int → PortOutMulti
 //   - all other field types are ignored
 //
-// Kind-specific non-channel setup (HeldValue, Input pre-fill, etc.) goes in
-// the optional populate func on the registry entry.
+// Non-channel fields can be populated from data.* JSON values via struct tags:
+//   - wire:"data.<key>"               reads NodeData.<Key> (e.g. data.init → Init []int)
+//   - wire:"data.initialSlots.<key>"  reads NodeData.InitialSlots[key] (int)
 
 package Wiring
 
@@ -139,9 +140,36 @@ func reflectBuild(id int, name string, data *NodeData, pb PortBindings, e kindEn
 		}
 	}
 
-	// Kind-specific non-channel population.
-	if e.populate != nil {
-		e.populate(id, name, data, nodePtr)
+	// Tag-driven data population: wire:"data.<key>" or wire:"data.initialSlots.<key>".
+	t := reflect.TypeOf(nodePtr).Elem()
+	for i := 0; i < t.NumField(); i++ {
+		tag := t.Field(i).Tag.Get("wire")
+		if tag == "" {
+			continue
+		}
+		if data == nil {
+			continue
+		}
+		fv := v.Field(i)
+		if !fv.CanSet() {
+			continue
+		}
+		const dataPrefix = "data."
+		const initSlotsPrefix = "data.initialSlots."
+		if len(tag) > len(initSlotsPrefix) && tag[:len(initSlotsPrefix)] == initSlotsPrefix {
+			key := tag[len(initSlotsPrefix):]
+			if val, ok := data.InitialSlots[key]; ok {
+				fv.Set(reflect.ValueOf(val))
+			}
+		} else if len(tag) > len(dataPrefix) && tag[:len(dataPrefix)] == dataPrefix {
+			key := tag[len(dataPrefix):]
+			switch key {
+			case "init":
+				if data.Init != nil {
+					fv.Set(reflect.ValueOf(append([]int(nil), data.Init...)))
+				}
+			}
+		}
 	}
 
 	node, ok := nodePtr.(S.Node)

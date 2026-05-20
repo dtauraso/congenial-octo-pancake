@@ -64,5 +64,5 @@ func (g *InhibitRightGateNode) Update(s *S.SafeWorker) {
 }
 
 func init() {
-	Wiring.Register("InhibitRightGate", func() any { return &InhibitRightGateNode{} }, nil)
+	Wiring.Register("InhibitRightGate", func() any { return &InhibitRightGateNode{} })
 }

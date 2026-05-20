@@ -8,7 +8,7 @@ import (
 type InputNode struct {
 	Id     int
 	Name   string
-	Init   []int
+	Init   []int        `wire:"data.init"`
 	ToReadGate chan<- int
 }
 
@@ -30,13 +30,6 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 	}
 }
 
-func populateInput(id int, name string, data *Wiring.NodeData, node any) {
-	n := node.(*InputNode)
-	if data != nil {
-		n.Init = append([]int(nil), data.Init...)
-	}
-}
-
 func init() {
-	Wiring.Register("Input", func() any { return &InputNode{} }, populateInput)
+	Wiring.Register("Input", func() any { return &InputNode{} })
 }

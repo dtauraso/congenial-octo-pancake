@@ -10,7 +10,7 @@ import (
 type ChainInhibitorNode struct {
 	Id         int
 	Name       string
-	HeldValue  int
+	HeldValue  int          `wire:"data.initialSlots.held"`
 	FromPrevChainInhibitorNode <-chan int
 	ToNext                     []chan<- int
 }
@@ -43,18 +43,6 @@ func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 	}
 }
 
-func populateChainInhibitor(id int, name string, data *Wiring.NodeData, node any) {
-	n := node.(*ChainInhibitorNode)
-	if data != nil {
-		if v, ok := data.InitialSlots["held"]; ok {
-			n.HeldValue = v
-		}
-	}
-	if len(n.ToNext) == 0 {
-		n.ToNext = []chan<- int{make(chan int, 1)}
-	}
-}
-
 func init() {
-	Wiring.Register("ChainInhibitor", func() any { return &ChainInhibitorNode{} }, populateChainInhibitor)
+	Wiring.Register("ChainInhibitor", func() any { return &ChainInhibitorNode{} })
 }
