@@ -2,6 +2,7 @@
 // non-React callers can read/write folds without Zustand.
 
 import type { Fold } from "../state/viewer/types";
+export type { Fold };
 
 let _folds: Fold[] = [];
 
