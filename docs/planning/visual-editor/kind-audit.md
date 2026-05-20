@@ -76,6 +76,28 @@ Worth scrutinizing before the audit table is filled:
 - 🗑️ **ReadLatch** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; `node-defs.ts` regenerated; fixture parity tests removed (FixtureParity_ReadLatch_test.go and FixtureParity_test.go which wired ReadLatch as integration harness).
 - 🗑️ **SyncGate** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; dropped from `node-types.ts`; `node-defs.ts` regenerated; fixture parity test removed.
 
+## Kind structure
+
+### Input
+**Go:** `Input <-chan int` (in), `ToNext chan<- int` (out); state `Value int`, `HasValue bool`, `SentValue bool`. Firing: non-blocking poll `Input` → buffer value; non-blocking send `ToNext` → flush. `populateInput` builds `Input` chan from `data.init`, pre-loads it before the loop starts.
+**RF:** `input: { defaultLabel: "input", bg: "#1a1f2e", border: "#3fb950", text: "#c9d1d9", accent: "#3fb950", minWidth: 90, sources: [{ id: "ToOut" }], displays: ["queue", "repeat"] }`
+**Drift:** RF handle id `ToOut` vs Go field `ToNext`.
+
+### ReadGate
+**Go:** `FromValue <-chan int`, `FromAck <-chan int` (ins), `ToGated chan<- int` (out); state `Value int`, `HasValue bool`, `AckVal int`, `HasAck bool`. Firing: non-blocking poll each input independently; when both `HasValue && HasAck`, send `Value` to `ToGated` and clear both. No populate.
+**RF:** `readGate: { defaultLabel: "readgate", bg: "#f3e5f5", border: "#7b1fa2", text: "#4a148c", accent: "#7b1fa2", minWidth: 70, sublabel: "val / ack", targets: [{ id: "FromValue" }, { id: "FromAck" }], sources: [{ id: "ToGated" }] }`
+**Drift:** none — handle ids `FromValue`, `FromAck`, `ToGated` match Go fields exactly.
+
+### ChainInhibitor
+**Go:** `FromPrev <-chan int` (in), `ToNext chan<- int`, `ToAck chan<- int`, `ToEdge []chan<- int`, `ToEdgeNew []chan<- int` (outs); state `HeldValue int`. Firing: blocking receive on `FromPrev`; emit old `HeldValue` to all `ToEdge` and `ToNext`, new value to all `ToEdgeNew`, ack 1 to `ToAck`, then update `HeldValue`. `populateChainInhibitor` seeds `HeldValue` from `data.InitialSlots["held"]`; ensures `ToEdge` has at least one channel.
+**RF:** `chainInhibitor: { defaultLabel: "chainInhibitor", bg: "#fff3e0", border: "#e65100", text: "#bf360c", accent: "#e65100", minWidth: 90, targets: [{ id: "FromPrev" }], sources: [{ id: "ToNext" }, { id: "ToAck" }, { id: "ToEdge" }, { id: "ToEdgeNew" }], displays: ["held"] }`
+**Drift:** none — handle ids match Go fields. `ToEdge`/`ToEdgeNew` are slice fields in Go; RF represents them as single source handles (fan-out is implicit).
+
+### InhibitRightGate
+**Go:** `FromLeft <-chan int`, `FromRight <-chan int` (ins), `ToPassed chan<- int` (out); state `Left int`, `HasLeft bool`, `Right int`, `HasRight bool`. Firing: non-blocking poll each input independently; when both `HasLeft && HasRight`, compute `result = 1` iff `Left==1 && Right==0`, send to `ToPassed`, clear both. No populate.
+**RF:** `inhibitRightGate: { defaultLabel: "inhibitRightGate", bg: "#fce4ec", border: "#880e4f", text: "#880e4f", accent: "#880e4f", minWidth: 110, sublabel: "L pass / R inhibit", targets: [{ id: "FromLeft" }, { id: "FromRight", accent: "#f48fb1" }], sources: [{ id: "ToPassed" }] }`
+**Drift:** none — handle ids `FromLeft`, `FromRight`, `ToPassed` match Go fields exactly.
+
 ## Migration plan template
 
 For each `delete` or `merge`:
