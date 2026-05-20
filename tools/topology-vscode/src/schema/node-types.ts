@@ -32,13 +32,6 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     outputs: [{ name: "ToOut", kind: "chain" }],
     shape: "rect", fill: "#e0e0e0", stroke: "#666", width: 80, height: 60,
   },
-  ReadLatch: {
-    role: "latch",
-    inputs: [{ name: "in", kind: "chain" }, { name: "release", kind: "release" }],
-    outputs: [{ name: "out", kind: "chain" }],
-    shape: "rect", fill: "#e0f7fa", stroke: "#00838f", width: 90, height: 50,
-    defaultProps: { delay: 1 },
-  },
   ChainInhibitor: {
     role: "inhibitor",
     inputs: [{ name: "FromPrev", kind: "chain" }],

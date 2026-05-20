@@ -62,7 +62,7 @@ Worth scrutinizing before the audit table is filled:
 | StreakDetector | 2 → 2 (old+new / done+streak) | Emit 1 on Done; emit 1/0 on Streak if sign same/diff. | 1 code ref | StreakBreakDetector | 🗑️ **deleted (2026-05-20)** — unused; symmetric inverse of StreakBreakDetector still available if needed. |
 | StreakBreakDetector | 2 → 1 (old+new / done) | Emit 1 if sign(old)≠sign(new). | 1 code ref | StreakDetector | 🗑️ **deleted (2026-05-20)** — unused. |
 | ReadGate | 2 → 1 (value+ack / gated) | Buffer both; emit value when both arrive. | topology: 1; docs: 1 | SyncGate, Join | ✅ **keep**. |
-| ReadLatch | 2 → 2 (in+release / next+ack) | FromIn buffers; FromRelease emits held+ack. | 2 code refs | — | ⏸️ **defer** — release-trigger unique; no usage. |
+| ReadLatch | 2 → 2 (in+release / next+ack) | FromIn buffers; FromRelease emits held+ack. | 2 code refs | — | 🗑️ **deleted (2026-05-20)** — release-trigger semantics unused. |
 | SyncGate | 2 → 1 | Buffer both; emit 1 unconditionally. | 1 code ref | ReadGate | 🔀 **merge → ReadGate + flag**. |
 | AndGate | 2 → 1 | Emit 1 if a==1 AND b==1. | 1 code ref | InhibitRightGate | ✅ **keep**. |
 | InhibitRightGate | 2 → 1 (left+right / passed) | Emit 1 if left==1 AND right==0. | topology: 1; docs: 1 | AndGate | ✅ **keep**. |
@@ -71,12 +71,12 @@ Worth scrutinizing before the audit table is filled:
 
 ## Findings (haiku sweep, 2026-05-19)
 
-**Tally:** keep 6, merge 1, delete 8, defer 1 (16 total).
+**Tally:** keep 6, merge 1, delete 9, defer 0 (16 total).
 
 - ✅ **Keep:** Input, ChainInhibitor, ReadGate, AndGate, InhibitRightGate, Partition.
 - 🔀 **Merge:** SyncGate → ReadGate (flag).
 - 🗑️ **Delete:** Relay (≡ wire, unused), Join (editor-only, unused; subsumed by ReadGate), Inhibitor (superset already in use as ChainInhibitor), EdgeInhibitor (subset of ChainInhibitor, unused), EdgeNode (unused; XOR fan-out replaceable), TransferInhibitor (specialized partition-end forwarding; unused), StreakDetector (unused; symmetric inverse of StreakBreakDetector), StreakBreakDetector (unused).
-- ⏸️ **Defer:** ReadLatch — has a plausible role but zero topology usage today.
+- ⏸️ **Defer:** (none).
 
 **Surprises:**
 - Relay is literally a 1-in-1-out passthrough — indistinguishable from the wire itself.
@@ -96,6 +96,7 @@ Usage counts are from the agent's grep sweep; verify per-kind before any deletio
 - 🗑️ **TransferInhibitor** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; `node-defs.ts` regenerated.
 - 🗑️ **StreakDetector** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; `node-defs.ts` regenerated.
 - 🗑️ **StreakBreakDetector** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; `node-defs.ts` regenerated; fixture parity test removed.
+- 🗑️ **ReadLatch** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; `node-defs.ts` regenerated; fixture parity tests removed (FixtureParity_ReadLatch_test.go and FixtureParity_test.go which wired ReadLatch as integration harness).
 
 ## Migration plan template
 
