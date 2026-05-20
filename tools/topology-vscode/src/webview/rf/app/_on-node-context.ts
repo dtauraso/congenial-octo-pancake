@@ -57,13 +57,16 @@ export function useNodeContextHandlers(ctx: AppCtx) {
     }
     cx = cx / memberIds.length;
     cy = cy / memberIds.length;
-    const id = mutateViewer((s) => createFold(s, memberIds, [cx, cy]));
+    pushSnapshot();
+    const draft = { folds: getFolds() } as { folds: ReturnType<typeof getFolds> };
+    const id = createFold(draft as Parameters<typeof createFold>[0], memberIds, [cx, cy]);
     if (!id) {
       console.info(
         `[fold] createFold rejected (members may already be inside another fold): ${memberIds.join(", ")}`,
       );
       return;
     }
+    setFolds(draft.folds ?? []);
     console.info(`[fold] created ${id} with ${memberIds.length} members: ${memberIds.join(", ")}`);
     ctx.rebuildFlow();
     flushViewSave();
