@@ -5,10 +5,9 @@
 // asserts the canonical projection matches the bytes of
 // tools/topology-vscode/test/fixtures/chain-inhibitor.trace.jsonl.
 //
-// Multi-output node: one slot for ToEdge (inhibitOut) and one slot
-// for ToEdgeNew (readNew), plus the always-present ToNextChainInhibitorNode (out) and
-// ToReadGate. Send order in the Go node is ToEdge → ToEdgeNew →
-// ToNextChainInhibitorNode → ToReadGate; the fixture pins that same order.
+// Multi-output node: one slot for ToEdge (inhibitOut), plus the always-present
+// ToNextChainInhibitorNode (out) and ToReadGate. Send order in the Go node is
+// ToEdge → ToNextChainInhibitorNode → ToReadGate; the fixture pins that same order.
 
 package Trace_test
 
@@ -55,7 +54,6 @@ func TestParity_FixtureMatch_ChainInhibitor(t *testing.T) {
 
 	em := BuildEdgeMap([]EdgeLite{
 		{ID: "ciInhibit", SourceNode: "ci", SourceHandle: "ToEdge"},
-		{ID: "ciReadNew", SourceNode: "ci", SourceHandle: "readNew"},
 		{ID: "ciOut", SourceNode: "ci", SourceHandle: "ToNextChainInhibitorNode"},
 		{ID: "ciAck", SourceNode: "ci", SourceHandle: "ToReadGate"},
 	})
@@ -64,7 +62,6 @@ func TestParity_FixtureMatch_ChainInhibitor(t *testing.T) {
 
 	fromPrev := make(chan int, 1)
 	toEdge := make(chan int, 1)
-	toEdgeNew := make(chan int, 1)
 	toNext := make(chan int, 1)
 	toAck := make(chan int, 1)
 
@@ -73,7 +70,6 @@ func TestParity_FixtureMatch_ChainInhibitor(t *testing.T) {
 		HeldValue: 0,
 		FromPrevChainInhibitorNode:  fromPrev,
 		ToEdge:    []chan<- int{toEdge},
-		ToEdgeNew: []chan<- int{toEdgeNew},
 		ToNextChainInhibitorNode:    toNext,
 		ToReadGate: toAck,
 	}
@@ -87,15 +83,11 @@ func TestParity_FixtureMatch_ChainInhibitor(t *testing.T) {
 	fromPrev <- 5
 
 	timeout := time.After(200 * time.Millisecond)
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 3; i++ {
 		select {
 		case v := <-toEdge:
 			if v != 0 {
 				t.Fatalf("toEdge got %d, want 0", v)
-			}
-		case v := <-toEdgeNew:
-			if v != 5 {
-				t.Fatalf("toEdgeNew got %d, want 5", v)
 			}
 		case v := <-toNext:
 			if v != 0 {
@@ -106,7 +98,7 @@ func TestParity_FixtureMatch_ChainInhibitor(t *testing.T) {
 				t.Fatalf("toAck got %d, want 1", v)
 			}
 		case <-timeout:
-			t.Fatalf("only %d of 4 outputs received before timeout", i)
+			t.Fatalf("only %d of 3 outputs received before timeout", i)
 		}
 	}
 	cancel()

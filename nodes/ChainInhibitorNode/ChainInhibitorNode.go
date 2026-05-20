@@ -15,7 +15,6 @@ type ChainInhibitorNode struct {
 	ToNextChainInhibitorNode     chan<- int
 	ToReadGate chan<- int
 	ToEdge     []chan<- int
-	ToEdgeNew  []chan<- int
 }
 
 func NewChainInhibitorNode(id int, fromPrev <-chan int, toNext chan<- int) ChainInhibitorNode {
@@ -39,10 +38,6 @@ func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 			for _, ch := range in.ToEdge {
 				S.Send(ch, in.HeldValue)
 				s.Trace.Send(in.Name, "ToEdge", in.HeldValue)
-			}
-			for _, ch := range in.ToEdgeNew {
-				S.Send(ch, value)
-				s.Trace.Send(in.Name, "readNew", value)
 			}
 			S.Send(in.ToNextChainInhibitorNode, in.HeldValue)
 			s.Trace.Send(in.Name, "ToNextChainInhibitorNode", in.HeldValue)
