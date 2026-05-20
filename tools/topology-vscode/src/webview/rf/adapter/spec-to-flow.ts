@@ -3,7 +3,7 @@ import { KIND_COLORS, NODE_TYPES, type Node as SpecNode, type Spec } from "../..
 import type { Fold, ViewerState } from "../../state/viewer/types";
 import { COLLAPSED_FOLD_W, COLLAPSED_FOLD_H, expandedBounds } from "./_bounds";
 
-const RF_NODE_TYPE_MAP: Record<string, string> = { Input: "input", Relay: "relay", Join: "join", ReadGate: "readGate", ReadLatch: "readLatch" };
+const RF_NODE_TYPE_MAP: Record<string, string> = { Input: "input", Relay: "relay", Join: "join", ReadGate: "readGate", ReadLatch: "readLatch", Partition: "partition" };
 
 // Fold-aware spec→flow conversion. Folds are viewer-only state; they never
 // touch the spec (topogen ignores topology.view.json). Edges that cross a
