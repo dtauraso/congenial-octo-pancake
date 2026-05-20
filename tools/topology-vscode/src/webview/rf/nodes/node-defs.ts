@@ -21,7 +21,6 @@ export interface NodeDef {
 }
 
 export const NODE_DEFS: Record<string, NodeDef> = {
-  andGate: { defaultLabel: "andGate", bg: "#e3f2fd", border: "#1565c0", text: "#0d47a1", accent: "#1565c0", minWidth: 70, targets: [{ id: "FromA" }, { id: "FromB" }], sources: [{ id: "ToOut", accent: "#42a5f5" }] },
   chainInhibitor: { defaultLabel: "chainInhibitor", bg: "#fff3e0", border: "#e65100", text: "#bf360c", accent: "#e65100", minWidth: 90, targets: [{ id: "FromPrev" }], sources: [{ id: "ToNext" }, { id: "ToAck" }, { id: "ToEdge" }, { id: "ToEdgeNew" }], displays: ["held"] },
   edgeNode: { defaultLabel: "edge", bg: "#fff8e1", border: "#ff6f00", text: "#e65100", accent: "#ff6f00", minWidth: 90, targets: [{ id: "FromLeft" }, { id: "FromRight" }], sources: [{ id: "ToInhibitor" }, { id: "ToPartition" }, { id: "ToNextEdge" }] },
   inhibitRightGate: { defaultLabel: "inhibitRightGate", bg: "#fce4ec", border: "#880e4f", text: "#880e4f", accent: "#880e4f", minWidth: 110, sublabel: "L pass / R inhibit", targets: [{ id: "FromLeft" }, { id: "FromRight", accent: "#f48fb1" }], sources: [{ id: "ToPassed" }] },

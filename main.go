@@ -13,7 +13,6 @@ import (
 	W "github.com/dtauraso/wirefold/nodes/Wiring"
 
 	// Trigger self-registration init() in each node kind package.
-	_ "github.com/dtauraso/wirefold/nodes/AndGateNode"
 	_ "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode"
 _ "github.com/dtauraso/wirefold/nodes/EdgeNode"
 	_ "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode"

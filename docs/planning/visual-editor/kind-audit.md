@@ -64,7 +64,7 @@ Worth scrutinizing before the audit table is filled:
 | ReadGate | 2 → 1 (value+ack / gated) | Buffer both; emit value when both arrive. | topology: 1; docs: 1 | SyncGate, Join | ✅ **keep**. |
 | ReadLatch | 2 → 2 (in+release / next+ack) | FromIn buffers; FromRelease emits held+ack. | 2 code refs | — | 🗑️ **deleted (2026-05-20)** — release-trigger semantics unused. |
 | SyncGate | 2 → 1 | Buffer both; emit 1 unconditionally. | 1 code ref | ReadGate | 🗑️ **deleted (2026-05-20)** — unused; semantics subsumed by ReadGate. |
-| AndGate | 2 → 1 | Emit 1 if a==1 AND b==1. | 1 code ref | InhibitRightGate | ✅ **keep**. |
+| AndGate | 2 → 1 | Emit 1 if a==1 AND b==1. | 1 code ref | InhibitRightGate | 🗑️ **deleted (2026-05-20)** — unused; AND semantics available via InhibitRightGate or direct wiring. |
 | InhibitRightGate | 2 → 1 (left+right / passed) | Emit 1 if left==1 AND right==0. | topology: 1; docs: 1 | AndGate | ✅ **keep**. |
 | EdgeNode | 2 → 3 (left+right / inhibitor+partition+next) | XOR; fan out identically. | 0 | AndGate, InhibitRightGate | 🗑️ **delete** — unused; fan-out replaceable by direct wiring. |
 | Partition | 1 → 1 | State machine 0→1→2; emit 1 on 0→1, 0 on 1→2. | 4 code refs | — | ✅ **keep**. |
@@ -73,7 +73,7 @@ Worth scrutinizing before the audit table is filled:
 
 **Tally:** keep 6, merge 1, delete 9, defer 0 (16 total).
 
-- ✅ **Keep:** Input, ChainInhibitor, ReadGate, AndGate, InhibitRightGate, Partition.
+- ✅ **Keep:** Input, ChainInhibitor, ReadGate, InhibitRightGate, Partition.
 - 🔀 **Merge:** SyncGate → ReadGate (flag).
 - 🗑️ **Delete:** Relay (≡ wire, unused), Join (editor-only, unused; subsumed by ReadGate), Inhibitor (superset already in use as ChainInhibitor), EdgeInhibitor (subset of ChainInhibitor, unused), EdgeNode (unused; XOR fan-out replaceable), TransferInhibitor (specialized partition-end forwarding; unused), StreakDetector (unused; symmetric inverse of StreakBreakDetector), StreakBreakDetector (unused).
 - ⏸️ **Defer:** (none).

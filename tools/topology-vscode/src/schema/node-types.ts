@@ -54,14 +54,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     shape: "rect", fill: "#e0f7fa", stroke: "#00838f", width: 90, height: 50,
     defaultProps: { delay: 1 },
   },
-AndGate: {
-    role: "and-gate",
-    inputs: [{ name: "a", kind: "signal" }, { name: "b", kind: "signal" }],
-    outputs: [{ name: "out", kind: "and-out" }],
-    shape: "rect", fill: "#f3e5f5", stroke: "#7b1fa2", width: 70, height: 40,
-    defaultProps: { inputCount: 2 },
-  },
-  PatternAnd: {
+PatternAnd: {
     role: "pattern-and",
     inputs: [{ name: "a", kind: "signal" }, { name: "b", kind: "signal" }],
     outputs: [{ name: "out", kind: "and-out" }],
