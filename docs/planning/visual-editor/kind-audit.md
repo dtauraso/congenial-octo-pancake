@@ -52,9 +52,37 @@ Worth scrutinizing before the audit table is filled:
 
 | Kind | Ports (in → out) | Firing rule (one line) | Usages | Overlap | Decision |
 |------|------------------|------------------------|--------|---------|----------|
-| TBD  | TBD              | TBD                    | TBD    | TBD     | TBD      |
+| Input | 0 → 1 (ToNext) | Poll init queue; forward once; clear on send. | topology: 2; docs: 1 | — | **keep** — source node. |
+| Relay | 1 → 1 | Pass-through. | 0 | wire, Join | **deleted (2026-05-19)** — 1-in-1-out ≡ wire; editor-only, unused. |
+| Join | 2 → 1 | Buffer both; emit once both arrive. | 0 | ReadGate, SyncGate | **delete** — editor-only, unused; semantics subsumed by ReadGate. |
+| Inhibitor | 2 → 3 (prev+edge / next+edge+gate) | Block on prev; emit held+new; forward chain. | 1 code ref | ChainInhibitor | **merge → ChainInhibitor**. |
+| ChainInhibitor | 1 → 4 (prev / next+edge+new+ack) | Block on prev; emit old to ToEdge/ToNext, new to ToEdgeNew, 1 to ToAck. | topology: 2; docs: 2 | Inhibitor | **keep** — superset; fan-out + ack. |
+| EdgeInhibitor | 1 → 1 (prev / edge) | Block on prev; forward to edge (no buffer). | 1 code ref | ChainInhibitor | **delete** — unused; ChainInhibitor superset. |
+| TransferInhibitor | chan-of-chan → 1 | Block on TransferIn; store as EndTo; forward if set. | 1 code ref | — | **defer** — specialized partition-end forwarding. |
+| StreakDetector | 2 → 2 (old+new / done+streak) | Emit 1 on Done; emit 1/0 on Streak if sign same/diff. | 1 code ref | StreakBreakDetector | **merge → StreakBreakDetector + invert flag**. |
+| StreakBreakDetector | 2 → 1 (old+new / done) | Emit 1 if sign(old)≠sign(new). | 1 code ref | StreakDetector | **absorb StreakDetector**. |
+| ReadGate | 2 → 1 (value+ack / gated) | Buffer both; emit value when both arrive. | topology: 1; docs: 1 | SyncGate, Join | **keep**. |
+| ReadLatch | 2 → 2 (in+release / next+ack) | FromIn buffers; FromRelease emits held+ack. | 2 code refs | — | **defer** — release-trigger unique; no usage. |
+| SyncGate | 2 → 1 | Buffer both; emit 1 unconditionally. | 1 code ref | ReadGate | **merge → ReadGate + flag**. |
+| AndGate | 2 → 1 | Emit 1 if a==1 AND b==1. | 1 code ref | InhibitRightGate | **keep**. |
+| InhibitRightGate | 2 → 1 (left+right / passed) | Emit 1 if left==1 AND right==0. | topology: 1; docs: 1 | AndGate | **keep**. |
+| EdgeNode | 2 → 3 (left+right / inhibitor+partition+next) | XOR; fan out identically. | 0 | AndGate, InhibitRightGate | **delete** — unused; fan-out replaceable by direct wiring. |
 
-(Populated by the audit pass.)
+**Tally:** keep 6, merge 3, delete 4, defer 3 (16 total).
+
+- **Keep:** Input, ChainInhibitor, ReadGate, AndGate, InhibitRightGate, Partition.
+- **Merge:** Inhibitor → ChainInhibitor; SyncGate → ReadGate (flag); StreakDetector → StreakBreakDetector (invert flag).
+- **Delete:** Relay (≡ wire, unused), Join (editor-only, unused; subsumed by ReadGate), EdgeInhibitor (subset of ChainInhibitor, unused), EdgeNode (unused; XOR fan-out replaceable).
+- **Defer:** TransferInhibitor, ReadLatch — each has a plausible role but zero topology usage today.
+
+**Surprises:**
+- Relay is literally a 1-in-1-out passthrough — indistinguishable from the wire itself.
+- Inhibitor has only one code reference (likely stale relative to ChainInhibitor).
+- StreakDetector / StreakBreakDetector are exact logical inverses.
+- SyncGate and ReadGate both wait for two inputs; SyncGate ignores values.
+- EdgeNode's three outputs carry the same XOR value — fan-out via wiring would do.
+
+Usage counts are from the agent's grep sweep; verify per-kind before any deletion lands.
 
 ## Migration plan template
 

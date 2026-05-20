@@ -16,7 +16,6 @@ import type { NodeTypeDef } from "./types-graph";
 // with spec.ts; toRNodeKind enforces the lowercase form at runtime.
 export const RUNTIME_IMPLEMENTED_KINDS: ReadonlySet<string> = new Set([
   "Input",
-  "Relay",
   "Join",
   "ReadGate",
   "ChainInhibitor",
@@ -33,12 +32,6 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     inputs: [],
     outputs: [{ name: "ToOut", kind: "chain" }],
     shape: "rect", fill: "#e0e0e0", stroke: "#666", width: 80, height: 60,
-  },
-  Relay: {
-    role: "relay",
-    inputs: [{ name: "FromIn", kind: "chain" }],
-    outputs: [{ name: "ToOut", kind: "chain" }],
-    shape: "rect", fill: "#e8f5e9", stroke: "#2e7d32", width: 70, height: 40,
   },
   ReadLatch: {
     role: "latch",
