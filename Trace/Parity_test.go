@@ -107,7 +107,7 @@ func TestParity_InputThroughChainInhibitor(t *testing.T) {
 	want := map[string]int{
 		"fire:in":       1,
 		"send:inToCi=7": 1,
-		"recv:ci/in=7":    1,
+		"recv:ci/FromPrev=7": 1,
 		"fire:ci":         1,
 	}
 	gotCount := map[string]int{}

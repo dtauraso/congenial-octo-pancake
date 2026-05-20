@@ -49,7 +49,7 @@ func TestParity_FixtureMatch_InhibitRightGate(t *testing.T) {
 	}
 
 	em := BuildEdgeMap([]EdgeLite{
-		{ID: "irgOut", SourceNode: "irg", SourceHandle: "passed"},
+		{ID: "irgOut", SourceNode: "irg", SourceHandle: "ToPassed"},
 	})
 
 	tr := New(64)

@@ -54,9 +54,9 @@ func TestParity_FixtureMatch_ChainInhibitor(t *testing.T) {
 	}
 
 	em := BuildEdgeMap([]EdgeLite{
-		{ID: "ciInhibit", SourceNode: "ci", SourceHandle: "inhibitOut"},
+		{ID: "ciInhibit", SourceNode: "ci", SourceHandle: "ToEdge"},
 		{ID: "ciReadNew", SourceNode: "ci", SourceHandle: "readNew"},
-		{ID: "ciOut", SourceNode: "ci", SourceHandle: "out"},
+		{ID: "ciOut", SourceNode: "ci", SourceHandle: "ToNext"},
 		{ID: "ciAck", SourceNode: "ci", SourceHandle: "ack"},
 	})
 
