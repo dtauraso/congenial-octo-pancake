@@ -1,6 +1,6 @@
 import { specToFlow } from "../adapter";
 import { markViewSynced, scheduleViewSave } from "../../save";
-import { patchViewerState, setViewerState } from "../../state";
+import { setViewerState } from "../../state";
 import { useStore } from "../../state/store";
 import { parseViewerState, serializeViewerState } from "../../state/viewer/types";
 import { resolveViewLoadViewport } from "./_resolve-view-load-viewport";
@@ -41,7 +41,6 @@ export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
     if (ns.length === 0) return ns;
     const reconciled = reconcileSelection(next.lastSelectionIds, ns.map((n) => n.id));
     const want = new Set(reconciled);
-    patchViewerState((v) => { v.lastSelectionIds = reconciled.length > 0 ? reconciled : undefined; });
     return ns.map((n) => {
       const wantSel = want.has(n.id);
       return n.selected === wantSel ? n : { ...n, selected: wantSel };
