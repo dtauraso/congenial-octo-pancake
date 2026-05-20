@@ -55,11 +55,14 @@ export function onConnectImpl(ctx: AppCtx, conn: Connection) {
   // For grow connections: append new port to node.inputs, then treat the
   // new port name as the targetHandle.
   let resolvedTargetHandle = conn.targetHandle;
+  // Single snapshot before any RF mutation — covers both the grow-port
+  // addition (if any) and the new edge, so there is exactly one undo step.
+  pushSnapshot();
+
   if (growDecode) {
     const existingInputs = dstInputs.length > 0 ? dstInputs : (dstDef?.inputs ?? []);
     const newName = nextInputName(existingInputs.map((p) => p.name));
     resolvedTargetHandle = newName;
-    pushSnapshot();
     const newPort = { name: newName, kind: srcPort.kind, side: growDecode.side, slot: growDecode.slot };
     rfSetNodes((ns) => ns.map((nd) =>
       nd.id !== conn.target ? nd : {
@@ -82,7 +85,6 @@ export function onConnectImpl(ctx: AppCtx, conn: Connection) {
   let label = baseLabel;
   let m = 2;
   while (rfEdges.some((e) => e.data?.label === label)) label = `${baseLabel}_${m++}`;
-  if (!growDecode) pushSnapshot();
   rfSetEdges((es) => [
     ...es,
     {
