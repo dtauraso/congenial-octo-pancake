@@ -24,6 +24,8 @@ import { useUndoRedo } from "./app/_use-undo-redo";
 import type { AppCtx } from "./app/_ctx";
 import { EdgeActionsCtx } from "./app/_edge-actions-ctx";
 import { registerRFSetters } from "./rf-imperative";
+import { registerHistory, undo as rfUndo, redo as rfRedo } from "./history";
+import { useHotkeys } from "react-hotkeys-hook";
 
 function Inner() {
   const [nodes, setNodes] = useState<RFNode[]>([]);
@@ -32,6 +34,11 @@ function Inner() {
 
   // Expose setNodes/setEdges imperatively for non-React callers (inline-edit).
   useEffect(() => { registerRFSetters(setNodes, setEdges); }, []);
+  // Register RF instance for snapshot-based history.
+  useEffect(() => { registerHistory(rf); }, [rf]);
+  // RF-snapshot undo/redo — runs alongside the existing Zustand-backed hotkeys.
+  useHotkeys("mod+z", (e) => { e.preventDefault(); rfUndo(); }, { enableOnContentEditable: false });
+  useHotkeys("mod+shift+z, mod+y", (e) => { e.preventDefault(); rfRedo(); }, { enableOnContentEditable: false });
   const s = useInnerState();
   const rf = useReactFlow();
   const [guides, setGuides] = useState<{ vx: number | null; hy: number | null }>({ vx: null, hy: null });
