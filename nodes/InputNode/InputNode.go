@@ -43,7 +43,7 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 				n.hasValue = false
 				fmt.Printf("%s: sent %d\n", n.Name, n.value)
 				s.Trace.Fire(n.Name)
-				s.Trace.Send(n.Name, "out", n.value)
+				s.Trace.Send(n.Name, "ToOut", n.value)
 			default:
 			}
 		}
