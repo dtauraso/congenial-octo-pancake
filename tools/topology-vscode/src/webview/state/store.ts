@@ -1,4 +1,8 @@
-import { create } from "zustand";
+// Plain module-level state — replaces Zustand store now that all React
+// consumers have been migrated to contexts (dimmed, runStatus) or RF
+// (nodes, edges). spec and viewerState are live-binding module exports
+// that non-React callers (save.ts, inline-edit.ts, etc.) read directly.
+
 import type { Node, Spec } from "../../schema";
 import type { RunStatus } from "../../messages";
 import { DEFAULT_VIEWER_STATE, type ViewerState } from "./viewer/types";
@@ -7,32 +11,16 @@ import { DEFAULT_VIEWER_STATE, type ViewerState } from "./viewer/types";
 // no idle variant (the host only emits running/ok/error/cancelled).
 export type RunStatusUI = RunStatus | { state: "idle" };
 
-interface Store {
-  spec: Spec;
-  viewerState: ViewerState;
-  dimmed: Set<string> | null;
-  runStatus: RunStatusUI;
-}
-
-export const useStore = create<Store>(() => ({
-  spec: { nodes: [], edges: [] },
-  viewerState: { ...DEFAULT_VIEWER_STATE },
-  dimmed: null,
-  runStatus: { state: "idle" },
-}));
-
-// Live module-level bindings kept in sync with the store. Non-React
-// modules (save.ts, views.ts, etc.) import these directly and
-// rely on ES-module live-binding semantics to see updates.
-export let spec: Spec = useStore.getState().spec;
-export let viewerState: ViewerState = useStore.getState().viewerState;
+export let spec: Spec = { nodes: [], edges: [] };
+export let viewerState: ViewerState = { ...DEFAULT_VIEWER_STATE };
 export const nodeById = new Map<string, Node>();
 
-useStore.subscribe((s) => {
-  if (s.spec !== spec) {
-    spec = s.spec;
-    nodeById.clear();
-    for (const n of s.spec.nodes) nodeById.set(n.id, n);
-  }
-  if (s.viewerState !== viewerState) viewerState = s.viewerState;
-});
+export function _setSpec(next: Spec) {
+  spec = next;
+  nodeById.clear();
+  for (const n of next.nodes) nodeById.set(n.id, n);
+}
+
+export function _setViewerState(next: ViewerState) {
+  viewerState = next;
+}
