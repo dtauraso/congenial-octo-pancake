@@ -54,24 +54,8 @@ export function useNodeDrag(
       scheduleViewSave();
       return;
     }
-    const sn = spec.nodes.find((n) => n.id === node.id);
-    if (!sn) return;
-    const prevNv = viewerState.nodes?.[node.id];
-    const prevX = prevNv?.x ?? 0;
-    const prevY = prevNv?.y ?? 0;
-    const dx = node.position.x - prevX;
-    const dy = node.position.y - prevY;
-    if (dx === 0 && dy === 0) return;
-    // Motion-type slide-rule rewriting (record-mode-lite) retired:
-    // frame mode drives motion via substrate state events, not spec props.
-    // Treat all drags as position-only edits.
-    void mutateSpec; void scheduleSave; // keep imports if referenced elsewhere
-    patchViewerState((v) => {
-      if (!v.nodes) v.nodes = {};
-      const existing = v.nodes[node.id] ?? { x: 0, y: 0 };
-      v.nodes[node.id] = { ...existing, x: node.position.x, y: node.position.y };
-    });
-    scheduleViewSave();
+    // RF tracks node position natively via node.position — no viewerState write needed.
+    void mutateSpec; void scheduleSave; void spec; void viewerState; // keep imports until B-E complete
   }, [ctx, setGuides]);
 
   return { onNodeDrag, onNodeDragStop };
