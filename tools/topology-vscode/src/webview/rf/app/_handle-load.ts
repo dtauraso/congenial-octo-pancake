@@ -36,7 +36,6 @@ export function handleLoad(ctx: AppCtx, text: string) {
     if (sel.size > 0) {
       flow.nodes = flow.nodes.map((n) => sel.has(n.id) ? { ...n, selected: true } : n);
     }
-    patchViewerState((v) => { v.lastSelectionIds = filtered.length > 0 ? filtered : undefined; });
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
   } catch (err) {
