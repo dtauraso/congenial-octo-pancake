@@ -3,14 +3,17 @@
 // No simulation, no RAF, no slot phase logic.
 
 import { Handle, Position, type NodeProps } from "reactflow";
+import { useFireFlash } from "./use-fire-flash";
 
 interface JoinNodeData {
   label?: string;
+  lastFire?: number;
 }
 
 export function JoinNode({ data }: NodeProps<JoinNodeData>) {
+  const flashing = useFireFlash(data.lastFire);
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #58a6ff" : undefined }}>
       <Handle type="target" position={Position.Left} id="FromA" style={{ ...styles.handle, top: "30%" }} />
       <Handle type="target" position={Position.Left} id="FromB" style={{ ...styles.handle, top: "70%" }} />
       <div style={styles.label}>{data.label ?? "join"}</div>

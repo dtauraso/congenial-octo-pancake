@@ -3,22 +3,25 @@
 // handle. No simulation, no RAF, no slot phase logic.
 
 import { Handle, Position, type NodeProps } from "reactflow";
+import { useFireFlash } from "./use-fire-flash";
 
 interface InputNodeData {
   label?: string;
   // Init queue — array of values the Go runtime will emit in order.
   initialQueue?: unknown[];
   repeat?: boolean;
+  lastFire?: number;
 }
 
 export function InputNode({ data }: NodeProps<InputNodeData>) {
+  const flashing = useFireFlash(data.lastFire);
   const queue = data.initialQueue ?? [];
   const queueStr = queue.length > 0
     ? queue.map((v) => JSON.stringify(v)).join(", ")
     : "—";
 
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #3fb950" : undefined }}>
       <div style={styles.label}>{data.label ?? "input"}</div>
       <div style={styles.queue} title="init queue">
         [{queueStr}]

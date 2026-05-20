@@ -3,14 +3,17 @@
 // No simulation, no RAF, no slot phase logic.
 
 import { Handle, Position, type NodeProps } from "reactflow";
+import { useFireFlash } from "./use-fire-flash";
 
 interface ReadGateNodeData {
   label?: string;
+  lastFire?: number;
 }
 
 export function ReadGateNode({ data }: NodeProps<ReadGateNodeData>) {
+  const flashing = useFireFlash(data.lastFire);
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #7b1fa2" : undefined }}>
       <Handle type="target" position={Position.Left} id="FromValue" style={{ ...styles.handle, top: "30%" }} />
       <Handle type="target" position={Position.Left} id="FromAck" style={{ ...styles.handle, top: "70%" }} />
       <div style={styles.label}>{data.label ?? "readgate"}</div>
