@@ -18,7 +18,6 @@ import (
 	_ "github.com/dtauraso/wirefold/nodes/EdgeInhibitorNode"
 	_ "github.com/dtauraso/wirefold/nodes/EdgeNode"
 	_ "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode"
-	_ "github.com/dtauraso/wirefold/nodes/InhibitorNode"
 	_ "github.com/dtauraso/wirefold/nodes/InputNode"
 	_ "github.com/dtauraso/wirefold/nodes/PartitionNode"
 	_ "github.com/dtauraso/wirefold/nodes/ReadGateNode"
