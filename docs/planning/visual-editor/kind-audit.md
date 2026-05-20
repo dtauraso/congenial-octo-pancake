@@ -67,6 +67,9 @@ Worth scrutinizing before the audit table is filled:
 | AndGate | 2 → 1 | Emit 1 if a==1 AND b==1. | 1 code ref | InhibitRightGate | **keep**. |
 | InhibitRightGate | 2 → 1 (left+right / passed) | Emit 1 if left==1 AND right==0. | topology: 1; docs: 1 | AndGate | **keep**. |
 | EdgeNode | 2 → 3 (left+right / inhibitor+partition+next) | XOR; fan out identically. | 0 | AndGate, InhibitRightGate | **delete** — unused; fan-out replaceable by direct wiring. |
+| Partition | 1 → 1 | State machine 0→1→2; emit 1 on 0→1, 0 on 1→2. | 4 code refs | — | **keep**. |
+
+## Findings (haiku sweep, 2026-05-19)
 
 **Tally:** keep 6, merge 3, delete 4, defer 3 (16 total).
 
