@@ -30,8 +30,8 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
   },
   ReadGate: {
     role: "and-gate",
-    inputs: [{ name: "FromValue", kind: "chain" }, { name: "FromAck", kind: "chain" }],
-    outputs: [{ name: "ToGated", kind: "chain" }],
+    inputs: [{ name: "FromInput", kind: "chain" }, { name: "FromChainInhibitor", kind: "chain" }],
+    outputs: [{ name: "ToChainInhibitor", kind: "chain" }],
     shape: "rect", fill: "#f3e5f5", stroke: "#7b1fa2", width: 70, height: 40,
   },
   ChainInhibitor: {

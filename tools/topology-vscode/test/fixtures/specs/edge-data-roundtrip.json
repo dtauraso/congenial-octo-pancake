@@ -20,14 +20,14 @@
       "source": "in0",
       "sourceHandle": "ToOut",
       "target": "readGate",
-      "targetHandle": "FromValue",
+      "targetHandle": "FromInput",
       "kind": "chain",
       "data": { "slots": 1 }
     },
     {
       "id": "readGateToI0",
       "source": "readGate",
-      "sourceHandle": "ToGated",
+      "sourceHandle": "ToChainInhibitor",
       "target": "i0",
       "targetHandle": "FromPrev",
       "kind": "chain",

@@ -53,7 +53,7 @@ Worth scrutinizing before the audit table is filled:
 | Kind | Ports (in → out) | Firing rule (one line) | Usages | Overlap | Decision |
 |------|------------------|------------------------|--------|---------|----------|
 | Input | 0 → 1 (ToNext) | Poll init queue; forward once; clear on send. | topology: 2; docs: 1 | — | ✅ **keep** — source node. |
-| ReadGate | 2 → 1 (value+ack / gated) | Buffer both; emit value when both arrive. | topology: 1; docs: 1 | SyncGate, Join | ✅ **keep**. |
+| ReadGate | 2 → 1 (value+inhibitor / gated) | Buffer both; emit value when both arrive. | topology: 1; docs: 1 | SyncGate, Join | ✅ **keep**. |
 | ChainInhibitor | 1 → 4 (prev / next+edge+new+ack) | Block on prev; emit old to ToEdge/ToNext, new to ToEdgeNew, 1 to ToAck. | topology: 2; docs: 2 | Inhibitor | ✅ **keep** — superset; fan-out + ack. |
 | InhibitRightGate | 2 → 1 (left+right / passed) | Emit 1 if left==1 AND right==0. | topology: 1; docs: 1 | AndGate | ✅ **keep**. |
 
@@ -144,18 +144,17 @@ type ReadGateNode struct {
 	Name      string
 	Value     int
 	HasValue  bool
-	AckVal    int
-	HasAck    bool
-	FromValue <-chan int
-	FromAck   <-chan int
-	ToGated   chan<- int
+	HasChainInhibitor bool
+	FromInput <-chan int
+	FromChainInhibitor   <-chan int
+	ToChainInhibitor   chan<- int
 }
 ```
 
-- **Inputs:** `FromValue <-chan int` — value to gate, `FromAck <-chan int` — ack signal
-- **Outputs:** `ToGated chan<- int` — passes value through when both inputs arrive
-- **State:** `Value int`, `HasValue bool`, `AckVal int`, `HasAck bool`
-- **Firing rule:** non-blocking poll each input independently; when both `HasValue && HasAck`, send `Value` to `ToGated` and clear both
+- **Inputs:** `FromInput <-chan int` — value to gate, `FromChainInhibitor <-chan int` — chain-inhibitor signal
+- **Outputs:** `ToChainInhibitor chan<- int` — passes value through when both inputs arrive
+- **State:** `Value int`, `HasValue bool`, `HasChainInhibitor bool`
+- **Firing rule:** non-blocking poll each input independently; when both `HasValue && HasChainInhibitor`, send `Value` to `ToChainInhibitor` and clear both
 - **Populate:** none
 
 #### RF (node-defs entry)
@@ -168,23 +167,23 @@ readGate: {
   text: "#4a148c",
   accent: "#7b1fa2",
   minWidth: 70,
-  sublabel: "val / ack",
+  sublabel: "val / inhibitor",
   targets: [
-    { id: "FromValue" },
-    { id: "FromAck" },
+    { id: "FromInput" },
+    { id: "FromChainInhibitor" },
   ],
   sources: [
-    { id: "ToGated" },
+    { id: "ToChainInhibitor" },
   ],
 },
 ```
 
-- **Visual:** label `"readgate"`, accent `#7b1fa2`, minWidth 70, sublabel `"val / ack"`
-- **Handles:** targets [`FromValue`, `FromAck`], sources [`ToGated`]
+- **Visual:** label `"readgate"`, accent `#7b1fa2`, minWidth 70, sublabel `"val / inhibitor"`
+- **Handles:** targets [`FromInput`, `FromChainInhibitor`], sources [`ToChainInhibitor`]
 - **Displays:** none
 
 #### Drift
-- none — handle ids `FromValue`, `FromAck`, `ToGated` match Go fields exactly
+- none — handle ids `FromInput`, `FromChainInhibitor`, `ToChainInhibitor` match Go fields exactly
 
 ---
 

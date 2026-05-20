@@ -49,7 +49,7 @@ func TestParity_FixtureMatch_ReadGate(t *testing.T) {
 	}
 
 	em := BuildEdgeMap([]EdgeLite{
-		{ID: "rgOut", SourceNode: "rg", SourceHandle: "ToGated"},
+		{ID: "rgOut", SourceNode: "rg", SourceHandle: "ToChainInhibitor"},
 	})
 
 	tr := New(64)
@@ -58,7 +58,7 @@ func TestParity_FixtureMatch_ReadGate(t *testing.T) {
 	ackIn := make(chan int, 1)
 	rgOut := make(chan int, 1)
 
-	rg := RG.ReadGateNode{Name: "rg", FromValue: chainIn, FromAck: ackIn, ToGated: rgOut}
+	rg := RG.ReadGateNode{Name: "rg", FromInput: chainIn, FromChainInhibitor: ackIn, ToChainInhibitor: rgOut}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)

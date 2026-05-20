@@ -23,13 +23,13 @@
       "type": "ReadGate",
       "inputs": [
         {
-          "name": "FromValue",
+          "name": "FromInput",
           "kind": "chain",
           "side": "left",
           "slot": 1
         },
         {
-          "name": "FromAck",
+          "name": "FromChainInhibitor",
           "kind": "chain",
           "side": "bottom",
           "slot": 1
@@ -37,7 +37,7 @@
       ],
       "outputs": [
         {
-          "name": "ToGated",
+          "name": "ToChainInhibitor",
           "kind": "chain",
           "side": "right",
           "slot": 1
@@ -155,7 +155,7 @@
       "source": "in08",
       "sourceHandle": "ToOut",
       "target": "readGate1",
-      "targetHandle": "FromValue",
+      "targetHandle": "FromInput",
       "kind": "chain",
       "label": "in08ToReadGate1",
       "data": {
@@ -165,7 +165,7 @@
     {
       "id": "readGate1ToI0",
       "source": "readGate1",
-      "sourceHandle": "ToGated",
+      "sourceHandle": "ToChainInhibitor",
       "target": "i0",
       "targetHandle": "FromPrev",
       "kind": "chain",
@@ -216,7 +216,7 @@
       "source": "i1",
       "sourceHandle": "ToNext",
       "target": "readGate1",
-      "targetHandle": "FromAck",
+      "targetHandle": "FromChainInhibitor",
       "kind": "chain",
       "label": "i1ToReadGate1",
       "lane": -69.0549836800538,
@@ -230,7 +230,7 @@
       "source": "bootstrap_rg",
       "sourceHandle": "ToOut",
       "target": "readGate1",
-      "targetHandle": "FromAck",
+      "targetHandle": "FromChainInhibitor",
       "kind": "chain",
       "label": "bootstrapRgToReadGate1",
       "data": {

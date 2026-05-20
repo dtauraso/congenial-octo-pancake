@@ -11,11 +11,10 @@ type ReadGateNode struct {
 	Name      string
 	Value     int
 	HasValue  bool
-	AckVal    int
-	HasAck    bool
-	FromValue <-chan int
-	FromAck   <-chan int
-	ToGated   chan<- int
+	HasChainInhibitor bool
+	FromInput <-chan int
+	FromChainInhibitor   <-chan int
+	ToChainInhibitor   chan<- int
 }
 
 func (g *ReadGateNode) Update(s *S.SafeWorker) {
@@ -29,31 +28,30 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 
 		if !g.HasValue {
 			select {
-			case v := <-g.FromValue:
+			case v := <-g.FromInput:
 				g.Value = v
 				g.HasValue = true
-				s.Trace.Recv(g.Name, "FromValue", v)
+				s.Trace.Recv(g.Name, "FromInput", v)
 			default:
 			}
 		}
 
-		if !g.HasAck {
+		if !g.HasChainInhibitor {
 			select {
-			case v := <-g.FromAck:
-				g.AckVal = v
-				g.HasAck = true
-				s.Trace.Recv(g.Name, "FromAck", v)
+			case v := <-g.FromChainInhibitor:
+				g.HasChainInhibitor = true
+				s.Trace.Recv(g.Name, "FromChainInhibitor", v)
 			default:
 			}
 		}
 
-		if g.HasValue && g.HasAck {
-			fmt.Printf("%s: value=%d ack=%d → %d\n", g.Name, g.Value, g.AckVal, g.Value)
+		if g.HasValue && g.HasChainInhibitor {
+			fmt.Printf("%s: value=%d → %d\n", g.Name, g.Value, g.Value)
 			s.Trace.Fire(g.Name)
-			S.Send(g.ToGated, g.Value)
-			s.Trace.Send(g.Name, "ToGated", g.Value)
+			S.Send(g.ToChainInhibitor, g.Value)
+			s.Trace.Send(g.Name, "ToChainInhibitor", g.Value)
 			g.HasValue = false
-			g.HasAck = false
+			g.HasChainInhibitor = false
 		}
 	}
 }

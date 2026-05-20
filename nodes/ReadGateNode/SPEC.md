@@ -4,18 +4,18 @@
 
 | Name | Direction | Element type | Cardinality | TSX handle | Side |
 |------|-----------|--------------|-------------|------------|------|
-| FromValue | in | int | single | FromValue | left |
-| FromAck | in | int | single | FromAck | left |
-| ToGated | out | int | single | ToGated | right |
+| FromInput | in | int | single | FromInput | left |
+| FromChainInhibitor | in | int | single | FromChainInhibitor | left |
+| ToChainInhibitor | out | int | single | ToChainInhibitor | right |
 
 ## Firing rule
 
-Buffer one value from each input independently. When both FromValue and FromAck have been received, fire:
+Buffer one value from each input independently. When both FromInput and FromChainInhibitor have been received, fire:
 
-- Emit the buffered value from FromValue on ToGated.
+- Emit the buffered value from FromInput on ToChainInhibitor.
 - Clear both buffers.
 
-The ack signal gates passage of the value; the ack's own value is not used — only its arrival matters.
+The chain-inhibitor signal gates passage of the value; its own value is not used — only its arrival matters.
 
 ## View
 
@@ -27,7 +27,7 @@ The ack signal gates passage of the value; the ack's own value is not used — o
 | text | #4a148c |
 | accent | #7b1fa2 |
 | minWidth | 70 |
-| sublabel | val / ack |
+| sublabel | val / inhibitor |
 | defaultLabel | readgate |
 
 ## Runtime status
