@@ -4,7 +4,7 @@ import type { Fold, ViewerState } from "../../state/viewer/types";
 import { COLLAPSED_FOLD_W, COLLAPSED_FOLD_H, expandedBounds } from "./_bounds";
 import type { NodeData, EdgeData } from "../types";
 
-const RF_NODE_TYPE_MAP: Record<string, string> = { Input: "input", Relay: "relay", Join: "join", ReadGate: "readGate", ReadLatch: "readLatch", Partition: "partition", EdgeNode: "edgeNode", Inhibitor: "inhibitor", ChainInhibitor: "chainInhibitor", EdgeInhibitor: "edgeInhibitor", InhibitRightGate: "inhibitRightGate", SyncGate: "syncGate", StreakDetector: "streakDetector", StreakBreakDetector: "streakBreakDetector", TransferInhibitor: "transferInhibitor" };
+export const RF_NODE_TYPE_MAP: Record<string, string> = { Input: "input", Relay: "relay", Join: "join", ReadGate: "readGate", ReadLatch: "readLatch", Partition: "partition", EdgeNode: "edgeNode", Inhibitor: "inhibitor", ChainInhibitor: "chainInhibitor", EdgeInhibitor: "edgeInhibitor", InhibitRightGate: "inhibitRightGate", SyncGate: "syncGate", StreakDetector: "streakDetector", StreakBreakDetector: "streakBreakDetector", TransferInhibitor: "transferInhibitor" };
 
 // Fold-aware spec→flow conversion. Folds are viewer-only state; they never
 // touch the spec (the runtime loader ignores topology.view.json). Edges that cross a
