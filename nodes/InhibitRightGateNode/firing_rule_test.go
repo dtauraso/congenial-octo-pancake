@@ -1,0 +1,80 @@
+package InhibitRightGateNode
+
+import (
+	"context"
+	"sync"
+	"testing"
+	"time"
+
+	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+)
+
+func newWorker(ctx context.Context) *S.SafeWorker {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	return &S.SafeWorker{Ctx: ctx, Wg: wg, Trace: nil}
+}
+
+func recv(t *testing.T, ch <-chan int) int {
+	t.Helper()
+	select {
+	case v := <-ch:
+		return v
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timeout waiting for output")
+		return 0
+	}
+}
+
+func run(left, right int) (int, error) {
+	fromLeft := make(chan int, 1)
+	fromRight := make(chan int, 1)
+	toPassed := make(chan int, 1)
+	node := &InhibitRightGateNode{
+		Name:      "irg",
+		FromLeft:  fromLeft,
+		FromRight: fromRight,
+		ToPassed:  toPassed,
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	sw := &S.SafeWorker{Ctx: ctx, Wg: wg, Trace: nil}
+	go node.Update(sw)
+	fromLeft <- left
+	fromRight <- right
+	select {
+	case v := <-toPassed:
+		cancel()
+		wg.Wait()
+		return v, nil
+	case <-time.After(100 * time.Millisecond):
+		cancel()
+		wg.Wait()
+		return -1, nil
+	}
+}
+
+// left=1, right=0 → passes (1).
+func TestPassWhenLeftOnlyActive(t *testing.T) {
+	got, _ := run(1, 0)
+	if got != 1 {
+		t.Fatalf("expected 1, got %d", got)
+	}
+}
+
+// left=1, right=1 → inhibited (0).
+func TestInhibitedWhenRightActive(t *testing.T) {
+	got, _ := run(1, 1)
+	if got != 0 {
+		t.Fatalf("expected 0, got %d", got)
+	}
+}
+
+// left=0, right=0 → 0.
+func TestZeroWhenLeftInactive(t *testing.T) {
+	got, _ := run(0, 0)
+	if got != 0 {
+		t.Fatalf("expected 0, got %d", got)
+	}
+}
