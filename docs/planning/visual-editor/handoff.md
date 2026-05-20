@@ -9,9 +9,9 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-19, post-phase-2, kind-audit pending)
+## State at handoff (2026-05-20, kind-audit-consolidation complete)
 
-**Active branch:** `task/kind-audit-consolidation` at `6240289`. Off
+**Active branch:** `task/kind-audit-consolidation` at `HEAD` (post d70025a). Off
 `task/spec-phase2-generic-renderer` (NOT yet merged to `main`).
 
 ### Branches in flight
@@ -33,14 +33,38 @@ handoff.md is exempt from the 100-LOC budget.
      (editor-only; `Loader-registered: no`). Side effect: SPEC being
      authoritative gave ChainInhibitor new `ToAck`/`ToEdgeNew`
      handles and ReadLatch new `ToAck` — these were prior Open
-     Questions and now match the Go ports. (ReadLatch's `ToAck`
-     handle became moot when ReadLatch was deleted.)
+     Questions and now match the Go ports.
    - `f246e9c` — folded each kind's `register.go` (init + populate)
      into the kind's body file. `register.go` removed everywhere.
 
-2. **`task/kind-audit-consolidation`** at `6240289` (current) — spec
-   doc landed at `docs/planning/visual-editor/kind-audit.md`. Audit
-   pass not yet run. See "Next step" below.
+2. **`task/kind-audit-consolidation`** (current) — kind audit complete.
+   Final registry: 4 kinds — Input, ReadGate, ChainInhibitor,
+   InhibitRightGate. Ten kinds deleted (SyncGate, AndGate, EdgeNode,
+   Partition, TransferInhibitor, StreakDetector, StreakBreakDetector,
+   ReadLatch, plus any others trimmed earlier). See "What landed" below.
+
+### What landed this session
+
+- Five more kinds deleted: SyncGate, AndGate, EdgeNode, Partition
+  (user override of audit keep), plus earlier deletions of
+  TransferInhibitor / StreakDetector / StreakBreakDetector / ReadLatch.
+- Registry reordered everywhere: schema, gen-node-defs priority,
+  main.go imports, audit table. Deleted-kind rows pruned from
+  kind-audit.md.
+- kind-audit.md gained a `## Kind structure` section with Go struct +
+  TS node-defs entry for each of the 4 kept kinds, plus Go/RF/Drift
+  bullets.
+- InputNode redesigned: removed internal `Input <-chan int`; replaced
+  with `Init []int` populated from `data.init`. Update iterates with a
+  local index, exits when Init drained. Line.go updated to use
+  `Init: []int{0,1,0}`.
+- Trace fixture-parity tests fixed: itoaSigned helpers re-added to
+  ReadGate/InhibitRightGate tests; port-name mismatches corrected
+  (in→FromPrev, left/right→FromLeft/FromRight, SourceHandle renames).
+- go.mod bumped to `go 1.23.0` (gopls minimum); CLAUDE.md updated.
+  govulncheck ran clean.
+- New planning doc: docs/planning/visual-editor/line-go-relocation.md
+  (parked; see item 7 in Parked follow-ups).
 
 ## Adding a kind (3 files, post-phase-2)
 
@@ -59,38 +83,34 @@ prebuild). `builders.go` is not touched.
   `node-defs.ts` (generated) and renders all kinds. `SubstrateEdge`
   for wires. State via RF + thin helpers. `gen-node-defs.mjs` walks
   `nodes/*/SPEC.md`.
-- **Runtime (Go):** `main.go` blank-imports the 14 kinds; each
+- **Runtime (Go):** `main.go` blank-imports the 4 kinds; each
   `init()` calls `Wiring.Register`. `Wiring.LoadTopology` parses
   `topology.json` and uses reflection on each registered struct to
   build the port manifest. `populate` is a per-kind hook for
-  non-channel fields (4 kinds use it: Input, ChainInhibitor,
-  Inhibitor, TransferInhibitor).
+  non-channel fields (Input still uses it for `Init []int`).
 - **Editor-only kinds (no Go body):** Relay, Join. SPEC.md exists for
   documentation only; `Runtime status: Loader-registered: no`.
 
 ## Next step
 
-Run the kind audit per
-[`kind-audit.md`](kind-audit.md). It's a haiku-friendly read-only
-sweep:
+Three options in priority order — pick based on friction:
 
-For each of the 16 kinds (14 Go + Relay + Join), gather:
-- Ports (in → out) from `<Kind>.go` channel fields.
-- One-line firing rule from `SPEC.md`.
-- Topology usages: grep `topology.json` and any reference topologies
-  under `docs/`, `examples/`, or fixtures for `"kind": "Kind"`.
-- Overlap candidates against the a priori suspects in `kind-audit.md`
-  (Relay/Join, four inhibitors, two streak detectors, three gates).
+**(a) Line.go relocation** — move Line.go's hand-wired topology into
+`topologies/line.json` loaded via `Wiring.LoadTopology`. Plan:
+[line-go-relocation.md](line-go-relocation.md). Cleanest next cut;
+removes the last place topology is hard-coded in Go.
 
-Fill the audit table in `kind-audit.md`. Propose a decision per kind
-(keep / merge into X / delete / defer). Do not act on decisions in
-the audit commit — David reviews, then per-decision commits land
-each kind-removal or merge separately.
+**(b) Struct-tag populates** — Input is now the only kind using
+`populate`. Remove the Populator API and wire `Init` directly from
+struct tags or SPEC.md `data` fields instead. Reduces indirection.
 
-After the audit, further infra cuts (struct-tag populates to remove
-the `Populator` API; Go-AST port parsing to remove SPEC.md Ports
-table duplication) are still open but deferred until the kind set is
-trimmed.
+**(c) Go-AST port parsing** — replace the SPEC.md `## Ports` table
+with Go-AST reflection so port names and directions are derived
+directly from the struct. Eliminates dual-maintenance between Go
+fields and SPEC.md.
+
+Start with (a) unless a specific friction point makes (b) or (c)
+more urgent.
 
 ## Parked follow-ups (still applicable)
 
@@ -115,7 +135,7 @@ trimmed.
 
 ## Working-tree state
 
-Clean.
+Clean (topology.view.json has unstaged edits — leave untouched).
 
 ## Dev-loop
 
