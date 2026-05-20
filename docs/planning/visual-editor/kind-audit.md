@@ -103,7 +103,18 @@ type InputNode struct {
 #### RF (node-defs entry)
 
 ```ts
-input: { defaultLabel: "input", bg: "#1a1f2e", border: "#3fb950", text: "#c9d1d9", accent: "#3fb950", minWidth: 90, sources: [{ id: "ToOut" }], displays: ["queue", "repeat"] },
+input: {
+  defaultLabel: "input",
+  bg: "#1a1f2e",
+  border: "#3fb950",
+  text: "#c9d1d9",
+  accent: "#3fb950",
+  minWidth: 90,
+  sources: [
+    { id: "ToOut" },
+  ],
+  displays: ["queue", "repeat"],
+},
 ```
 
 - **Visual:** label `"input"`, accent `#3fb950`, minWidth 90
@@ -142,7 +153,22 @@ type ReadGateNode struct {
 #### RF (node-defs entry)
 
 ```ts
-readGate: { defaultLabel: "readgate", bg: "#f3e5f5", border: "#7b1fa2", text: "#4a148c", accent: "#7b1fa2", minWidth: 70, sublabel: "val / ack", targets: [{ id: "FromValue" }, { id: "FromAck" }], sources: [{ id: "ToGated" }] },
+readGate: {
+  defaultLabel: "readgate",
+  bg: "#f3e5f5",
+  border: "#7b1fa2",
+  text: "#4a148c",
+  accent: "#7b1fa2",
+  minWidth: 70,
+  sublabel: "val / ack",
+  targets: [
+    { id: "FromValue" },
+    { id: "FromAck" },
+  ],
+  sources: [
+    { id: "ToGated" },
+  ],
+},
 ```
 
 - **Visual:** label `"readgate"`, accent `#7b1fa2`, minWidth 70, sublabel `"val / ack"`
@@ -180,7 +206,24 @@ type ChainInhibitorNode struct {
 #### RF (node-defs entry)
 
 ```ts
-chainInhibitor: { defaultLabel: "chainInhibitor", bg: "#fff3e0", border: "#e65100", text: "#bf360c", accent: "#e65100", minWidth: 90, targets: [{ id: "FromPrev" }], sources: [{ id: "ToNext" }, { id: "ToAck" }, { id: "ToEdge" }, { id: "ToEdgeNew" }], displays: ["held"] },
+chainInhibitor: {
+  defaultLabel: "chainInhibitor",
+  bg: "#fff3e0",
+  border: "#e65100",
+  text: "#bf360c",
+  accent: "#e65100",
+  minWidth: 90,
+  targets: [
+    { id: "FromPrev" },
+  ],
+  sources: [
+    { id: "ToNext" },
+    { id: "ToAck" },
+    { id: "ToEdge" },
+    { id: "ToEdgeNew" },
+  ],
+  displays: ["held"],
+},
 ```
 
 - **Visual:** label `"chainInhibitor"`, accent `#e65100`, minWidth 90
@@ -219,7 +262,22 @@ type InhibitRightGateNode struct {
 #### RF (node-defs entry)
 
 ```ts
-inhibitRightGate: { defaultLabel: "inhibitRightGate", bg: "#fce4ec", border: "#880e4f", text: "#880e4f", accent: "#880e4f", minWidth: 110, sublabel: "L pass / R inhibit", targets: [{ id: "FromLeft" }, { id: "FromRight", accent: "#f48fb1" }], sources: [{ id: "ToPassed" }] },
+inhibitRightGate: {
+  defaultLabel: "inhibitRightGate",
+  bg: "#fce4ec",
+  border: "#880e4f",
+  text: "#880e4f",
+  accent: "#880e4f",
+  minWidth: 110,
+  sublabel: "L pass / R inhibit",
+  targets: [
+    { id: "FromLeft" },
+    { id: "FromRight", accent: "#f48fb1" },
+  ],
+  sources: [
+    { id: "ToPassed" },
+  ],
+},
 ```
 
 - **Visual:** label `"inhibitRightGate"`, accent `#880e4f`, minWidth 110, sublabel `"L pass / R inhibit"`
