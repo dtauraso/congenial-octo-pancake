@@ -17,7 +17,7 @@ export function RunButton() {
     }
     // Commit any in-flight inline rename so the posted text reflects what
     // the user sees on screen, then bundle the spec into the run message
-    // so the host writes topology.json synchronously before topogen runs.
+    // so the host writes topology.json synchronously before the runtime loader reads it.
     flushActiveInlineEdit();
     const spec = flowToSpec(rfGetNodes(), rfGetEdges(), { nodes: [], edges: [] });
     const text = JSON.stringify(spec, null, 2) + "\n";

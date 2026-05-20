@@ -8,7 +8,7 @@ Two things in one repo:
 
 1. **A dataflow runtime in Go.** Behavior emerges from how nodes are wired together, not from procedural code. Goroutines and channels replace conventional control flow. Primitives include lateral inhibition, contrast detection (XOR edges), partition timing windows, AND-gate reduction trees, and a latch + AND-gate backpressure pattern for safe pipelining.
 
-2. **A visual topology editor** (vscode webview, React Flow) where editing the diagram regenerates the Go source within a second via a deterministic codegen tool (`topogen`). The diagram is the spec; the Go code is the deliverable.
+2. **A visual topology editor** (vscode webview, React Flow) where the diagram is the spec; a runtime loader reads `topology.json` directly at startup — no codegen step required.
 
 ## Repo layout
 
@@ -16,10 +16,10 @@ Two things in one repo:
 |------|------------|
 | `*Node/` (top-level Go packages) | Runtime primitives: inhibitors, latches, edge/XOR detectors, gates, partitions, distributors |
 | `nodes/Wiring/` | Topology assembly — how nodes connect at runtime |
-| `topogen/` | Spec → Go code generator (`topology.json` → `nodes/Wiring/Wiring.go`) |
+| `nodes/Wiring/loader.go` | Runtime topology loader (`topology.json` → live wiring, replaces codegen) |
 | `tools/topology-vscode/` | The visual editor (vscode webview, React Flow + Zustand) |
 | `topology.json` | The spec (canonical source of truth) |
-| `topology.view.json` | Viewer state sidecar (camera, folds, bookmarks — never affects codegen) |
+| `topology.view.json` | Viewer state sidecar (camera, folds, bookmarks — never affects the runtime loader) |
 | `diagrams/` | Reference SVGs hand-authored to a house style guide |
 | `docs/` | Design docs, planning, style guides |
 | `memory/` | Long-running project context for AI-assisted work |

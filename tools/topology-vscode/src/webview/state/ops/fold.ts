@@ -1,7 +1,7 @@
 // Pure mutations on viewerState.folds. No DOM imports — kept testable
 // without a webview harness, mirroring rename-core / delete-core.
 //
-// Folds are viewer-only: topogen ignores topology.view.json, so creating
+// Folds are viewer-only: the runtime loader ignores topology.view.json, so creating
 // or toggling a fold never changes the spec. The flat Wiring/ package the
 // generator emits is byte-identical before and after a fold operation.
 

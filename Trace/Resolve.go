@@ -24,7 +24,7 @@ type EdgeMap map[string]string
 
 // EdgeLite is the minimum spec data needed to build an EdgeMap:
 // edge ID + source node + source port. The full Spec / Edge types
-// live in cmd/topogen/main.go and would create an import cycle if
+// live in nodes/Wiring/loader.go and would create an import cycle if
 // pulled in here, so callers project their spec into []EdgeLite.
 type EdgeLite struct {
 	ID           string

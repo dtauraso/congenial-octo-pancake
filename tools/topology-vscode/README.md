@@ -1,6 +1,6 @@
 # Topology Editor (VS Code extension)
 
-Custom editor for `topology.json`. Drag nodes around; saves write back through `WorkspaceEdit` and re-run `go run ./cmd/topogen`.
+Custom editor for `topology.json`. Drag nodes around; saves write back through `WorkspaceEdit` and the runtime loader picks up the new spec on next run.
 
 ## Dev loop
 

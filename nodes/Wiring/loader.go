@@ -3,7 +3,7 @@
 // LoadTopology reads topology.json, allocates channels, and returns []S.Node
 // in spec order. Behaviorally equivalent to the generated Wire() in Wiring.go.
 //
-// Key behaviors mirrored from topogen:
+// Key behaviors (previously codegen, now runtime):
 //   - One chan int (buf 1) per edge; label is its identity.
 //   - Input nodes: input channel sized max(len(init),1), pre-loaded with init values.
 //   - ChainInhibitor: data.initialSlots["held"] → HeldValue.
