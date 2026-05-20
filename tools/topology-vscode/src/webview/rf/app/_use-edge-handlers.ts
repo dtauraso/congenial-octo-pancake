@@ -66,14 +66,14 @@ export function useEdgeHandlers(ctx: AppCtx) {
   const setEdgeLane = useCallback((edgeId: string, lane: number) => {
     if (!ctx.lastSpec.current) return;
     if (!spec.edges.some((e) => e.id === edgeId)) return;
-    const next = mutateSpec((s) => {
+    pushSnapshot();
+    mutateSpec((s) => {
       const e = s.edges.find((x) => x.id === edgeId);
       if (e) e.lane = lane;
     });
-    ctx.lastSpec.current = next;
-    const flow = specToFlow(next, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
-    ctx.setNodes(flow.nodes);
-    ctx.setEdges(flow.edges);
+    rfSetEdges((es) => es.map((e) =>
+      e.id !== edgeId ? e : { ...e, data: { ...e.data, lane } }
+    ));
     scheduleSave();
   }, [ctx]);
 
