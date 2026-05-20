@@ -9,7 +9,7 @@
 // inner DOM avoids a positioning round-trip and keeps the edited label
 // visually identical to the rendered one.
 
-import { mutateBoth, mutateSpec, patchViewerState, getSpec, getViewerState } from "./state";
+import { mutateSpec, patchViewerState, getSpec, getViewerState } from "./state";
 import { scheduleSave, scheduleViewSave } from "./save";
 import { applyRename } from "./state/ops/rename";
 import { rfSetNodes, rfSetEdges } from "./rf/rf-imperative";
@@ -98,8 +98,7 @@ export function beginRenameNodeId(oldId: string, labelEl: HTMLElement | null) {
       if (probeErr) return `rename rejected: ${probeErr}`;
       // Snapshot BEFORE rename so undo restores the pre-rename state.
       pushSnapshot();
-      // RF mutation: update node id and edge endpoints in RF state
-      // (parallel with mutateBoth — temporary dual-write).
+      // RF mutation: update node id and edge endpoints in RF state.
       rfSetNodes((ns) => ns.map((n) => n.id === oldId ? { ...n, id: next, data: { ...n.data, label: next } } : n));
       rfSetEdges((es) => es.map((e) => {
         if (e.source !== oldId && e.target !== oldId) return e;
@@ -109,7 +108,6 @@ export function beginRenameNodeId(oldId: string, labelEl: HTMLElement | null) {
           ...(e.target === oldId ? { target: next } : {}),
         };
       }));
-      mutateBoth((s, v) => { applyRename(s, v, oldId, next); });
       scheduleSave();
       return null;
     },
