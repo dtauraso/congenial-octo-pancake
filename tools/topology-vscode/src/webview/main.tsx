@@ -5,7 +5,6 @@ import App from "./rf/app";
 import { flushSave, flushViewSave, setTopogenStatus } from "./save";
 import { parseHostToWebview } from "../messages";
 import { getSpec, setDimmed, setRunStatus } from "./state";
-import { SubstrateProvider } from "./substrate-r/registry";
 import { ErrorBoundary } from "./log/ErrorBoundary";
 import { CrashListeners } from "./log/CrashListeners";
 
@@ -28,9 +27,7 @@ const app = document.getElementById("app")!;
 createRoot(app).render(
   <ErrorBoundary>
     <CrashListeners />
-    <SubstrateProvider>
-      <App />
-    </SubstrateProvider>
+    <App />
   </ErrorBoundary>,
 );
 
