@@ -72,14 +72,10 @@ prebuild). `builders.go` is not touched.
 architecture, then execute. Payload `{primary, secondary}`, new `register`
 kind, ReadGate slot-fill emit rule. Doc must be rewritten before any code.
 
-**(b) Line.go relocation** — move Line.go's hand-wired topology into
-`topologies/line.json` loaded via `Wiring.LoadTopology`. Plan:
-[line-go-relocation.md](line-go-relocation.md).
-
-**(c) Struct-tag populates** — remove Populator API; wire `Init` from
+**(b) Struct-tag populates** — remove Populator API; wire `Init` from
 struct tags. Input is the only remaining `populate` user.
 
-**(d) Go-AST port parsing** — derive port names from Go structs instead of
+**(c) Go-AST port parsing** — derive port names from Go structs instead of
 SPEC.md tables. Eliminates dual-maintenance.
 
 ## Parked follow-ups
@@ -101,7 +97,7 @@ SPEC.md tables. Eliminates dual-maintenance.
 After any TS edit: `npm run build` from `tools/topology-vscode/` (tsc alone
 doesn't refresh `out/webview.js`). After extension-host changes: Reload
 Window in VS Code (Cmd+R). Go: `go build ./...` from repo root;
-`go run .` runs the canonical topology.
+`go run .` runs `topologies/line.json` (default `--topology`).
 
 ## ALWAYS clause
 

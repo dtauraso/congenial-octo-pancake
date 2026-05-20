@@ -290,7 +290,7 @@ inhibitRightGate: {
 
 ## Follow-ups
 
-- **Line.go hand-wiring** (deferred): `Line.go` still constructs its topology with struct literals and manual chan allocation (e.g. `InputNode{Init: []int{0, 1, 0}, ...}`). Long-term this should move into a JSON file loaded via `Wiring.LoadTopology`, so there is one construction path instead of two.
+- **Line.go hand-wiring** (done): relocated to `topologies/line.json` loaded via `Wiring.LoadTopology`. `nodes/Line/Line.go` deleted. `main.go` defaults `--topology` to `topologies/line.json`.
 
 ## Migration plan template
 
