@@ -26,20 +26,17 @@ func recv(t *testing.T, ch <-chan int) int {
 	}
 }
 
-// On receive, emit HeldValue downstream then hold the new value and release ReadGate.
+// On receive, emit HeldValue to every ToNext entry, then store the new value.
 func TestFireOnReceive(t *testing.T) {
 	fromPrev := make(chan int, 1)
-	toNext := make(chan int, 1)
-	toReadGate := make(chan int, 1)
-	toEdge := make(chan int, 1)
+	out0 := make(chan int, 1)
+	out1 := make(chan int, 1)
 
 	node := &ChainInhibitorNode{
 		Name:                       "ci",
 		HeldValue:                  99,
 		FromPrevChainInhibitorNode: fromPrev,
-		ToNextChainInhibitorNode:   toNext,
-		ToReadGate:                 toReadGate,
-		ToEdge:                     []chan<- int{toEdge},
+		ToNext:                     []chan<- int{out0, out1},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -47,21 +44,16 @@ func TestFireOnReceive(t *testing.T) {
 	go node.Update(sw)
 
 	fromPrev <- 7
-	gotEdge := recv(t, toEdge)
-	gotNext := recv(t, toNext)
-	gotRG := recv(t, toReadGate)
+	got0 := recv(t, out0)
+	got1 := recv(t, out1)
 	cancel()
 	sw.Wg.Wait()
 
-	// HeldValue (99) goes to edge and next; new value (7) is stored.
-	if gotEdge != 99 {
-		t.Errorf("ToEdge: expected 99, got %d", gotEdge)
+	if got0 != 99 {
+		t.Errorf("ToNext[0]: expected 99, got %d", got0)
 	}
-	if gotNext != 99 {
-		t.Errorf("ToNextChainInhibitorNode: expected 99, got %d", gotNext)
-	}
-	if gotRG != 1 {
-		t.Errorf("ToReadGate: expected 1, got %d", gotRG)
+	if got1 != 99 {
+		t.Errorf("ToNext[1]: expected 99, got %d", got1)
 	}
 	if node.HeldValue != 7 {
 		t.Errorf("HeldValue after fire: expected 7, got %d", node.HeldValue)

@@ -5,9 +5,7 @@
 | Name | Direction | Element type | Cardinality | TSX handle | Side |
 |------|-----------|--------------|-------------|------------|------|
 | FromPrevChainInhibitorNode | in | int | single | FromPrevChainInhibitorNode | left |
-| ToNextChainInhibitorNode | out | int | single | ToNextChainInhibitorNode | right |
-| ToReadGate | out | int | single | ToReadGate | right |
-| ToEdge | out | int | fan-out | ToEdge | right |
+| ToNext | out | int | fan-out | ToNext | right |
 
 ## Non-channel fields
 
@@ -19,12 +17,10 @@
 
 Block until a value arrives on FromPrevChainInhibitorNode. On each arrival:
 
-1. Emit HeldValue on every channel in ToEdge (fan-out).
-2. Emit HeldValue on ToNextChainInhibitorNode.
-3. Update HeldValue = incoming value.
-4. Emit 1 on ToReadGate.
+1. Emit HeldValue on every channel in ToNext (fan-out).
+2. Update HeldValue = incoming value.
 
-HeldValue is the previously-held value; ToEdge receivers get the old value. ToNextChainInhibitorNode propagates the old value down the inhibitor chain. ToReadGate signals completion.
+HeldValue is the previously-held value. All ToNext receivers get the old value. Destinations include downstream ChainInhibitor nodes, edge-gate inputs, and the ReadGate pacing port — all wired as entries in the ToNext fanout slice.
 
 ## View
 

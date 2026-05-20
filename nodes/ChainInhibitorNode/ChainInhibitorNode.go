@@ -11,14 +11,12 @@ type ChainInhibitorNode struct {
 	Id         int
 	Name       string
 	HeldValue  int
-	FromPrevChainInhibitorNode   <-chan int
-	ToNextChainInhibitorNode     chan<- int
-	ToReadGate chan<- int
-	ToEdge     []chan<- int
+	FromPrevChainInhibitorNode <-chan int
+	ToNext                     []chan<- int
 }
 
-func NewChainInhibitorNode(id int, fromPrev <-chan int, toNext chan<- int) ChainInhibitorNode {
-	return ChainInhibitorNode{Id: id, HeldValue: 0, FromPrevChainInhibitorNode: fromPrev, ToNextChainInhibitorNode: toNext}
+func NewChainInhibitorNode(id int, fromPrev <-chan int) ChainInhibitorNode {
+	return ChainInhibitorNode{Id: id, HeldValue: 0, FromPrevChainInhibitorNode: fromPrev}
 }
 
 func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
@@ -35,15 +33,11 @@ func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 			s.Trace.Recv(in.Name, "FromPrevChainInhibitorNode", value)
 			fmt.Printf("%s: received %d (old=%d)\n", in.Name, value, in.HeldValue)
 			s.Trace.Fire(in.Name)
-			for _, ch := range in.ToEdge {
+			for _, ch := range in.ToNext {
 				S.Send(ch, in.HeldValue)
-				s.Trace.Send(in.Name, "ToEdge", in.HeldValue)
+				s.Trace.Send(in.Name, "ToNext", in.HeldValue)
 			}
-			S.Send(in.ToNextChainInhibitorNode, in.HeldValue)
-			s.Trace.Send(in.Name, "ToNextChainInhibitorNode", in.HeldValue)
 			in.HeldValue = value
-			S.Send(in.ToReadGate, 1)
-			s.Trace.Send(in.Name, "ToReadGate", 1)
 		default:
 		}
 	}
@@ -56,8 +50,8 @@ func populateChainInhibitor(id int, name string, data *Wiring.NodeData, node any
 			n.HeldValue = v
 		}
 	}
-	if len(n.ToEdge) == 0 {
-		n.ToEdge = []chan<- int{make(chan int, 1)}
+	if len(n.ToNext) == 0 {
+		n.ToNext = []chan<- int{make(chan int, 1)}
 	}
 }
 

@@ -15,7 +15,7 @@ Buffer one value from each input independently. When both FromInput and FromChai
 - Emit the buffered value from FromInput on ToChainInhibitor.
 - Clear both buffers.
 
-The chain-inhibitor signal gates passage of the value; its own value is not used — only its arrival matters.
+The chain-inhibitor signal gates passage of the value; its own value is not used — only its arrival matters. The signal carries the held int emitted by ChainInhibitor's ToNext fanout (not a constant).
 
 ## View
 
