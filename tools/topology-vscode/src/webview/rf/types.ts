@@ -1,0 +1,59 @@
+// Typed data payloads for React Flow nodes and edges produced by spec-to-flow.
+// These mirror Spec.Node / Spec.Edge fields plus viewer-only and adapter fields.
+// Consumers still read from Zustand; this file is schema-only.
+
+import type { ArrowStyle, EdgeKind, Port, StateValue } from "../../schema/types";
+import type { NodeSpec } from "../../schema/types-graph";
+
+// Per-node data carried in RF Node<NodeData>.data.
+export interface NodeData {
+  // --- Spec.Node fields ---
+  type: string;
+  index?: number;
+  props?: Record<string, StateValue>;
+  spec?: NodeSpec;
+  notes?: string;
+  /** Raw Spec.Node.data — carried verbatim for round-trip. */
+  nodeData?: unknown;
+  inputs: Port[];
+  outputs: Port[];
+  initialSlots?: Record<string, StateValue>;
+
+  // --- Viewer-only fields (from NodeView / store) ---
+  x?: number;
+  y?: number;
+  sublabel?: string;
+  foldId?: string;
+  dimmed?: boolean;
+  state?: Record<string, StateValue>;
+
+  // --- Adapter convenience fields ---
+  label: string;
+  fill: string;
+  stroke: string;
+  shape: "rect" | "pill";
+  width: number;
+  height: number;
+}
+
+// Per-edge data carried in RF Edge<EdgeData>.data.
+// RF-native fields (id, source, sourceHandle, target, targetHandle) live on
+// the RF edge itself and are NOT duplicated here — except sourceHandle /
+// targetHandle are also stored in data for round-trip when endpoints are
+// rerouted through a fold placeholder.
+export interface EdgeData {
+  kind: EdgeKind;
+  label?: string;
+  valueLabel?: string;
+  lane?: number;
+  arrowStyle?: ArrowStyle;
+  /** Raw Spec.Edge.data — carried verbatim for round-trip. */
+  edgeData?: unknown;
+  concurrent?: boolean;
+  route?: string;
+  value?: unknown;
+  /** Original sourceHandle before any fold rerouting. */
+  sourceHandle?: string;
+  /** Original targetHandle before any fold rerouting. */
+  targetHandle?: string;
+}

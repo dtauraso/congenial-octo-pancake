@@ -2,6 +2,7 @@ import type { Edge as RFEdge, Node as RFNode } from "reactflow";
 import { KIND_COLORS, NODE_TYPES, type Node as SpecNode, type Spec } from "../../../schema";
 import type { Fold, ViewerState } from "../../state/viewer/types";
 import { COLLAPSED_FOLD_W, COLLAPSED_FOLD_H, expandedBounds } from "./_bounds";
+import type { NodeData, EdgeData } from "../types";
 
 const RF_NODE_TYPE_MAP: Record<string, string> = { Input: "input", Relay: "relay", Join: "join", ReadGate: "readGate", ReadLatch: "readLatch", Partition: "partition", EdgeNode: "edgeNode", Inhibitor: "inhibitor", ChainInhibitor: "chainInhibitor", EdgeInhibitor: "edgeInhibitor", InhibitRightGate: "inhibitRightGate", SyncGate: "syncGate", StreakDetector: "streakDetector", StreakBreakDetector: "streakBreakDetector", TransferInhibitor: "transferInhibitor" };
 
@@ -15,7 +16,7 @@ export function specToFlow(
   spec: Spec,
   folds: Fold[] = [],
   vs: Pick<ViewerState, "nodes" | "edges"> = {},
-): { nodes: RFNode[]; edges: RFEdge[] } {
+): { nodes: RFNode<NodeData>[]; edges: RFEdge<EdgeData>[] } {
   // Map memberId → containing collapsed fold id. Nested folds are not
   // supported here; if a node appears in multiple collapsed folds, the first
   // wins (the plan flags nested folds as needing manual coordination).
@@ -69,7 +70,7 @@ export function specToFlow(
     };
   });
 
-  const memberNodes: RFNode[] = spec.nodes
+  const memberNodes: RFNode<NodeData>[] = spec.nodes
     .filter((n) => !collapsedFoldFor.has(n.id))
     .map((n) => {
     const def = NODE_TYPES[n.type];
@@ -83,6 +84,8 @@ export function specToFlow(
       data: {
         label: n.id,
         sublabel: nv?.sublabel,
+        x: nv?.x,
+        y: nv?.y,
         type: n.type,
         fill: def?.fill ?? "#ffffff",
         stroke: def?.stroke ?? "#888",
@@ -102,11 +105,13 @@ export function specToFlow(
         // {init: [...]}, future node types may use it for other handler
         // config. flow-to-spec puts it back.
         nodeData: n.data,
+        initialSlots: n.initialSlots,
+        index: n.index,
       },
     };
   });
 
-  const edges: RFEdge[] = [];
+  const edges: RFEdge<EdgeData>[] = [];
   for (const e of spec.edges) {
     const srcFold = collapsedFoldFor.get(e.source);
     const dstFold = collapsedFoldFor.get(e.target);
@@ -147,6 +152,7 @@ export function specToFlow(
         // the editor would silently strip backpressure /
         // delay configuration from the spec.
         edgeData: e.data,
+        concurrent: e.concurrent,
       },
     });
   }
