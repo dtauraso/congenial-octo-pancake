@@ -28,6 +28,15 @@ export function specToFlow(
     }
   }
 
+  // Map memberId → containing fold id (all folds, collapsed or expanded).
+  // First-wins precedence matches collapsedFoldFor above.
+  const foldOf = new Map<string, string>();
+  for (const f of folds) {
+    for (const m of f.memberIds) {
+      if (!foldOf.has(m)) foldOf.set(m, f.id);
+    }
+  }
+
   const nodeById = new Map<string, SpecNode>();
   for (const n of spec.nodes) nodeById.set(n.id, n);
 
@@ -107,6 +116,7 @@ export function specToFlow(
         nodeData: n.data,
         initialSlots: n.initialSlots,
         index: n.index,
+        foldId: foldOf.get(n.id),
       },
     };
   });
