@@ -25,7 +25,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
   Input: {
     role: "input",
     inputs: [],
-    outputs: [{ name: "ToOut", kind: "chain" }],
+    outputs: [{ name: "ToReadGate", kind: "chain" }],
     shape: "rect", fill: "#e0e0e0", stroke: "#666", width: 80, height: 60,
   },
   ReadGate: {
@@ -36,10 +36,10 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
   },
   ChainInhibitor: {
     role: "inhibitor",
-    inputs: [{ name: "FromPrev", kind: "chain" }],
+    inputs: [{ name: "FromPrevChainInhibitorNode", kind: "chain" }],
     outputs: [
       { name: "ToEdge", kind: "inhibit-in" },
-      { name: "ToNext", kind: "chain" },
+      { name: "ToNextChainInhibitorNode", kind: "chain" },
     ],
     shape: "rect", fill: "#fff3e0", stroke: "#e65100", width: 90, height: 60,
   },

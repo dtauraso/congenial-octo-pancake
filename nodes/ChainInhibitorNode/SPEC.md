@@ -4,8 +4,8 @@
 
 | Name | Direction | Element type | Cardinality | TSX handle | Side |
 |------|-----------|--------------|-------------|------------|------|
-| FromPrev | in | int | single | FromPrev | left |
-| ToNext | out | int | single | ToNext | right |
+| FromPrevChainInhibitorNode | in | int | single | FromPrevChainInhibitorNode | left |
+| ToNextChainInhibitorNode | out | int | single | ToNextChainInhibitorNode | right |
 | ToReadGate | out | int | single | ToReadGate | right |
 | ToEdge | out | int | fan-out | ToEdge | right |
 | ToEdgeNew | out | int | fan-out | ToEdgeNew | right |
@@ -18,15 +18,15 @@
 
 ## Firing rule
 
-Block until a value arrives on FromPrev. On each arrival:
+Block until a value arrives on FromPrevChainInhibitorNode. On each arrival:
 
 1. Emit HeldValue on every channel in ToEdge (fan-out).
 2. Emit the incoming value on every channel in ToEdgeNew (fan-out).
-3. Emit HeldValue on ToNext.
+3. Emit HeldValue on ToNextChainInhibitorNode.
 4. Update HeldValue = incoming value.
 5. Emit 1 on ToReadGate.
 
-HeldValue is the previously-held value; ToEdge receivers get the old value, ToEdgeNew receivers get the new value. ToNext propagates the old value down the inhibitor chain. ToReadGate signals completion.
+HeldValue is the previously-held value; ToEdge receivers get the old value, ToEdgeNew receivers get the new value. ToNextChainInhibitorNode propagates the old value down the inhibitor chain. ToReadGate signals completion.
 
 ## View
 
@@ -48,4 +48,4 @@ HeldValue is the previously-held value; ToEdge receivers get the old value, ToEd
 
 ## Open questions
 
-- TSX only renders `ToEdge` and `ToNext` handles; `ToEdgeNew` and `ToReadGate` are absent from the current render. Port manifest and Go struct include all four outputs.
+- TSX only renders `ToEdge` and `ToNextChainInhibitorNode` handles; `ToEdgeNew` and `ToReadGate` are absent from the current render. Port manifest and Go struct include all four outputs.

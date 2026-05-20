@@ -4,11 +4,11 @@
 
 | Name | Direction | Element type | Cardinality | TSX handle | Side |
 |------|-----------|--------------|-------------|------------|------|
-| ToNext | out | int | single | ToOut | right |
+| ToReadGate | out | int | single | ToReadGate | right |
 
 ## Firing rule
 
-On each Update call: iterate through `Init` slice by index. For each value, attempt a non-blocking send on ToNext. On success, advance the index. Exits when all values have been sent or context is cancelled.
+On each Update call: iterate through `Init` slice by index. For each value, attempt a non-blocking send on ToReadGate. On success, advance the index. Exits when all values have been sent or context is cancelled.
 
 ## View
 
@@ -30,4 +30,4 @@ On each Update call: iterate through `Init` slice by index. For each value, atte
 
 ## Open questions
 
-- TSX handle id is `ToOut`; Go struct field is `ToNext`. These should be reconciled (handle id should match field name per the post-fix-5 convention).
+- TSX handle id and Go struct field are now both `ToReadGate` (reconciled per post-fix-5 convention).

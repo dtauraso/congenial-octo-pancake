@@ -6,9 +6,9 @@
 // tools/topology-vscode/test/fixtures/chain-inhibitor.trace.jsonl.
 //
 // Multi-output node: one slot for ToEdge (inhibitOut) and one slot
-// for ToEdgeNew (readNew), plus the always-present ToNext (out) and
+// for ToEdgeNew (readNew), plus the always-present ToNextChainInhibitorNode (out) and
 // ToReadGate. Send order in the Go node is ToEdge → ToEdgeNew →
-// ToNext → ToReadGate; the fixture pins that same order.
+// ToNextChainInhibitorNode → ToReadGate; the fixture pins that same order.
 
 package Trace_test
 
@@ -56,7 +56,7 @@ func TestParity_FixtureMatch_ChainInhibitor(t *testing.T) {
 	em := BuildEdgeMap([]EdgeLite{
 		{ID: "ciInhibit", SourceNode: "ci", SourceHandle: "ToEdge"},
 		{ID: "ciReadNew", SourceNode: "ci", SourceHandle: "readNew"},
-		{ID: "ciOut", SourceNode: "ci", SourceHandle: "ToNext"},
+		{ID: "ciOut", SourceNode: "ci", SourceHandle: "ToNextChainInhibitorNode"},
 		{ID: "ciAck", SourceNode: "ci", SourceHandle: "ToReadGate"},
 	})
 
@@ -71,10 +71,10 @@ func TestParity_FixtureMatch_ChainInhibitor(t *testing.T) {
 	ci := CI.ChainInhibitorNode{
 		Name:      "ci",
 		HeldValue: 0,
-		FromPrev:  fromPrev,
+		FromPrevChainInhibitorNode:  fromPrev,
 		ToEdge:    []chan<- int{toEdge},
 		ToEdgeNew: []chan<- int{toEdgeNew},
-		ToNext:    toNext,
+		ToNextChainInhibitorNode:    toNext,
 		ToReadGate: toAck,
 	}
 

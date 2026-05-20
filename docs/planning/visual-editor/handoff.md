@@ -60,7 +60,7 @@ handoff.md is exempt from the 100-LOC budget.
   `Init: []int{0,1,0}`.
 - Trace fixture-parity tests fixed: itoaSigned helpers re-added to
   ReadGate/InhibitRightGate tests; port-name mismatches corrected
-  (in→FromPrev, left/right→FromLeft/FromRight, SourceHandle renames).
+  (in→FromPrevChainInhibitorNode, left/right→FromLeft/FromRight, SourceHandle renames).
 - go.mod bumped to `go 1.23.0` (gopls minimum); CLAUDE.md updated.
   govulncheck ran clean.
 - New planning doc: docs/planning/visual-editor/line-go-relocation.md

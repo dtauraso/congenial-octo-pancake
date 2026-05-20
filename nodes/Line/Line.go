@@ -20,7 +20,7 @@ func (l *Line) Setup() {
 	inputNodeToReadGate := make(chan int, 1)
 	i1ToReadGate := make(chan int, 1)
 	readGateToI0 := make(chan int, 1)
-	inputNode := INN.InputNode{Id: 0, Init: []int{0, 1, 0}, ToNext: inputNodeToReadGate}
+	inputNode := INN.InputNode{Id: 0, Init: []int{0, 1, 0}, ToReadGate: inputNodeToReadGate}
 
 	// Prime ack so first input flows through
 	i1ToReadGate <- 1

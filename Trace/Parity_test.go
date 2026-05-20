@@ -47,7 +47,7 @@ func TestParity_InputThroughChainInhibitor(t *testing.T) {
 	// dead-end channels. The resolver should drop sends on those
 	// dead-end ports because they have no spec edge.
 	edges := []EdgeLite{
-		{ID: "inToCi", SourceNode: "in", SourceHandle: "ToOut"},
+		{ID: "inToCi", SourceNode: "in", SourceHandle: "ToReadGate"},
 	}
 	em := BuildEdgeMap(edges)
 
@@ -58,8 +58,8 @@ func TestParity_InputThroughChainInhibitor(t *testing.T) {
 	ciAck := make(chan int, 1)
 	ciOut := make(chan int, 1)
 
-	in := INN.InputNode{Id: 0, Name: "in", Init: []int{7}, ToNext: inToCi}
-	ci := CI.ChainInhibitorNode{Id: 0, Name: "ci", FromPrev: inToCi, ToReadGate: ciAck, ToNext: ciOut}
+	in := INN.InputNode{Id: 0, Name: "in", Init: []int{7}, ToReadGate: inToCi}
+	ci := CI.ChainInhibitorNode{Id: 0, Name: "ci", FromPrevChainInhibitorNode: inToCi, ToReadGate: ciAck, ToNextChainInhibitorNode: ciOut}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)
@@ -101,13 +101,13 @@ func TestParity_InputThroughChainInhibitor(t *testing.T) {
 	//   fire:ci
 	// The Go scheduler's interleaving determines whether "fire:in"
 	// happens before "recv:ci/in" — they could in principle land in
-	// either order around the ToNext send. Assert as a *set* of
+	// either order around the ToNextChainInhibitorNode send. Assert as a *set* of
 	// expected projections plus a per-node ordering check, not a
 	// strict global sequence.
 	want := map[string]int{
 		"fire:in":       1,
 		"send:inToCi=7": 1,
-		"recv:ci/FromPrev=7": 1,
+		"recv:ci/FromPrevChainInhibitorNode=7": 1,
 		"fire:ci":         1,
 	}
 	gotCount := map[string]int{}

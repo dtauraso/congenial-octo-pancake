@@ -54,7 +54,7 @@
       },
       "inputs": [
         {
-          "name": "FromPrev",
+          "name": "FromPrevChainInhibitorNode",
           "kind": "chain",
           "side": "left",
           "slot": 1
@@ -68,7 +68,7 @@
           "slot": 1
         },
         {
-          "name": "ToNext",
+          "name": "ToNextChainInhibitorNode",
           "kind": "chain",
           "side": "right",
           "slot": 1
@@ -85,7 +85,7 @@
       },
       "inputs": [
         {
-          "name": "FromPrev",
+          "name": "FromPrevChainInhibitorNode",
           "kind": "chain",
           "side": "left",
           "slot": 1
@@ -99,7 +99,7 @@
           "slot": 1
         },
         {
-          "name": "ToNext",
+          "name": "ToNextChainInhibitorNode",
           "kind": "chain",
           "side": "bottom",
           "slot": 1
@@ -167,7 +167,7 @@
       "source": "readGate1",
       "sourceHandle": "ToChainInhibitor",
       "target": "i0",
-      "targetHandle": "FromPrev",
+      "targetHandle": "FromPrevChainInhibitorNode",
       "kind": "chain",
       "label": "readGate1ToI0",
       "data": {
@@ -177,9 +177,9 @@
     {
       "id": "i0ToI1",
       "source": "i0",
-      "sourceHandle": "ToNext",
+      "sourceHandle": "ToNextChainInhibitorNode",
       "target": "i1",
-      "targetHandle": "FromPrev",
+      "targetHandle": "FromPrevChainInhibitorNode",
       "kind": "chain",
       "label": "i0ToI1",
       "data": {
@@ -214,7 +214,7 @@
     {
       "id": "i1ToReadGate1",
       "source": "i1",
-      "sourceHandle": "ToNext",
+      "sourceHandle": "ToNextChainInhibitorNode",
       "target": "readGate1",
       "targetHandle": "FromChainInhibitor",
       "kind": "chain",

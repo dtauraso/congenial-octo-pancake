@@ -92,8 +92,8 @@ func TestEndToEnd_InputThroughChainInhibitor(t *testing.T) {
 	ciAck := make(chan int, 1)
 	ciOut := make(chan int, 1)
 
-	in := INN.InputNode{Id: 0, Name: "in", Init: []int{7}, ToNext: inToCi}
-	ci := CI.ChainInhibitorNode{Id: 0, Name: "ci", FromPrev: inToCi, ToReadGate: ciAck, ToNext: ciOut}
+	in := INN.InputNode{Id: 0, Name: "in", Init: []int{7}, ToReadGate: inToCi}
+	ci := CI.ChainInhibitorNode{Id: 0, Name: "ci", FromPrevChainInhibitorNode: inToCi, ToReadGate: ciAck, ToNextChainInhibitorNode: ciOut}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)
@@ -102,15 +102,15 @@ func TestEndToEnd_InputThroughChainInhibitor(t *testing.T) {
 	go in.Update(&s)
 	go ci.Update(&s)
 
-	// Wait until ci has emitted on ToNext (its ack is buffered, but
-	// ToNext is the observable end of one full pipeline pass) or 200ms,
+	// Wait until ci has emitted on ToNextChainInhibitorNode (its ack is buffered, but
+	// ToNextChainInhibitorNode is the observable end of one full pipeline pass) or 200ms,
 	// whichever comes first. 200ms is far longer than this fixture
 	// needs and keeps the test from hanging if anything is wrong.
 	deadline := time.After(200 * time.Millisecond)
 	select {
 	case <-ciOut:
 	case <-deadline:
-		t.Fatal("ci.ToNext never received the held value")
+		t.Fatal("ci.ToNextChainInhibitorNode never received the held value")
 	}
 	cancel()
 	wg.Wait()

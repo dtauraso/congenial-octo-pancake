@@ -52,9 +52,9 @@ Worth scrutinizing before the audit table is filled:
 
 | Kind | Ports (in → out) | Firing rule (one line) | Usages | Overlap | Decision |
 |------|------------------|------------------------|--------|---------|----------|
-| Input | 0 → 1 (ToNext) | Poll init queue; forward once; clear on send. | topology: 2; docs: 1 | — | ✅ **keep** — source node. |
+| Input | 0 → 1 (ToReadGate) | Poll init queue; forward once; clear on send. | topology: 2; docs: 1 | — | ✅ **keep** — source node. |
 | ReadGate | 2 → 1 (value+inhibitor / gated) | Buffer both; emit value when both arrive. | topology: 1; docs: 1 | SyncGate, Join | ✅ **keep**. |
-| ChainInhibitor | 1 → 4 (prev / next+edge+new+ack) | Block on prev; emit old to ToEdge/ToNext, new to ToEdgeNew, 1 to ToReadGate. | topology: 2; docs: 2 | Inhibitor | ✅ **keep** — superset; fan-out + ack. |
+| ChainInhibitor | 1 → 4 (prev / next+edge+new+ack) | Block on prev; emit old to ToEdge/ToNextChainInhibitorNode, new to ToEdgeNew, 1 to ToReadGate. | topology: 2; docs: 2 | Inhibitor | ✅ **keep** — superset; fan-out + ack. |
 | InhibitRightGate | 2 → 1 (left+right / passed) | Emit 1 if left==1 AND right==0. | topology: 1; docs: 1 | AndGate | ✅ **keep**. |
 
 ## Findings (haiku sweep, 2026-05-19)
@@ -87,7 +87,7 @@ type InputNode struct {
 	Id     int
 	Name   string
 	Init   []int
-	ToNext chan<- int
+	ToReadGate chan<- int
 }
 ```
 
@@ -96,16 +96,16 @@ Update body uses a local index:
 ```go
 for i := 0; i < len(n.Init); {
     select {
-    case n.ToNext <- n.Init[i]:
+    case n.ToReadGate <- n.Init[i]:
         i++
     }
 }
 ```
 
 - **Inputs:** none — source node; no inbound channel
-- **Outputs:** `ToNext chan<- int` — forwards each value downstream
+- **Outputs:** `ToReadGate chan<- int` — forwards each value downstream
 - **State:** `Init []int` (seed sequence); no index field — local index iterates Init inside `Update`
-- **Firing rule:** local index iterates `Init`; blocking send each `Init[i]` to `ToNext`; goroutine exits when index reaches `len(Init)` (drained)
+- **Firing rule:** local index iterates `Init`; blocking send each `Init[i]` to `ToReadGate`; goroutine exits when index reaches `len(Init)` (drained)
 - **Populate:** `populateInput` copies `data.Init` directly into the `Init` slice; no chan allocation
 
 #### RF (node-defs entry)
@@ -119,18 +119,18 @@ input: {
   accent: "#3fb950",
   minWidth: 90,
   sources: [
-    { id: "ToOut" },
+    { id: "ToReadGate" },
   ],
   displays: ["queue", "repeat"],
 },
 ```
 
 - **Visual:** label `"input"`, accent `#3fb950`, minWidth 90
-- **Handles:** targets [], sources [`ToOut`]
+- **Handles:** targets [], sources [`ToReadGate`]
 - **Displays:** `["queue", "repeat"]`
 
 #### Drift
-- RF handle id `ToOut` vs Go field `ToNext` (mismatch still present post-redesign)
+- RF handle id and Go field are both `ToReadGate` (reconciled).
 
 ---
 
@@ -196,18 +196,18 @@ type ChainInhibitorNode struct {
 	Id         int
 	Name       string
 	HeldValue  int
-	FromPrev   <-chan int
-	ToNext     chan<- int
+	FromPrevChainInhibitorNode   <-chan int
+	ToNextChainInhibitorNode     chan<- int
 	ToReadGate      chan<- int
 	ToEdge     []chan<- int
 	ToEdgeNew  []chan<- int
 }
 ```
 
-- **Inputs:** `FromPrev <-chan int` — incoming value to hold
-- **Outputs:** `ToNext chan<- int`, `ToReadGate chan<- int`, `ToEdge []chan<- int` — old value fan-out, `ToEdgeNew []chan<- int` — new value fan-out
+- **Inputs:** `FromPrevChainInhibitorNode <-chan int` — incoming value to hold
+- **Outputs:** `ToNextChainInhibitorNode chan<- int`, `ToReadGate chan<- int`, `ToEdge []chan<- int` — old value fan-out, `ToEdgeNew []chan<- int` — new value fan-out
 - **State:** `HeldValue int`
-- **Firing rule:** blocking receive on `FromPrev`; emit old `HeldValue` to all `ToEdge` and `ToNext`, new value to all `ToEdgeNew`, ack 1 to `ToReadGate`, then update `HeldValue`
+- **Firing rule:** blocking receive on `FromPrevChainInhibitorNode`; emit old `HeldValue` to all `ToEdge` and `ToNextChainInhibitorNode`, new value to all `ToEdgeNew`, ack 1 to `ToReadGate`, then update `HeldValue`
 - **Populate:** `populateChainInhibitor` seeds `HeldValue` from `data.InitialSlots["held"]`; ensures `ToEdge` has at least one channel
 
 #### RF (node-defs entry)
@@ -221,10 +221,10 @@ chainInhibitor: {
   accent: "#e65100",
   minWidth: 90,
   targets: [
-    { id: "FromPrev" },
+    { id: "FromPrevChainInhibitorNode" },
   ],
   sources: [
-    { id: "ToNext" },
+    { id: "ToNextChainInhibitorNode" },
     { id: "ToReadGate" },
     { id: "ToEdge" },
     { id: "ToEdgeNew" },
@@ -234,7 +234,7 @@ chainInhibitor: {
 ```
 
 - **Visual:** label `"chainInhibitor"`, accent `#e65100`, minWidth 90
-- **Handles:** targets [`FromPrev`], sources [`ToNext`, `ToReadGate`, `ToEdge`, `ToEdgeNew`]
+- **Handles:** targets [`FromPrevChainInhibitorNode`], sources [`ToNextChainInhibitorNode`, `ToReadGate`, `ToEdge`, `ToEdgeNew`]
 - **Displays:** `["held"]`
 
 #### Drift

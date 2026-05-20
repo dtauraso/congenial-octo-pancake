@@ -11,15 +11,15 @@ type ChainInhibitorNode struct {
 	Id         int
 	Name       string
 	HeldValue  int
-	FromPrev   <-chan int
-	ToNext     chan<- int
+	FromPrevChainInhibitorNode   <-chan int
+	ToNextChainInhibitorNode     chan<- int
 	ToReadGate chan<- int
 	ToEdge     []chan<- int
 	ToEdgeNew  []chan<- int
 }
 
 func NewChainInhibitorNode(id int, fromPrev <-chan int, toNext chan<- int) ChainInhibitorNode {
-	return ChainInhibitorNode{Id: id, HeldValue: 0, FromPrev: fromPrev, ToNext: toNext}
+	return ChainInhibitorNode{Id: id, HeldValue: 0, FromPrevChainInhibitorNode: fromPrev, ToNextChainInhibitorNode: toNext}
 }
 
 func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
@@ -32,8 +32,8 @@ func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 		}
 
 		select {
-		case value := <-in.FromPrev:
-			s.Trace.Recv(in.Name, "FromPrev", value)
+		case value := <-in.FromPrevChainInhibitorNode:
+			s.Trace.Recv(in.Name, "FromPrevChainInhibitorNode", value)
 			fmt.Printf("%s: received %d (old=%d)\n", in.Name, value, in.HeldValue)
 			s.Trace.Fire(in.Name)
 			for _, ch := range in.ToEdge {
@@ -44,8 +44,8 @@ func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 				S.Send(ch, value)
 				s.Trace.Send(in.Name, "readNew", value)
 			}
-			S.Send(in.ToNext, in.HeldValue)
-			s.Trace.Send(in.Name, "ToNext", in.HeldValue)
+			S.Send(in.ToNextChainInhibitorNode, in.HeldValue)
+			s.Trace.Send(in.Name, "ToNextChainInhibitorNode", in.HeldValue)
 			in.HeldValue = value
 			S.Send(in.ToReadGate, 1)
 			s.Trace.Send(in.Name, "ToReadGate", 1)

@@ -9,7 +9,7 @@ type InputNode struct {
 	Id     int
 	Name   string
 	Init   []int
-	ToNext chan<- int
+	ToReadGate chan<- int
 }
 
 func (n *InputNode) Update(s *S.SafeWorker) {
@@ -21,9 +21,9 @@ func (n *InputNode) Update(s *S.SafeWorker) {
 		default:
 		}
 		select {
-		case n.ToNext <- n.Init[i]:
+		case n.ToReadGate <- n.Init[i]:
 			s.Trace.Fire(n.Name)
-			s.Trace.Send(n.Name, "ToOut", n.Init[i])
+			s.Trace.Send(n.Name, "ToReadGate", n.Init[i])
 			i++
 		default:
 		}

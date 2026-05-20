@@ -1,6 +1,6 @@
 // Phase 8 Chunk 10 — InputNode cross-language fixture parity.
 //
-// Source node: emits values from Init slice to ToNext.
+// Source node: emits values from Init slice to ToReadGate.
 // Trace order per value is fire → send(out).
 // Fixture pins three values (0, 1, 0) mirroring Wiring.go's seed.
 
@@ -48,14 +48,14 @@ func TestParity_FixtureMatch_InputNode(t *testing.T) {
 	}
 
 	em := BuildEdgeMap([]EdgeLite{
-		{ID: "in0Out", SourceNode: "in0", SourceHandle: "ToOut"},
+		{ID: "in0Out", SourceNode: "in0", SourceHandle: "ToReadGate"},
 	})
 
 	tr := New(64)
 
 	toNext := make(chan int, 3)
 
-	in := INN.InputNode{Name: "in0", Init: []int{0, 1, 0}, ToNext: toNext}
+	in := INN.InputNode{Name: "in0", Init: []int{0, 1, 0}, ToReadGate: toNext}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)

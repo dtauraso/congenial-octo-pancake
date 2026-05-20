@@ -29,7 +29,7 @@
       "source": "readGate",
       "sourceHandle": "ToChainInhibitor",
       "target": "i0",
-      "targetHandle": "FromPrev",
+      "targetHandle": "FromPrevChainInhibitorNode",
       "kind": "chain",
       "data": { "delay": 2, "init": [1] }
     }
