@@ -9,9 +9,9 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-20, kind-audit-consolidation complete)
+## State at handoff (2026-05-20, post port-rename pass)
 
-**Active branch:** `task/kind-audit-consolidation` at `HEAD` (post d70025a). Off
+**Active branch:** `task/kind-audit-consolidation` at `7bbcefd`. Off
 `task/spec-phase2-generic-renderer` (NOT yet merged to `main`).
 
 ### Branches in flight
@@ -45,6 +45,7 @@ handoff.md is exempt from the 100-LOC budget.
 
 ### What landed this session
 
+Prior commits (before this session's port-rename pass):
 - Five more kinds deleted: SyncGate, AndGate, EdgeNode, Partition
   (user override of audit keep), plus earlier deletions of
   TransferInhibitor / StreakDetector / StreakBreakDetector / ReadLatch.
@@ -65,6 +66,28 @@ handoff.md is exempt from the 100-LOC budget.
   govulncheck ran clean.
 - New planning doc: docs/planning/visual-editor/line-go-relocation.md
   (parked; see item 7 in Parked follow-ups).
+
+Port-rename pass (this session, 4 commits through `7bbcefd`):
+- **ReadGate** (`bbd4aed`): `FromValue→FromInput`, `FromAck→FromChainInhibitor`
+  (`HasAck→HasChainInhibitor`), `ToGated→ToChainInhibitor`. Removed dead
+  `AckVal` field.
+- **ChainInhibitor** (`508016f`): `ToAck→ToReadGate` (trace label
+  `"ack"→"ToReadGate"`).
+- **ChainInhibitor + InputNode** (`c0add90`): `FromPrev→FromPrevChainInhibitorNode`,
+  `ToNext→ToNextChainInhibitorNode` (ChainInhibitor); `ToNext→ToReadGate`
+  (InputNode). Rename rule: disambiguate names that appear in
+  kind-agnostic surfaces (topology.json, fixtures, traces) or collide
+  across kinds.
+- **ChainInhibitor** (`7bbcefd`): deleted dead `ToEdgeNew` port — no live
+  consumer; the "new" value reaches any subscriber's source via
+  `FromPrevChainInhibitorNode` already.
+
+Rationale worth preserving: the "ack" back-edge from ChainInhibitor to
+ReadGate is not an ack — it is round-close pacing: it gates input
+admission so the topology completes a round before the next value is
+read. MODEL.md names round-close as a substrate concept; the current
+hand-wired back-edge is a stand-in until proper round-close machinery
+lands.
 
 ## Adding a kind (3 files, post-phase-2)
 
