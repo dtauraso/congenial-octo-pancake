@@ -87,11 +87,11 @@ func TestParity_FixtureMatch_InhibitRightGate(t *testing.T) {
 	project := func(kind, node, port, edge string, value int) string {
 		switch kind {
 		case "recv":
-			return "recv:" + node + "/" + port + "=" + itoaSigned(value)
+			return "recv:" + node + "/" + port + "=" + itoaSignedIRG(value)
 		case "fire":
 			return "fire:" + node
 		case "send":
-			return "send:" + edge + "=" + itoaSigned(value)
+			return "send:" + edge + "=" + itoaSignedIRG(value)
 		}
 		return ""
 	}
@@ -145,4 +145,26 @@ func TestParity_FixtureMatch_InhibitRightGate(t *testing.T) {
 	if ps := per["irg"]; ps == nil || !(ps.recv < ps.fire && ps.fire < ps.send) {
 		t.Errorf("irg: per-node order broken: %+v", ps)
 	}
+}
+
+func itoaSignedIRG(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	neg := n < 0
+	if neg {
+		n = -n
+	}
+	var buf [20]byte
+	i := len(buf)
+	for n > 0 {
+		i--
+		buf[i] = byte('0' + n%10)
+		n /= 10
+	}
+	if neg {
+		i--
+		buf[i] = '-'
+	}
+	return string(buf[i:])
 }
