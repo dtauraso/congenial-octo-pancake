@@ -245,7 +245,12 @@
 <!-- ===== PHASE 4 ===== -->
 <div id="tab-p4" class="tab-content">
   <h2>Phase 4 &mdash; Codegen / Go handshake</h2>
-  <div class="goal">Simplify topology.json to RF's native shape; topogen reads RF state. Run button calls the Go runtime; the editor visualizes the trace stream Go emits. Go is the reference — TS simulation is display-only and may drift.</div>
+  <div class="goal">Simplify topology.json to RF's native shape; topogen reads RF state. Run button calls the Go runtime; the editor visualizes the trace stream Go emits. Go is the reference &mdash; TS simulation is display-only and may drift.</div>
+
+  <div class="callout">
+    <div class="callout-title">The pump is a translator, not a substrate</div>
+    RF does not read Go output directly. A thin TS module (<code>rf/pump.ts</code> or similar) listens for Go trace events and translates each one into an RF state update: <code>edge.data.pulse = {value, simTime}</code>, <code>node.data.lastFire = simTime</code>, etc. RF custom nodes/edges read that state and animate. The pump must contain zero substrate logic &mdash; no slot phase tracking, no backpressure, no fire scheduling. If the pump grows a state machine, it is becoming substrate-r v2; stop and route that logic into Go instead.
+  </div>
 
   <div class="section-label">Steps</div>
   <ul>
