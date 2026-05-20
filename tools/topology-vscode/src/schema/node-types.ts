@@ -16,7 +16,6 @@ import type { NodeTypeDef } from "./types-graph";
 // with spec.ts; toRNodeKind enforces the lowercase form at runtime.
 export const RUNTIME_IMPLEMENTED_KINDS: ReadonlySet<string> = new Set([
   "Input",
-  "Join",
   "ReadGate",
   "ChainInhibitor",
 ]);
