@@ -1,10 +1,10 @@
 import { useCallback } from "react";
 import { NODE_TYPES } from "../../../schema";
-import { specToFlow } from "../adapter";
 import { IDENT_RE } from "../../state/ops/rename";
 import { scheduleSave, scheduleViewSave } from "../../save";
-import { mutateSpec, patchViewerState, spec, viewerState } from "../../state";
-import { useStore } from "../../state/store";
+import { mutateSpec, patchViewerState, spec } from "../../state";
+import { pushSnapshot } from "../history";
+import { rfSetNodes } from "../rf-imperative";
 import { PALETTE_DATA_TYPE } from "../panels/NodePalette";
 import type { AppCtx } from "./_ctx";
 
@@ -31,18 +31,46 @@ export function useDragDrop(ctx: AppCtx) {
       id = `${base}${n}`;
     }
     if (!IDENT_RE.test(id)) return;
-    const next = mutateSpec((s) => {
+    pushSnapshot();
+    mutateSpec((s) => {
       const nodeData = type === "Input" ? { init: [0, 1] } : undefined;
       s.nodes.push({ id, type, ...(nodeData ? { data: nodeData } : {}) });
     });
-    ctx.lastSpec.current = next;
     patchViewerState((v) => {
       if (!v.nodes) v.nodes = {};
       v.nodes[id] = { x: pos.x, y: pos.y };
     });
-    const flow = specToFlow(next, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
-    ctx.setNodes(flow.nodes);
-    ctx.setEdges(flow.edges);
+    const def = NODE_TYPES[type];
+    const width = def?.width ?? 110;
+    const height = def?.height ?? 60;
+    const nodeData = type === "Input" ? { init: [0, 1] } : undefined;
+    rfSetNodes((ns) => [
+      ...ns,
+      {
+        id,
+        type: type === "Input" ? "input" : type === "Relay" ? "relay" : type === "Join" ? "join"
+          : type === "ReadGate" ? "readGate" : type === "ReadLatch" ? "readLatch"
+          : type === "Partition" ? "partition" : type === "EdgeNode" ? "edgeNode"
+          : type === "Inhibitor" ? "inhibitor" : type === "ChainInhibitor" ? "chainInhibitor"
+          : type === "EdgeInhibitor" ? "edgeInhibitor" : type === "InhibitRightGate" ? "inhibitRightGate"
+          : type === "SyncGate" ? "syncGate" : type === "StreakDetector" ? "streakDetector"
+          : type === "StreakBreakDetector" ? "streakBreakDetector"
+          : type === "TransferInhibitor" ? "transferInhibitor" : "animated",
+        position: { x: pos.x, y: pos.y },
+        data: {
+          label: id,
+          type,
+          fill: def?.fill ?? "#ffffff",
+          stroke: def?.stroke ?? "#888",
+          shape: def?.shape ?? "rect",
+          width,
+          height,
+          inputs: def?.inputs ?? [],
+          outputs: def?.outputs ?? [],
+          nodeData,
+        },
+      },
+    ]);
     scheduleSave();
     scheduleViewSave();
   }, [ctx]);
