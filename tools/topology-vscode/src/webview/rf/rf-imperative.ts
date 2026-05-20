@@ -10,10 +10,19 @@ type SetEdges = Dispatch<SetStateAction<RFEdge[]>>;
 
 let _setNodes: SetNodes | null = null;
 let _setEdges: SetEdges | null = null;
+let _nodes: RFNode[] = [];
+let _edges: RFEdge[] = [];
 
 export function registerRFSetters(sn: SetNodes, se: SetEdges) {
   _setNodes = sn;
   _setEdges = se;
+}
+
+// Called by Inner() after each nodes/edges state change to keep the
+// module-level snapshots current for rfGetNodes/rfGetEdges.
+export function notifyRFState(nodes: RFNode[], edges: RFEdge[]) {
+  _nodes = nodes;
+  _edges = edges;
 }
 
 export function rfSetNodes(updater: (ns: RFNode[]) => RFNode[]) {
@@ -22,4 +31,14 @@ export function rfSetNodes(updater: (ns: RFNode[]) => RFNode[]) {
 
 export function rfSetEdges(updater: (es: RFEdge[]) => RFEdge[]) {
   _setEdges?.(updater);
+}
+
+// Read the latest RF node/edge snapshots without hooks.
+// Returns empty arrays before Inner mounts.
+export function rfGetNodes(): RFNode[] {
+  return _nodes;
+}
+
+export function rfGetEdges(): RFEdge[] {
+  return _edges;
 }

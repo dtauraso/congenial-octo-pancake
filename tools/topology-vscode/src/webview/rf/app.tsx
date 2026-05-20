@@ -23,7 +23,7 @@ import { useNodeDrag } from "./app/_on-node-drag";
 import { useUndoRedo } from "./app/_use-undo-redo";
 import type { AppCtx } from "./app/_ctx";
 import { EdgeActionsCtx } from "./app/_edge-actions-ctx";
-import { registerRFSetters } from "./rf-imperative";
+import { registerRFSetters, notifyRFState } from "./rf-imperative";
 import { registerHistory, undo as rfUndo, redo as rfRedo } from "./history";
 import { useHotkeys } from "react-hotkeys-hook";
 
@@ -35,6 +35,8 @@ function Inner() {
   const rf = useReactFlow();
   // Expose setNodes/setEdges imperatively for non-React callers (inline-edit).
   useEffect(() => { registerRFSetters(setNodes, setEdges); }, []);
+  // Keep module-level snapshots current so rfGetNodes/rfGetEdges are fresh.
+  useEffect(() => { notifyRFState(nodes, edges); }, [nodes, edges]);
   // Register RF instance for snapshot-based history.
   useEffect(() => { registerHistory(rf); }, [rf]);
   // RF-snapshot undo/redo — runs alongside the existing Zustand-backed hotkeys.
