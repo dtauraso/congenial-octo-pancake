@@ -14,10 +14,10 @@ export function SyncGateNode({ data }: NodeProps<SyncGateNodeData>) {
   const flashing = useFireFlash(data.lastFire);
   return (
     <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #7b1fa2" : undefined }}>
-      <Handle type="target" position={Position.Left} id="a" style={{ ...styles.handle, top: "30%" }} />
-      <Handle type="target" position={Position.Left} id="b" style={{ ...styles.handle, top: "70%" }} />
+      <Handle type="target" position={Position.Left} id="FromA" style={{ ...styles.handle, top: "30%" }} />
+      <Handle type="target" position={Position.Left} id="FromB" style={{ ...styles.handle, top: "70%" }} />
       <div style={styles.label}>{data.label ?? "syncGate"}</div>
-      <Handle type="source" position={Position.Right} id="release" style={styles.releaseHandle} />
+      <Handle type="source" position={Position.Right} id="ToRelease" style={styles.releaseHandle} />
     </div>
   );
 }

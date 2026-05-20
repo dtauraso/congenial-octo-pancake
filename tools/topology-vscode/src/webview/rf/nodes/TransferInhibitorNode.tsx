@@ -16,9 +16,8 @@ export function TransferInhibitorNode({ data }: NodeProps<TransferInhibitorNodeD
   const flashing = useFireFlash(data.lastFire);
   return (
     <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #bf360c" : undefined }}>
-      <Handle type="target" position={Position.Left} id="in" style={styles.handle} />
       <div style={styles.label}>{data.label ?? "transferInhibitor"}</div>
-      <Handle type="source" position={Position.Right} id="out" style={styles.handle} />
+      <Handle type="source" position={Position.Right} id="EndTo" style={styles.handle} />
     </div>
   );
 }

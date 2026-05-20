@@ -16,9 +16,12 @@ export function InhibitorNode({ data }: NodeProps<InhibitorNodeData>) {
   const flashing = useFireFlash(data.lastFire);
   return (
     <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #e65100" : undefined }}>
-      <Handle type="target" position={Position.Left} id="in" style={styles.handle} />
+      <Handle type="target" position={Position.Left} id="FromPrevInhibitor" style={{ ...styles.handle, top: "33%" }} />
+      <Handle type="target" position={Position.Left} id="FromEdgeNode" style={{ ...styles.handle, top: "67%" }} />
       <div style={styles.label}>{data.label ?? "inhibitor"}</div>
-      <Handle type="source" position={Position.Right} id="out" style={styles.handle} />
+      <Handle type="source" position={Position.Right} id="ToNextInhibitor" style={{ ...styles.handle, top: "25%" }} />
+      <Handle type="source" position={Position.Right} id="ToEdgeNode" style={{ ...styles.handle, top: "50%" }} />
+      <Handle type="source" position={Position.Right} id="ToRecognitionAndGate" style={{ ...styles.handle, top: "75%" }} />
     </div>
   );
 }

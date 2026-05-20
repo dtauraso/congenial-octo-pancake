@@ -14,10 +14,10 @@ export function StreakBreakDetectorNode({ data }: NodeProps<StreakBreakDetectorN
   const flashing = useFireFlash(data.lastFire);
   return (
     <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #c62828" : undefined }}>
-      <Handle type="target" position={Position.Left} id="old" style={{ ...styles.handle, top: "30%" }} />
-      <Handle type="target" position={Position.Left} id="new" style={{ ...styles.handle, top: "70%" }} />
+      <Handle type="target" position={Position.Left} id="FromOld" style={{ ...styles.handle, top: "30%" }} />
+      <Handle type="target" position={Position.Left} id="FromNew" style={{ ...styles.handle, top: "70%" }} />
       <div style={styles.label}>{data.label ?? "streakBreakDetector"}</div>
-      <Handle type="source" position={Position.Right} id="done" style={styles.handle} />
+      <Handle type="source" position={Position.Right} id="ToDone" style={styles.handle} />
     </div>
   );
 }
