@@ -109,6 +109,9 @@ trimmed.
 6. **`spec-to-flow` / `flow-to-spec` adapters** — post-RF-migration,
    `topology.json` is RF-native shape. These may be near-identity
    functions worth collapsing.
+7. **Line.go → JSON topology** — Line.go hand-wires Input→ReadGate
+   parallel to LoadTopology; relocate to topologies/line.json. Plan:
+   [line-go-relocation.md](line-go-relocation.md).
 
 ## Working-tree state
 
