@@ -16,6 +16,7 @@ package EdgeNode
 
 import (
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+	"github.com/dtauraso/wirefold/nodes/Wiring"
 )
 
 type EdgeNode struct {
@@ -73,4 +74,8 @@ func (e *EdgeNode) Update(s *S.SafeWorker) {
 			e.hasRight = false
 		}
 	}
+}
+
+func init() {
+	Wiring.Register("Edge", func() any { return &EdgeNode{} }, nil)
 }

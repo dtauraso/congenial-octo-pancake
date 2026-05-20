@@ -11,6 +11,7 @@ package SyncGateNode
 
 import (
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+	"github.com/dtauraso/wirefold/nodes/Wiring"
 )
 
 type SyncGateNode struct {
@@ -61,4 +62,8 @@ func (g *SyncGateNode) Update(s *S.SafeWorker) {
 			g.hasB = false
 		}
 	}
+}
+
+func init() {
+	Wiring.Register("SyncGate", func() any { return &SyncGateNode{} }, nil)
 }

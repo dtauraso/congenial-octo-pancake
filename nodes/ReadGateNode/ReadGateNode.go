@@ -3,6 +3,7 @@ package ReadGateNode
 import (
 	"fmt"
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+	"github.com/dtauraso/wirefold/nodes/Wiring"
 )
 
 type ReadGateNode struct {
@@ -55,4 +56,8 @@ func (g *ReadGateNode) Update(s *S.SafeWorker) {
 			g.HasAck = false
 		}
 	}
+}
+
+func init() {
+	Wiring.Register("ReadGate", func() any { return &ReadGateNode{} }, nil)
 }

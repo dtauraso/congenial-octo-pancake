@@ -10,6 +10,7 @@ package StreakDetector
 
 import (
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+	"github.com/dtauraso/wirefold/nodes/Wiring"
 )
 
 type StreakDetector struct {
@@ -67,4 +68,8 @@ func (n *StreakDetector) Update(s *S.SafeWorker) {
 			n.hasNew = false
 		}
 	}
+}
+
+func init() {
+	Wiring.Register("StreakDetector", func() any { return &StreakDetector{} }, nil)
 }

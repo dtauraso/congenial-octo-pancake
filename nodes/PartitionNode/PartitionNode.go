@@ -16,6 +16,7 @@ package PartitionNode
 
 import (
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+	"github.com/dtauraso/wirefold/nodes/Wiring"
 )
 
 const (
@@ -57,4 +58,8 @@ func (pn *PartitionNode) Update(s *S.SafeWorker) {
 			}
 		}
 	}
+}
+
+func init() {
+	Wiring.Register("Partition", func() any { return &PartitionNode{} }, nil)
 }

@@ -13,6 +13,7 @@ package AndGateNode
 
 import (
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+	"github.com/dtauraso/wirefold/nodes/Wiring"
 )
 
 type AndGateNode struct {
@@ -67,4 +68,8 @@ func (g *AndGateNode) Update(s *S.SafeWorker) {
 			g.hasB = false
 		}
 	}
+}
+
+func init() {
+	Wiring.Register("AndGate", func() any { return &AndGateNode{} }, nil)
 }

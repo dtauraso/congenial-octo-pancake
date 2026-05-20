@@ -12,6 +12,7 @@ package ReadLatchNode
 
 import (
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+	"github.com/dtauraso/wirefold/nodes/Wiring"
 )
 
 type ReadLatchNode struct {
@@ -56,4 +57,8 @@ func (n *ReadLatchNode) Update(s *S.SafeWorker) {
 			return
 		}
 	}
+}
+
+func init() {
+	Wiring.Register("ReadLatch", func() any { return &ReadLatchNode{} }, nil)
 }

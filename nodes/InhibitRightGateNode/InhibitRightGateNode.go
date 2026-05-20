@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+	"github.com/dtauraso/wirefold/nodes/Wiring"
 )
 
 type InhibitRightGateNode struct {
@@ -60,4 +61,8 @@ func (g *InhibitRightGateNode) Update(s *S.SafeWorker) {
 			g.HasRight = false
 		}
 	}
+}
+
+func init() {
+	Wiring.Register("InhibitRightGate", func() any { return &InhibitRightGateNode{} }, nil)
 }

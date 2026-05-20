@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+	"github.com/dtauraso/wirefold/nodes/Wiring"
 )
 
 type TransferInhibitorNode struct {
@@ -35,4 +36,15 @@ func (in *TransferInhibitorNode) Update(s *S.SafeWorker) {
 		default:
 		}
 	}
+}
+
+func populateTransferInhibitor(id int, name string, data *Wiring.NodeData, node any) {
+	n := node.(*TransferInhibitorNode)
+	rcv := make(chan chan<- int, 1)
+	n.TransferIn = rcv
+	n.TransferOut = make(chan chan<- int, 1)
+}
+
+func init() {
+	Wiring.Register("TransferInhibitor", func() any { return &TransferInhibitorNode{} }, populateTransferInhibitor)
 }

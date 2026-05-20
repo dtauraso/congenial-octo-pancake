@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
+	"github.com/dtauraso/wirefold/nodes/Wiring"
 )
 
 type EdgeInhibitorNode struct {
@@ -28,4 +29,8 @@ func (in *EdgeInhibitorNode) Update(s *S.SafeWorker) {
 		default:
 		}
 	}
+}
+
+func init() {
+	Wiring.Register("EdgeInhibitor", func() any { return &EdgeInhibitorNode{} }, nil)
 }
