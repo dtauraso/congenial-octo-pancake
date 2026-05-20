@@ -1,27 +1,32 @@
 import { useEffect } from "react";
-import { specToFlow } from "../adapter";
 import { setInlineEditRerender } from "../../inline-edit";
 import { vscode } from "../../vscode-api";
-import { getSpec, viewerState } from "../../state";
+import { viewerState } from "../viewer-state";
+import { rfGetNodes, rfGetEdges } from "../rf-imperative";
+import { flowToSpec } from "../adapter/flow-to-spec";
 import { getFolds } from "../folds-state";
 import { getDimmed } from "../dimmed-state";
+import { specToFlow } from "../adapter";
 import type { AppCtx } from "./_ctx";
 import { handleLoad } from "./_handle-load";
 import { handleViewLoad } from "./_handle-view-load";
 import { installHostMessageRouter } from "./_install-host-message-router";
 
 export function useHostMessages(ctx: AppCtx) {
-  // Inline-edit rerender hook: state.ts mutators can't see RF's setNodes,
-  // so we register a callback that rebuilds the flow from the live spec.
+  // Inline-edit rerender hook: after an inline edit commits (rename/sublabel),
+  // RF state is already updated. Rebuild the flow from the current RF nodes/edges
+  // so specToFlow can apply viewer-state decorations (folds, dimming, etc.).
   useEffect(() => {
-    const rerenderFromSpec = () => {
-      const next = getSpec();
+    const rerenderFromRF = () => {
+      const nodes = rfGetNodes();
+      const edges = rfGetEdges();
+      const next = flowToSpec(nodes, edges, { nodes: [], edges: [] });
       ctx.lastSpec.current = next;
       const flow = specToFlow(next, getFolds(), viewerState, viewerState.lastSelectionIds ?? [], getDimmed());
       ctx.setNodes(flow.nodes);
       ctx.setEdges(flow.edges);
     };
-    setInlineEditRerender(rerenderFromSpec);
+    setInlineEditRerender(rerenderFromRF);
   }, [ctx]);
 
   useEffect(() => {

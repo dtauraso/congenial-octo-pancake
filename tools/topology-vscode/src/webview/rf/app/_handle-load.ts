@@ -1,10 +1,10 @@
 import { parseSpec, type Spec } from "../../../schema";
 import { postLog } from "../../log/post";
 import { specToFlow } from "../adapter";
-import { patchViewerState, setSpec, viewerState } from "../../state";
+import { viewerState, patchViewerState } from "../viewer-state";
 import { getFolds } from "../../rf/folds-state";
 import { getDimmed } from "../../rf/dimmed-state";
-import { scheduleViewSave } from "../../save";
+import { scheduleViewSave, setSpecMeta } from "../../save";
 import { migrateLegacyFields } from "./_migrate-legacy-fields";
 import { reconcileSelection } from "./_reconcile-selection";
 import type { AppCtx } from "./_ctx";
@@ -28,7 +28,7 @@ export function handleLoad(ctx: AppCtx, text: string) {
     });
     if (migrated) scheduleViewSave();
     const next: Spec = parseSpec(rawJson);
-    setSpec(next);
+    setSpecMeta(next);
     ctx.lastSpec.current = next;
     postLog("load", { nodes: next.nodes.length, edges: next.edges.length });
     const flow = specToFlow(next, getFolds(), viewerState, viewerState.lastSelectionIds ?? [], getDimmed());

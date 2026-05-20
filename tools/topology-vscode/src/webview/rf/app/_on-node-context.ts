@@ -3,7 +3,8 @@ import type { Node as RFNode } from "reactflow";
 import { createFold } from "../../state/ops/fold";
 import { beginEditSublabel, beginRenameNodeId } from "../../inline-edit";
 import { flushViewSave } from "../../save";
-import { mutateViewer, spec, viewerState } from "../../state";
+import { mutateViewer, viewerState } from "../viewer-state";
+import { rfGetNodes } from "../rf-imperative";
 import { pushSnapshot } from "../history";
 import { toggleFoldCollapse, getFolds, setFolds } from "../folds-state";
 import type { AppCtx } from "./_ctx";
@@ -45,7 +46,8 @@ export function useNodeContextHandlers(ctx: AppCtx) {
 
   const foldCurrentSelection = useCallback(() => {
     const sel = new Set(viewerState.lastSelectionIds ?? []);
-    const memberIds = Array.from(sel).filter((id) => spec.nodes.some((n) => n.id === id));
+    const rfNodes = rfGetNodes();
+    const memberIds = Array.from(sel).filter((id) => rfNodes.some((n) => n.id === id));
     if (memberIds.length < 2) {
       console.info(`[fold] need >=2 nodes selected to fold; have ${memberIds.length}`);
       return;

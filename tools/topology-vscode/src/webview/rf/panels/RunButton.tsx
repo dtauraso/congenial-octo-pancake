@@ -1,6 +1,7 @@
 import { createPortal } from "react-dom";
 import { vscode } from "../../vscode-api";
-import { spec } from "../../state";
+import { rfGetNodes, rfGetEdges } from "../rf-imperative";
+import { flowToSpec } from "../adapter/flow-to-spec";
 import { flushActiveInlineEdit } from "../../inline-edit";
 import { useRunStatusCtx } from "../run-status-ctx";
 
@@ -18,6 +19,7 @@ export function RunButton() {
     // the user sees on screen, then bundle the spec into the run message
     // so the host writes topology.json synchronously before topogen runs.
     flushActiveInlineEdit();
+    const spec = flowToSpec(rfGetNodes(), rfGetEdges(), { nodes: [], edges: [] });
     const text = JSON.stringify(spec, null, 2) + "\n";
     vscode.postMessage({ type: "run", text });
   };

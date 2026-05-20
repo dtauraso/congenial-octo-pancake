@@ -9,11 +9,12 @@
 // inner DOM avoids a positioning round-trip and keeps the edited label
 // visually identical to the rendered one.
 
-import { mutateSpec, getSpec, getViewerState } from "./state";
 import { scheduleSave, scheduleViewSave } from "./save";
 import { applyRename } from "./state/ops/rename";
-import { rfSetNodes, rfSetEdges } from "./rf/rf-imperative";
+import { rfSetNodes, rfSetEdges, rfGetNodes, rfGetEdges } from "./rf/rf-imperative";
+import { flowToSpec } from "./rf/adapter/flow-to-spec";
 import { pushSnapshot } from "./rf/history";
+import { viewerState } from "./rf/viewer-state";
 
 type RerenderFn = () => void;
 
@@ -36,7 +37,7 @@ interface Options {
   onCommit: (next: string) => string | null;
   // null = accepted; string = rejected with an error message. The element's
   // text content is restored to `initial` on rejection. The implementation
-  // is responsible for actually applying the edit (mutateSpec / mutateBoth).
+  // is responsible for actually applying the edit via RF state.
 }
 
 function beginInlineEdit(el: HTMLElement | null, opts: Options) {
@@ -67,10 +68,9 @@ function beginInlineEdit(el: HTMLElement | null, opts: Options) {
       const err = opts.onCommit(next);
       if (err !== null && err !== "") window.alert(err);
     }
-    // Always rerender from spec so cancelled edits / rejected commits /
+    // Always rerender from RF state so cancelled edits / rejected commits /
     // no-op commits all restore whatever decorated DOM the renderer would
     // produce (e.g. sublabel placeholder italics for an empty value).
-    // Cheaper than getting the restoration right in-place.
     rerender();
   };
 
@@ -89,9 +89,10 @@ export function beginRenameNodeId(oldId: string, labelEl: HTMLElement | null) {
       if (!next || next === oldId) return ""; // silent cancel — no alert
       // Validate against a throwaway clone so a rejected rename leaves both
       // surfaces (and both undo stacks) untouched.
+      const probeSpec = flowToSpec(rfGetNodes(), rfGetEdges(), { nodes: [], edges: [] });
       const probeErr = applyRename(
-        structuredClone(getSpec()),
-        structuredClone(getViewerState()),
+        structuredClone(probeSpec),
+        structuredClone(viewerState),
         oldId,
         next,
       );
@@ -115,7 +116,9 @@ export function beginRenameNodeId(oldId: string, labelEl: HTMLElement | null) {
 }
 
 export function beginEditSublabel(nodeId: string, el: HTMLElement | null) {
-  const original = getViewerState().nodes?.[nodeId]?.sublabel ?? "";
+  // Read current sublabel from RF node data.
+  const rfNode = rfGetNodes().find((n) => n.id === nodeId);
+  const original = (rfNode?.data?.sublabel as string | undefined) ?? "";
   beginInlineEdit(el, {
     initial: original,
     activeClass: "sublabel-active",

@@ -2,7 +2,11 @@
 // main.tsx calls setRunStatusImperative from the window message handler;
 // App registers the React setState via registerRunStatusSetter on mount.
 
-import type { RunStatusUI } from "../state/store";
+import type { RunStatus } from "../../messages";
+
+// Webview-local: idle is the pre-first-run default. The wire RunStatus has
+// no idle variant (the host only emits running/ok/error/cancelled).
+export type RunStatusUI = RunStatus | { state: "idle" };
 
 type Setter = (next: RunStatusUI) => void;
 

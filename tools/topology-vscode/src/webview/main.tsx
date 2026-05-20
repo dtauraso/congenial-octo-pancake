@@ -4,7 +4,8 @@ import "./webview.css";
 import App from "./rf/app";
 import { flushSave, flushViewSave, setTopogenStatus } from "./save";
 import { parseHostToWebview } from "../messages";
-import { getSpec } from "./state";
+import { rfGetNodes, rfGetEdges } from "./rf/rf-imperative";
+import { flowToSpec } from "./rf/adapter/flow-to-spec";
 import { setRunStatusImperative } from "./rf/run-status-state";
 import { setDimmedImperative } from "./rf/dimmed-state";
 import { ErrorBoundary } from "./log/ErrorBoundary";
@@ -15,7 +16,7 @@ import { CrashListeners } from "./log/CrashListeners";
 // call from the webview, so a test can assert both the live spec and that a
 // save was posted.
 (window as unknown as { __wirefold_test: unknown }).__wirefold_test = {
-  getSpec,
+  getSpec: () => flowToSpec(rfGetNodes(), rfGetEdges(), { nodes: [], edges: [] }),
   getSent: () =>
     (window as unknown as { __wirefold_sent?: unknown[] }).__wirefold_sent ?? [],
   // Test-only: drive the dim state directly so tests don't need to click

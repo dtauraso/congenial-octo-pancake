@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import type { Node as RFNode } from "reactflow";
 import { NODE_TYPES } from "../../../schema";
 import { scheduleSave, scheduleViewSave } from "../../save";
-import { mutateSpec, patchViewerState, spec, viewerState } from "../../state";
+import { viewerState } from "../viewer-state";
 import { pushSnapshot } from "../history";
 import { rfSetNodes } from "../rf-imperative";
 import { ALIGN_TOL } from "./_constants";
@@ -55,7 +55,6 @@ export function useNodeDrag(
       return;
     }
     // RF tracks node position natively via node.position — no viewerState write needed.
-    void mutateSpec; void scheduleSave; void spec; void viewerState; // keep imports until B-E complete
   }, [ctx, setGuides]);
 
   return { onNodeDrag, onNodeDragStop };

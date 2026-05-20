@@ -1,7 +1,8 @@
 import { useCallback } from "react";
 import type { Edge as RFEdge, Node as RFNode } from "reactflow";
 import { flushViewSave, scheduleSave, scheduleViewSave } from "../../save";
-import { getSpec, mutateViewer, viewerState } from "../../state";
+import { mutateViewer, viewerState } from "../viewer-state";
+import { rfGetEdges } from "../rf-imperative";
 import { pushSnapshot } from "../history";
 import type { AppCtx } from "./_ctx";
 
@@ -13,7 +14,7 @@ export function useDeleteHandlers(ctx: AppCtx) {
     // Pre-compute cascade so RF setNodes/setEdges mirrors incident-edge removal.
     const delNodes = new Set(nodeIds);
     const delEdges = new Set(edgeIds);
-    for (const e of getSpec().edges) {
+    for (const e of rfGetEdges()) {
       if (delNodes.has(e.source) || delNodes.has(e.target)) delEdges.add(e.id);
     }
 

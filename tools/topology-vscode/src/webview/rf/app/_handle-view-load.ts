@@ -1,6 +1,6 @@
 import { specToFlow } from "../adapter";
 import { markViewSynced, scheduleViewSave } from "../../save";
-import { setViewerState } from "../../state";
+import { setViewerState } from "../viewer-state";
 import { getFolds, setFolds } from "../folds-state";
 import { getDimmed } from "../dimmed-state";
 import { parseViewerState, serializeViewerState } from "../../state/viewer/types";

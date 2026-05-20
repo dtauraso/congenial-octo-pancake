@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { RunStatusUI } from "../state/store";
+import type { RunStatusUI } from "./run-status-state";
 
 export const RunStatusCtx = createContext<RunStatusUI>({ state: "idle" });
 

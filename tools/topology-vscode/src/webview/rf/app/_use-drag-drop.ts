@@ -2,9 +2,8 @@ import { useCallback } from "react";
 import { NODE_TYPES } from "../../../schema";
 import { IDENT_RE } from "../../state/ops/rename";
 import { scheduleSave, scheduleViewSave } from "../../save";
-import { mutateSpec, spec } from "../../state";
+import { rfGetNodes, rfSetNodes } from "../rf-imperative";
 import { pushSnapshot } from "../history";
-import { rfSetNodes } from "../rf-imperative";
 import { PALETTE_DATA_TYPE } from "../panels/NodePalette";
 import type { AppCtx } from "./_ctx";
 
@@ -26,16 +25,13 @@ export function useDragDrop(ctx: AppCtx) {
     const base = type.charAt(0).toLowerCase() + type.slice(1);
     let n = 0;
     let id = `${base}${n}`;
-    while (spec.nodes.some((nd) => nd.id === id)) {
+    const rfNodes = rfGetNodes();
+    while (rfNodes.some((nd) => nd.id === id)) {
       n += 1;
       id = `${base}${n}`;
     }
     if (!IDENT_RE.test(id)) return;
     pushSnapshot();
-    mutateSpec((s) => {
-      const nodeData = type === "Input" ? { init: [0, 1] } : undefined;
-      s.nodes.push({ id, type, ...(nodeData ? { data: nodeData } : {}) });
-    });
     const def = NODE_TYPES[type];
     const width = def?.width ?? 110;
     const height = def?.height ?? 60;
