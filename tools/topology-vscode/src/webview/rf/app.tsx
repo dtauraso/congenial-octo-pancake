@@ -21,7 +21,7 @@ import { useNodeContextHandlers } from "./app/_on-node-context";
 import { useNodeDrag } from "./app/_on-node-drag";
 import { useUndoRedo } from "./app/_use-undo-redo";
 import type { AppCtx } from "./app/_ctx";
-import { EdgeActionsCtx } from "../substrate-r/edge-actions-ctx";
+import { EdgeActionsCtx } from "./app/_edge-actions-ctx";
 
 function Inner() {
   const [nodes, setNodes] = useState<RFNode[]>([]);
