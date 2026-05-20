@@ -22,7 +22,6 @@ export interface NodeDef {
 
 export const NODE_DEFS: Record<string, NodeDef> = {
   chainInhibitor: { defaultLabel: "chainInhibitor", bg: "#fff3e0", border: "#e65100", text: "#bf360c", accent: "#e65100", minWidth: 90, targets: [{ id: "FromPrev" }], sources: [{ id: "ToNext" }, { id: "ToAck" }, { id: "ToEdge" }, { id: "ToEdgeNew" }], displays: ["held"] },
-  edgeNode: { defaultLabel: "edge", bg: "#fff8e1", border: "#ff6f00", text: "#e65100", accent: "#ff6f00", minWidth: 90, targets: [{ id: "FromLeft" }, { id: "FromRight" }], sources: [{ id: "ToInhibitor" }, { id: "ToPartition" }, { id: "ToNextEdge" }] },
   inhibitRightGate: { defaultLabel: "inhibitRightGate", bg: "#fce4ec", border: "#880e4f", text: "#880e4f", accent: "#880e4f", minWidth: 110, sublabel: "L pass / R inhibit", targets: [{ id: "FromLeft" }, { id: "FromRight", accent: "#f48fb1" }], sources: [{ id: "ToPassed" }] },
   input: { defaultLabel: "input", bg: "#1a1f2e", border: "#3fb950", text: "#c9d1d9", accent: "#3fb950", minWidth: 90, sources: [{ id: "ToOut" }], displays: ["queue", "repeat"] },
   partition: { defaultLabel: "partition", bg: "#fce4ec", border: "#ad1457", text: "#880e4f", accent: "#ad1457", minWidth: 90, targets: [{ id: "FromIn" }], sources: [{ id: "ToOut" }] },

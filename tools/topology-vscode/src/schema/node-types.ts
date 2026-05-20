@@ -66,17 +66,7 @@ PatternAnd: {
     outputs: [{ name: "ToGated", kind: "chain" }],
     shape: "rect", fill: "#f3e5f5", stroke: "#7b1fa2", width: 70, height: 40,
   },
-  EdgeNode: {
-    role: "edge",
-    inputs: [{ name: "left", kind: "inhibit-in" }, { name: "right", kind: "inhibit-in" }],
-    outputs: [
-      { name: "outInhibitor", kind: "signal" },
-      { name: "outPartition", kind: "signal" },
-      { name: "outNextEdge", kind: "signal" },
-    ],
-    shape: "rect", fill: "#fff8e1", stroke: "#ff6f00", width: 90, height: 50,
-  },
-  Partition: {
+Partition: {
     role: "partition",
     inputs: [{ name: "in", kind: "chain" }],
     outputs: [{ name: "out", kind: "chain" }],

@@ -66,7 +66,7 @@ Worth scrutinizing before the audit table is filled:
 | SyncGate | 2 → 1 | Buffer both; emit 1 unconditionally. | 1 code ref | ReadGate | 🗑️ **deleted (2026-05-20)** — unused; semantics subsumed by ReadGate. |
 | AndGate | 2 → 1 | Emit 1 if a==1 AND b==1. | 1 code ref | InhibitRightGate | 🗑️ **deleted (2026-05-20)** — unused; AND semantics available via InhibitRightGate or direct wiring. |
 | InhibitRightGate | 2 → 1 (left+right / passed) | Emit 1 if left==1 AND right==0. | topology: 1; docs: 1 | AndGate | ✅ **keep**. |
-| EdgeNode | 2 → 3 (left+right / inhibitor+partition+next) | XOR; fan out identically. | 0 | AndGate, InhibitRightGate | 🗑️ **delete** — unused; fan-out replaceable by direct wiring. |
+| EdgeNode | 2 → 3 (left+right / inhibitor+partition+next) | XOR; fan out identically. | 0 | AndGate, InhibitRightGate | 🗑️ **deleted (2026-05-20)** — unused; fan-out replaceable by direct wiring. |
 | Partition | 1 → 1 | State machine 0→1→2; emit 1 on 0→1, 0 on 1→2. | 4 code refs | — | ✅ **keep**. |
 
 ## Findings (haiku sweep, 2026-05-19)
