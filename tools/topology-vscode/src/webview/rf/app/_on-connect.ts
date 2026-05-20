@@ -1,10 +1,10 @@
 import type { Connection } from "reactflow";
-import { NODE_TYPES, type EdgeKind } from "../../../schema";
-import { specToFlow } from "../adapter";
+import { KIND_COLORS, NODE_TYPES, type EdgeKind } from "../../../schema";
 import { scheduleSave } from "../../save";
-import { mutateSpec, spec, viewerState } from "../../state";
-import { useStore } from "../../state/store";
+import { mutateSpec, spec } from "../../state";
 import { decodeGrowHandle } from "../port-rim-drag";
+import { pushSnapshot } from "../history";
+import { rfSetNodes, rfSetEdges } from "../rf-imperative";
 import type { AppCtx } from "./_ctx";
 
 // Auto-name a new extra input port: in0, in1, in2, ... picking the first
@@ -53,6 +53,7 @@ export function onConnectImpl(ctx: AppCtx, conn: Connection) {
     const existingInputs = dstNode.inputs ?? dstDef?.inputs ?? [];
     const newName = nextInputName(existingInputs.map((p) => p.name));
     resolvedTargetHandle = newName;
+    pushSnapshot();
     mutateSpec((s) => {
       const sn = s.nodes.find((nd) => nd.id === conn.target); if (!sn) return;
       const kindInputs = NODE_TYPES[sn.type]?.inputs ?? [];
@@ -65,6 +66,13 @@ export function onConnectImpl(ctx: AppCtx, conn: Connection) {
         slot: growDecode.slot,
       });
     });
+    const newPort = { name: newName, kind: srcPort.kind, side: growDecode.side, slot: growDecode.slot };
+    rfSetNodes((ns) => ns.map((nd) =>
+      nd.id !== conn.target ? nd : {
+        ...nd,
+        data: { ...nd.data, inputs: [...(nd.data?.inputs ?? []), newPort] },
+      }
+    ));
   }
 
   const baseId = `${conn.source}.${conn.sourceHandle}->${conn.target}.${resolvedTargetHandle}`;
@@ -80,7 +88,8 @@ export function onConnectImpl(ctx: AppCtx, conn: Connection) {
   let label = baseLabel;
   let m = 2;
   while (spec.edges.some((e) => e.label === label)) label = `${baseLabel}_${m++}`;
-  const next = mutateSpec((s) => {
+  if (!growDecode) pushSnapshot();
+  mutateSpec((s) => {
     s.edges.push({
       id,
       source: conn.source!,
@@ -91,9 +100,23 @@ export function onConnectImpl(ctx: AppCtx, conn: Connection) {
       label,
     });
   });
-  ctx.lastSpec.current = next;
-  const flow = specToFlow(next, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
-  ctx.setNodes(flow.nodes);
-  ctx.setEdges(flow.edges);
+  rfSetEdges((es) => [
+    ...es,
+    {
+      id,
+      source: conn.source!,
+      sourceHandle: conn.sourceHandle!,
+      target: conn.target!,
+      targetHandle: resolvedTargetHandle,
+      type: "animated",
+      style: { stroke: KIND_COLORS[kind] ?? "#888", strokeWidth: 1.5 },
+      data: {
+        kind,
+        label,
+        sourceHandle: conn.sourceHandle!,
+        targetHandle: resolvedTargetHandle,
+      },
+    },
+  ]);
   scheduleSave();
 }
