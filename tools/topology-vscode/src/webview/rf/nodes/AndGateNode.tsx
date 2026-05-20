@@ -1,47 +1,47 @@
-// RF custom node for the "SyncGate" kind.
-// Static visual only: label, two input handles (a, b), one output (release).
+// RF custom node for the "AndGate" kind.
+// Static visual only: label, two input handles (FromA, FromB), one output (ToOut).
 // No simulation, no RAF, no slot phase logic.
 
 import { Handle, Position, type NodeProps } from "reactflow";
 import { useFireFlash } from "./use-fire-flash";
 
-interface SyncGateNodeData {
+interface AndGateNodeData {
   label?: string;
   lastFire?: number;
 }
 
-export function SyncGateNode({ data }: NodeProps<SyncGateNodeData>) {
+export function AndGateNode({ data }: NodeProps<AndGateNodeData>) {
   const flashing = useFireFlash(data.lastFire);
   return (
-    <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #7b1fa2" : undefined }}>
+    <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #1565c0" : undefined }}>
       <Handle type="target" position={Position.Left} id="FromA" style={{ ...styles.handle, top: "30%" }} />
       <Handle type="target" position={Position.Left} id="FromB" style={{ ...styles.handle, top: "70%" }} />
-      <div style={styles.label}>{data.label ?? "syncGate"}</div>
-      <Handle type="source" position={Position.Right} id="ToRelease" style={styles.releaseHandle} />
+      <div style={styles.label}>{data.label ?? "andGate"}</div>
+      <Handle type="source" position={Position.Right} id="ToOut" style={styles.outHandle} />
     </div>
   );
 }
 
 const styles = {
   container: {
-    background: "#f3e5f5",
-    border: "1px solid #7b1fa2",
+    background: "#e3f2fd",
+    border: "1px solid #1565c0",
     borderRadius: 4,
     padding: "6px 10px",
     minWidth: 70,
     fontFamily: "monospace",
     fontSize: 11,
-    color: "#4a148c",
+    color: "#0d47a1",
   },
   label: {
     fontWeight: 700,
-    color: "#7b1fa2",
+    color: "#1565c0",
     textAlign: "center" as const,
   },
   handle: {
-    background: "#7b1fa2",
+    background: "#1565c0",
   },
-  releaseHandle: {
-    background: "#80cbc4",
+  outHandle: {
+    background: "#42a5f5",
   },
 } as const;

@@ -14,9 +14,8 @@ type InhibitorNode struct {
 	ToNextInhibitor   chan<- int
 	ToEdgeNode        chan<- int
 	FromEdgeNode      <-chan int
-	ToRecognitionAndGate         chan<- int
-	EndFromPartition  <-chan int
-	EndToPartition    chan<- int
+	ToRecognitionAndGate chan<- int
+	EndToPartition       chan<- int
 
 	TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor chan<- chan<- int
 

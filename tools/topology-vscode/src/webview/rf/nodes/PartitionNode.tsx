@@ -14,9 +14,9 @@ export function PartitionNode({ data }: NodeProps<PartitionNodeData>) {
   const flashing = useFireFlash(data.lastFire);
   return (
     <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #ad1457" : undefined }}>
-      <Handle type="target" position={Position.Left} id="in" style={styles.handle} />
+      <Handle type="target" position={Position.Left} id="FromIn" style={styles.handle} />
       <div style={styles.label}>{data.label ?? "partition"}</div>
-      <Handle type="source" position={Position.Right} id="out" style={styles.handle} />
+      <Handle type="source" position={Position.Right} id="ToOut" style={styles.handle} />
     </div>
   );
 }

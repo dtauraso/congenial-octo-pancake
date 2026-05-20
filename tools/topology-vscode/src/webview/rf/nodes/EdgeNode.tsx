@@ -14,12 +14,12 @@ export function EdgeNode({ data }: NodeProps<EdgeNodeData>) {
   const flashing = useFireFlash(data.lastFire);
   return (
     <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #ff6f00" : undefined }}>
-      <Handle type="target" position={Position.Left} id="left" style={{ ...styles.handle, top: "35%" }} />
-      <Handle type="target" position={Position.Left} id="right" style={{ ...styles.handle, top: "65%" }} />
+      <Handle type="target" position={Position.Left} id="FromLeft" style={{ ...styles.handle, top: "35%" }} />
+      <Handle type="target" position={Position.Left} id="FromRight" style={{ ...styles.handle, top: "65%" }} />
       <div style={styles.label}>{data.label ?? "edge"}</div>
-      <Handle type="source" position={Position.Right} id="outInhibitor" style={{ ...styles.handle, top: "25%" }} />
-      <Handle type="source" position={Position.Right} id="outPartition" style={{ ...styles.handle, top: "50%" }} />
-      <Handle type="source" position={Position.Right} id="outNextEdge" style={{ ...styles.handle, top: "75%" }} />
+      <Handle type="source" position={Position.Right} id="ToInhibitor" style={{ ...styles.handle, top: "25%" }} />
+      <Handle type="source" position={Position.Right} id="ToPartition" style={{ ...styles.handle, top: "50%" }} />
+      <Handle type="source" position={Position.Right} id="ToNextEdge" style={{ ...styles.handle, top: "75%" }} />
     </div>
   );
 }

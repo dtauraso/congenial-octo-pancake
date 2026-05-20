@@ -10,7 +10,6 @@ type EdgeInhibitorNode struct {
 	Id       int
 	FromPrev <-chan int
 	ToEdge   chan<- int
-	FromEdge <-chan int
 }
 
 func (in *EdgeInhibitorNode) Update(s *S.SafeWorker) {
@@ -26,12 +25,6 @@ func (in *EdgeInhibitorNode) Update(s *S.SafeWorker) {
 		case value := <-in.FromPrev:
 			fmt.Printf("%dEI: received %d, sending to edge\n", in.Id, value)
 			S.Send(in.ToEdge, value)
-
-			select {
-			case result := <-in.FromEdge:
-				fmt.Printf("%dEI: edge result: %d\n", in.Id, result)
-			default:
-			}
 		default:
 		}
 	}

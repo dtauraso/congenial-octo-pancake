@@ -14,11 +14,11 @@ export function ReadLatchNode({ data }: NodeProps<ReadLatchNodeData>) {
   const flashing = useFireFlash(data.lastFire);
   return (
     <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #00838f" : undefined }}>
-      <Handle type="target" position={Position.Left} id="in" style={{ ...styles.handle, top: "30%" }} />
-      <Handle type="target" position={Position.Left} id="release" style={{ ...styles.releaseHandle, top: "70%" }} />
+      <Handle type="target" position={Position.Left} id="FromIn" style={{ ...styles.handle, top: "30%" }} />
+      <Handle type="target" position={Position.Left} id="FromRelease" style={{ ...styles.releaseHandle, top: "70%" }} />
       <div style={styles.label}>{data.label ?? "readlatch"}</div>
-      <div style={styles.sublabel}>in / rel</div>
-      <Handle type="source" position={Position.Right} id="out" style={styles.handle} />
+      <div style={styles.sublabel}>FromIn / FromRelease</div>
+      <Handle type="source" position={Position.Right} id="ToNext" style={styles.handle} />
     </div>
   );
 }

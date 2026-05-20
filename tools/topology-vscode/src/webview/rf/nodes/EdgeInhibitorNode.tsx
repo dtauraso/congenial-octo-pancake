@@ -16,9 +16,9 @@ export function EdgeInhibitorNode({ data }: NodeProps<EdgeInhibitorNodeData>) {
   const flashing = useFireFlash(data.lastFire);
   return (
     <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #ff6f00" : undefined }}>
-      <Handle type="target" position={Position.Left} id="in" style={styles.handle} />
+      <Handle type="target" position={Position.Left} id="FromPrev" style={styles.handle} />
       <div style={styles.label}>{data.label ?? "edgeInhibitor"}</div>
-      <Handle type="source" position={Position.Right} id="out" style={styles.handle} />
+      <Handle type="source" position={Position.Right} id="ToEdge" style={styles.handle} />
     </div>
   );
 }

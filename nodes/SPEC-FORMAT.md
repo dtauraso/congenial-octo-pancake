@@ -1,0 +1,92 @@
+# Node Kind SPEC Format
+
+Each `nodes/<Kind>/SPEC.md` is the canonical description of one substrate node kind. It is the source of truth that drives the Go runtime (firing rule + struct), the TSX render (port positions + label), and the AI-assisted parity check.
+
+This document defines what goes in a SPEC and what each section means.
+
+## File layout
+
+```markdown
+# <Kind>
+
+## Ports
+
+| Name | Direction | Element type | Cardinality | TSX handle | Side |
+|------|-----------|--------------|-------------|------------|------|
+| FromA | in | int | single | FromA | left |
+| ToOut | out | int | single | ToOut | right |
+
+## Loader-managed channels
+
+(Optional. Channels the loader creates internally — not wirable.)
+
+| Name | Element type | Source |
+|------|--------------|--------|
+| Input | int | `data.init: []int` (pre-fill) |
+
+## Non-channel fields
+
+(Optional. Struct fields populated from `topology.json` `data.*`.)
+
+| Field | Type | Source | Notes |
+|-------|------|--------|-------|
+| HeldValue | int | `data.initialSlots.held` | initial latch value |
+
+## Firing rule
+
+Pseudocode — English + math, no Go syntax. Reference port names from
+the Ports table. State what triggers a fire, what is emitted, what
+state is updated.
+
+## Runtime status
+
+- Loader-registered: yes | no
+- TSX render: present | missing
+
+## Open questions
+
+(Optional. Anything underspecified or contradictory.)
+```
+
+## Column semantics
+
+### Ports table
+
+- **Name** — the Go struct field name. Authoritative.
+- **Direction** — `in` (recv-side, `<-chan`), `out` (send-side, `chan<-`).
+- **Element type** — what travels through the channel. Usually `int`. For meta-wires that carry channels (e.g., a transfer of a partition-end channel from one inhibitor to the next), write `chan int` — the wire is a `chan<- chan<- int` whose elements are channels carrying ints.
+- **Cardinality** — `single` (one `chan<- int` field), or `fan-out` (a `[]chan<- int` field that accepts multiple outgoing edges, all receiving the same value). `fan-in` is not supported on the substrate side; fan-in is modeled by separate input ports.
+- **TSX handle** — the handle id used on the React Flow node. Same as Name unless legacy code uses a different id. New kinds: always equal to Name.
+- **Side** — `top` | `right` | `bottom` | `left`. Where on the rendered node the handle sits.
+
+### Loader-managed channels
+
+For channels the loader allocates but does not wire to any edge — e.g., Input nodes' `Input` channel is created and pre-filled from `data.init`. Listing here makes "this isn't wirable" explicit, so the SPEC doesn't suggest you can connect to it.
+
+### Non-channel fields
+
+Struct fields populated from `topology.json` at load time (not wires). Examples: `HeldValue` on `ChainInhibitor`, `Name` / `Id` on most kinds. Trivial fields like `Id`/`Name` are implicit and need not be listed; only list fields with substantive load-time semantics.
+
+### Firing rule
+
+Pseudocode. The goal is "what this kind does," expressible in English+math without committing to Go syntax. If a behavior is genuinely undecided (e.g., what to do on simultaneous arrival), say so in the rule or in Open Questions — don't silently pick a tiebreaker.
+
+### Runtime status
+
+Two flags. If `Loader-registered: no` but `TSX render: present`, the kind is stranded (can be dropped into the editor but won't run). If both `no`, the kind is currently dormant.
+
+## Authoring flow
+
+1. User describes the desired node in their own words.
+2. AI writes the pseudocode + port manifest in this format. User confirms.
+3. AI generates the Go struct skeleton, TSX render, and registry entries from the manifest. Mechanical.
+4. AI transcribes the pseudocode into Go as the firing rule body. Not interpretation — direct.
+5. Parity check: mechanical (port↔field↔handle names align) + behavioral (Go rule still matches pseudocode).
+
+## Banned content
+
+Do not include in a SPEC:
+
+- Go code or Go syntax. The pseudocode is the contract; Go is downstream.
+- Implementation notes about goroutine scheduling, select ordering, channel buffer sizes. Those are substrate concerns owned by the runtime, not per-kind.
+- TSX styling, CSS classes, port positions in pixel coordinates. Side is the only render-relevant column.
