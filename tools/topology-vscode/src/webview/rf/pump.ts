@@ -34,6 +34,7 @@ export function handleTraceEvent(event: TraceEvent): void {
       const edgeId = edges.find(
         (e) => e.source === node && e.sourceHandle === port,
       )?.id;
+      console.log(`[pump] send step=${step} node=${node} port=${port} edgeId=${edgeId ?? "NO-MATCH"} edges=[${edges.map(e => `${e.source}:${e.sourceHandle}`).join(",")}]`);
       if (!edgeId) return; // no matching edge — topology mismatch, skip silently
       rfSetEdges((es) =>
         es.map((e) =>

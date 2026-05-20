@@ -32,7 +32,10 @@ export function installHostMessageRouter(
     if (!msg) return;
     if (msg.type === "load") handlers.load(msg.text);
     else if (msg.type === "view-load") handlers.viewLoad(msg.text);
-    else if (msg.type === "trace-event") handlers.traceEvent?.(msg.event);
+    else if (msg.type === "trace-event") {
+      console.log(`[webview-msg] trace-event step=${msg.event.step} kind=${msg.event.kind} node=${msg.event.node} port=${msg.event.port ?? "-"}`);
+      handlers.traceEvent?.(msg.event);
+    }
   };
   deps.addEventListener("message", handler);
   deps.postMessage({ type: "ready" });

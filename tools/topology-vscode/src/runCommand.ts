@@ -85,6 +85,7 @@ export class BuildAndRunRunner {
       this.stdoutBuf = this.stdoutBuf.slice(nl + 1);
       const ev = tryParseTraceEvent(line);
       if (ev && this.onTraceEvent) {
+        console.log(`[ext] trace-event step=${ev.step} kind=${ev.kind} node=${ev.node} port=${ev.port ?? "-"}`);
         this.onTraceEvent(ev);
       } else {
         this.channel!.appendLine(line);

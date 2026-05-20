@@ -42,6 +42,7 @@ export function SubstrateEdge({
     const pulse = data?.pulse;
     if (!pulse) return;
     if (pulse.simStep === lastPulseStep.current) return;
+    console.log(`[edge] pulse start id=${id} step=${pulse.simStep} value=${pulse.value}`);
     lastPulseStep.current = pulse.simStep;
 
     const start = performance.now();
