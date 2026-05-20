@@ -70,117 +70,73 @@
 <body>
 <header>
   <h1>wirefold / migration-phases</h1>
-  <span>Two-store + parallel substrate-r  &rarr;  RF-only with substrate logic in custom nodes/edges</span>
+  <span>Two-store + substrate-r  &rarr;  RF-only editor; Go is the only canonical runtime</span>
 </header>
 <nav>
-  <button class="active" onclick="show('p1')">Phase 1 &mdash; POC</button>
-  <button onclick="show('p2')">Phase 2 &mdash; Port Kinds</button>
-  <button onclick="show('p3')">Phase 3 &mdash; State Registry</button>
-  <button onclick="show('p4')">Phase 4 &mdash; Collapse Store</button>
-  <button onclick="show('p5')">Phase 5 &mdash; Codegen</button>
+  <button class="active" onclick="show('p1')">Phase 1 &mdash; POC (done)</button>
+  <button onclick="show('p2')">Phase 2 &mdash; Delete substrate-r</button>
+  <button onclick="show('p3')">Phase 3 &mdash; Single State Source</button>
+  <button onclick="show('p4')">Phase 4 &mdash; Codegen / Go Handshake</button>
 </nav>
 
 <!-- ===== PHASE 1 ===== -->
 <div id="tab-p1" class="tab-content active">
-  <h2>Phase 1 &mdash; POC: one kind end-to-end in RF</h2>
-  <div class="goal">Prove that a substrate node body and pulse animation can live entirely inside RF custom node/edge components, with no separate substrate-r mounting layer.</div>
+  <h2>Phase 1 &mdash; POC (verified)</h2>
+  <div class="goal">Proved that a node body and pulse animation can live entirely inside RF custom node/edge components with no substrate-r mounting layer. See <a href="phase-1-verification.md" style="color:var(--accent)">docs/phase-1-verification.md</a> for the full trace.</div>
 
   <div class="callout">
-    <div class="callout-title">Audit finding</div>
-    The substrate-r audit found all node kinds port-ready &mdash; no logic rewrites needed.
-    InputQueueEditor is the only "port-with-light-refactor" item (overlay positioning assumes a separate substrate canvas coordinate space; adjust to RF node-local coords).
+    <div class="callout-title">Conclusion (stronger than the original framing)</div>
+    The POC was framed as "substrate runs inside RF." The actual result is stronger: the editor can be RF-only. No TS substrate library, no shared substrate/ module, and no TS runtime survive. Go is the canonical runtime; the TS editor is a preview/simulation only.
   </div>
 
-  <div class="section-label">Steps</div>
-  <ul>
-    <li>Pick InputNode as the test case.</li>
-    <li>Create <code>rf/nodes/InputNode.tsx</code>: RF custom node that owns RAF loop, input slot refs, and the Input kind body inline.</li>
-    <li>Create <code>rf/edges/SubstrateEdge.tsx</code>: RF custom edge that reads the RF-internal path geometry and drives a pulse SVG circle along it.</li>
-    <li>Wire a 2-node toy topology (InputNode &rarr; SubstrateEdge &rarr; ConsumerNode) directly in RF &mdash; no SubstrateProvider, no separate registry.</li>
-    <li>Verify pulse fires on input delivery and animation duration matches today's substrate-r Wire.tsx output.</li>
-    <li>Confirm slot backpressure still works: a second load() while in-flight is a no-op.</li>
-  </ul>
-
-  <div class="section-label">Files touched</div>
-  <div class="files-grid">
-    <div class="file-row"><div class="file-path">rf/nodes/InputNode.tsx</div><div class="file-role">New: RF custom node with embedded Input body (RAF, slot refs, queue drain)</div></div>
-    <div class="file-row"><div class="file-path">rf/edges/SubstrateEdge.tsx</div><div class="file-role">New: RF custom edge with SVG pulse animation along the RF-computed path</div></div>
-    <div class="file-row"><div class="file-path">rf/app/AppView.tsx</div><div class="file-role">Register new node/edge types in the RF nodeTypes/edgeTypes maps for the POC</div></div>
-    <div class="file-row"><div class="file-path">substrate-r/Wire.tsx</div><div class="file-role">Read-only reference for animation timing constants and slot-fill contract</div></div>
-  </div>
-
-  <div class="section-label">Risks</div>
-  <div class="risks-grid">
-    <div class="risk-row"><div class="risk-label">Path geometry access</div><div class="risk-detail">RF custom edges receive the SVG path string but not the raw point array. Pulse position must be computed via SVGPathElement.getPointAtLength; verify this is available in the webview sandbox before committing to the approach.</div></div>
-    <div class="risk-row"><div class="risk-label">Ref threading</div><div class="risk-detail">Without SubstrateProvider, wire.fill() must reach the dest node ref via a shared module-level map. Establish the map boundary clearly to avoid a de-facto global registry that recreates what is being removed.</div></div>
-  </div>
-
-  <div class="done-when">Done when: a 2-node RF-only topology runs, InputNode fires and drains its queue, the pulse animates along the edge, and the ConsumerNode slot fills &mdash; all without importing anything from substrate-r/.</div>
-
-  <div class="diagram section-label">Diagram</div>
-  <svg width="700" height="200" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-        <path d="M0,0 L0,6 L8,3 z" fill="#58a6ff"/>
-      </marker>
-    </defs>
-    <!-- InputNode -->
-    <rect x="40" y="70" width="160" height="60" rx="4" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
-    <text x="120" y="95" fill="#3fb950" font-size="12" font-family="monospace" text-anchor="middle">InputNode</text>
-    <text x="120" y="112" fill="#8b949e" font-size="10" font-family="monospace" text-anchor="middle">RF custom node</text>
-    <text x="120" y="125" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">RAF + slot refs + body inline</text>
-    <!-- Wire / pulse -->
-    <line x1="200" y1="100" x2="448" y2="100" stroke="#58a6ff" stroke-width="2" marker-end="url(#arr)"/>
-    <circle cx="324" cy="100" r="7" fill="#58a6ff" opacity="0.85"/>
-    <text x="324" y="88" fill="#58a6ff" font-size="9" font-family="monospace" text-anchor="middle">pulse</text>
-    <rect x="200" y="60" width="250" height="20" rx="3" fill="none" stroke="#30363d" stroke-width="1" stroke-dasharray="4,3"/>
-    <text x="325" y="74" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">RF custom edge (SubstrateEdge) &mdash; SVG path + getPointAtLength</text>
-    <!-- ConsumerNode -->
-    <rect x="450" y="70" width="160" height="60" rx="4" fill="#161b22" stroke="#bc8cff" stroke-width="1.5"/>
-    <text x="530" y="95" fill="#bc8cff" font-size="12" font-family="monospace" text-anchor="middle">ConsumerNode</text>
-    <text x="530" y="112" fill="#8b949e" font-size="10" font-family="monospace" text-anchor="middle">RF custom node</text>
-    <text x="530" y="125" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">slot fills on delivery</text>
-    <!-- Labels -->
-    <text x="120" y="175" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">kind body embedded</text>
-    <text x="530" y="175" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">kind body embedded</text>
-  </svg>
+  <div class="done-when">Done. Phase 2 is the active work.</div>
 </div>
 
 <!-- ===== PHASE 2 ===== -->
 <div id="tab-p2" class="tab-content">
-  <h2>Phase 2 &mdash; Port remaining kinds</h2>
-  <div class="goal">Migrate every node kind out of substrate-r/ into self-contained RF custom node files, then delete the substrate-r/ directory.</div>
+  <h2>Phase 2 &mdash; Delete substrate-r, rewrite kinds RF-native</h2>
+  <div class="goal">Delete <code>tools/topology-vscode/src/webview/substrate-r/</code> in its entirety. Rewrite every node kind from scratch as self-contained RF custom node components that render the topology statically. Wire the Run button to invoke the Go runtime; pulse animation from Go trace events lands in Phase 4. Old substrate-r files may be read once as reference; new code is RF-native &mdash; no ports, no adapters.</div>
 
   <div class="callout">
-    <div class="callout-title">Audit finding</div>
-    The substrate-r audit found all kinds port-ready &mdash; no logic rewrites needed before porting.
-    InputQueueEditor requires light refactoring: its overlay positioning assumes the substrate canvas coordinate space; update to RF node-local coordinates during the port.
+    <div class="callout-title">Implementation contract</div>
+    Per-kind RF nodes render the topology and accept user edits via RF primitives (<code>node.data</code>, <code>setNodes</code>, <code>setEdges</code>, <code>useReactFlow</code>). They do not simulate. Run invokes the Go runtime; Go is the only runtime. No shared substrate/ module, no slot phase machine in TS, no TS-side enforcement of substrate semantics &mdash; parity with Go comes from Go being the reference.
+  </div>
+
+  <div class="callout">
+    <div class="callout-title">Phase 2 &rarr; Phase 4 gap (intentional)</div>
+    After Phase 2 and before Phase 4, Run invokes the Go runtime but the editor does not yet render pulses &mdash; the trace-stream consumer lands in Phase 4. The editor is fully usable for editing during the gap; live visualization is the Phase 4 deliverable.
   </div>
 
   <div class="section-label">Steps</div>
   <ul>
-    <li>For each kind in <code>node-kinds.tsx</code> (Input, Relay, Join, ReadGate, ReadLatch, Partition, Edge, Inhibitor, ChainInhibitor, EdgeInhibitor, InhibitRightGate, SyncGate, StreakDetector, StreakBreakDetector, TransferInhibitor): create one file under <code>rf/nodes/&lt;KindName&gt;Node.tsx</code>.</li>
-    <li>Each file contains: the RNodeKind type entry, port list constant, body component, and any per-kind validator.</li>
-    <li>Port InputQueueEditor overlay to RF node-local coordinates.</li>
-    <li>Update <code>rf/app/AppView.tsx</code> nodeTypes map to point to the new files.</li>
+    <li>Start with <code>InputNode</code>: create <code>rf/nodes/InputNode.tsx</code> &mdash; RF custom node that renders the kind's static visual (ports, label, init-queue display) from <code>node.data</code>. No simulation logic, no RAF.</li>
+    <li>Create <code>rf/edges/SubstrateEdge.tsx</code>: RF custom edge that renders the wire's static visual (path, label, kind styling). No pulse animation yet &mdash; Phase 4 adds that on trace events.</li>
+    <li>For each remaining kind (Relay, Join, ReadGate, ReadLatch, Partition, Edge, Inhibitor, ChainInhibitor, EdgeInhibitor, InhibitRightGate, SyncGate, StreakDetector, StreakBreakDetector, TransferInhibitor): create one file under <code>rf/nodes/&lt;KindName&gt;Node.tsx</code> with port list and static visual. No bodies, no simulation.</li>
+    <li>Register all kinds in <code>rf/app/AppView.tsx</code> nodeTypes/edgeTypes maps.</li>
+    <li>Wire the Run button to invoke the Go runtime (subprocess or IPC). The editor does not consume Go output yet; that lands in Phase 4. Run goes from faded to live in this phase.</li>
     <li>Delete <code>tools/topology-vscode/src/webview/substrate-r/</code>.</li>
-    <li>Confirm <code>npm run build</code> passes with no imports of substrate-r.</li>
+    <li>Confirm no imports of substrate-r remain: <code>grep -r "substrate-r" --include="*.ts" --include="*.tsx" tools/topology-vscode/src/</code></li>
+    <li>Run <code>npm run build</code> and verify it passes.</li>
   </ul>
 
   <div class="section-label">Files touched</div>
   <div class="files-grid">
-    <div class="file-row"><div class="file-path">rf/nodes/&lt;Kind&gt;Node.tsx (x14+)</div><div class="file-role">New per-kind files: type entry, ports, body, validator</div></div>
-    <div class="file-row"><div class="file-path">rf/app/AppView.tsx</div><div class="file-role">Update nodeTypes registration map</div></div>
+    <div class="file-row"><div class="file-path">rf/nodes/InputNode.tsx</div><div class="file-role">First kind: RF custom node, static visual rendered from node.data — no simulation</div></div>
+    <div class="file-row"><div class="file-path">rf/edges/SubstrateEdge.tsx</div><div class="file-role">RF custom edge, static path rendering — pulse animation lands in Phase 4</div></div>
+    <div class="file-row"><div class="file-path">rf/nodes/&lt;Kind&gt;Node.tsx (x14+)</div><div class="file-role">One file per remaining kind: ports + static visual, RF-native, no simulation</div></div>
+    <div class="file-row"><div class="file-path">rf/app/RunButton.tsx</div><div class="file-role">Wire to Go runtime invocation; output consumed in Phase 4</div></div>
+    <div class="file-row"><div class="file-path">rf/app/AppView.tsx</div><div class="file-role">Register all new nodeTypes/edgeTypes</div></div>
     <div class="file-row"><div class="file-path">substrate-r/ (deleted)</div><div class="file-role">Entire directory removed after all imports resolved</div></div>
   </div>
 
   <div class="section-label">Risks</div>
   <div class="risks-grid">
+    <div class="risk-row"><div class="risk-label">Path geometry access</div><div class="risk-detail">RF custom edges receive the SVG path string but not the raw point array. Pulse position computed via SVGPathElement.getPointAtLength; verify available in the webview sandbox before committing to the approach.</div></div>
+    <div class="risk-row"><div class="risk-label">No TS substrate fallback</div><div class="risk-detail">Per-kind RF nodes render the static topology only; they do not simulate. Run invokes the Go runtime. Do not introduce a shared module-level slot/wire registry in TS &mdash; that would reinvent substrate-r under a new name. If a kind needs cross-node state for editing affordances, route it through RF state (<code>edge.data</code>, <code>useReactFlow</code>), not a parallel registry.</div></div>
     <div class="risk-row"><div class="risk-label">Import churn</div><div class="risk-detail">substrate-r/ is imported from RSubstrateNode, RSubstrateEdge, registry, and edge-actions-ctx. Grep all import paths before deleting to avoid missing a stale reference.</div></div>
-    <div class="risk-row"><div class="risk-label">InputQueueEditor coords</div><div class="risk-detail">Only known refactor item from the audit. Scope the fix to the overlay's position calculation; the queue logic itself is port-ready.</div></div>
   </div>
 
-  <div class="done-when">Done when: <code>npm run build</code> succeeds, no file imports from substrate-r/, and the editor loads the full node palette with all kinds functional.</div>
+  <div class="done-when">Done when: <code>substrate-r/</code> directory is gone; <code>npm run build</code> succeeds; editor loads topology.json and every kind renders statically; Run button invokes the Go runtime (output not yet visualized).</div>
 
   <div class="diagram section-label">Diagram &mdash; before/after directory tree</div>
   <svg width="700" height="260" viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg">
@@ -218,35 +174,40 @@
 
 <!-- ===== PHASE 3 ===== -->
 <div id="tab-p3" class="tab-content">
-  <h2>Phase 3 &mdash; State registry for fold survival</h2>
-  <div class="goal">Preserve per-node runtime state (slot phases, in-flight values) across React fold collapse/expand cycles by moving it from component-local refs into a module-level registry.</div>
+  <h2>Phase 3 &mdash; Single state source (RF only)</h2>
+  <div class="goal">The editor's only state is RF state. Delete the second Zustand store, <code>specToFlow</code>, <code>mutateBoth</code>, and the parallel undo/redo stacks. RF node/edge data fields are the sole editor state.</div>
 
   <div class="section-label">Steps</div>
   <ul>
-    <li>Create <code>rf/nodes/runtime-registry.ts</code>: a module-level <code>Map&lt;nodeId, RuntimeState&gt;</code> where <code>RuntimeState</code> holds slot phases and any in-flight wire values.</li>
-    <li>On mount, each RF custom node reads its entry from the registry (if present) and restores local refs.</li>
-    <li>On unmount, each node writes current slot state back to the registry.</li>
-    <li>Wire phase (in-flight) needs the same treatment on the edge side: <code>rf/edges/SubstrateEdge.tsx</code> saves/restores animation progress on unmount/mount.</li>
-    <li>Test: start a simulation run, collapse the fold containing an in-flight wire, expand immediately, confirm the pulse resumes rather than drops.</li>
+    <li>Define typed <code>NodeData</code> and <code>EdgeData</code> schemas that carry all fields currently split across the Zustand spec store and RF node data.</li>
+    <li>Replace <code>spec-to-flow.ts</code> projection with direct <code>setNodes</code>/<code>setEdges</code> calls using the typed data fields.</li>
+    <li>Wrap <code>setNodes</code>/<code>setEdges</code> in validation dispatchers (<code>rf/nodes/dispatchers.ts</code>); these are the only mutator API — enforce via module boundary.</li>
+    <li>Delete <code>specToFlow</code>, <code>mutateBoth</code>, and the Zustand spec slice.</li>
+    <li>Delete parallel undo/redo stacks; verify undo/redo works via RF's own snapshot mechanism or a thin wrapper.</li>
+    <li>Update <code>SaveLifecycle</code> to read from RF state (<code>useNodes</code>/<code>useEdges</code>) directly.</li>
+    <li>Grep for any remaining imports of the deleted Zustand store and resolve.</li>
   </ul>
 
   <div class="section-label">Files touched</div>
   <div class="files-grid">
-    <div class="file-row"><div class="file-path">rf/nodes/runtime-registry.ts</div><div class="file-role">New: module-level Map holding RuntimeState per node id</div></div>
-    <div class="file-row"><div class="file-path">rf/nodes/&lt;Kind&gt;Node.tsx</div><div class="file-role">Each kind: add mount-read and unmount-write hooks against the registry</div></div>
-    <div class="file-row"><div class="file-path">rf/edges/SubstrateEdge.tsx</div><div class="file-role">Save/restore animation progress (RAF t, in-flight value) on unmount/mount</div></div>
+    <div class="file-row"><div class="file-path">state/store.ts</div><div class="file-role">Remove spec slice entirely; delete file if nothing else lives there</div></div>
+    <div class="file-row"><div class="file-path">state/spec/mutators.ts</div><div class="file-role">Delete; logic moves into dispatchers.ts</div></div>
+    <div class="file-row"><div class="file-path">rf/adapter/spec-to-flow.ts</div><div class="file-role">Delete; no projection from a separate store</div></div>
+    <div class="file-row"><div class="file-path">rf/nodes/dispatchers.ts</div><div class="file-role">New: typed setNodes/setEdges wrappers with validation; only permitted mutator path</div></div>
+    <div class="file-row"><div class="file-path">webview/SaveLifecycle.tsx</div><div class="file-role">Read from RF state (useNodes/useEdges) instead of Zustand spec</div></div>
+    <div class="file-row"><div class="file-path">state/history.ts</div><div class="file-role">Delete or replace with RF-native snapshot</div></div>
   </div>
 
   <div class="section-label">Risks</div>
   <div class="risks-grid">
-    <div class="risk-row"><div class="risk-label">Fold + running sim</div><div class="risk-detail">A fold collapse while the RAF loop is mid-tick can leave the registry write racing the animation frame. Halt the node's RAF before unmount write; resume after mount read.</div></div>
-    <div class="risk-row"><div class="risk-label">Stale registry entries</div><div class="risk-detail">If a node is deleted (not folded), its registry entry must be evicted. Hook deletion through the same path that removes the RF node to avoid phantom entries accumulating.</div></div>
+    <div class="risk-row"><div class="risk-label">Dispatcher bypass</div><div class="risk-detail">Any code path calling raw setNodes/setEdges directly bypasses validation. Enforce module boundary. Grep for direct calls as audit step before deleting old store.</div></div>
+    <div class="risk-row"><div class="risk-label">Undo granularity</div><div class="risk-detail">Zustand history gave per-operation undo. RF built-in history operates at node-graph level. Verify granularity is acceptable before removing old stacks.</div></div>
   </div>
 
-  <div class="done-when">Done when: collapsing a fold group mid-simulation and immediately expanding it shows slot state intact (filled slots remain filled, in-flight pulse resumes) with no console errors.</div>
+  <div class="done-when">Done when: no Zustand store outside RF's own internals; build passes; save/load round-trip preserves all node fields; undo/redo works for add/delete/rename.</div>
 
-  <div class="diagram section-label">Diagram &mdash; node lifecycle with registry</div>
-  <svg width="700" height="280" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+  <div class="diagram section-label">Diagram &mdash; before vs after</div>
+  <svg width="700" height="220" viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
         <path d="M0,0 L0,6 L8,3 z" fill="#58a6ff"/>
@@ -254,98 +215,17 @@
       <marker id="a3g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
         <path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/>
       </marker>
-      <marker id="a3o" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-        <path d="M0,0 L0,6 L8,3 z" fill="#d29922"/>
-      </marker>
-    </defs>
-    <!-- Registry -->
-    <rect x="260" y="10" width="180" height="50" rx="3" fill="#161b22" stroke="#bc8cff" stroke-width="1.5"/>
-    <text x="350" y="32" fill="#bc8cff" font-size="11" font-family="monospace" text-anchor="middle">runtime-registry.ts</text>
-    <text x="350" y="50" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">Map&lt;nodeId, RuntimeState&gt;</text>
-    <!-- Mount -->
-    <rect x="60" y="120" width="160" height="50" rx="3" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
-    <text x="140" y="142" fill="#3fb950" font-size="11" font-family="monospace" text-anchor="middle">useEffect (mount)</text>
-    <text x="140" y="158" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">read registry, restore refs</text>
-    <!-- Unmount -->
-    <rect x="480" y="120" width="160" height="50" rx="3" fill="#161b22" stroke="#d29922" stroke-width="1.5"/>
-    <text x="560" y="142" fill="#d29922" font-size="11" font-family="monospace" text-anchor="middle">useEffect cleanup</text>
-    <text x="560" y="158" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">halt RAF, write registry</text>
-    <!-- Running node -->
-    <rect x="260" y="120" width="180" height="50" rx="3" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
-    <text x="350" y="142" fill="#58a6ff" font-size="11" font-family="monospace" text-anchor="middle">RF custom node</text>
-    <text x="350" y="158" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">RAF loop, slot refs live</text>
-    <!-- Arrows -->
-    <line x1="220" y1="145" x2="256" y2="145" stroke="#3fb950" stroke-width="1.5" marker-end="url(#a3g)"/>
-    <line x1="440" y1="145" x2="476" y2="145" stroke="#d29922" stroke-width="1.5" marker-end="url(#a3o)"/>
-    <!-- registry read -->
-    <line x1="140" y1="120" x2="300" y2="62" stroke="#3fb950" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#a3g)"/>
-    <text x="180" y="85" fill="#3fb950" font-size="9" font-family="monospace">read on mount</text>
-    <!-- registry write -->
-    <line x1="560" y1="120" x2="420" y2="62" stroke="#d29922" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#a3o)"/>
-    <text x="470" y="85" fill="#d29922" font-size="9" font-family="monospace">write on unmount</text>
-    <!-- fold collapse/expand -->
-    <text x="350" y="220" fill="#8b949e" font-size="10" font-family="monospace" text-anchor="middle">fold collapse  &rarr;  unmount  &rarr;  registry write</text>
-    <text x="350" y="240" fill="#8b949e" font-size="10" font-family="monospace" text-anchor="middle">fold expand   &rarr;  mount    &rarr;  registry read</text>
-    <text x="350" y="265" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">slot state and in-flight values survive the round-trip</text>
-  </svg>
-</div>
-
-<!-- ===== PHASE 4 ===== -->
-<div id="tab-p4" class="tab-content">
-  <h2>Phase 4 &mdash; Collapse the second Zustand store</h2>
-  <div class="goal">Move the topology spec out of the parallel Zustand store and into RF's own node/edge data fields, leaving a single source of truth.</div>
-
-  <div class="section-label">Steps</div>
-  <ul>
-    <li>Define typed schemas for RF node data (<code>NodeData</code>) and edge data (<code>EdgeData</code>) that carry all fields currently in the Zustand spec.</li>
-    <li>Replace <code>spec-to-flow.ts</code> projection with direct RF <code>setNodes</code>/<code>setEdges</code> calls using the typed data fields.</li>
-    <li>Wrap <code>setNodes</code> and <code>setEdges</code> in validation dispatchers that run the existing spec validators before committing; these are the new mutator API.</li>
-    <li>Delete <code>specToFlow</code>, <code>mutateBoth</code>, and the viewer history undo/redo stacks that were backed by Zustand spec snapshots.</li>
-    <li>Verify undo/redo still works via RF's own snapshot mechanism or a thin wrapper around it.</li>
-    <li>Verify save: SaveLifecycle reads from RF state directly and serialises to topology.json.</li>
-  </ul>
-
-  <div class="section-label">Files touched</div>
-  <div class="files-grid">
-    <div class="file-row"><div class="file-path">state/store.ts</div><div class="file-role">Remove spec slice; keep only non-topology fields (runStatus, nextTxnId) if still needed</div></div>
-    <div class="file-row"><div class="file-path">state/spec/mutators.ts</div><div class="file-role">Delete; logic moves into validation dispatchers</div></div>
-    <div class="file-row"><div class="file-path">rf/adapter/spec-to-flow.ts</div><div class="file-role">Delete; no longer projecting from a separate store</div></div>
-    <div class="file-row"><div class="file-path">rf/nodes/dispatchers.ts</div><div class="file-role">New: typed setNodes/setEdges wrappers with validation</div></div>
-    <div class="file-row"><div class="file-path">webview/SaveLifecycle.tsx</div><div class="file-role">Update to read from RF state (useNodes/useEdges) instead of Zustand spec</div></div>
-    <div class="file-row"><div class="file-path">state/history.ts</div><div class="file-role">Delete or replace with RF-native snapshot approach</div></div>
-  </div>
-
-  <div class="section-label">Risks</div>
-  <div class="risks-grid">
-    <div class="risk-row"><div class="risk-label">Validation dispatcher bypass</div><div class="risk-detail">Any code path calling RF setNodes/setEdges directly bypasses validation. Enforce by making raw setNodes/setEdges inaccessible outside dispatchers.ts (module boundary). Grep for direct calls in the audit step.</div></div>
-    <div class="risk-row"><div class="risk-label">Undo stack regression</div><div class="risk-detail">Zustand history.ts gave per-operation undo. RF's built-in history operates at the node-graph level. Verify undo granularity is acceptable before removing the old stacks.</div></div>
-  </div>
-
-  <div class="done-when">Done when: build passes, no imports of state/store.ts for spec data, save/load round-trip preserves all node fields, and undo/redo works for add/delete/rename operations.</div>
-
-  <div class="diagram section-label">Diagram &mdash; before vs after</div>
-  <svg width="700" height="280" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <marker id="a4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-        <path d="M0,0 L0,6 L8,3 z" fill="#58a6ff"/>
-      </marker>
-      <marker id="a4r" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-        <path d="M0,0 L0,6 L8,3 z" fill="#f85149"/>
-      </marker>
-      <marker id="a4g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-        <path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/>
-      </marker>
     </defs>
     <!-- BEFORE -->
     <text x="20" y="20" fill="#8b949e" font-size="11" font-family="monospace">BEFORE</text>
     <rect x="20" y="30" width="130" height="40" rx="3" fill="#161b22" stroke="#58a6ff" stroke-width="1"/>
     <text x="85" y="48" fill="#58a6ff" font-size="10" font-family="monospace" text-anchor="middle">Zustand store</text>
-    <text x="85" y="62" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">(spec + viewer)</text>
+    <text x="85" y="62" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">(spec + history)</text>
     <rect x="20" y="100" width="130" height="40" rx="3" fill="#161b22" stroke="#bc8cff" stroke-width="1"/>
     <text x="85" y="118" fill="#bc8cff" font-size="10" font-family="monospace" text-anchor="middle">RF store</text>
     <text x="85" y="132" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">(nodes, edges)</text>
-    <line x1="85" y1="70" x2="85" y2="96" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a4)"/>
-    <text x="90" y="88" fill="#8b949e" font-size="9" font-family="monospace">spec-to-flow</text>
+    <line x1="85" y1="70" x2="85" y2="96" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a3)"/>
+    <text x="90" y="88" fill="#8b949e" font-size="9" font-family="monospace">specToFlow</text>
     <text x="85" y="170" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">Two stores + projection</text>
     <!-- AFTER -->
     <text x="420" y="20" fill="#8b949e" font-size="11" font-family="monospace">AFTER</text>
@@ -357,76 +237,80 @@
     <text x="485" y="132" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">typed NodeData/EdgeData</text>
     <rect x="420" y="160" width="130" height="40" rx="3" fill="#161b22" stroke="#58a6ff" stroke-width="1"/>
     <text x="485" y="178" fill="#58a6ff" font-size="10" font-family="monospace" text-anchor="middle">dispatchers.ts</text>
-    <text x="485" y="192" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">validation wrappers</text>
-    <line x1="485" y1="140" x2="485" y2="156" stroke="#3fb950" stroke-width="1.5" marker-end="url(#a4g)"/>
-    <text x="485" y="245" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">One RF store + typed data</text>
+    <text x="485" y="192" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">only mutator path</text>
+    <line x1="485" y1="140" x2="485" y2="156" stroke="#3fb950" stroke-width="1.5" marker-end="url(#a3g)"/>
   </svg>
 </div>
 
-<!-- ===== PHASE 5 ===== -->
-<div id="tab-p5" class="tab-content">
-  <h2>Phase 5 &mdash; Go codegen direct from RF state</h2>
-  <div class="goal">Update topogen to read RF state at save time, eliminating or simplifying the topology.json intermediate format.</div>
+<!-- ===== PHASE 4 ===== -->
+<div id="tab-p4" class="tab-content">
+  <h2>Phase 4 &mdash; Codegen / Go handshake</h2>
+  <div class="goal">Simplify topology.json to RF's native shape; topogen reads RF state. Run button calls the Go runtime; the editor visualizes the trace stream Go emits. Go is the reference — TS simulation is display-only and may drift.</div>
 
   <div class="section-label">Steps</div>
   <ul>
-    <li>Decide serialization strategy (see Risks below): either keep topology.json as a snapshot of RF state, or emit Wiring_gen.go directly without an intermediate JSON file.</li>
-    <li>If keeping topology.json: update SaveLifecycle to serialise RF NodeData/EdgeData to the existing JSON schema; topogen remains unchanged.</li>
-    <li>If going direct: topogen reads from a new RF-state export (JSON-lines or inline call); delete topology.json from the save path; add a snapshot command for git-diffable artifacts.</li>
-    <li>Validate topogen output against the existing Wiring.go contract: same channel names, same node constructors.</li>
-    <li>Run <code>go build ./...</code> to confirm the generated file compiles.</li>
+    <li>Update <code>SaveLifecycle</code> to serialise RF <code>NodeData</code>/<code>EdgeData</code> to the topology.json schema; topology.json remains as a snapshot artifact for git-diffability.</li>
+    <li>Update <code>cmd/topogen/main.go</code> input parser if RF-state schema diverges from current topology.json schema; add a schema version field and assert it in topogen.</li>
+    <li>Run <code>go build ./...</code> to confirm generated Wiring_gen.go compiles.</li>
+    <li>Wire the Run button to invoke the Go runtime (IPC or subprocess); receive the trace stream (Go events).</li>
+    <li>Drive pulse animations from Go trace events: each event carries node id, slot index, and simTime; RF custom nodes/edges animate on receipt. This is the only source of pulse animation &mdash; there is no TS fallback.</li>
   </ul>
 
   <div class="section-label">Files touched</div>
   <div class="files-grid">
-    <div class="file-row"><div class="file-path">webview/SaveLifecycle.tsx</div><div class="file-role">Updated serialiser: reads RF NodeData/EdgeData and writes to topology.json (snapshot path) or posts directly to codegen</div></div>
+    <div class="file-row"><div class="file-path">webview/SaveLifecycle.tsx</div><div class="file-role">Serialise RF NodeData/EdgeData to topology.json</div></div>
     <div class="file-row"><div class="file-path">cmd/topogen/main.go</div><div class="file-role">Input format update if RF state schema diverges from current topology.json schema</div></div>
     <div class="file-row"><div class="file-path">nodes/Wiring/Wiring.go</div><div class="file-role">Generated output; format unchanged, input path may differ</div></div>
-    <div class="file-row"><div class="file-path">topology.json</div><div class="file-role">May become a snapshot artifact rather than the live spec, or be retired entirely</div></div>
+    <div class="file-row"><div class="file-path">topology.json</div><div class="file-role">Snapshot artifact: RF-state shape, read by topogen, git-diffable</div></div>
+    <div class="file-row"><div class="file-path">rf/app/RunButton.tsx (or equivalent)</div><div class="file-role">Invoke Go runtime; receive and dispatch trace events to RF nodes/edges</div></div>
+    <div class="file-row"><div class="file-path">rf/nodes/&lt;Kind&gt;Node.tsx</div><div class="file-role">Accept Go trace events for pulse animation; no TS simulation dependency</div></div>
   </div>
 
   <div class="section-label">Risks</div>
   <div class="risks-grid">
-    <div class="risk-row"><div class="risk-label">Snapshot vs direct codegen</div><div class="risk-detail">Keeping topology.json preserves git-diffability of topology changes and lets topogen remain a standalone CLI. Skipping it saves a round-trip but loses that audit trail. Recommended: keep topology.json as a snapshot; it is cheap to write and valuable for diffs.</div></div>
-    <div class="risk-row"><div class="risk-label">Schema drift</div><div class="risk-detail">If RF NodeData fields diverge from the current topology.json schema, topogen will silently produce wrong wiring. Add a schema version field and assert it in topogen before parsing.</div></div>
+    <div class="risk-row"><div class="risk-label">Schema drift</div><div class="risk-detail">RF NodeData fields diverging from topology.json schema causes topogen to silently produce wrong wiring. Add schema version field; assert in topogen before parsing.</div></div>
+    <div class="risk-row"><div class="risk-label">IPC latency</div><div class="risk-detail">Go trace events arrive asynchronously; RF animation must buffer and replay at correct simTime offsets, not wall-clock time. Anchor each pulse at its emit simTime.</div></div>
+    <div class="risk-row"><div class="risk-label">Go parity</div><div class="risk-detail">TS preview may show behavior that differs from Go. Go wins — do not add TS-side enforcement of substrate semantics. If parity matters, add a Go test, not a TS check.</div></div>
   </div>
 
-  <div class="done-when">Done when: saving the editor writes topology.json from RF state, topogen runs without error, <code>go build ./...</code> passes, and a round-trip (edit &rarr; save &rarr; run) produces correct Go output.</div>
+  <div class="done-when">Done when: Run button is live; pressing it calls the Go runtime; the editor shows pulses driven by Go trace events; <code>go build ./...</code> and <code>npm run build</code> both pass.</div>
 
-  <div class="diagram section-label">Diagram &mdash; data flow from RF state to codegen</div>
-  <svg width="700" height="180" viewBox="0 0 700 180" xmlns="http://www.w3.org/2000/svg">
+  <div class="diagram section-label">Diagram &mdash; data flow from RF state to Go and back</div>
+  <svg width="700" height="200" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <marker id="a5" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <marker id="a4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
         <path d="M0,0 L0,6 L8,3 z" fill="#58a6ff"/>
       </marker>
-      <marker id="a5o" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <marker id="a4o" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
         <path d="M0,0 L0,6 L8,3 z" fill="#d29922"/>
+      </marker>
+      <marker id="a4g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/>
       </marker>
     </defs>
     <!-- RF store -->
-    <rect x="20" y="65" width="130" height="50" rx="3" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
-    <text x="85" y="87" fill="#3fb950" font-size="11" font-family="monospace" text-anchor="middle">RF store</text>
-    <text x="85" y="103" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">NodeData / EdgeData</text>
-    <!-- SaveLifecycle -->
-    <line x1="150" y1="90" x2="196" y2="90" stroke="#3fb950" stroke-width="1.5" marker-end="url(#a5)"/>
-    <text x="173" y="83" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">save</text>
-    <rect x="198" y="65" width="130" height="50" rx="3" fill="#161b22" stroke="#58a6ff" stroke-width="1"/>
-    <text x="263" y="87" fill="#58a6ff" font-size="11" font-family="monospace" text-anchor="middle">topology.json</text>
-    <text x="263" y="103" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">snapshot + git diff</text>
+    <rect x="20" y="65" width="120" height="50" rx="3" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
+    <text x="80" y="87" fill="#3fb950" font-size="11" font-family="monospace" text-anchor="middle">RF store</text>
+    <text x="80" y="103" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">NodeData/EdgeData</text>
+    <!-- topology.json -->
+    <line x1="140" y1="90" x2="178" y2="90" stroke="#3fb950" stroke-width="1.5" marker-end="url(#a4)"/>
+    <text x="159" y="83" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">save</text>
+    <rect x="180" y="65" width="120" height="50" rx="3" fill="#161b22" stroke="#58a6ff" stroke-width="1"/>
+    <text x="240" y="87" fill="#58a6ff" font-size="11" font-family="monospace" text-anchor="middle">topology.json</text>
+    <text x="240" y="103" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">snapshot / git diff</text>
     <!-- topogen -->
-    <line x1="328" y1="90" x2="374" y2="90" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a5)"/>
-    <text x="351" y="83" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">topogen</text>
-    <rect x="376" y="65" width="130" height="50" rx="3" fill="#161b22" stroke="#d29922" stroke-width="1"/>
-    <text x="441" y="87" fill="#d29922" font-size="11" font-family="monospace" text-anchor="middle">Wiring_gen.go</text>
-    <text x="441" y="103" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">generated Go wiring</text>
-    <!-- go build -->
-    <line x1="506" y1="90" x2="552" y2="90" stroke="#d29922" stroke-width="1.5" marker-end="url(#a5o)"/>
-    <text x="529" y="83" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">go build</text>
-    <rect x="554" y="65" width="130" height="50" rx="3" fill="#161b22" stroke="#d29922" stroke-width="1"/>
-    <text x="619" y="87" fill="#d29922" font-size="11" font-family="monospace" text-anchor="middle">Go binary</text>
-    <text x="619" y="103" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">goroutines + channels</text>
+    <line x1="300" y1="90" x2="338" y2="90" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a4)"/>
+    <text x="319" y="83" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">topogen</text>
+    <rect x="340" y="65" width="120" height="50" rx="3" fill="#161b22" stroke="#d29922" stroke-width="1"/>
+    <text x="400" y="87" fill="#d29922" font-size="11" font-family="monospace" text-anchor="middle">Go runtime</text>
+    <text x="400" y="103" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">goroutines + channels</text>
+    <!-- trace events back -->
+    <line x1="400" y1="115" x2="400" y2="155" stroke="#d29922" stroke-width="1.5"/>
+    <line x1="400" y1="155" x2="82" y2="155" stroke="#d29922" stroke-width="1.5"/>
+    <line x1="82" y1="155" x2="82" y2="118" stroke="#d29922" stroke-width="1.5" marker-end="url(#a4o)"/>
+    <text x="240" y="170" fill="#d29922" font-size="9" font-family="monospace" text-anchor="middle">trace events (nodeId, slot, simTime)  &rarr;  RF pulse animation</text>
     <!-- note -->
-    <text x="350" y="155" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">topology.json stays as snapshot artifact for git-diffability; topogen CLI unchanged</text>
+    <text x="400" y="190" fill="#8b949e" font-size="9" font-family="monospace" text-anchor="middle">Go is canonical; TS preview may drift &mdash; Go wins</text>
   </svg>
 </div>
 
