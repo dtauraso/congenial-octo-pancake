@@ -7,8 +7,7 @@ import { specToFlow } from "./adapter";
 import { RunButton } from "./panels/RunButton";
 import { SaveLifecycle } from "../SaveLifecycle";
 import { TimelinePanel } from "./panels/TimelinePanel";
-import { scheduleViewSave } from "../save";
-import { patchViewerState, useDimmed, viewerState } from "../state";
+import { useDimmed, viewerState } from "../state";
 import { isLegacyCamera } from "../state/viewer/types";
 import { AppView } from "./app/AppView";
 import { decorate } from "./app/_decorate";
@@ -77,13 +76,6 @@ function Inner() {
     (c: NodeChange[]) => setNodes((ns) => applyNodeChanges(c, ns)), []);
   const onEdgesChange = useCallback(
     (c: EdgeChange[]) => setEdges((es) => applyEdgeChanges(c, es)), []);
-  const onSelectionChange = useCallback(({ nodes: sel }: { nodes: RFNode[] }) => {
-    const ids = sel.map((n) => n.id);
-    const prev = viewerState.lastSelectionIds ?? [];
-    if (prev.length === ids.length && prev.every((v, i) => v === ids[i])) return;
-    patchViewerState((v) => { v.lastSelectionIds = ids.length > 0 ? ids : undefined; });
-    scheduleViewSave();
-  }, []);
 
   const edgeH = useEdgeHandlers(ctx);
   const delH = useDeleteHandlers(ctx);
@@ -115,7 +107,6 @@ function Inner() {
       styledNodes={styled.nodes} styledEdges={styled.edges}
       guides={guides} edgeMenu={edgeH.edgeMenu}
       onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-      onSelectionChange={onSelectionChange}
       onNodeDoubleClick={ctxH.onNodeDoubleClick}
       onNodeContextMenu={ctxH.onNodeContextMenu}
       onSelectionContextMenu={ctxH.onSelectionContextMenu}

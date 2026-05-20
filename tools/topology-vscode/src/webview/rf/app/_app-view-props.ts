@@ -14,7 +14,6 @@ export type AppViewProps = {
   edgeMenu: EdgeMenu;
   onNodesChange: (c: NodeChange[]) => void;
   onEdgesChange: (c: EdgeChange[]) => void;
-  onSelectionChange: (p: { nodes: RFNode[] }) => void;
   onNodeDoubleClick: (ev: React.MouseEvent, n: RFNode) => void;
   onNodeContextMenu: (ev: React.MouseEvent, n: RFNode) => void;
   onSelectionContextMenu: (ev: React.MouseEvent, n: RFNode[]) => void;
