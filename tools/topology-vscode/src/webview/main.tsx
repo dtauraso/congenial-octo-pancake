@@ -4,7 +4,8 @@ import "./webview.css";
 import App from "./rf/app";
 import { flushSave, flushViewSave, setTopogenStatus } from "./save";
 import { parseHostToWebview } from "../messages";
-import { getSpec, setDimmed, setRunStatus } from "./state";
+import { getSpec, setDimmed } from "./state";
+import { setRunStatusImperative } from "./rf/run-status-state";
 import { ErrorBoundary } from "./log/ErrorBoundary";
 import { CrashListeners } from "./log/CrashListeners";
 
@@ -39,7 +40,7 @@ window.addEventListener("message", (e) => {
       ? { state: "error", message: msg.message ?? "" }
       : { state: msg.state });
   } else if (msg.type === "run-status") {
-    setRunStatus(msg.state === "error"
+    setRunStatusImperative(msg.state === "error"
       ? { state: "error", message: msg.message ?? "" }
       : { state: msg.state });
   } else if (msg.type === "flush") {

@@ -25,6 +25,9 @@ import type { AppCtx } from "./app/_ctx";
 import { EdgeActionsCtx } from "./app/_edge-actions-ctx";
 import { registerRFSetters, notifyRFState } from "./rf-imperative";
 import { registerHistory, undo as rfUndo, redo as rfRedo } from "./history";
+import { registerRunStatusSetter } from "./run-status-state";
+import { RunStatusCtx } from "./run-status-ctx";
+import type { RunStatusUI } from "../state/store";
 import { useHotkeys } from "react-hotkeys-hook";
 
 function Inner() {
@@ -125,12 +128,16 @@ function Inner() {
 }
 
 export default function App() {
+  const [runStatus, setRunStatus] = useState<RunStatusUI>({ state: "idle" });
+  useEffect(() => { registerRunStatusSetter(setRunStatus); }, []);
   return (
-    <ReactFlowProvider>
-      <SaveLifecycle />
-      <Inner />
-      <RunButton />
-<TimelinePanel />
-    </ReactFlowProvider>
+    <RunStatusCtx.Provider value={runStatus}>
+      <ReactFlowProvider>
+        <SaveLifecycle />
+        <Inner />
+        <RunButton />
+        <TimelinePanel />
+      </ReactFlowProvider>
+    </RunStatusCtx.Provider>
   );
 }

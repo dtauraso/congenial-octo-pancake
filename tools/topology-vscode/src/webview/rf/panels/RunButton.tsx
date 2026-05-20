@@ -1,10 +1,11 @@
 import { createPortal } from "react-dom";
 import { vscode } from "../../vscode-api";
-import { spec, useRunStatus } from "../../state";
+import { spec } from "../../state";
 import { flushActiveInlineEdit } from "../../inline-edit";
+import { useRunStatusCtx } from "../run-status-ctx";
 
 export function RunButton() {
-  const status = useRunStatus();
+  const status = useRunStatusCtx();
   const mount = document.getElementById("run-mount");
   if (!mount) return null;
   const running = status.state === "running";
@@ -38,7 +39,7 @@ export function RunButton() {
   );
 }
 
-function statusClass(s: ReturnType<typeof useRunStatus>): string {
+function statusClass(s: ReturnType<typeof useRunStatusCtx>): string {
   if (s.state === "running") return "run-running";
   if (s.state === "ok") return "run-ok";
   if (s.state === "cancelled") return "run-idle";
@@ -46,7 +47,7 @@ function statusClass(s: ReturnType<typeof useRunStatus>): string {
   return "run-idle";
 }
 
-function statusText(s: ReturnType<typeof useRunStatus>): string {
+function statusText(s: ReturnType<typeof useRunStatusCtx>): string {
   if (s.state === "running") return "running…";
   if (s.state === "ok") return "ok";
   if (s.state === "cancelled") return "cancelled";
