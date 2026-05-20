@@ -1,9 +1,9 @@
 import type { Connection, Edge as RFEdge } from "reactflow";
-import { NODE_TYPES, type EdgeKind } from "../../../schema";
-import { specToFlow } from "../adapter";
+import { KIND_COLORS, NODE_TYPES, type EdgeKind } from "../../../schema";
 import { scheduleSave } from "../../save";
-import { mutateSpec, spec, viewerState } from "../../state";
-import { useStore } from "../../state/store";
+import { mutateSpec, spec } from "../../state";
+import { pushSnapshot } from "../history";
+import { rfSetEdges } from "../rf-imperative";
 import type { AppCtx } from "./_ctx";
 
 export function onReconnectImpl(ctx: AppCtx, oldEdge: RFEdge, conn: Connection) {
@@ -20,7 +20,8 @@ export function onReconnectImpl(ctx: AppCtx, oldEdge: RFEdge, conn: Connection) 
   const dstPort = dstDef?.inputs.find((p) => p.name === conn.targetHandle);
   if (!srcPort || !dstPort) return;
   const newKind: EdgeKind = srcPort.kind === dstPort.kind ? srcPort.kind : "any";
-  const next = mutateSpec((s) => {
+  pushSnapshot();
+  mutateSpec((s) => {
     const e = s.edges.find((x) => x.id === oldEdge.id);
     if (!e) return;
     e.source = conn.source!;
@@ -30,9 +31,21 @@ export function onReconnectImpl(ctx: AppCtx, oldEdge: RFEdge, conn: Connection) 
     e.kind = newKind;
   });
   ctx.reconnectOk.current = true;
-  ctx.lastSpec.current = next;
-  const flow = specToFlow(next, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
-  ctx.setNodes(flow.nodes);
-  ctx.setEdges(flow.edges);
+  rfSetEdges((es) => es.map((e) =>
+    e.id !== oldEdge.id ? e : {
+      ...e,
+      source: conn.source!,
+      sourceHandle: conn.sourceHandle!,
+      target: conn.target!,
+      targetHandle: conn.targetHandle!,
+      style: { ...e.style, stroke: KIND_COLORS[newKind] ?? "#888" },
+      data: {
+        ...e.data,
+        kind: newKind,
+        sourceHandle: conn.sourceHandle!,
+        targetHandle: conn.targetHandle!,
+      },
+    }
+  ));
   scheduleSave();
 }
