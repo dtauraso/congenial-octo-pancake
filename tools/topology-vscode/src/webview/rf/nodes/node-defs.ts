@@ -32,5 +32,4 @@ export const NODE_DEFS: Record<string, NodeDef> = {
   streakBreakDetector: { defaultLabel: "streakBreakDetector", bg: "#ffebee", border: "#c62828", text: "#b71c1c", accent: "#c62828", minWidth: 110, targets: [{ id: "FromOld" }, { id: "FromNew" }], sources: [{ id: "ToDone" }] },
   streakDetector: { defaultLabel: "streakDetector", bg: "#e8f5e9", border: "#2e7d32", text: "#1b5e20", accent: "#2e7d32", minWidth: 100, targets: [{ id: "FromOld" }, { id: "FromNew" }], sources: [{ id: "ToDone" }, { id: "ToStreak", accent: "#66bb6a" }] },
   syncGate: { defaultLabel: "syncGate", bg: "#f3e5f5", border: "#7b1fa2", text: "#4a148c", accent: "#7b1fa2", minWidth: 70, targets: [{ id: "FromA" }, { id: "FromB" }], sources: [{ id: "ToRelease", accent: "#80cbc4" }] },
-  transferInhibitor: { defaultLabel: "transferInhibitor", bg: "#fff3e0", border: "#bf360c", text: "#bf360c", accent: "#bf360c", minWidth: 120, sources: [{ id: "EndTo" }] },
 };
