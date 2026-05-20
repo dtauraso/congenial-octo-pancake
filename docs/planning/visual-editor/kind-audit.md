@@ -57,7 +57,7 @@ Worth scrutinizing before the audit table is filled:
 | Join | 2 → 1 | Buffer both; emit once both arrive. | 0 | ReadGate, SyncGate | 🗑️ **deleted (2026-05-19)** — editor-only, unused; semantics subsumed by ReadGate. |
 | Inhibitor | 2 → 3 (prev+edge / next+edge+gate) | Block on prev; emit held+new; forward chain. | 1 code ref | ChainInhibitor | 🗑️ **deleted (2026-05-20)** — superset already in use as ChainInhibitor. |
 | ChainInhibitor | 1 → 4 (prev / next+edge+new+ack) | Block on prev; emit old to ToEdge/ToNext, new to ToEdgeNew, 1 to ToAck. | topology: 2; docs: 2 | Inhibitor | ✅ **keep** — superset; fan-out + ack. |
-| EdgeInhibitor | 1 → 1 (prev / edge) | Block on prev; forward to edge (no buffer). | 1 code ref | ChainInhibitor | 🗑️ **delete** — unused; ChainInhibitor superset. |
+| EdgeInhibitor | 1 → 1 (prev / edge) | Block on prev; forward to edge (no buffer). | 1 code ref | ChainInhibitor | 🗑️ **deleted (2026-05-20)** — unused; ChainInhibitor superset. |
 | TransferInhibitor | chan-of-chan → 1 | Block on TransferIn; store as EndTo; forward if set. | 1 code ref | — | ⏸️ **defer** — specialized partition-end forwarding. |
 | StreakDetector | 2 → 2 (old+new / done+streak) | Emit 1 on Done; emit 1/0 on Streak if sign same/diff. | 1 code ref | StreakBreakDetector | 🔀 **merge → StreakBreakDetector + invert flag**. |
 | StreakBreakDetector | 2 → 1 (old+new / done) | Emit 1 if sign(old)≠sign(new). | 1 code ref | StreakDetector | 🔀 **absorb StreakDetector**. |
@@ -92,6 +92,7 @@ Usage counts are from the agent's grep sweep; verify per-kind before any deletio
 - 🗑️ **Relay** — deleted 2026-05-19 on `task/kind-audit-consolidation`. SPEC.md removed; dropped from `RUNTIME_IMPLEMENTED_KINDS` and `NODE_TYPES`; `node-defs.ts` regenerated.
 - 🗑️ **Join** — deleted 2026-05-19 on `task/kind-audit-consolidation`. SPEC.md removed; dropped from `RUNTIME_IMPLEMENTED_KINDS`; `node-defs.ts` regenerated.
 - 🗑️ **Inhibitor** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; dropped from `RUNTIME_IMPLEMENTED_KINDS`; `node-defs.ts` regenerated.
+- 🗑️ **EdgeInhibitor** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; `node-defs.ts` regenerated.
 
 ## Migration plan template
 

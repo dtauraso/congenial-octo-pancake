@@ -15,8 +15,7 @@ import (
 	// Trigger self-registration init() in each node kind package.
 	_ "github.com/dtauraso/wirefold/nodes/AndGateNode"
 	_ "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode"
-	_ "github.com/dtauraso/wirefold/nodes/EdgeInhibitorNode"
-	_ "github.com/dtauraso/wirefold/nodes/EdgeNode"
+_ "github.com/dtauraso/wirefold/nodes/EdgeNode"
 	_ "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode"
 	_ "github.com/dtauraso/wirefold/nodes/InputNode"
 	_ "github.com/dtauraso/wirefold/nodes/PartitionNode"
