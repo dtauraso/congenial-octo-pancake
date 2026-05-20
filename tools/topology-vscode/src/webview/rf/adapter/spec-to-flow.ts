@@ -16,6 +16,8 @@ export function specToFlow(
   spec: Spec,
   folds: Fold[] = [],
   vs: Pick<ViewerState, "nodes" | "edges"> = {},
+  lastSelectionIds: string[] = [],
+  dimmed: Set<string> | null = null,
 ): { nodes: RFNode<NodeData>[]; edges: RFEdge<EdgeData>[] } {
   // Map memberId → containing collapsed fold id. Nested folds are not
   // supported here; if a node appears in multiple collapsed folds, the first
@@ -90,6 +92,7 @@ export function specToFlow(
       id: n.id,
       type: RF_NODE_TYPE_MAP[n.type] ?? "animated",
       position: { x: nv?.x ?? 0, y: nv?.y ?? 0 },
+      selected: lastSelectionIds.includes(n.id),
       data: {
         label: n.id,
         sublabel: nv?.sublabel,
@@ -117,6 +120,7 @@ export function specToFlow(
         initialSlots: n.initialSlots,
         index: n.index,
         foldId: foldOf.get(n.id),
+        dimmed: dimmed?.has(n.id) ?? false,
       },
     };
   });

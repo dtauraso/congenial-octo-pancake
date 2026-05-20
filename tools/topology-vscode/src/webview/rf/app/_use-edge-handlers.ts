@@ -4,6 +4,7 @@ import type { EdgeKind } from "../../../schema";
 import { specToFlow } from "../adapter";
 import { scheduleSave } from "../../save";
 import { mutateSpec, spec, viewerState } from "../../state";
+import { useStore } from "../../state/store";
 import type { AppCtx } from "./_ctx";
 import { onConnectImpl } from "./_on-connect";
 import { onReconnectImpl } from "./_on-reconnect";
@@ -50,7 +51,7 @@ export function useEdgeHandlers(ctx: AppCtx) {
       if (e) e.kind = kind;
     });
     ctx.lastSpec.current = next;
-    const flow = specToFlow(next, viewerState.folds, viewerState);
+    const flow = specToFlow(next, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
     scheduleSave();
@@ -65,7 +66,7 @@ export function useEdgeHandlers(ctx: AppCtx) {
       if (e) e.lane = lane;
     });
     ctx.lastSpec.current = next;
-    const flow = specToFlow(next, viewerState.folds, viewerState);
+    const flow = specToFlow(next, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
     scheduleSave();

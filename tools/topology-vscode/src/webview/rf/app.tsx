@@ -33,10 +33,10 @@ function Inner() {
 
   const rebuildFlow = useCallback(() => {
     if (!s.lastSpec.current) return;
-    const flow = specToFlow(s.lastSpec.current, viewerState.folds, viewerState);
+    const flow = specToFlow(s.lastSpec.current, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], dimmed);
     setNodes(flow.nodes);
     setEdges(flow.edges);
-  }, [s.lastSpec]);
+  }, [s.lastSpec, dimmed]);
 
   const ctx: AppCtx = useMemo(() => ({
     setNodes, setEdges,

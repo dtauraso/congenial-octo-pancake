@@ -4,6 +4,7 @@ import { specToFlow } from "../adapter";
 import { IDENT_RE } from "../../state/ops/rename";
 import { scheduleSave, scheduleViewSave } from "../../save";
 import { mutateSpec, patchViewerState, spec, viewerState } from "../../state";
+import { useStore } from "../../state/store";
 import { PALETTE_DATA_TYPE } from "../panels/NodePalette";
 import type { AppCtx } from "./_ctx";
 
@@ -39,7 +40,7 @@ export function useDragDrop(ctx: AppCtx) {
       if (!v.nodes) v.nodes = {};
       v.nodes[id] = { x: pos.x, y: pos.y };
     });
-    const flow = specToFlow(next, viewerState.folds, viewerState);
+    const flow = specToFlow(next, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
     scheduleSave();

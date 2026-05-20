@@ -1,6 +1,7 @@
 import { specToFlow } from "../adapter";
 import { markViewSynced, scheduleViewSave } from "../../save";
 import { clearViewerHistory, patchViewerState, setViewerState } from "../../state";
+import { useStore } from "../../state/store";
 import { parseViewerState, serializeViewerState } from "../../state/viewer/types";
 import { resolveViewLoadViewport } from "./_resolve-view-load-viewport";
 import { reconcileSelection } from "./_reconcile-selection";
@@ -33,7 +34,7 @@ export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
   // node falls back to its default position (visually: stacked at the
   // origin) whenever the sidecar lacks folds.
   if (ctx.lastSpec.current) {
-    const flow = specToFlow(ctx.lastSpec.current, next.folds ?? [], next);
+    const flow = specToFlow(ctx.lastSpec.current, next.folds ?? [], next, next.lastSelectionIds ?? [], useStore.getState().dimmed);
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
   }

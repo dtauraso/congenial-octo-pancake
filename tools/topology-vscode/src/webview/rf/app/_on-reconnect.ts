@@ -3,6 +3,7 @@ import { NODE_TYPES, type EdgeKind } from "../../../schema";
 import { specToFlow } from "../adapter";
 import { scheduleSave } from "../../save";
 import { mutateSpec, spec, viewerState } from "../../state";
+import { useStore } from "../../state/store";
 import type { AppCtx } from "./_ctx";
 
 export function onReconnectImpl(ctx: AppCtx, oldEdge: RFEdge, conn: Connection) {
@@ -30,7 +31,7 @@ export function onReconnectImpl(ctx: AppCtx, oldEdge: RFEdge, conn: Connection) 
   });
   ctx.reconnectOk.current = true;
   ctx.lastSpec.current = next;
-  const flow = specToFlow(next, viewerState.folds, viewerState);
+  const flow = specToFlow(next, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
   ctx.setNodes(flow.nodes);
   ctx.setEdges(flow.edges);
   scheduleSave();

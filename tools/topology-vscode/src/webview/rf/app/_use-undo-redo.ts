@@ -6,6 +6,7 @@ import { scheduleSave, scheduleViewSave } from "../../save";
 import {
   getLastScope, redoSpec, redoViewer, setLastScope, undoSpec, undoViewer, viewerState,
 } from "../../state";
+import { useStore } from "../../state/store";
 import { FLASH_TIMEOUT_MS } from "./_constants";
 import type { AppCtx } from "./_ctx";
 
@@ -17,7 +18,7 @@ export function useUndoRedo(ctx: AppCtx, hotkeysEnabled: boolean) {
   // render, so there's nothing to decorate without a ghost-rendering pass.
   const rebuildWithFlash = useCallback((flashSet: Set<string>) => {
     if (!lastSpec.current) return;
-    const flow = specToFlow(lastSpec.current, viewerState.folds, viewerState);
+    const flow = specToFlow(lastSpec.current, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
     if (flashSet.size > 0) {
       const tag = (cn: string | undefined) => [cn, "diff-added"].filter(Boolean).join(" ");
       flow.nodes = flow.nodes.map((n) => flashSet.has(n.id) ? { ...n, className: tag(n.className) } : n);
@@ -28,7 +29,7 @@ export function useUndoRedo(ctx: AppCtx, hotkeysEnabled: boolean) {
         flashIdsRef.current = new Set();
         flashTimerRef.current = null;
         if (lastSpec.current) {
-          const f = specToFlow(lastSpec.current, viewerState.folds, viewerState);
+          const f = specToFlow(lastSpec.current, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
           setNodes(f.nodes);
           setEdges(f.edges);
         }
