@@ -1,9 +1,11 @@
 import { useCallback } from "react";
 import type { Node as RFNode } from "reactflow";
-import { createFold, toggleFold } from "../../state/ops/fold";
+import { createFold } from "../../state/ops/fold";
 import { beginEditSublabel, beginRenameNodeId } from "../../inline-edit";
 import { flushViewSave } from "../../save";
 import { mutateViewer, spec, viewerState } from "../../state";
+import { pushSnapshot } from "../history";
+import { toggleFoldCollapse, getFolds, setFolds } from "../folds-state";
 import type { AppCtx } from "./_ctx";
 
 export function useNodeContextHandlers(ctx: AppCtx) {
@@ -12,9 +14,10 @@ export function useNodeContextHandlers(ctx: AppCtx) {
     // selectable, so dbl-click never fires on them; collapsing again
     // uses the right-click "fold selection" path on regular nodes.
     if (node.type === "fold") {
-      const ok = mutateViewer((s) => toggleFold(s, node.id));
+      pushSnapshot();
+      const ok = toggleFoldCollapse(node.id);
       if (ok) {
-        const f = viewerState.folds?.find((x) => x.id === node.id);
+        const f = getFolds().find((x) => x.id === node.id);
         console.info(`[fold] toggled ${node.id} -> collapsed=${f?.collapsed}`);
         ctx.rebuildFlow();
         flushViewSave();
