@@ -39,8 +39,9 @@ export function useNodeContextHandlers(ctx: AppCtx) {
       (ev.currentTarget as HTMLElement);
     // Prefer the label element so the input sits exactly where the id
     // text is drawn — content can be vertically offset when a node also
-    // renders state-text lines.
-    const label = wrapper.querySelector<HTMLElement>(".node-label");
+    // renders state-text lines. Fall back to the wrapper itself if the
+    // node component doesn't carry a .node-label child (RF-native nodes).
+    const label = wrapper.querySelector<HTMLElement>(".node-label") ?? wrapper;
     beginRenameNodeId(node.id, label);
   }, [ctx]);
 
@@ -85,7 +86,15 @@ export function useNodeContextHandlers(ctx: AppCtx) {
   const onNodeContextMenu = useCallback((ev: React.MouseEvent, node: RFNode) => {
     ev.preventDefault();
     if (node.type === "fold") {
-      console.info("[fold] right-click on a placeholder is a no-op; double-click to expand");
+      // Right-click on a collapsed fold placeholder toggles it open/closed.
+      pushSnapshot();
+      const ok = toggleFoldCollapse(node.id);
+      if (ok) {
+        const f = getFolds().find((x) => x.id === node.id);
+        console.info(`[fold] right-click toggled ${node.id} -> collapsed=${f?.collapsed}`);
+        ctx.rebuildFlow();
+        flushViewSave();
+      }
       return;
     }
     const sel = new Set(viewerState.lastSelectionIds ?? []);
