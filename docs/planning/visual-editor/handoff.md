@@ -11,7 +11,7 @@ handoff.md is exempt from the 100-LOC budget.
 
 ## State at handoff (2026-05-20, post Populator API removal)
 
-**Active branch:** `task/remove-populator-api` at `d1f0156`.
+**Active branch:** `main` at `f432cb4`. No task in flight.
 
 ### What landed since last handoff
 
@@ -20,6 +20,8 @@ handoff.md is exempt from the 100-LOC budget.
   `Register`. Non-channel fields use `wire:"data.<key>"` or
   `wire:"data.initialSlots.<key>"` struct tags. `InputNode.Init` and
   `ChainInhibitorNode.HeldValue` migrated.
+- **`f432cb4`** docs(handoff): refresh after Populator API removal. Merged
+  `task/remove-populator-api` ff to main; branch deleted local + remote.
 
 ### Surviving kinds (4)
 
@@ -72,7 +74,9 @@ architecture, then execute. Payload `{primary, secondary}`, new `register`
 kind, ReadGate slot-fill emit rule. Doc must be rewritten before any code.
 
 **(b) Go-AST port parsing** — derive port names from Go structs instead of
-SPEC.md tables. Eliminates dual-maintenance.
+SPEC.md tables. Eliminates dual-maintenance. Natural follow-on to the
+Populator removal: `data.*` is now tag-driven; extend the same idea to
+channel ports.
 
 ## Parked follow-ups
 
