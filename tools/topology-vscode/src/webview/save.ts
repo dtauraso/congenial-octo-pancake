@@ -2,6 +2,8 @@ import { spec, viewerState } from "./state";
 import { serializeViewerState } from "./state/viewer/types";
 import type { TopogenStatus } from "../messages";
 import { vscode } from "./vscode-api";
+import { rfGetNodes, rfGetEdges } from "./rf/rf-imperative";
+import { flowToSpec } from "./rf/adapter/flow-to-spec";
 
 export type { TopogenStatus };
 const status = document.getElementById("status")!;
@@ -45,7 +47,15 @@ export function setTopogenStatus(s: TopogenStatus) {
 // Pure send-now helpers — invoked by the debouncer in <SaveLifecycle />
 // after the trailing edge fires, or directly via flushSave/flushViewSave.
 export function performSave() {
-  const text = JSON.stringify(spec, null, 2) + "\n";
+  const nodes = rfGetNodes();
+  const edges = rfGetEdges();
+  // Derive spec from RF state when nodes are available (Inner is mounted).
+  // Fall back to the Zustand spec binding before Inner mounts (e.g. the
+  // initial flush on pagehide before any RF render).
+  const derived = nodes.length > 0 || edges.length > 0
+    ? flowToSpec(nodes, edges, spec)
+    : spec;
+  const text = JSON.stringify(derived, null, 2) + "\n";
   vscode.postMessage({ type: "save", text });
   setStatus(false);
 }
