@@ -18,6 +18,8 @@ import (
 
 	AG "github.com/dtauraso/wirefold/nodes/AndGateNode"
 	CI "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode"
+	SD "github.com/dtauraso/wirefold/nodes/StreakDetector"
+	SBD "github.com/dtauraso/wirefold/nodes/StreakBreakDetector"
 	EI "github.com/dtauraso/wirefold/nodes/EdgeInhibitorNode"
 	EN "github.com/dtauraso/wirefold/nodes/EdgeNode"
 	IRG "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode"
@@ -232,7 +234,9 @@ var kindRegistry = map[string]kindEntry{
 			n.TransferOut = make(chan chan<- int, 1)
 		},
 	},
-	"EdgeInhibitor": {newNode: func() any { return &EI.EdgeInhibitorNode{} }},
+	"EdgeInhibitor":       {newNode: func() any { return &EI.EdgeInhibitorNode{} }},
+	"StreakDetector":      {newNode: func() any { return &SD.StreakDetector{} }},
+	"StreakBreakDetector": {newNode: func() any { return &SBD.StreakBreakDetector{} }},
 }
 
 // NodeBuilder is the public-facing type consumed by the loader.
