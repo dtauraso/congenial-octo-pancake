@@ -33,7 +33,7 @@ export async function handleMessage(raw: unknown, ctx: MessageCtx): Promise<void
 }
 
 async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
-  const { document, sidecarUri, topogen, runner, post } = ctx;
+  const { document, sidecarUri, runner, post } = ctx;
   switch (msg.type) {
     case "ready":
       ctx.send();
@@ -45,7 +45,6 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
         await applyEdit(document, msg.text);
         await document.save();
         ctx.setLastAppliedVersion(document.version);
-        topogen.schedule();
       } catch (err) {
         post({ type: "save-error", message: toErrorMessage(err) });
       }
@@ -62,7 +61,6 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
           await document.save();
           ctx.setLastAppliedVersion(document.version);
         }
-        await topogen.write();
       } catch (err) {
         console.error("topology editor: run pre-write failed", err);
         post({ type: "save-error", message: toErrorMessage(err) });
