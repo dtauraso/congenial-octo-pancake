@@ -16,7 +16,6 @@ import (
 	_ "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode"
 _ "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode"
 	_ "github.com/dtauraso/wirefold/nodes/InputNode"
-	_ "github.com/dtauraso/wirefold/nodes/PartitionNode"
 	_ "github.com/dtauraso/wirefold/nodes/ReadGateNode"
 )
 
