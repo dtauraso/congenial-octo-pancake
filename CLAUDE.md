@@ -30,11 +30,12 @@ pointer at the top of this file is the only entry point you need.
 **Node kinds:** adding a kind requires three things in the same commit:
 1. One file `tools/topology-vscode/src/webview/rf/nodes/<Kind>Node.tsx` —
    the React Flow custom node component (render only; no substrate logic).
-2. Register the type in `tools/topology-vscode/src/webview/rf/_constants.ts`
-   (`RF_NODE_TYPES`).
-3. Add an entry in `tools/topology-vscode/src/webview/rf/adapter/spec-to-flow.ts`
-   (`RF_NODE_TYPE_MAP`) so the spec parser maps the kind to the RF type.
-4. The Go node package under `nodes/<Kind>/`.
+2. Register the type in `tools/topology-vscode/src/webview/rf/app/_constants.ts`
+   (`RF_NODE_TYPES`) using the camelCase key (e.g. `myKind: MyKindNode`).
+   The RF type name is derived from the spec kind automatically:
+   `specKindToRfType` in `spec-to-flow.ts` lowercases the first character,
+   so spec kind `MyKind` maps to RF type `myKind` with no extra registration.
+3. The Go node package under `nodes/<Kind>/`.
 
 **Wire props:** `tools/topology-vscode/src/webview/rf/edges/SubstrateEdge.tsx`
 threads wire props from the RF store into the edge component. A new wire

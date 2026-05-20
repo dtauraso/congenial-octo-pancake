@@ -6,7 +6,7 @@ import { rfGetNodes, rfSetNodes } from "../rf-imperative";
 import { pushSnapshot } from "../history";
 import { PALETTE_DATA_TYPE } from "../panels/NodePalette";
 import type { AppCtx } from "./_ctx";
-import { RF_NODE_TYPE_MAP } from "../adapter/spec-to-flow";
+import { specKindToRfType } from "../adapter/spec-to-flow";
 
 export function useDragDrop(ctx: AppCtx) {
   const onDragOver = useCallback((ev: React.DragEvent) => {
@@ -41,7 +41,7 @@ export function useDragDrop(ctx: AppCtx) {
       ...ns,
       {
         id,
-        type: RF_NODE_TYPE_MAP[type] ?? "animated",
+        type: specKindToRfType(type),
         position: { x: pos.x, y: pos.y },
         data: {
           label: id,
