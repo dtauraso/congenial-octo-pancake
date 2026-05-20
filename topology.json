@@ -9,7 +9,6 @@
           1
         ]
       },
-      "inputs": [],
       "outputs": [
         {
           "name": "ToOut",
@@ -49,7 +48,9 @@
       "id": "i0",
       "type": "ChainInhibitor",
       "data": {
-        "initialSlots": { "held": 0 }
+        "initialSlots": {
+          "held": 0
+        }
       },
       "inputs": [
         {
@@ -78,7 +79,9 @@
       "id": "i1",
       "type": "ChainInhibitor",
       "data": {
-        "initialSlots": { "held": 0 }
+        "initialSlots": {
+          "held": 0
+        }
       },
       "inputs": [
         {
@@ -120,16 +123,22 @@
           "slot": 2
         }
       ],
-      "outputs": []
+      "outputs": [
+        {
+          "name": "ToPassed",
+          "kind": "and-out"
+        }
+      ]
     },
     {
       "id": "bootstrap_rg",
       "type": "Input",
       "data": {
-        "init": [1],
+        "init": [
+          1
+        ],
         "repeat": false
       },
-      "inputs": [],
       "outputs": [
         {
           "name": "ToOut",
@@ -228,16 +237,5 @@
         "slots": 1
       }
     }
-  ],
-  "timing": {
-    "duration": "12s"
-  },
-  "legend": [
-    {
-      "kind": "chain",
-      "name": "Chain",
-      "desc": "Data flow: value advances one step along the pipeline"
-    }
-  ],
-  "notes": []
+  ]
 }

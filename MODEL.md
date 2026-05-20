@@ -1,7 +1,7 @@
 # Substrate model
 
 Read this before changing anything in the **Go substrate** (`nodes/`,
-`Wire.go`, `Wiring_gen.go`) or the **pump**
+`Wire.go`, `nodes/Wiring/loader.go`, `nodes/Wiring/builders.go`) or the **pump**
 (`tools/topology-vscode/src/webview/rf/pump.ts`),
 or anything that schedules/orders work. If your
 reasoning slips into banned vocabulary (below), you are in the wrong
@@ -138,7 +138,7 @@ render-only: it animates trace events received from Go.
   While paused, Go stops firing; the editor reflects the last known
   state.
 - **Bridge surface** carries spec I/O only — `ready`, `spec`, `view`,
-  `save`, `view-safe`, optionally `topogen-status`. Nothing about
+  `save`, `view-safe`. Nothing about
   slot phases, animation internals, or controls crosses the bridge.
 
 ## Banned vocabulary (in substrate context)

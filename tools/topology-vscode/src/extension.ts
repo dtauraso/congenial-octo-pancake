@@ -1,6 +1,5 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { TopogenRunner } from "./topogenRunner";
 import { BuildAndRunRunner } from "./runCommand";
 import { viewSidecarUri, readSidecar } from "./sidecar";
 import type { HostToWebviewMsg } from "./messages";
@@ -30,9 +29,6 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
 
     const sidecarUri = viewSidecarUri(document.uri);
     const post = (msg: HostToWebviewMsg) => panel.webview.postMessage(msg);
-    const topogen = new TopogenRunner((status) =>
-      post({ type: "topogen-status", ...status }),
-    );
     const runner = new BuildAndRunRunner(
       (status) => post({ type: "run-status", ...status }),
       (event) => post({ type: "trace-event", event }),
@@ -92,14 +88,13 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
       console.log("[topology] bundleWatcher NOT armed — extensionMode:", this.context.extensionMode);
     }
 
-    this.context.subscriptions.push(docSub, viewStateSub, topogen, runner);
+    this.context.subscriptions.push(docSub, viewStateSub, runner);
     if (bundleWatcher) this.context.subscriptions.push(bundleWatcher);
 
     panel.onDidDispose(() => {
       docSub.dispose();
       bundleWatcher?.dispose();
       viewStateSub.dispose();
-      topogen.dispose();
       runner.dispose();
     });
 
@@ -107,7 +102,6 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
       handleMessage(raw, {
         document,
         sidecarUri,
-        topogen,
         runner,
         post,
         send,

@@ -1,10 +1,9 @@
 // Message handler for one webview panel. The closure-captured state
-// (lastAppliedVersion ref, topogen/runner instances, post callback,
+// (lastAppliedVersion ref, runner instance, post callback,
 // sidecar URI) is passed in via the Ctx struct so this stays a plain
 // function rather than a method.
 
 import * as vscode from "vscode";
-import { TopogenRunner } from "../topogenRunner";
 import { BuildAndRunRunner } from "../runCommand";
 import { writeSidecar } from "../sidecar";
 import { parseWebviewToHost, type HostToWebviewMsg, type WebviewToHostMsg } from "../messages";
@@ -15,7 +14,6 @@ import { toErrorMessage } from "../utils/error";
 export type MessageCtx = {
   document: vscode.TextDocument;
   sidecarUri: vscode.Uri;
-  topogen: TopogenRunner;
   runner: BuildAndRunRunner;
   post: (msg: HostToWebviewMsg) => Thenable<boolean>;
   send: () => Thenable<boolean>;

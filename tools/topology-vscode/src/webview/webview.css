@@ -16,9 +16,6 @@ html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; font-fami
 .react-flow__edge:hover .react-flow__edge-path { stroke-width: 2.5; }
 .dirty { color: #c62828; font-weight: 600; }
 .clean { color: #2e7d32; }
-.topogen-ok { color: #2e7d32; }
-.topogen-running { color: #f57f17; }
-.topogen-error { color: #c62828; font-weight: 600; }
 .run-btn {
   border: 1px solid #ddd; background: #fafafa; border-radius: 4px;
   padding: 2px 8px; cursor: pointer; font: inherit; color: #333;
