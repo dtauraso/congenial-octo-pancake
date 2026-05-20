@@ -19,11 +19,10 @@ export function AppView(p: AppViewProps) {
         edges={p.styledEdges}
         onNodesChange={p.onNodesChange}
         onEdgesChange={p.onEdgesChange}
-        onMoveEnd={p.onMoveEnd}
-        onSelectionChange={p.onSelectionChange}
         onNodeDoubleClick={p.onNodeDoubleClick}
         onNodeContextMenu={p.onNodeContextMenu}
         onSelectionContextMenu={p.onSelectionContextMenu}
+        onNodeDragStart={p.onNodeDragStart}
         onNodeDrag={p.onNodeDrag}
         onNodeDragStop={p.onNodeDragStop}
         onNodesDelete={p.onNodesDelete}

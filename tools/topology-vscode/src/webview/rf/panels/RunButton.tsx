@@ -1,10 +1,12 @@
 import { createPortal } from "react-dom";
 import { vscode } from "../../vscode-api";
-import { spec, useRunStatus } from "../../state";
+import { rfGetNodes, rfGetEdges } from "../rf-imperative";
+import { flowToSpec } from "../adapter/flow-to-spec";
 import { flushActiveInlineEdit } from "../../inline-edit";
+import { useRunStatusCtx } from "../run-status-ctx";
 
 export function RunButton() {
-  const status = useRunStatus();
+  const status = useRunStatusCtx();
   const mount = document.getElementById("run-mount");
   if (!mount) return null;
   const running = status.state === "running";
@@ -17,6 +19,7 @@ export function RunButton() {
     // the user sees on screen, then bundle the spec into the run message
     // so the host writes topology.json synchronously before topogen runs.
     flushActiveInlineEdit();
+    const spec = flowToSpec(rfGetNodes(), rfGetEdges(), { nodes: [], edges: [] });
     const text = JSON.stringify(spec, null, 2) + "\n";
     vscode.postMessage({ type: "run", text });
   };
@@ -38,7 +41,7 @@ export function RunButton() {
   );
 }
 
-function statusClass(s: ReturnType<typeof useRunStatus>): string {
+function statusClass(s: ReturnType<typeof useRunStatusCtx>): string {
   if (s.state === "running") return "run-running";
   if (s.state === "ok") return "run-ok";
   if (s.state === "cancelled") return "run-idle";
@@ -46,7 +49,7 @@ function statusClass(s: ReturnType<typeof useRunStatus>): string {
   return "run-idle";
 }
 
-function statusText(s: ReturnType<typeof useRunStatus>): string {
+function statusText(s: ReturnType<typeof useRunStatusCtx>): string {
   if (s.state === "running") return "running…";
   if (s.state === "ok") return "ok";
   if (s.state === "cancelled") return "cancelled";

@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { useNodes } from "reactflow";
 import { NODE_TYPES } from "../../../schema";
-import { useStore } from "../../state/store";
+import type { NodeData } from "../types";
 
 // Drag a palette item into the canvas to mint a new node of that type at
 // the drop coordinates. The actual mint happens in app.tsx onDrop, which
@@ -9,9 +10,9 @@ import { useStore } from "../../state/store";
 export const PALETTE_DATA_TYPE = "application/wirefold-node-type";
 
 export function NodePalette() {
-  const specNodes = useStore((s) => s.spec.nodes);
+  const rfNodes = useNodes<NodeData>();
   const [collapsed, setCollapsed] = useState(false);
-  const usedTypes = new Set(specNodes.map((n) => n.type));
+  const usedTypes = new Set(rfNodes.map((n) => n.data.type));
   const allTypes = Object.keys(NODE_TYPES);
   // If the diagram is empty show all kinds; otherwise show only kinds in use.
   const types = usedTypes.size === 0 ? allTypes : allTypes.filter((t) => usedTypes.has(t));

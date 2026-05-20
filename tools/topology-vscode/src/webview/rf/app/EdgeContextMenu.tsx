@@ -1,5 +1,5 @@
 import type { EdgeKind } from "../../../schema";
-import { spec } from "../../state";
+import { rfGetEdges } from "../rf-imperative";
 import { EDGE_KIND_OPTIONS } from "./_constants";
 
 export function EdgeContextMenu({
@@ -10,7 +10,7 @@ export function EdgeContextMenu({
   edgeId: string;
   onPick: (edgeId: string, kind: EdgeKind) => void;
 }) {
-  const currentKind = spec.edges.find((e) => e.id === edgeId)?.kind;
+  const currentKind = rfGetEdges().find((e) => e.id === edgeId)?.data?.kind as EdgeKind | undefined;
   return (
     <div
       className="edge-context-menu"

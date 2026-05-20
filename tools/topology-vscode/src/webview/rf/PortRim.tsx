@@ -13,8 +13,8 @@ import { Handle, Position, useStore, useReactFlow, useUpdateNodeInternals } from
 import { shallow } from "zustand/shallow";
 import { KIND_COLORS } from "../../schema";
 import type { EdgeKind } from "../../schema";
-import { mutateSpec } from "../state";
 import { scheduleSave } from "../save";
+import { pushSnapshot } from "./history";
 import { NODE_TYPES } from "../../schema/node-types";
 import {
   type Side, type ActiveDrag, SLOT_PCT,
@@ -87,6 +87,7 @@ export function PortRim({ nodeId, inputs, outputs, width, height }: Props) {
       const n = nearestSnap(computeSnapPoints(rect, width, height), ev.clientX, ev.clientY);
       setDrag(null);
       if (n.side === curSide && n.slot === curSlot) return;
+      pushSnapshot();
       const allRF = [
         ...inputs.map((p) => ({ p, inp: true })),
         ...outputs.map((p) => ({ p, inp: false })),
@@ -95,16 +96,6 @@ export function PortRim({ nodeId, inputs, outputs, width, height }: Props) {
       const occupant = allRF.find(({ p, inp }) =>
         p.name !== portName && defSide(p, inp) === n.side && (p.slot ?? 1) === n.slot
       );
-      mutateSpec((s) => {
-        const sn = s.nodes.find((nd) => nd.id === nodeId); if (!sn) return;
-        const kindDef = NODE_TYPES[sn.type];
-        if (sn.inputs === undefined && kindDef?.inputs) sn.inputs = structuredClone(kindDef.inputs);
-        if (sn.outputs === undefined && kindDef?.outputs) sn.outputs = structuredClone(kindDef.outputs);
-        const all = [...(sn.inputs ?? []).map((p) => ({ p })), ...(sn.outputs ?? []).map((p) => ({ p }))];
-        const dragged = all.find(({ p }) => p.name === portName); if (!dragged) return;
-        if (occupant) { const occ = all.find(({ p }) => p.name === occupant.p.name); if (occ) { occ.p.side = curSide; occ.p.slot = curSlot; } }
-        dragged.p.side = n.side; dragged.p.slot = n.slot;
-      });
       rf.setNodes((nodes) => nodes.map((nd) => {
         if (nd.id !== nodeId) return nd;
         const patch = (p: PortDef): PortDef => {

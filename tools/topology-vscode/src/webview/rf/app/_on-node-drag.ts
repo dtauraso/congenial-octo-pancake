@@ -2,7 +2,9 @@ import { useCallback } from "react";
 import type { Node as RFNode } from "reactflow";
 import { NODE_TYPES } from "../../../schema";
 import { scheduleSave, scheduleViewSave } from "../../save";
-import { mutateSpec, patchViewerState, spec, viewerState } from "../../state";
+import { patchViewerState, viewerState } from "../viewer-state";
+import { pushSnapshot } from "../history";
+import { rfSetNodes } from "../rf-imperative";
 import { ALIGN_TOL } from "./_constants";
 import type { AppCtx } from "./_ctx";
 
@@ -13,6 +15,11 @@ export function useNodeDrag(
   guides: Guides,
   setGuides: (g: Guides) => void,
 ) {
+  const onNodeDragStart = useCallback((_ev: React.MouseEvent, _node: RFNode) => {
+    // Capture pre-drag state so undo restores to before the drag began.
+    pushSnapshot();
+  }, []);
+
   const onNodeDrag = useCallback((_ev: React.MouseEvent, node: RFNode) => {
     if (node.type === "fold") {
       // Fold placeholder dimensions vary; skipping keeps the matcher
@@ -40,35 +47,26 @@ export function useNodeDrag(
   const onNodeDragStop = useCallback((_ev: React.MouseEvent, node: RFNode) => {
     setGuides({ vx: null, hy: null });
     if (node.type === "fold") {
-      // Persist fold-placeholder drags back into viewerState.folds so
-      // the position survives reload (folds live in the sidecar).
+      // Persist fold-placeholder drags back to RF node data so the
+      // position is available for serialization.
       if (!viewerState.folds?.some((x) => x.id === node.id)) return;
-      patchViewerState((v) => {
-        const f = v.folds?.find((x) => x.id === node.id);
-        if (f) f.position = [node.position.x, node.position.y];
-      });
+      rfSetNodes((ns) => ns.map((n) =>
+        n.id === node.id
+          ? { ...n, data: { ...n.data, position: [node.position.x, node.position.y] } }
+          : n
+      ));
       scheduleViewSave();
       return;
     }
-    const sn = spec.nodes.find((n) => n.id === node.id);
-    if (!sn) return;
-    const prevNv = viewerState.nodes?.[node.id];
-    const prevX = prevNv?.x ?? 0;
-    const prevY = prevNv?.y ?? 0;
-    const dx = node.position.x - prevX;
-    const dy = node.position.y - prevY;
-    if (dx === 0 && dy === 0) return;
-    // Motion-type slide-rule rewriting (record-mode-lite) retired:
-    // frame mode drives motion via substrate state events, not spec props.
-    // Treat all drags as position-only edits.
-    void mutateSpec; void scheduleSave; // keep imports if referenced elsewhere
+    // Persist dragged position to viewerState so the view sidecar survives reload.
     patchViewerState((v) => {
       if (!v.nodes) v.nodes = {};
       const existing = v.nodes[node.id] ?? { x: 0, y: 0 };
       v.nodes[node.id] = { ...existing, x: node.position.x, y: node.position.y };
     });
     scheduleViewSave();
+    scheduleSave();
   }, [ctx, setGuides]);
 
-  return { onNodeDrag, onNodeDragStop };
+  return { onNodeDragStart, onNodeDrag, onNodeDragStop };
 }

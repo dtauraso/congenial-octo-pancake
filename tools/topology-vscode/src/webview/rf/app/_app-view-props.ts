@@ -1,7 +1,7 @@
 import type { MutableRefObject } from "react";
 import type {
   Connection, Edge as RFEdge, Node as RFNode,
-  EdgeChange, NodeChange, Viewport,
+  EdgeChange, NodeChange,
 } from "reactflow";
 import type { EdgeKind } from "../../../schema";
 import type { EdgeMenu } from "./_use-edge-handlers";
@@ -14,11 +14,10 @@ export type AppViewProps = {
   edgeMenu: EdgeMenu;
   onNodesChange: (c: NodeChange[]) => void;
   onEdgesChange: (c: EdgeChange[]) => void;
-  onMoveEnd: (e: unknown, vp: Viewport) => void;
-  onSelectionChange: (p: { nodes: RFNode[] }) => void;
   onNodeDoubleClick: (ev: React.MouseEvent, n: RFNode) => void;
   onNodeContextMenu: (ev: React.MouseEvent, n: RFNode) => void;
   onSelectionContextMenu: (ev: React.MouseEvent, n: RFNode[]) => void;
+  onNodeDragStart: (ev: React.MouseEvent, n: RFNode) => void;
   onNodeDrag: (ev: React.MouseEvent, n: RFNode) => void;
   onNodeDragStop: (ev: React.MouseEvent, n: RFNode) => void;
   onNodesDelete: (n: RFNode[]) => void;

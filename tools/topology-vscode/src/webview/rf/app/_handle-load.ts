@@ -1,8 +1,10 @@
 import { parseSpec, type Spec } from "../../../schema";
 import { postLog } from "../../log/post";
 import { specToFlow } from "../adapter";
-import { clearSpecHistory, patchViewerState, setSpec, viewerState } from "../../state";
-import { scheduleViewSave } from "../../save";
+import { viewerState, patchViewerState } from "../viewer-state";
+import { getFolds } from "../../rf/folds-state";
+import { getDimmed } from "../../rf/dimmed-state";
+import { scheduleViewSave, setSpecMeta } from "../../save";
 import { migrateLegacyFields } from "./_migrate-legacy-fields";
 import { reconcileSelection } from "./_reconcile-selection";
 import type { AppCtx } from "./_ctx";
@@ -26,19 +28,15 @@ export function handleLoad(ctx: AppCtx, text: string) {
     });
     if (migrated) scheduleViewSave();
     const next: Spec = parseSpec(rawJson);
-    setSpec(next);
-    // Fresh load drops history — undoing into a previous file's spec
-    // would be incoherent (ids may not even exist there).
-    clearSpecHistory();
+    setSpecMeta(next);
     ctx.lastSpec.current = next;
     postLog("load", { nodes: next.nodes.length, edges: next.edges.length });
-    const flow = specToFlow(next, viewerState.folds, viewerState);
+    const flow = specToFlow(next, getFolds(), viewerState, viewerState.lastSelectionIds ?? [], getDimmed());
     const filtered = reconcileSelection(viewerState.lastSelectionIds, flow.nodes.map((n) => n.id));
     const sel = new Set(filtered);
     if (sel.size > 0) {
       flow.nodes = flow.nodes.map((n) => sel.has(n.id) ? { ...n, selected: true } : n);
     }
-    patchViewerState((v) => { v.lastSelectionIds = filtered.length > 0 ? filtered : undefined; });
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
   } catch (err) {

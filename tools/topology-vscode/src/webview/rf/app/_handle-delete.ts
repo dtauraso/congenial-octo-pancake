@@ -1,23 +1,29 @@
 import { useCallback } from "react";
 import type { Edge as RFEdge, Node as RFNode } from "reactflow";
-import { applyDelete } from "../../state/ops/delete";
 import { flushViewSave, scheduleSave, scheduleViewSave } from "../../save";
-import { getSpec, mutateBoth, mutateViewer, viewerState } from "../../state";
+import { mutateViewer, viewerState } from "../viewer-state";
+import { rfGetEdges } from "../rf-imperative";
+import { pushSnapshot } from "../history";
 import type { AppCtx } from "./_ctx";
 
 export function useDeleteHandlers(ctx: AppCtx) {
   const handleDelete = useCallback((nodeIds: string[], edgeIds: string[]) => {
     if (!ctx.lastSpec.current) return;
     if (nodeIds.length === 0 && edgeIds.length === 0) return;
-    // mutateBoth: applyDelete patches both spec and viewerState (orphan
-    // cleanup in views/folds/lastSelectionIds). Cmd-Z must restore both
-    // surfaces in one step.
-    mutateBoth((s, v) => { applyDelete(s, v, nodeIds, edgeIds); });
-    ctx.lastSpec.current = getSpec();
-    // applyDelete cascades — RF only removed the items its own change
-    // set named, so rebuild from the post-delete spec to flush stale
-    // visuals before the host save round-trip.
-    ctx.rebuildFlow();
+
+    // Pre-compute cascade so RF setNodes/setEdges mirrors incident-edge removal.
+    const delNodes = new Set(nodeIds);
+    const delEdges = new Set(edgeIds);
+    for (const e of rfGetEdges()) {
+      if (delNodes.has(e.source) || delNodes.has(e.target)) delEdges.add(e.id);
+    }
+
+    // Snapshot BEFORE deletion so undo restores the pre-delete state.
+    pushSnapshot();
+
+    ctx.setNodes((ns) => ns.filter((n) => !delNodes.has(n.id)));
+    ctx.setEdges((es) => es.filter((e) => !delEdges.has(e.id)));
+
     scheduleSave();
     scheduleViewSave();
   }, [ctx]);

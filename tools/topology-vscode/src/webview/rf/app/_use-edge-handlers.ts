@@ -1,9 +1,10 @@
 import { useCallback, useState } from "react";
 import type { Connection, Edge as RFEdge } from "reactflow";
 import type { EdgeKind } from "../../../schema";
-import { specToFlow } from "../adapter";
+import { KIND_COLORS } from "../../../schema";
 import { scheduleSave } from "../../save";
-import { mutateSpec, spec, viewerState } from "../../state";
+import { rfGetEdges, rfSetEdges } from "../rf-imperative";
+import { pushSnapshot } from "../history";
 import type { AppCtx } from "./_ctx";
 import { onConnectImpl } from "./_on-connect";
 import { onReconnectImpl } from "./_on-reconnect";
@@ -21,7 +22,7 @@ export function useEdgeHandlers(ctx: AppCtx) {
   const isValidConnection = useCallback((conn: Connection) => {
     if (!conn.target || !conn.targetHandle) return false;
     if (conn.targetHandle.startsWith("__grow:")) return true;
-    return !spec.edges.some(
+    return !rfGetEdges().some(
       (e) => e.target === conn.target && e.targetHandle === conn.targetHandle,
     );
   }, []);
@@ -44,30 +45,26 @@ export function useEdgeHandlers(ctx: AppCtx) {
 
   const setEdgeKind = useCallback((edgeId: string, kind: EdgeKind) => {
     if (!ctx.lastSpec.current) return;
-    if (!spec.edges.some((e) => e.id === edgeId)) return;
-    const next = mutateSpec((s) => {
-      const e = s.edges.find((x) => x.id === edgeId);
-      if (e) e.kind = kind;
-    });
-    ctx.lastSpec.current = next;
-    const flow = specToFlow(next, viewerState.folds, viewerState);
-    ctx.setNodes(flow.nodes);
-    ctx.setEdges(flow.edges);
+    if (!rfGetEdges().some((e) => e.id === edgeId)) return;
+    pushSnapshot();
+    rfSetEdges((es) => es.map((e) =>
+      e.id !== edgeId ? e : {
+        ...e,
+        style: { ...e.style, stroke: KIND_COLORS[kind] ?? "#888" },
+        data: { ...e.data, kind },
+      }
+    ));
     scheduleSave();
     setEdgeMenu(null);
   }, [ctx]);
 
   const setEdgeLane = useCallback((edgeId: string, lane: number) => {
     if (!ctx.lastSpec.current) return;
-    if (!spec.edges.some((e) => e.id === edgeId)) return;
-    const next = mutateSpec((s) => {
-      const e = s.edges.find((x) => x.id === edgeId);
-      if (e) e.lane = lane;
-    });
-    ctx.lastSpec.current = next;
-    const flow = specToFlow(next, viewerState.folds, viewerState);
-    ctx.setNodes(flow.nodes);
-    ctx.setEdges(flow.edges);
+    if (!rfGetEdges().some((e) => e.id === edgeId)) return;
+    pushSnapshot();
+    rfSetEdges((es) => es.map((e) =>
+      e.id !== edgeId ? e : { ...e, data: { ...e.data, lane } }
+    ));
     scheduleSave();
   }, [ctx]);
 

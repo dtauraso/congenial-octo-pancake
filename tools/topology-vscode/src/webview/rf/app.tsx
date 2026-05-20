@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlowProvider, applyEdgeChanges, applyNodeChanges, useReactFlow,
-  type Edge as RFEdge, type EdgeChange, type Node as RFNode, type NodeChange, type Viewport,
+  type Edge as RFEdge, type EdgeChange, type Node as RFNode, type NodeChange,
 } from "reactflow";
 import { specToFlow } from "./adapter";
 import { RunButton } from "./panels/RunButton";
 import { SaveLifecycle } from "../SaveLifecycle";
 import { TimelinePanel } from "./panels/TimelinePanel";
-import { scheduleViewSave } from "../save";
-import { patchViewerState, useDimmed, viewerState } from "../state";
+import { viewerState } from "./viewer-state";
+import { getFolds } from "./folds-state";
+import { isLegacyCamera } from "../state/viewer/types";
 import { AppView } from "./app/AppView";
 import { decorate } from "./app/_decorate";
 import { useDeleteHandlers } from "./app/_handle-delete";
@@ -22,21 +23,49 @@ import { useNodeDrag } from "./app/_on-node-drag";
 import { useUndoRedo } from "./app/_use-undo-redo";
 import type { AppCtx } from "./app/_ctx";
 import { EdgeActionsCtx } from "./app/_edge-actions-ctx";
+import { registerRFSetters, notifyRFState } from "./rf-imperative";
+import { registerHistory, undo as rfUndo, redo as rfRedo } from "./history";
+import { registerRunStatusSetter } from "./run-status-state";
+import { RunStatusCtx } from "./run-status-ctx";
+import type { RunStatusUI } from "./run-status-state";
+import { registerDimmedSetter } from "./dimmed-state";
+import { DimmedCtx, useDimmedCtx } from "./dimmed-ctx";
+import { useHotkeys } from "react-hotkeys-hook";
 
 function Inner() {
   const [nodes, setNodes] = useState<RFNode[]>([]);
   const [edges, setEdges] = useState<RFEdge[]>([]);
-  const dimmed = useDimmed();
-  const s = useInnerState();
+  const dimmed = useDimmedCtx();
+
   const rf = useReactFlow();
+  // Expose setNodes/setEdges imperatively for non-React callers (inline-edit).
+  useEffect(() => { registerRFSetters(setNodes, setEdges); }, []);
+  // Keep module-level snapshots current so rfGetNodes/rfGetEdges are fresh.
+  useEffect(() => { notifyRFState(nodes, edges); }, [nodes, edges]);
+  // Register RF instance for snapshot-based history.
+  useEffect(() => { registerHistory(rf); }, [rf]);
+  // RF-snapshot undo/redo — runs alongside the existing Zustand-backed hotkeys.
+  useHotkeys("mod+z", (e) => { e.preventDefault(); rfUndo(); }, { enableOnContentEditable: false });
+  useHotkeys("mod+shift+z, mod+y", (e) => { e.preventDefault(); rfRedo(); }, { enableOnContentEditable: false });
+  const s = useInnerState();
   const [guides, setGuides] = useState<{ vx: number | null; hy: number | null }>({ vx: null, hy: null });
+
+  // Hydrate RF viewport from persisted camera on mount. view-load will
+  // overwrite this once the sidecar message arrives; this covers the gap
+  // before that message fires (or when there is no sidecar).
+  useEffect(() => {
+    const cam = viewerState.camera;
+    if (!cam || isLegacyCamera(cam)) return;
+    rf.setViewport({ x: cam.x, y: cam.y, zoom: cam.zoom });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const rebuildFlow = useCallback(() => {
     if (!s.lastSpec.current) return;
-    const flow = specToFlow(s.lastSpec.current, viewerState.folds, viewerState);
+    const flow = specToFlow(s.lastSpec.current, getFolds(), viewerState, viewerState.lastSelectionIds ?? [], dimmed);
     setNodes(flow.nodes);
     setEdges(flow.edges);
-  }, [s.lastSpec]);
+  }, [s.lastSpec, dimmed]);
 
   const ctx: AppCtx = useMemo(() => ({
     setNodes, setEdges,
@@ -49,21 +78,10 @@ function Inner() {
   useFitViewHotkeys(rf);
   useHostMessages(ctx);
 
-  const onMoveEnd = useCallback((_: unknown, vp: Viewport) => {
-    patchViewerState((v) => { v.camera = { x: vp.x, y: vp.y, zoom: vp.zoom }; });
-    scheduleViewSave();
-  }, []);
   const onNodesChange = useCallback(
     (c: NodeChange[]) => setNodes((ns) => applyNodeChanges(c, ns)), []);
   const onEdgesChange = useCallback(
     (c: EdgeChange[]) => setEdges((es) => applyEdgeChanges(c, es)), []);
-  const onSelectionChange = useCallback(({ nodes: sel }: { nodes: RFNode[] }) => {
-    const ids = sel.map((n) => n.id);
-    const prev = viewerState.lastSelectionIds ?? [];
-    if (prev.length === ids.length && prev.every((v, i) => v === ids[i])) return;
-    patchViewerState((v) => { v.lastSelectionIds = ids.length > 0 ? ids : undefined; });
-    scheduleViewSave();
-  }, []);
 
   const edgeH = useEdgeHandlers(ctx);
   const delH = useDeleteHandlers(ctx);
@@ -95,10 +113,10 @@ function Inner() {
       styledNodes={styled.nodes} styledEdges={styled.edges}
       guides={guides} edgeMenu={edgeH.edgeMenu}
       onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-      onMoveEnd={onMoveEnd} onSelectionChange={onSelectionChange}
       onNodeDoubleClick={ctxH.onNodeDoubleClick}
       onNodeContextMenu={ctxH.onNodeContextMenu}
       onSelectionContextMenu={ctxH.onSelectionContextMenu}
+      onNodeDragStart={dragH.onNodeDragStart}
       onNodeDrag={dragH.onNodeDrag} onNodeDragStop={dragH.onNodeDragStop}
       onNodesDelete={delH.onNodesDelete} onEdgesDelete={delH.onEdgesDelete}
       onConnect={edgeH.onConnect} isValidConnection={edgeH.isValidConnection}
@@ -113,12 +131,20 @@ function Inner() {
 }
 
 export default function App() {
+  const [runStatus, setRunStatus] = useState<RunStatusUI>({ state: "idle" });
+  const [dimmed, setDimmed] = useState<Set<string> | null>(null);
+  useEffect(() => { registerRunStatusSetter(setRunStatus); }, []);
+  useEffect(() => { registerDimmedSetter(setDimmed); }, []);
   return (
-    <ReactFlowProvider>
-      <SaveLifecycle />
-      <Inner />
-      <RunButton />
-<TimelinePanel />
-    </ReactFlowProvider>
+    <DimmedCtx.Provider value={dimmed}>
+    <RunStatusCtx.Provider value={runStatus}>
+      <ReactFlowProvider>
+        <SaveLifecycle />
+        <Inner />
+        <RunButton />
+        <TimelinePanel />
+      </ReactFlowProvider>
+    </RunStatusCtx.Provider>
+    </DimmedCtx.Provider>
   );
 }

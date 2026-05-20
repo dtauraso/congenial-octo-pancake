@@ -1,6 +1,6 @@
 import { useHotkeys } from "react-hotkeys-hook";
 import type { ReactFlowInstance } from "reactflow";
-import { viewerState } from "../../state";
+import { viewerState } from "../viewer-state";
 import { FIT_VIEW_DURATION_MS, FIT_VIEW_MAX_ZOOM, FIT_VIEW_PADDING, FIT_VIEW_PADDING_WIDE } from "./_constants";
 
 // f → fit-view all; shift+f → fit-view selection. Lowercase only —

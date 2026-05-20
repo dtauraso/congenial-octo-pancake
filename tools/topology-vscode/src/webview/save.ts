@@ -1,11 +1,20 @@
-import { spec, viewerState } from "./state";
+import { viewerState } from "./rf/viewer-state";
 import { serializeViewerState } from "./state/viewer/types";
 import type { TopogenStatus } from "../messages";
+import type { Spec } from "../schema";
 import { vscode } from "./vscode-api";
+import { rfGetNodes, rfGetEdges } from "./rf/rf-imperative";
+import { flowToSpec } from "./rf/adapter/flow-to-spec";
 
 export type { TopogenStatus };
 const status = document.getElementById("status")!;
 const topogenStatus = document.getElementById("topogen-status")!;
+
+// Top-level spec metadata (timing, cycleAnchor, legend, runtime) that
+// flowToSpec passes through verbatim. Updated on each load so saves
+// preserve fields that aren't carried in RF node/edge data.
+let _specMeta: Spec = { nodes: [], edges: [] };
+export function setSpecMeta(s: Spec) { _specMeta = s; };
 
 let lastViewSyncedText: string | undefined;
 
@@ -45,7 +54,13 @@ export function setTopogenStatus(s: TopogenStatus) {
 // Pure send-now helpers — invoked by the debouncer in <SaveLifecycle />
 // after the trailing edge fires, or directly via flushSave/flushViewSave.
 export function performSave() {
-  const text = JSON.stringify(spec, null, 2) + "\n";
+  const nodes = rfGetNodes();
+  const edges = rfGetEdges();
+  // Derive spec from RF state. If RF is not yet mounted (nodes/edges empty),
+  // there is nothing to save — skip silently.
+  if (nodes.length === 0 && edges.length === 0) return;
+  const derived = flowToSpec(nodes, edges, _specMeta);
+  const text = JSON.stringify(derived, null, 2) + "\n";
   vscode.postMessage({ type: "save", text });
   setStatus(false);
 }

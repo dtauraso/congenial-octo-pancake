@@ -1,6 +1,8 @@
 import { specToFlow } from "../adapter";
 import { markViewSynced, scheduleViewSave } from "../../save";
-import { clearViewerHistory, patchViewerState, setViewerState } from "../../state";
+import { setViewerState } from "../viewer-state";
+import { getFolds, setFolds } from "../folds-state";
+import { getDimmed } from "../dimmed-state";
 import { parseViewerState, serializeViewerState } from "../../state/viewer/types";
 import { resolveViewLoadViewport } from "./_resolve-view-load-viewport";
 import { reconcileSelection } from "./_reconcile-selection";
@@ -22,9 +24,7 @@ export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
     }
   }
   setViewerState(next);
-  // A fresh sidecar makes prior viewer history incoherent (folds/views/
-  // bookmarks may not exist there).
-  clearViewerHistory();
+  setFolds(next.folds ?? []);
   markViewSynced(text ?? serializeViewerState(next));
   // If the spec already loaded, rebuild now so the freshly-installed
   // viewerState (positions, folds, sublabels, edge routes) is applied.
@@ -33,7 +33,7 @@ export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
   // node falls back to its default position (visually: stacked at the
   // origin) whenever the sidecar lacks folds.
   if (ctx.lastSpec.current) {
-    const flow = specToFlow(ctx.lastSpec.current, next.folds ?? [], next);
+    const flow = specToFlow(ctx.lastSpec.current, getFolds(), next, next.lastSelectionIds ?? [], getDimmed());
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
   }
@@ -43,7 +43,6 @@ export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
     if (ns.length === 0) return ns;
     const reconciled = reconcileSelection(next.lastSelectionIds, ns.map((n) => n.id));
     const want = new Set(reconciled);
-    patchViewerState((v) => { v.lastSelectionIds = reconciled.length > 0 ? reconciled : undefined; });
     return ns.map((n) => {
       const wantSel = want.has(n.id);
       return n.selected === wantSel ? n : { ...n, selected: wantSel };
