@@ -1,14 +1,16 @@
 # Substrate model
 
-Read this before changing anything in `tools/topology-vscode/src/substrate/`,
-the wire primitive, or anything that schedules/orders work. If your
+Read this before changing anything in the **Go substrate** (`nodes/`,
+`Wire.go`, `Wiring_gen.go`) or the **pump**
+(`tools/topology-vscode/src/webview/rf/pump.ts`),
+or anything that schedules/orders work. If your
 reasoning slips into banned vocabulary (below), you are in the wrong
 frame. Stop, re-read this file, and re-derive from the model.
 
-The pivot from earlier substrate versions: the `<Wire>` no longer owns
-a parked slot. The wire is transient — it carries a value to the
+The pivot from earlier substrate versions: a wire no longer owns a
+parked slot. The wire is transient — it carries a value to the
 destination and becomes empty on arrival. The slot lives on the
-destination node. Source nodes observe destination slot phase
+destination node in Go. Source nodes observe destination slot phase
 directly, not through wire phase.
 
 ## What things are
@@ -113,30 +115,31 @@ observation window, not an independent clock competing for authority.
 > violation, not a retry. The precondition is all-or-nothing: partial
 > consumption is not permitted.
 
-## React surface realization
+## Editor surface realization
 
-- **`<Wire>`** renders the SVG path and runs the RAF pulse animation
-  while in `in-flight(v)`. Exposes no `load`/`take`/`ack`. Its only
-  substrate side-effect is calling `dest.fill(slotId, v)` on
-  animation completion. Wire renders only the in-flight pulse; it is
-  empty before and after arrival.
-- **`<Node>`** owns its slot map, exposes `slotPhase(slotId)`,
-  `fill(slotId, v)`, and its firing rule. The parked value renders
-  on the destination's input port (small indicator that fills when
-  the slot is `filled(v)`) — see [diagrams/model-revised-draft/05-q3-slot-visual-depiction.svg](diagrams/model-revised-draft/05-q3-slot-visual-depiction.svg).
-  Manually-gated nodes render a take affordance whose click invokes
-  the firing rule with the user-gate satisfied.
-- **Global gate** halts or starts wire animations via the pause axis.
-  While paused, wire RAF steps are no-ops (pulse frozen in-flight);
-  nodes continue to poll their slot state but find no new fills, so
-  they naturally decide to emit nothing. Resume thaws wires; held
-  in-flight pulses finish their transit and nodes pick up work on
-  the next poll frame. A slot in `filled(v)` waiting for a
-  manually-gated destination continues to wait — halt/resume does
-  not abort it.
+The substrate model lives entirely in Go. The TS/React layer is
+render-only: it animates trace events received from Go.
+
+- **Go runtime** owns all slot state, firing rules, wire delivery, and
+  backpressure. It emits trace events as JSON lines on stdout.
+- **`pump.ts`** (`tools/topology-vscode/src/webview/rf/pump.ts`) is the
+  sole translator: it reads trace events from the extension bridge and
+  updates React Flow node/edge data so components can animate them.
+  Pump is the boundary — no slot-phase or backpressure logic may live
+  outside it on the TS side.
+- **Per-kind node components** (`rf/nodes/<Kind>Node.tsx`) render the
+  current RF node data as static React Flow custom nodes. They read
+  phase indicators from the data the pump has written; they own no
+  substrate state.
+- **`SubstrateEdge.tsx`** (`rf/edges/SubstrateEdge.tsx`) renders wire
+  animations driven by trace events written by the pump. It owns no
+  delivery logic.
+- **Global gate** is a play/pause signal sent to the Go process.
+  While paused, Go stops firing; the editor reflects the last known
+  state.
 - **Bridge surface** carries spec I/O only — `ready`, `spec`, `view`,
-  `save`, `view-save`, optionally `topogen-status`. Nothing about
-  phases, animation, or controls crosses.
+  `save`, `view-safe`, optionally `topogen-status`. Nothing about
+  slot phases, animation internals, or controls crosses the bridge.
 
 ## Banned vocabulary (in substrate context)
 
