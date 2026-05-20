@@ -19,6 +19,18 @@ Buffer one value from each input independently. When both FromOld and FromNew ha
 
 Detects a sign change between two consecutive edge values. Emits 1 when the streak is broken (sign changed), 0 when the streak continues.
 
+## View
+
+| Field | Value |
+|-------|-------|
+| kind | streakBreakDetector |
+| bg | #ffebee |
+| border | #c62828 |
+| text | #b71c1c |
+| accent | #c62828 |
+| minWidth | 110 |
+| defaultLabel | streakBreakDetector |
+
 ## Runtime status
 
 - Loader-registered: yes

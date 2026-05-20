@@ -28,6 +28,19 @@ Block until a value arrives on FromPrev. On each arrival:
 
 HeldValue is the previously-held value; ToEdge receivers get the old value, ToEdgeNew receivers get the new value. ToNext propagates the old value down the inhibitor chain. ToAck signals completion.
 
+## View
+
+| Field | Value |
+|-------|-------|
+| kind | chainInhibitor |
+| bg | #fff3e0 |
+| border | #e65100 |
+| text | #bf360c |
+| accent | #e65100 |
+| minWidth | 90 |
+| displays | held |
+| defaultLabel | chainInhibitor |
+
 ## Runtime status
 
 - Loader-registered: yes

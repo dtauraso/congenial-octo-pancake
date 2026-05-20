@@ -18,6 +18,19 @@ On each cycle: if no value is buffered, poll Input non-blocking. If a value is r
 
 Each value from the `data.init` queue is forwarded once to ToNext in order.
 
+## View
+
+| Field | Value |
+|-------|-------|
+| kind | input |
+| bg | #1a1f2e |
+| border | #3fb950 |
+| text | #c9d1d9 |
+| accent | #3fb950 |
+| minWidth | 90 |
+| displays | queue, repeat |
+| defaultLabel | input |
+
 ## Runtime status
 
 - Loader-registered: yes

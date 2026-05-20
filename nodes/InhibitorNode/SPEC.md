@@ -33,6 +33,18 @@ Block until a value arrives on FromPrevInhibitor. On each arrival:
 4. Emit HeldValue on ToRecognitionAndGate.
 5. If `TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor` is set and `EndToPartition` is not nil, forward EndToPartition on the transfer-out channel and clear EndToPartition.
 
+## View
+
+| Field | Value |
+|-------|-------|
+| kind | inhibitor |
+| bg | #fff3e0 |
+| border | #e65100 |
+| text | #bf360c |
+| accent | #e65100 |
+| minWidth | 90 |
+| defaultLabel | inhibitor |
+
 ## Runtime status
 
 - Loader-registered: yes

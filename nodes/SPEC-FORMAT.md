@@ -11,10 +11,10 @@ This document defines what goes in a SPEC and what each section means.
 
 ## Ports
 
-| Name | Direction | Element type | Cardinality | TSX handle | Side |
-|------|-----------|--------------|-------------|------------|------|
-| FromA | in | int | single | FromA | left |
-| ToOut | out | int | single | ToOut | right |
+| Name | Direction | Element type | Cardinality | TSX handle | Side | Accent |
+|------|-----------|--------------|-------------|------------|------|--------|
+| FromA | in | int | single | FromA | left | |
+| ToOut | out | int | single | ToOut | right | |
 
 ## Loader-managed channels
 
@@ -38,6 +38,20 @@ Pseudocode — English + math, no Go syntax. Reference port names from
 the Ports table. State what triggers a fire, what is emitted, what
 state is updated.
 
+## View
+
+| Field | Value |
+|-------|-------|
+| kind | <rfType> |
+| bg | #rrggbb |
+| border | #rrggbb |
+| text | #rrggbb |
+| accent | #rrggbb |
+| minWidth | 90 |
+| sublabel | optional |
+| displays | queue, repeat |
+| defaultLabel | <rfType> |
+
 ## Runtime status
 
 - Loader-registered: yes | no
@@ -58,6 +72,7 @@ state is updated.
 - **Cardinality** — `single` (one `chan<- int` field), or `fan-out` (a `[]chan<- int` field that accepts multiple outgoing edges, all receiving the same value). `fan-in` is not supported on the substrate side; fan-in is modeled by separate input ports.
 - **TSX handle** — the handle id used on the React Flow node. Same as Name unless legacy code uses a different id. New kinds: always equal to Name.
 - **Side** — `top` | `right` | `bottom` | `left`. Where on the rendered node the handle sits.
+- **Accent** — optional hex color. When present, overrides the kind-level accent for this single handle. Leave blank to inherit.
 
 ### Loader-managed channels
 
@@ -82,6 +97,48 @@ Two flags. If `Loader-registered: no` but `TSX render: present`, the kind is str
 3. AI generates the Go struct skeleton, TSX render, and registry entries from the manifest. Mechanical.
 4. AI transcribes the pseudocode into Go as the firing rule body. Not interpretation — direct.
 5. Parity check: mechanical (port↔field↔handle names align) + behavioral (Go rule still matches pseudocode).
+
+## View section
+
+The `## View` section is required for any kind that has a TSX render. It drives the generated `node-defs.ts` manifest.
+
+```markdown
+## View
+
+| Field | Value |
+|-------|-------|
+| kind | input |
+| bg | #1a1f2e |
+| border | #3fb950 |
+| text | #c9d1d9 |
+| accent | #3fb950 |
+| minWidth | 90 |
+| sublabel | A + B |
+| displays | queue, repeat |
+| defaultLabel | input |
+```
+
+- `kind` — required. The RF camelCase type name (= spec kind with first char lowercased). Defines the key in `node-defs.ts`.
+- `bg`, `border`, `text`, `accent` — required hex colors.
+- `minWidth` — optional integer pixel width.
+- `sublabel` — optional secondary label string shown beneath the node title.
+- `displays` — optional comma-separated list of display features. Valid values: `queue`, `repeat`, `held`.
+- `defaultLabel` — optional default label string (falls back to `kind` if omitted).
+
+SPEC.md files without a `## View` section are skipped by the generator (treated as not-yet-migrated).
+
+### Port accent overrides
+
+To specify a per-port accent color that overrides the kind-level accent for a single handle, add an optional `Accent` column to the Ports table:
+
+```markdown
+| Name | Direction | Element type | Cardinality | TSX handle | Side | Accent |
+|------|-----------|--------------|-------------|------------|------|--------|
+| FromRelease | in | int | single | FromRelease | left | #80cbc4 |
+| ToNext | out | int | single | ToNext | right | |
+```
+
+The `Accent` column is optional at the table level; individual rows may leave the cell empty to inherit the kind accent.
 
 ## Banned content
 

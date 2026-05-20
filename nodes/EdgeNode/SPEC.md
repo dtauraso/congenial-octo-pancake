@@ -20,6 +20,18 @@ Buffer one value from each input independently. When both FromLeft and FromRight
 
 Each input is polled non-blocking; arrival order does not matter.
 
+## View
+
+| Field | Value |
+|-------|-------|
+| kind | edgeNode |
+| bg | #fff8e1 |
+| border | #ff6f00 |
+| text | #e65100 |
+| accent | #ff6f00 |
+| minWidth | 90 |
+| defaultLabel | edge |
+
 ## Runtime status
 
 - Loader-registered: yes

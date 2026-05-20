@@ -18,6 +18,18 @@ Block until a value arrives on FromIn. On each arrival:
 - If value == 1 AND state == Growing: transition to Stopped; emit 0 on ToOut.
 - If value == 1 AND state == Stopped: silently absorb.
 
+## View
+
+| Field | Value |
+|-------|-------|
+| kind | partition |
+| bg | #fce4ec |
+| border | #ad1457 |
+| text | #880e4f |
+| accent | #ad1457 |
+| minWidth | 90 |
+| defaultLabel | partition |
+
 ## Runtime status
 
 - Loader-registered: yes

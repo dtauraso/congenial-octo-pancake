@@ -24,6 +24,18 @@ Block until a partition-end channel arrives on TransferIn. On receipt:
 
 Passes a partition-end channel (`chan<- int`) laterally along the inhibitor chain. The `EndTo` output port (wirable) is the terminal send target once the channel has arrived.
 
+## View
+
+| Field | Value |
+|-------|-------|
+| kind | transferInhibitor |
+| bg | #fff3e0 |
+| border | #bf360c |
+| text | #bf360c |
+| accent | #bf360c |
+| minWidth | 120 |
+| defaultLabel | transferInhibitor |
+
 ## Runtime status
 
 - Loader-registered: yes
