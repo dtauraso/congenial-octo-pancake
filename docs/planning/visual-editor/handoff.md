@@ -155,6 +155,7 @@ more urgent.
 7. **Line.go → JSON topology** — Line.go hand-wires Input→ReadGate
    parallel to LoadTopology; relocate to topologies/line.json. Plan:
    [line-go-relocation.md](line-go-relocation.md).
+8. **Firing-rule unit tests** — replace trace-parity fixtures (6 files, ~1100 LOC, zero real-bug catches) with per-kind unit tests. Spec: [firing-rule-unit-tests.md](firing-rule-unit-tests.md); branch: `task/firing-rule-unit-tests-spec`.
 
 ## Working-tree state
 
