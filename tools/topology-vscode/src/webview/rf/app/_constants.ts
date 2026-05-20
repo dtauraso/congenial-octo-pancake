@@ -15,10 +15,11 @@ import { ChainInhibitorNode } from "../nodes/ChainInhibitorNode";
 import { EdgeInhibitorNode } from "../nodes/EdgeInhibitorNode";
 import { InhibitRightGateNode } from "../nodes/InhibitRightGateNode";
 import { SyncGateNode } from "../nodes/SyncGateNode";
+import { StreakDetectorNode } from "../nodes/StreakDetectorNode";
 import { SubstrateEdge } from "../edges/SubstrateEdge";
 
 export const EDGE_TYPES = { animated: RSubstrateEdge, substrate: SubstrateEdge };
-export const RF_NODE_TYPES = { animated: RSubstrateNode, fold: FoldNode, note: NoteNode, input: InputNode, relay: RelayNode, join: JoinNode, readGate: ReadGateNode, readLatch: ReadLatchNode, partition: PartitionNode, edgeNode: EdgeNode, inhibitor: InhibitorNode, chainInhibitor: ChainInhibitorNode, edgeInhibitor: EdgeInhibitorNode, inhibitRightGate: InhibitRightGateNode, syncGate: SyncGateNode };
+export const RF_NODE_TYPES = { animated: RSubstrateNode, fold: FoldNode, note: NoteNode, input: InputNode, relay: RelayNode, join: JoinNode, readGate: ReadGateNode, readLatch: ReadLatchNode, partition: PartitionNode, edgeNode: EdgeNode, inhibitor: InhibitorNode, chainInhibitor: ChainInhibitorNode, edgeInhibitor: EdgeInhibitorNode, inhibitRightGate: InhibitRightGateNode, syncGate: SyncGateNode, streakDetector: StreakDetectorNode };
 
 // Alignment-guide tolerance is in flow units; 4 covers off-grid drag
 // noise without firing on every near-miss.
