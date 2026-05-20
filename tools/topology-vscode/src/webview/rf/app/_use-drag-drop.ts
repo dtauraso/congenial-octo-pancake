@@ -6,6 +6,7 @@ import { rfGetNodes, rfSetNodes } from "../rf-imperative";
 import { pushSnapshot } from "../history";
 import { PALETTE_DATA_TYPE } from "../panels/NodePalette";
 import type { AppCtx } from "./_ctx";
+import { specKindToRfType } from "../adapter/spec-to-flow";
 
 export function useDragDrop(ctx: AppCtx) {
   const onDragOver = useCallback((ev: React.DragEvent) => {
@@ -40,14 +41,7 @@ export function useDragDrop(ctx: AppCtx) {
       ...ns,
       {
         id,
-        type: type === "Input" ? "input" : type === "Relay" ? "relay" : type === "Join" ? "join"
-          : type === "ReadGate" ? "readGate" : type === "ReadLatch" ? "readLatch"
-          : type === "Partition" ? "partition" : type === "EdgeNode" ? "edgeNode"
-          : type === "Inhibitor" ? "inhibitor" : type === "ChainInhibitor" ? "chainInhibitor"
-          : type === "EdgeInhibitor" ? "edgeInhibitor" : type === "InhibitRightGate" ? "inhibitRightGate"
-          : type === "SyncGate" ? "syncGate" : type === "StreakDetector" ? "streakDetector"
-          : type === "StreakBreakDetector" ? "streakBreakDetector"
-          : type === "TransferInhibitor" ? "transferInhibitor" : "animated",
+        type: specKindToRfType(type),
         position: { x: pos.x, y: pos.y },
         data: {
           label: id,

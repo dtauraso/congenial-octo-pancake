@@ -1,17 +1,20 @@
-// builders.go — per-kind builder registry for the runtime topology loader.
+// builders.go — reflection-driven port-manifest and node construction.
 //
-// Each builder declares its port manifest and constructs the node struct
-// from a PortBindings map. Slice ports (e.g. ChainInhibitor.ToEdge) receive
-// all outbound channels in the order they appear in PortBindings.
+// Adding a kind: register one entry in kindRegistry. The struct fields
+// determine the port manifest automatically:
+//   - <-chan int  → PortIn
+//   - chan<- int  → PortOut
+//   - []chan<- int → PortOutMulti
+//   - all other field types are ignored
 //
-// chan-of-chan ports (Inhibitor, TransferInhibitor) are not encoded in
-// topology.json edges; dead-end channels of the correct type are allocated
-// so the struct constructs cleanly.
+// Kind-specific non-channel setup (HeldValue, Input pre-fill, etc.) goes in
+// the optional populate func on the registry entry.
 
 package Wiring
 
 import (
 	"fmt"
+	"reflect"
 
 	AG "github.com/dtauraso/wirefold/nodes/AndGateNode"
 	CI "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode"
@@ -32,9 +35,9 @@ import (
 type PortDir int
 
 const (
-	PortIn    PortDir = iota
-	PortOut           // single output
-	PortOutMulti      // slice output ([]chan<- int)
+	PortIn       PortDir = iota
+	PortOut              // single output
+	PortOutMulti         // slice output ([]chan<- int)
 )
 
 // PortSpec describes one port on a node kind.
@@ -57,9 +60,7 @@ func newPortBindings() PortBindings {
 	}
 }
 
-func (pb *PortBindings) SetSingle(name string, ch chan int) {
-	pb.single[name] = ch
-}
+func (pb *PortBindings) SetSingle(name string, ch chan int) { pb.single[name] = ch }
 
 func (pb *PortBindings) AppendMulti(name string, ch chan int) {
 	pb.multi[name] = append(pb.multi[name], ch)
@@ -90,31 +91,93 @@ func (pb *PortBindings) OutSlice(name string) []chan<- int {
 	return result
 }
 
-// NodeBuilder constructs a node from its spec and port bindings.
-type NodeBuilder struct {
-	Ports []PortSpec
-	Build func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error)
+// kindEntry is one entry in the kind registry.
+type kindEntry struct {
+	// newNode returns a fresh zero-valued pointer to the node struct.
+	newNode func() any
+	// populate optionally sets non-channel fields after channels are wired.
+	// id and name are already set before populate is called.
+	populate func(id int, name string, data *NodeData, node any)
 }
 
-// deadChanOfChan returns a dead-end chan<- chan<- int (cap 1).
-func deadChanOfChan() chan<- chan<- int {
-	ch := make(chan chan<- int, 1)
-	return ch
+var (
+	tChanIntRecv = reflect.TypeOf((<-chan int)(nil))
+	tChanIntSend = reflect.TypeOf((chan<- int)(nil))
+	tSliceSend   = reflect.TypeOf(([]chan<- int)(nil))
+)
+
+// reflectPorts walks the exported fields of the struct pointed to by sample
+// and returns a PortSpec for each channel field that carries int.
+// Chan-of-chan fields and non-channel fields are silently skipped.
+func reflectPorts(sample any) []PortSpec {
+	t := reflect.TypeOf(sample).Elem()
+	var ports []PortSpec
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		switch f.Type {
+		case tChanIntRecv:
+			ports = append(ports, PortSpec{Name: f.Name, Dir: PortIn})
+		case tChanIntSend:
+			ports = append(ports, PortSpec{Name: f.Name, Dir: PortOut})
+		case tSliceSend:
+			ports = append(ports, PortSpec{Name: f.Name, Dir: PortOutMulti})
+		}
+	}
+	return ports
 }
 
-// deadChanFromChanOfChan returns a dead-end <-chan chan<- int (cap 1).
-func deadChanFromChanOfChan() <-chan chan<- int {
-	ch := make(chan chan<- int, 1)
-	return ch
+// reflectBuild wires pb into the struct pointed to by nodePtr via reflection,
+// then returns it cast to S.Node.
+func reflectBuild(id int, name string, data *NodeData, pb PortBindings, e kindEntry) (S.Node, error) {
+	nodePtr := e.newNode()
+	v := reflect.ValueOf(nodePtr).Elem()
+
+	// Set Id and Name if the struct has them.
+	if f := v.FieldByName("Id"); f.IsValid() && f.CanSet() {
+		f.SetInt(int64(id))
+	}
+	if f := v.FieldByName("Name"); f.IsValid() && f.CanSet() {
+		f.SetString(name)
+	}
+
+	// Wire channel fields.
+	ports := reflectPorts(nodePtr)
+	for _, port := range ports {
+		f := v.FieldByName(port.Name)
+		if !f.IsValid() || !f.CanSet() {
+			continue
+		}
+		switch port.Dir {
+		case PortIn:
+			ch := pb.In(port.Name)
+			f.Set(reflect.ValueOf(ch))
+		case PortOut:
+			ch := pb.Out(port.Name)
+			f.Set(reflect.ValueOf(ch))
+		case PortOutMulti:
+			sl := pb.OutSlice(port.Name)
+			f.Set(reflect.ValueOf(sl))
+		}
+	}
+
+	// Kind-specific non-channel population.
+	if e.populate != nil {
+		e.populate(id, name, data, nodePtr)
+	}
+
+	node, ok := nodePtr.(S.Node)
+	if !ok {
+		return nil, fmt.Errorf("reflectBuild: %T does not implement S.Node", nodePtr)
+	}
+	return node, nil
 }
 
-// Registry maps kind name → NodeBuilder.
-var Registry = map[string]NodeBuilder{
+// kindRegistry maps spec kind name → kindEntry.
+var kindRegistry = map[string]kindEntry{
 	"Input": {
-		Ports: []PortSpec{
-			{Name: "ToOut", Dir: PortOut},
-		},
-		Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
+		newNode: func() any { return &IPN.InputNode{} },
+		populate: func(id int, name string, data *NodeData, node any) {
+			n := node.(*IPN.InputNode)
 			init := []int{}
 			if data != nil {
 				init = data.Init
@@ -127,239 +190,74 @@ var Registry = map[string]NodeBuilder{
 			for _, v := range init {
 				ch <- v
 			}
-			n := &IPN.InputNode{
-				Id:     id,
-				Name:   name,
-				Input:  ch,
-				ToNext: pb.Out("ToOut"),
-			}
-			return n, nil
+			n.Input = ch
 		},
 	},
-
-	"ReadGate": {
-		Ports: []PortSpec{
-			{Name: "FromValue", Dir: PortIn},
-			{Name: "FromAck", Dir: PortIn},
-			{Name: "ToGated", Dir: PortOut},
-		},
-		Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
-			n := &RGN.ReadGateNode{
-				Id:        id,
-				Name:      name,
-				FromValue: pb.In("FromValue"),
-				FromAck:   pb.In("FromAck"),
-				ToGated:   pb.Out("ToGated"),
-			}
-			return n, nil
-		},
-	},
-
+	"ReadGate": {newNode: func() any { return &RGN.ReadGateNode{} }},
 	"ChainInhibitor": {
-		Ports: []PortSpec{
-			{Name: "FromPrev", Dir: PortIn},
-			{Name: "ToNext", Dir: PortOut},
-			{Name: "ToAck", Dir: PortOut},
-			{Name: "ToEdge", Dir: PortOutMulti},
-		},
-		Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
-			held := 0
+		newNode: func() any { return &CI.ChainInhibitorNode{} },
+		populate: func(id int, name string, data *NodeData, node any) {
+			n := node.(*CI.ChainInhibitorNode)
 			if data != nil {
 				if v, ok := data.InitialSlots["held"]; ok {
-					held = v
+					n.HeldValue = v
 				}
 			}
-			toEdge := pb.OutSlice("ToEdge")
-			if len(toEdge) == 0 {
-				toEdge = []chan<- int{make(chan int, 1)}
+			if len(n.ToEdge) == 0 {
+				n.ToEdge = []chan<- int{make(chan int, 1)}
 			}
-			n := &CI.ChainInhibitorNode{
-				Id:        id,
-				Name:      name,
-				HeldValue: held,
-				FromPrev:  pb.In("FromPrev"),
-				ToNext:    pb.Out("ToNext"),
-				ToAck:     pb.Out("ToAck"),
-				ToEdge:    toEdge,
-			}
-			return n, nil
 		},
 	},
-
-	"InhibitRightGate": {
-		Ports: []PortSpec{
-			{Name: "FromLeft", Dir: PortIn},
-			{Name: "FromRight", Dir: PortIn},
-			{Name: "ToPassed", Dir: PortOut},
-		},
-		Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
-			n := &IRG.InhibitRightGateNode{
-				Id:        id,
-				Name:      name,
-				FromLeft:  pb.In("FromLeft"),
-				FromRight: pb.In("FromRight"),
-				ToPassed:  pb.Out("ToPassed"),
-			}
-			return n, nil
-		},
-	},
-
-	"AndGate": {
-		Ports: []PortSpec{
-			{Name: "FromA", Dir: PortIn},
-			{Name: "FromB", Dir: PortIn},
-			{Name: "ToOut", Dir: PortOut},
-		},
-		Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
-			n := &AG.AndGateNode{
-				Id:    id,
-				Name:  name,
-				FromA: pb.In("FromA"),
-				FromB: pb.In("FromB"),
-				ToOut: pb.Out("ToOut"),
-			}
-			return n, nil
-		},
-	},
-
-	"ReadLatch": {
-		Ports: []PortSpec{
-			{Name: "FromIn", Dir: PortIn},
-			{Name: "FromRelease", Dir: PortIn},
-			{Name: "ToNext", Dir: PortOut},
-			{Name: "ToAck", Dir: PortOut},
-		},
-		Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
-			n := &RLN.ReadLatchNode{
-				Id:          id,
-				Name:        name,
-				FromIn:      pb.In("FromIn"),
-				FromRelease: pb.In("FromRelease"),
-				ToNext:      pb.Out("ToNext"),
-				ToAck:       pb.Out("ToAck"),
-			}
-			return n, nil
-		},
-	},
-
-	"SyncGate": {
-		Ports: []PortSpec{
-			{Name: "FromA", Dir: PortIn},
-			{Name: "FromB", Dir: PortIn},
-			{Name: "ToRelease", Dir: PortOut},
-		},
-		Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
-			n := &SGN.SyncGateNode{
-				Id:        id,
-				Name:      name,
-				FromA:     pb.In("FromA"),
-				FromB:     pb.In("FromB"),
-				ToRelease: pb.Out("ToRelease"),
-			}
-			return n, nil
-		},
-	},
-
+	"InhibitRightGate": {newNode: func() any { return &IRG.InhibitRightGateNode{} }},
+	"AndGate":          {newNode: func() any { return &AG.AndGateNode{} }},
+	"ReadLatch":        {newNode: func() any { return &RLN.ReadLatchNode{} }},
+	"SyncGate":         {newNode: func() any { return &SGN.SyncGateNode{} }},
 	"Inhibitor": {
-		// chan-of-chan ports (TransferEndPartitionChannel*) are not encoded in
-		// topology.json; allocate dead-end channels so the struct constructs.
-		Ports: []PortSpec{
-			{Name: "FromPrevInhibitor", Dir: PortIn},
-			{Name: "ToNextInhibitor", Dir: PortOut},
-			{Name: "ToEdgeNode", Dir: PortOut},
-			{Name: "FromEdgeNode", Dir: PortIn},
-			{Name: "ToRecognitionAndGate", Dir: PortOut},
-			{Name: "EndFromPartition", Dir: PortIn},
-			{Name: "EndToPartition", Dir: PortOut},
-		},
-		Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
-			n := &INN.InhibitorNode{
-				Id:                id,
-				FromPrevInhibitor: pb.In("FromPrevInhibitor"),
-				ToNextInhibitor:   pb.Out("ToNextInhibitor"),
-				ToEdgeNode:        pb.Out("ToEdgeNode"),
-				FromEdgeNode:      pb.In("FromEdgeNode"),
-				ToRecognitionAndGate: pb.Out("ToRecognitionAndGate"),
-				EndFromPartition:  pb.In("EndFromPartition"),
-				EndToPartition:    pb.Out("EndToPartition"),
-				TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor: deadChanOfChan(),
-				TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor: deadChanFromChanOfChan(),
-			}
-			return n, nil
+		newNode: func() any { return &INN.InhibitorNode{} },
+		populate: func(id int, name string, data *NodeData, node any) {
+			n := node.(*INN.InhibitorNode)
+			n.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor = make(chan chan<- int, 1)
+			rcv := make(chan chan<- int, 1)
+			n.TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor = rcv
 		},
 	},
-
-	"Partition": {
-		Ports: []PortSpec{
-			{Name: "FromIn", Dir: PortIn},
-			{Name: "ToOut", Dir: PortOut},
-		},
-		Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
-			n := &PN.PartitionNode{
-				Id:     id,
-				Name:   name,
-				FromIn: pb.In("FromIn"),
-				ToOut:  pb.Out("ToOut"),
-			}
-			return n, nil
-		},
-	},
-
-	"Edge": {
-		Ports: []PortSpec{
-			{Name: "FromLeft", Dir: PortIn},
-			{Name: "FromRight", Dir: PortIn},
-			{Name: "ToInhibitor", Dir: PortOut},
-			{Name: "ToPartition", Dir: PortOut},
-			{Name: "ToNextEdge", Dir: PortOut},
-		},
-		Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
-			n := &EN.EdgeNode{
-				Id:          id,
-				Name:        name,
-				FromLeft:    pb.In("FromLeft"),
-				FromRight:   pb.In("FromRight"),
-				ToInhibitor: pb.Out("ToInhibitor"),
-				ToPartition: pb.Out("ToPartition"),
-				ToNextEdge:  pb.Out("ToNextEdge"),
-			}
-			return n, nil
-		},
-	},
-
+	"Partition": {newNode: func() any { return &PN.PartitionNode{} }},
+	"Edge":      {newNode: func() any { return &EN.EdgeNode{} }},
 	"TransferInhibitor": {
-		// TransferIn / TransferOut are chan<-chan<-int / <-chan chan<-int; not
-		// expressible as plain topology.json edges. Allocate dead-ends.
-		Ports: []PortSpec{
-			{Name: "EndTo", Dir: PortOut},
-		},
-		Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
-			n := &TIN.TransferInhibitorNode{
-				Id:          id,
-				EndTo:       pb.Out("EndTo"),
-				TransferIn:  deadChanFromChanOfChan(),
-				TransferOut: deadChanOfChan(),
-			}
-			return n, nil
+		newNode: func() any { return &TIN.TransferInhibitorNode{} },
+		populate: func(id int, name string, data *NodeData, node any) {
+			n := node.(*TIN.TransferInhibitorNode)
+			rcv := make(chan chan<- int, 1)
+			n.TransferIn = rcv
+			n.TransferOut = make(chan chan<- int, 1)
 		},
 	},
+	"EdgeInhibitor": {newNode: func() any { return &EI.EdgeInhibitorNode{} }},
+}
 
-	"EdgeInhibitor": {
-		Ports: []PortSpec{
-			{Name: "FromPrev", Dir: PortIn},
-			{Name: "ToEdge", Dir: PortOut},
-			{Name: "FromEdge", Dir: PortIn},
-		},
-		Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
-			n := &EI.EdgeInhibitorNode{
-				Id:       id,
-				FromPrev: pb.In("FromPrev"),
-				ToEdge:   pb.Out("ToEdge"),
-				FromEdge: pb.In("FromEdge"),
-			}
-			return n, nil
-		},
-	},
+// NodeBuilder is the public-facing type consumed by the loader.
+// Ports is derived lazily from reflection; Build delegates to reflectBuild.
+type NodeBuilder struct {
+	Ports []PortSpec
+	Build func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error)
+}
+
+// Registry is the loader-facing map, built once at init from kindRegistry.
+var Registry map[string]NodeBuilder
+
+func init() {
+	Registry = make(map[string]NodeBuilder, len(kindRegistry))
+	for kind, e := range kindRegistry {
+		e := e // capture
+		sample := e.newNode()
+		ports := reflectPorts(sample)
+		Registry[kind] = NodeBuilder{
+			Ports: ports,
+			Build: func(id int, name string, data *NodeData, pb PortBindings) (S.Node, error) {
+				return reflectBuild(id, name, data, pb, e)
+			},
+		}
+	}
 }
 
 // kindPorts returns the port specs for a kind, or an error if unknown.
