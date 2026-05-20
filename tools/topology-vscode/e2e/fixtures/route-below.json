@@ -7,7 +7,7 @@
     {
       "id": "e",
       "source": "b",
-      "sourceHandle": "ToAck",
+      "sourceHandle": "ToReadGate",
       "target": "a",
       "targetHandle": "in",
       "kind": "feedback-ack",

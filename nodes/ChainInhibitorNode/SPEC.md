@@ -6,7 +6,7 @@
 |------|-----------|--------------|-------------|------------|------|
 | FromPrev | in | int | single | FromPrev | left |
 | ToNext | out | int | single | ToNext | right |
-| ToAck | out | int | single | ToAck | right |
+| ToReadGate | out | int | single | ToReadGate | right |
 | ToEdge | out | int | fan-out | ToEdge | right |
 | ToEdgeNew | out | int | fan-out | ToEdgeNew | right |
 
@@ -24,9 +24,9 @@ Block until a value arrives on FromPrev. On each arrival:
 2. Emit the incoming value on every channel in ToEdgeNew (fan-out).
 3. Emit HeldValue on ToNext.
 4. Update HeldValue = incoming value.
-5. Emit 1 on ToAck.
+5. Emit 1 on ToReadGate.
 
-HeldValue is the previously-held value; ToEdge receivers get the old value, ToEdgeNew receivers get the new value. ToNext propagates the old value down the inhibitor chain. ToAck signals completion.
+HeldValue is the previously-held value; ToEdge receivers get the old value, ToEdgeNew receivers get the new value. ToNext propagates the old value down the inhibitor chain. ToReadGate signals completion.
 
 ## View
 
@@ -48,4 +48,4 @@ HeldValue is the previously-held value; ToEdge receivers get the old value, ToEd
 
 ## Open questions
 
-- TSX only renders `ToEdge` and `ToNext` handles; `ToEdgeNew` and `ToAck` are absent from the current render. Port manifest and Go struct include all four outputs.
+- TSX only renders `ToEdge` and `ToNext` handles; `ToEdgeNew` and `ToReadGate` are absent from the current render. Port manifest and Go struct include all four outputs.

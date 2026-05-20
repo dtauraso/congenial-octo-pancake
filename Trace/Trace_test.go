@@ -93,7 +93,7 @@ func TestEndToEnd_InputThroughChainInhibitor(t *testing.T) {
 	ciOut := make(chan int, 1)
 
 	in := INN.InputNode{Id: 0, Name: "in", Init: []int{7}, ToNext: inToCi}
-	ci := CI.ChainInhibitorNode{Id: 0, Name: "ci", FromPrev: inToCi, ToAck: ciAck, ToNext: ciOut}
+	ci := CI.ChainInhibitorNode{Id: 0, Name: "ci", FromPrev: inToCi, ToReadGate: ciAck, ToNext: ciOut}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)

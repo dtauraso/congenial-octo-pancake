@@ -54,7 +54,7 @@ Worth scrutinizing before the audit table is filled:
 |------|------------------|------------------------|--------|---------|----------|
 | Input | 0 → 1 (ToNext) | Poll init queue; forward once; clear on send. | topology: 2; docs: 1 | — | ✅ **keep** — source node. |
 | ReadGate | 2 → 1 (value+inhibitor / gated) | Buffer both; emit value when both arrive. | topology: 1; docs: 1 | SyncGate, Join | ✅ **keep**. |
-| ChainInhibitor | 1 → 4 (prev / next+edge+new+ack) | Block on prev; emit old to ToEdge/ToNext, new to ToEdgeNew, 1 to ToAck. | topology: 2; docs: 2 | Inhibitor | ✅ **keep** — superset; fan-out + ack. |
+| ChainInhibitor | 1 → 4 (prev / next+edge+new+ack) | Block on prev; emit old to ToEdge/ToNext, new to ToEdgeNew, 1 to ToReadGate. | topology: 2; docs: 2 | Inhibitor | ✅ **keep** — superset; fan-out + ack. |
 | InhibitRightGate | 2 → 1 (left+right / passed) | Emit 1 if left==1 AND right==0. | topology: 1; docs: 1 | AndGate | ✅ **keep**. |
 
 ## Findings (haiku sweep, 2026-05-19)
@@ -198,16 +198,16 @@ type ChainInhibitorNode struct {
 	HeldValue  int
 	FromPrev   <-chan int
 	ToNext     chan<- int
-	ToAck      chan<- int
+	ToReadGate      chan<- int
 	ToEdge     []chan<- int
 	ToEdgeNew  []chan<- int
 }
 ```
 
 - **Inputs:** `FromPrev <-chan int` — incoming value to hold
-- **Outputs:** `ToNext chan<- int`, `ToAck chan<- int`, `ToEdge []chan<- int` — old value fan-out, `ToEdgeNew []chan<- int` — new value fan-out
+- **Outputs:** `ToNext chan<- int`, `ToReadGate chan<- int`, `ToEdge []chan<- int` — old value fan-out, `ToEdgeNew []chan<- int` — new value fan-out
 - **State:** `HeldValue int`
-- **Firing rule:** blocking receive on `FromPrev`; emit old `HeldValue` to all `ToEdge` and `ToNext`, new value to all `ToEdgeNew`, ack 1 to `ToAck`, then update `HeldValue`
+- **Firing rule:** blocking receive on `FromPrev`; emit old `HeldValue` to all `ToEdge` and `ToNext`, new value to all `ToEdgeNew`, ack 1 to `ToReadGate`, then update `HeldValue`
 - **Populate:** `populateChainInhibitor` seeds `HeldValue` from `data.InitialSlots["held"]`; ensures `ToEdge` has at least one channel
 
 #### RF (node-defs entry)
@@ -225,7 +225,7 @@ chainInhibitor: {
   ],
   sources: [
     { id: "ToNext" },
-    { id: "ToAck" },
+    { id: "ToReadGate" },
     { id: "ToEdge" },
     { id: "ToEdgeNew" },
   ],
@@ -234,7 +234,7 @@ chainInhibitor: {
 ```
 
 - **Visual:** label `"chainInhibitor"`, accent `#e65100`, minWidth 90
-- **Handles:** targets [`FromPrev`], sources [`ToNext`, `ToAck`, `ToEdge`, `ToEdgeNew`]
+- **Handles:** targets [`FromPrev`], sources [`ToNext`, `ToReadGate`, `ToEdge`, `ToEdgeNew`]
 - **Displays:** `["held"]`
 
 #### Drift

@@ -34,7 +34,7 @@ func (l *Line) Setup() {
 
 	i1ToInhibitRight0 := make(chan int, 1)
 	i1 := CI.NewChainInhibitorNode(1, i0ToI1, make(chan int, 3))
-	i1.ToAck = i1ToReadGate
+	i1.ToReadGate = i1ToReadGate
 	i1.ToEdge = []chan<- int{i1ToInhibitRight0}
 
 	inhibitRight0 := IRG.InhibitRightGateNode{Id: 0, FromLeft: i0ToInhibitRight0, FromRight: i1ToInhibitRight0, ToPassed: make(chan int, 1)}

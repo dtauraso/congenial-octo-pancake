@@ -13,7 +13,7 @@ type ChainInhibitorNode struct {
 	HeldValue  int
 	FromPrev   <-chan int
 	ToNext     chan<- int
-	ToAck      chan<- int
+	ToReadGate chan<- int
 	ToEdge     []chan<- int
 	ToEdgeNew  []chan<- int
 }
@@ -47,8 +47,8 @@ func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 			S.Send(in.ToNext, in.HeldValue)
 			s.Trace.Send(in.Name, "ToNext", in.HeldValue)
 			in.HeldValue = value
-			S.Send(in.ToAck, 1)
-			s.Trace.Send(in.Name, "ack", 1)
+			S.Send(in.ToReadGate, 1)
+			s.Trace.Send(in.Name, "ToReadGate", 1)
 		default:
 		}
 	}

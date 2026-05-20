@@ -7,8 +7,8 @@
 //
 // Multi-output node: one slot for ToEdge (inhibitOut) and one slot
 // for ToEdgeNew (readNew), plus the always-present ToNext (out) and
-// ToAck (ack). Send order in the Go node is ToEdge → ToEdgeNew →
-// ToNext → ToAck; the fixture pins that same order.
+// ToReadGate. Send order in the Go node is ToEdge → ToEdgeNew →
+// ToNext → ToReadGate; the fixture pins that same order.
 
 package Trace_test
 
@@ -57,7 +57,7 @@ func TestParity_FixtureMatch_ChainInhibitor(t *testing.T) {
 		{ID: "ciInhibit", SourceNode: "ci", SourceHandle: "ToEdge"},
 		{ID: "ciReadNew", SourceNode: "ci", SourceHandle: "readNew"},
 		{ID: "ciOut", SourceNode: "ci", SourceHandle: "ToNext"},
-		{ID: "ciAck", SourceNode: "ci", SourceHandle: "ack"},
+		{ID: "ciAck", SourceNode: "ci", SourceHandle: "ToReadGate"},
 	})
 
 	tr := New(64)
@@ -75,7 +75,7 @@ func TestParity_FixtureMatch_ChainInhibitor(t *testing.T) {
 		ToEdge:    []chan<- int{toEdge},
 		ToEdgeNew: []chan<- int{toEdgeNew},
 		ToNext:    toNext,
-		ToAck:     toAck,
+		ToReadGate: toAck,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

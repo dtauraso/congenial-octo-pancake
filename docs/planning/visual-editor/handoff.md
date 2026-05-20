@@ -31,8 +31,8 @@ handoff.md is exempt from the 100-LOC budget.
      `nodes/<Kind>/SPEC.md`'s `## View` section + Ports table (with
      new optional `Accent` column). Added Relay/Join SPEC.md
      (editor-only; `Loader-registered: no`). Side effect: SPEC being
-     authoritative gave ChainInhibitor new `ToAck`/`ToEdgeNew`
-     handles and ReadLatch new `ToAck` — these were prior Open
+     authoritative gave ChainInhibitor new `ToReadGate`/`ToEdgeNew`
+     handles and ReadLatch new `ToReadGate` — these were prior Open
      Questions and now match the Go ports.
    - `f246e9c` — folded each kind's `register.go` (init + populate)
      into the kind's body file. `register.go` removed everywhere.
