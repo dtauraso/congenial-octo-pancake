@@ -44,6 +44,3 @@ HeldValue is the previously-held value; ToEdge receivers get the old value. ToNe
 - Loader-registered: yes
 - TSX render: present
 
-## Open questions
-
-- TSX only renders `ToEdge` and `ToNextChainInhibitorNode` handles; `ToReadGate` is absent from the current render.
