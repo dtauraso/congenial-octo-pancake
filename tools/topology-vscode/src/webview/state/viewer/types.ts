@@ -1,5 +1,5 @@
 // Viewer state — sidecar to topology.json. None of these fields belong in the
-// spec; topogen ignores them entirely. See visual-editor-plan.md §"Spec vs
+// spec; the runtime loader ignores them entirely. See visual-editor-plan.md §"Spec vs
 // viewer state" for the policy.
 
 import type { StateValue } from "../../../schema";

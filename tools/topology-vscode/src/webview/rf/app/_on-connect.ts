@@ -76,8 +76,8 @@ export function onConnectImpl(ctx: AppCtx, conn: Connection) {
   let id = baseId;
   let n = 2;
   while (rfEdges.some((e) => e.id === id)) id = `${baseId}#${n++}`;
-  // topogen uses edge.label verbatim as the channel variable name and
-  // requires a valid Go identifier. Synthesize one; users can rename.
+  // The runtime loader uses edge.label verbatim as the channel variable name
+  // and requires a valid Go identifier. Synthesize one; users can rename.
   const cap = (s: string) => (s.length === 0 ? s : s[0].toUpperCase() + s.slice(1));
   const baseLabel = `${conn.source}${cap(conn.sourceHandle)}To${cap(conn.target)}${cap(resolvedTargetHandle)}`
     .replace(/[^A-Za-z0-9_]/g, "_")

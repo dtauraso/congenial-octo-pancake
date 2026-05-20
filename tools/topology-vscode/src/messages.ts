@@ -2,11 +2,6 @@
 // Both sides import from here so unknown / malformed messages are caught
 // at type-narrow time rather than silently writing `[object Object]` to disk.
 
-export type TopogenStatus =
-  | { state: "running" }
-  | { state: "ok" }
-  | { state: "error"; message: string };
-
 export type RunStatus =
   | { state: "running" }
   | { state: "ok" }
@@ -36,7 +31,6 @@ export type TraceEvent = {
 export type HostToWebviewMsg =
   | { type: "load"; text: string }
   | { type: "view-load"; text?: string }
-  | { type: "topogen-status"; state: TopogenStatus["state"]; message?: string }
   | { type: "run-status"; state: RunStatus["state"]; message?: string }
   | { type: "flush" }
   | { type: "save-error"; message: string }
@@ -47,7 +41,7 @@ export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new 
 ]);
 
 export const HOST_TO_WEBVIEW_TYPES: ReadonlySet<HostToWebviewMsg["type"]> = new Set([
-  "load", "view-load", "topogen-status", "run-status", "flush", "save-error", "trace-event",
+  "load", "view-load", "run-status", "flush", "save-error", "trace-event",
 ]);
 
 export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {

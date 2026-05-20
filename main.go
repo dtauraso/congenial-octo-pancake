@@ -18,9 +18,13 @@ import (
 // to SafeWorker and its raw event stream is dumped as JSON-lines to
 // the path on shutdown. Raw form keys send events by (node, port);
 // the canonical edge-keyed form requires a spec-aware Resolve step
-// (cmd/topogen ground; out of scope for the runtime entrypoint).
-func RunTest(dur time.Duration, tracePath string) {
-	nodes := W.Wire()
+// (out of scope for the runtime entrypoint).
+func RunTest(dur time.Duration, tracePath string, topologyPath string) {
+	nodes, err := W.LoadTopology(topologyPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "load topology: %v\n", err)
+		os.Exit(1)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)
 	wg.Add(len(nodes))
@@ -56,6 +60,7 @@ func RunTest(dur time.Duration, tracePath string) {
 func main() {
 	tracePath := flag.String("trace", "", "if set, write a raw JSONL trace to this path on shutdown")
 	dur := flag.Duration("duration", 100*time.Millisecond, "how long to run before cancelling")
+	topologyPath := flag.String("topology", "topology.json", "path to topology JSON spec")
 	flag.Parse()
-	RunTest(*dur, *tracePath)
+	RunTest(*dur, *tracePath, *topologyPath)
 }

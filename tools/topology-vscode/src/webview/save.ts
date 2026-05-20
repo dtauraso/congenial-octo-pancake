@@ -1,14 +1,11 @@
 import { viewerState } from "./rf/viewer-state";
 import { serializeViewerState } from "./state/viewer/types";
-import type { TopogenStatus } from "../messages";
 import type { Spec } from "../schema";
 import { vscode } from "./vscode-api";
 import { rfGetNodes, rfGetEdges } from "./rf/rf-imperative";
 import { flowToSpec } from "./rf/adapter/flow-to-spec";
 
-export type { TopogenStatus };
 const status = document.getElementById("status")!;
-const topogenStatus = document.getElementById("topogen-status")!;
 
 // Top-level spec metadata (timing, cycleAnchor, legend, runtime) that
 // flowToSpec passes through verbatim. Updated on each load so saves
@@ -33,22 +30,6 @@ export function registerSavers(save: Saver, viewSave: Saver) {
 export function setStatus(dirty: boolean) {
   status.textContent = dirty ? "saving…" : "saved";
   status.className = dirty ? "dirty" : "clean";
-}
-
-export function setTopogenStatus(s: TopogenStatus) {
-  if (s.state === "running") {
-    topogenStatus.textContent = "codegen …";
-    topogenStatus.className = "topogen-running";
-    topogenStatus.title = "regenerating Go";
-  } else if (s.state === "ok") {
-    topogenStatus.textContent = "codegen ✓";
-    topogenStatus.className = "topogen-ok";
-    topogenStatus.title = "generated Go is up to date";
-  } else {
-    topogenStatus.textContent = "codegen ✗";
-    topogenStatus.className = "topogen-error";
-    topogenStatus.title = s.message;
-  }
 }
 
 // Pure send-now helpers — invoked by the debouncer in <SaveLifecycle />

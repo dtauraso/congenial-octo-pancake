@@ -46,7 +46,6 @@ export function buildWebviewHtml(
 <body>
   <div class="toolbar">
     <span id="status" class="clean">saved</span>
-    <span id="topogen-status" class="topogen-ok" title="generated Go is up to date">codegen ✓</span>
     <span id="run-mount"></span>
   </div>
   <div id="app"></div>

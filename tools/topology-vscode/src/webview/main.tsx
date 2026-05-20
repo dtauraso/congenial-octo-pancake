@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import "reactflow/dist/style.css";
 import "./webview.css";
 import App from "./rf/app";
-import { flushSave, flushViewSave, setTopogenStatus } from "./save";
+import { flushSave, flushViewSave } from "./save";
 import { parseHostToWebview } from "../messages";
 import { rfGetNodes, rfGetEdges } from "./rf/rf-imperative";
 import { flowToSpec } from "./rf/adapter/flow-to-spec";
@@ -37,11 +37,7 @@ createRoot(app).render(
 window.addEventListener("message", (e) => {
   const msg = parseHostToWebview(e.data);
   if (!msg) return;
-  if (msg.type === "topogen-status") {
-    setTopogenStatus(msg.state === "error"
-      ? { state: "error", message: msg.message ?? "" }
-      : { state: msg.state });
-  } else if (msg.type === "run-status") {
+  if (msg.type === "run-status") {
     setRunStatusImperative(msg.state === "error"
       ? { state: "error", message: msg.message ?? "" }
       : { state: msg.state });

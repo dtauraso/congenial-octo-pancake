@@ -7,7 +7,7 @@ import type { NodeData, EdgeData } from "../types";
 const RF_NODE_TYPE_MAP: Record<string, string> = { Input: "input", Relay: "relay", Join: "join", ReadGate: "readGate", ReadLatch: "readLatch", Partition: "partition", EdgeNode: "edgeNode", Inhibitor: "inhibitor", ChainInhibitor: "chainInhibitor", EdgeInhibitor: "edgeInhibitor", InhibitRightGate: "inhibitRightGate", SyncGate: "syncGate", StreakDetector: "streakDetector", StreakBreakDetector: "streakBreakDetector", TransferInhibitor: "transferInhibitor" };
 
 // Fold-aware spec→flow conversion. Folds are viewer-only state; they never
-// touch the spec (topogen ignores topology.view.json). Edges that cross a
+// touch the spec (the runtime loader ignores topology.view.json). Edges that cross a
 // collapsed fold boundary are re-routed onto the fold placeholder *only in
 // the flow*; the underlying spec edge keeps its original endpoints, so on
 // expand the original wiring is reinstated without mutation.

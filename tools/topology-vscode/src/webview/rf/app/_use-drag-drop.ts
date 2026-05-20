@@ -21,7 +21,7 @@ export function useDragDrop(ctx: AppCtx) {
     if (!ctx.lastSpec.current) return;
     const pos = ctx.rf.screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
     // Mint a unique id from the type. Lowercase first char so the id is
-    // a valid Go identifier the first time topogen consumes it.
+    // a valid Go identifier the first time the runtime loader consumes it.
     const base = type.charAt(0).toLowerCase() + type.slice(1);
     let n = 0;
     let id = `${base}${n}`;
