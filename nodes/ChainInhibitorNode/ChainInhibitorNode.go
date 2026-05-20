@@ -32,19 +32,19 @@ func (in *ChainInhibitorNode) Update(s *S.SafeWorker) {
 
 		select {
 		case value := <-in.FromPrev:
-			s.Trace.Recv(in.Name, "in", value)
+			s.Trace.Recv(in.Name, "FromPrev", value)
 			fmt.Printf("%s: received %d (old=%d)\n", in.Name, value, in.HeldValue)
 			s.Trace.Fire(in.Name)
 			for _, ch := range in.ToEdge {
 				S.Send(ch, in.HeldValue)
-				s.Trace.Send(in.Name, "inhibitOut", in.HeldValue)
+				s.Trace.Send(in.Name, "ToEdge", in.HeldValue)
 			}
 			for _, ch := range in.ToEdgeNew {
 				S.Send(ch, value)
 				s.Trace.Send(in.Name, "readNew", value)
 			}
 			S.Send(in.ToNext, in.HeldValue)
-			s.Trace.Send(in.Name, "out", in.HeldValue)
+			s.Trace.Send(in.Name, "ToNext", in.HeldValue)
 			in.HeldValue = value
 			S.Send(in.ToAck, 1)
 			s.Trace.Send(in.Name, "ack", 1)

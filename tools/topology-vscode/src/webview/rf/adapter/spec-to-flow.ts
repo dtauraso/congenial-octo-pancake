@@ -145,11 +145,9 @@ export function specToFlow(
       target,
       sourceHandle,
       targetHandle,
-      type: "animated",
-      // `label` is rendered as SVG <text> by AnimatedEdge so the style-guide
-      // font-weight / fill / stroke="none" rules apply (RF's default label
-      // renders via foreignObject, which the guide's text exceptions don't
-      // reach). Carried in data only.
+      type: "substrate",
+      // `label` is rendered in data only (SubstrateEdge reads data.label via
+      // EdgeLabelRenderer); not via RF's default foreignObject label.
       style: { stroke: KIND_COLORS[e.kind] ?? "#888", strokeWidth: 1.5 },
       data: {
         kind: e.kind,

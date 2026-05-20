@@ -5,14 +5,17 @@
 // No simulation, no RAF, no slot phase logic.
 
 import { Handle, Position, type NodeProps } from "reactflow";
+import { useFireFlash } from "./use-fire-flash";
 
 interface EdgeInhibitorNodeData {
   label?: string;
+  lastFire?: number;
 }
 
 export function EdgeInhibitorNode({ data }: NodeProps<EdgeInhibitorNodeData>) {
+  const flashing = useFireFlash(data.lastFire);
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #ff6f00" : undefined }}>
       <Handle type="target" position={Position.Left} id="in" style={styles.handle} />
       <div style={styles.label}>{data.label ?? "edgeInhibitor"}</div>
       <Handle type="source" position={Position.Right} id="out" style={styles.handle} />

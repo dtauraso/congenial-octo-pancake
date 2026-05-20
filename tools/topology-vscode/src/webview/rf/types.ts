@@ -27,6 +27,12 @@ export interface NodeData {
   dimmed?: boolean;
   state?: Record<string, StateValue>;
 
+  // --- Runtime trace fields (Phase 4) ---
+  /** Last fire event step for this node (used for visual highlight). */
+  lastFire?: number;
+  /** Last recv: {port, value, simStep}. */
+  lastRecv?: { port: string; value: number; simStep: number };
+
   // --- Adapter convenience fields ---
   label: string;
   fill: string;
@@ -56,4 +62,11 @@ export interface EdgeData {
   sourceHandle?: string;
   /** Original targetHandle before any fold rerouting. */
   targetHandle?: string;
+
+  // --- Runtime trace fields (Phase 4) ---
+  /** Set by pump on a "send" event: the value in flight on this edge. */
+  pulse?: { value: number; simStep: number };
 }
+
+// Runtime trace fields added to NodeData (Phase 4).
+// Declared as an augmentation here to keep the main NodeData block readable.

@@ -3,14 +3,17 @@
 // No simulation, no RAF, no slot phase logic.
 
 import { Handle, Position, type NodeProps } from "reactflow";
+import { useFireFlash } from "./use-fire-flash";
 
 interface StreakBreakDetectorNodeData {
   label?: string;
+  lastFire?: number;
 }
 
 export function StreakBreakDetectorNode({ data }: NodeProps<StreakBreakDetectorNodeData>) {
+  const flashing = useFireFlash(data.lastFire);
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #c62828" : undefined }}>
       <Handle type="target" position={Position.Left} id="old" style={{ ...styles.handle, top: "30%" }} />
       <Handle type="target" position={Position.Left} id="new" style={{ ...styles.handle, top: "70%" }} />
       <div style={styles.label}>{data.label ?? "streakBreakDetector"}</div>

@@ -3,14 +3,17 @@
 // No simulation, no RAF, no slot phase logic.
 
 import { Handle, Position, type NodeProps } from "reactflow";
+import { useFireFlash } from "./use-fire-flash";
 
 interface PartitionNodeData {
   label?: string;
+  lastFire?: number;
 }
 
 export function PartitionNode({ data }: NodeProps<PartitionNodeData>) {
+  const flashing = useFireFlash(data.lastFire);
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #ad1457" : undefined }}>
       <Handle type="target" position={Position.Left} id="in" style={styles.handle} />
       <div style={styles.label}>{data.label ?? "partition"}</div>
       <Handle type="source" position={Position.Right} id="out" style={styles.handle} />

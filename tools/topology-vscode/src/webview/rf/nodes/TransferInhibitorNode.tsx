@@ -5,14 +5,17 @@
 // No simulation, no RAF, no slot phase logic.
 
 import { Handle, Position, type NodeProps } from "reactflow";
+import { useFireFlash } from "./use-fire-flash";
 
 interface TransferInhibitorNodeData {
   label?: string;
+  lastFire?: number;
 }
 
 export function TransferInhibitorNode({ data }: NodeProps<TransferInhibitorNodeData>) {
+  const flashing = useFireFlash(data.lastFire);
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #bf360c" : undefined }}>
       <Handle type="target" position={Position.Left} id="in" style={styles.handle} />
       <div style={styles.label}>{data.label ?? "transferInhibitor"}</div>
       <Handle type="source" position={Position.Right} id="out" style={styles.handle} />

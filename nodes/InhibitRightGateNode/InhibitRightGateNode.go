@@ -32,7 +32,7 @@ func (g *InhibitRightGateNode) Update(s *S.SafeWorker) {
 			case v := <-g.FromLeft:
 				g.Left = v
 				g.HasLeft = true
-				s.Trace.Recv(g.Name, "left", v)
+				s.Trace.Recv(g.Name, "FromLeft", v)
 			default:
 			}
 		}
@@ -42,7 +42,7 @@ func (g *InhibitRightGateNode) Update(s *S.SafeWorker) {
 			case v := <-g.FromRight:
 				g.Right = v
 				g.HasRight = true
-				s.Trace.Recv(g.Name, "right", v)
+				s.Trace.Recv(g.Name, "FromRight", v)
 			default:
 			}
 		}
@@ -55,7 +55,7 @@ func (g *InhibitRightGateNode) Update(s *S.SafeWorker) {
 			fmt.Printf("%s: left=%d right=%d → %d\n", g.Name, g.Left, g.Right, result)
 			s.Trace.Fire(g.Name)
 			S.Send(g.ToPassed, result)
-			s.Trace.Send(g.Name, "passed", result)
+			s.Trace.Send(g.Name, "ToPassed", result)
 			g.HasLeft = false
 			g.HasRight = false
 		}

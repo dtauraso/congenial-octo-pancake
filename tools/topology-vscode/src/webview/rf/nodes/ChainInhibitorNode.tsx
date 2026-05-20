@@ -4,16 +4,19 @@
 // No simulation, no RAF, no slot phase logic.
 
 import { Handle, Position, type NodeProps } from "reactflow";
+import { useFireFlash } from "./use-fire-flash";
 
 interface ChainInhibitorNodeData {
   label?: string;
   nodeData?: { held?: unknown };
+  lastFire?: number;
 }
 
 export function ChainInhibitorNode({ data }: NodeProps<ChainInhibitorNodeData>) {
+  const flashing = useFireFlash(data.lastFire);
   const held = data.nodeData?.held;
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #e65100" : undefined }}>
       <Handle type="target" position={Position.Left} id="FromPrev" style={styles.handle} />
       <div style={styles.label}>{data.label ?? "chainInhibitor"}</div>
       {held !== undefined && (

@@ -3,14 +3,17 @@
 // No simulation, no RAF, no slot phase logic.
 
 import { Handle, Position, type NodeProps } from "reactflow";
+import { useFireFlash } from "./use-fire-flash";
 
 interface EdgeNodeData {
   label?: string;
+  lastFire?: number;
 }
 
 export function EdgeNode({ data }: NodeProps<EdgeNodeData>) {
+  const flashing = useFireFlash(data.lastFire);
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #ff6f00" : undefined }}>
       <Handle type="target" position={Position.Left} id="left" style={{ ...styles.handle, top: "35%" }} />
       <Handle type="target" position={Position.Left} id="right" style={{ ...styles.handle, top: "65%" }} />
       <div style={styles.label}>{data.label ?? "edge"}</div>

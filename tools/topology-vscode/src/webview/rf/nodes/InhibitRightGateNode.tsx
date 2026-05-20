@@ -3,14 +3,17 @@
 // No simulation, no RAF, no slot phase logic.
 
 import { Handle, Position, type NodeProps } from "reactflow";
+import { useFireFlash } from "./use-fire-flash";
 
 interface InhibitRightGateNodeData {
   label?: string;
+  lastFire?: number;
 }
 
 export function InhibitRightGateNode({ data }: NodeProps<InhibitRightGateNodeData>) {
+  const flashing = useFireFlash(data.lastFire);
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, boxShadow: flashing ? "0 0 8px 2px #880e4f" : undefined }}>
       <Handle type="target" position={Position.Left} id="FromLeft" style={{ ...styles.handle, top: "30%" }} />
       <Handle type="target" position={Position.Left} id="FromRight" style={{ ...styles.inhibitHandle, top: "70%" }} />
       <div style={styles.label}>{data.label ?? "inhibitRightGate"}</div>

@@ -93,7 +93,7 @@ export function onConnectImpl(ctx: AppCtx, conn: Connection) {
       sourceHandle: conn.sourceHandle!,
       target: conn.target!,
       targetHandle: resolvedTargetHandle,
-      type: "animated",
+      type: "substrate",
       style: { stroke: KIND_COLORS[kind] ?? "#888", strokeWidth: 1.5 },
       data: {
         kind,
