@@ -7,12 +7,9 @@ import { DEFAULT_VIEWER_STATE, type ViewerState } from "./viewer/types";
 // no idle variant (the host only emits running/ok/error/cancelled).
 export type RunStatusUI = RunStatus | { state: "idle" };
 
-export type View = { x: number; y: number; w: number; h: number };
-
 interface Store {
   spec: Spec;
   viewerState: ViewerState;
-  view: View;
   dimmed: Set<string> | null;
   runStatus: RunStatusUI;
 }
@@ -20,7 +17,6 @@ interface Store {
 export const useStore = create<Store>(() => ({
   spec: { nodes: [], edges: [] },
   viewerState: { ...DEFAULT_VIEWER_STATE },
-  view: { x: 0, y: 0, w: 1380, h: 740 },
   dimmed: null,
   runStatus: { state: "idle" },
 }));

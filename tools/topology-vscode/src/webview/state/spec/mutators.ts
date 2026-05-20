@@ -1,7 +1,7 @@
 import { produce } from "immer";
 import type { Spec } from "../../../schema";
 import type { ViewerState } from "../viewer/types";
-import { useStore, type RunStatusUI, type View } from "../store";
+import { useStore, type RunStatusUI } from "../store";
 
 // ---- Setters ----
 export function setSpec(next: Spec) {
@@ -9,9 +9,6 @@ export function setSpec(next: Spec) {
 }
 export function setViewerState(next: ViewerState) {
   useStore.setState({ viewerState: next });
-}
-export function setView(next: View) {
-  useStore.setState({ view: { ...next } });
 }
 export function setDimmed(next: Set<string> | null) {
   useStore.setState({ dimmed: next });
