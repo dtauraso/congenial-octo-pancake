@@ -21,20 +21,33 @@ export type WebviewToHostMsg =
   | { type: "run-cancel" }
   | { type: "webview-log"; entry: string };
 
+// Mirrors Go Trace.Event shape. kind ∈ {"recv","fire","send"}.
+// recv/send carry port+value; fire carries only node; send also carries edge
+// when the Go side has resolved it (currently omitted — raw form only).
+export type TraceEvent = {
+  step: number;
+  kind: "recv" | "fire" | "send";
+  node: string;
+  port?: string;
+  edge?: string;
+  value?: number;
+};
+
 export type HostToWebviewMsg =
   | { type: "load"; text: string }
   | { type: "view-load"; text?: string }
   | { type: "topogen-status"; state: TopogenStatus["state"]; message?: string }
   | { type: "run-status"; state: RunStatus["state"]; message?: string }
   | { type: "flush" }
-  | { type: "save-error"; message: string };
+  | { type: "save-error"; message: string }
+  | { type: "trace-event"; event: TraceEvent };
 
 export const WEBVIEW_TO_HOST_TYPES: ReadonlySet<WebviewToHostMsg["type"]> = new Set([
   "ready", "save", "view-save", "run", "run-cancel", "webview-log",
 ]);
 
 export const HOST_TO_WEBVIEW_TYPES: ReadonlySet<HostToWebviewMsg["type"]> = new Set([
-  "load", "view-load", "topogen-status", "run-status", "flush", "save-error",
+  "load", "view-load", "topogen-status", "run-status", "flush", "save-error", "trace-event",
 ]);
 
 export function parseWebviewToHost(raw: unknown): WebviewToHostMsg | undefined {
