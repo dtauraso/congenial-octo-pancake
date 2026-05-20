@@ -59,8 +59,8 @@ Worth scrutinizing before the audit table is filled:
 | ChainInhibitor | 1 → 4 (prev / next+edge+new+ack) | Block on prev; emit old to ToEdge/ToNext, new to ToEdgeNew, 1 to ToAck. | topology: 2; docs: 2 | Inhibitor | ✅ **keep** — superset; fan-out + ack. |
 | EdgeInhibitor | 1 → 1 (prev / edge) | Block on prev; forward to edge (no buffer). | 1 code ref | ChainInhibitor | 🗑️ **deleted (2026-05-20)** — unused; ChainInhibitor superset. |
 | TransferInhibitor | chan-of-chan → 1 | Block on TransferIn; store as EndTo; forward if set. | 1 code ref | — | 🗑️ **deleted (2026-05-20)** — specialized partition-end forwarding; unused. |
-| StreakDetector | 2 → 2 (old+new / done+streak) | Emit 1 on Done; emit 1/0 on Streak if sign same/diff. | 1 code ref | StreakBreakDetector | 🔀 **merge → StreakBreakDetector + invert flag**. |
-| StreakBreakDetector | 2 → 1 (old+new / done) | Emit 1 if sign(old)≠sign(new). | 1 code ref | StreakDetector | 🔀 **absorb StreakDetector**. |
+| StreakDetector | 2 → 2 (old+new / done+streak) | Emit 1 on Done; emit 1/0 on Streak if sign same/diff. | 1 code ref | StreakBreakDetector | 🗑️ **deleted (2026-05-20)** — unused; symmetric inverse of StreakBreakDetector still available if needed. |
+| StreakBreakDetector | 2 → 1 (old+new / done) | Emit 1 if sign(old)≠sign(new). | 1 code ref | StreakDetector | ✅ **keep**. |
 | ReadGate | 2 → 1 (value+ack / gated) | Buffer both; emit value when both arrive. | topology: 1; docs: 1 | SyncGate, Join | ✅ **keep**. |
 | ReadLatch | 2 → 2 (in+release / next+ack) | FromIn buffers; FromRelease emits held+ack. | 2 code refs | — | ⏸️ **defer** — release-trigger unique; no usage. |
 | SyncGate | 2 → 1 | Buffer both; emit 1 unconditionally. | 1 code ref | ReadGate | 🔀 **merge → ReadGate + flag**. |
@@ -71,11 +71,11 @@ Worth scrutinizing before the audit table is filled:
 
 ## Findings (haiku sweep, 2026-05-19)
 
-**Tally:** keep 6, merge 2, delete 6, defer 2 (16 total).
+**Tally:** keep 7, merge 1, delete 7, defer 1 (16 total).
 
-- ✅ **Keep:** Input, ChainInhibitor, ReadGate, AndGate, InhibitRightGate, Partition.
-- 🔀 **Merge:** SyncGate → ReadGate (flag); StreakDetector → StreakBreakDetector (invert flag).
-- 🗑️ **Delete:** Relay (≡ wire, unused), Join (editor-only, unused; subsumed by ReadGate), Inhibitor (superset already in use as ChainInhibitor), EdgeInhibitor (subset of ChainInhibitor, unused), EdgeNode (unused; XOR fan-out replaceable), TransferInhibitor (specialized partition-end forwarding; unused).
+- ✅ **Keep:** Input, ChainInhibitor, ReadGate, AndGate, InhibitRightGate, Partition, StreakBreakDetector.
+- 🔀 **Merge:** SyncGate → ReadGate (flag).
+- 🗑️ **Delete:** Relay (≡ wire, unused), Join (editor-only, unused; subsumed by ReadGate), Inhibitor (superset already in use as ChainInhibitor), EdgeInhibitor (subset of ChainInhibitor, unused), EdgeNode (unused; XOR fan-out replaceable), TransferInhibitor (specialized partition-end forwarding; unused), StreakDetector (unused; symmetric inverse of StreakBreakDetector).
 - ⏸️ **Defer:** ReadLatch — has a plausible role but zero topology usage today.
 
 **Surprises:**
@@ -94,6 +94,7 @@ Usage counts are from the agent's grep sweep; verify per-kind before any deletio
 - 🗑️ **Inhibitor** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; dropped from `RUNTIME_IMPLEMENTED_KINDS`; `node-defs.ts` regenerated.
 - 🗑️ **EdgeInhibitor** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; `node-defs.ts` regenerated.
 - 🗑️ **TransferInhibitor** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; `node-defs.ts` regenerated.
+- 🗑️ **StreakDetector** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; `node-defs.ts` regenerated. StreakBreakDetector retained as-is (no invert flag added).
 
 ## Migration plan template
 

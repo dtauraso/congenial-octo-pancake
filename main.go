@@ -22,8 +22,7 @@ _ "github.com/dtauraso/wirefold/nodes/EdgeNode"
 	_ "github.com/dtauraso/wirefold/nodes/ReadGateNode"
 	_ "github.com/dtauraso/wirefold/nodes/ReadLatchNode"
 	_ "github.com/dtauraso/wirefold/nodes/StreakBreakDetector"
-	_ "github.com/dtauraso/wirefold/nodes/StreakDetector"
-	_ "github.com/dtauraso/wirefold/nodes/SyncGateNode"
+_ "github.com/dtauraso/wirefold/nodes/SyncGateNode"
 )
 
 // RunTest wires the topology and lets it run for `dur` before

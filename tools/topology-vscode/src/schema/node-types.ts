@@ -67,13 +67,7 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     outputs: [{ name: "done", kind: "signal" }],
     shape: "pill", fill: "#ffebee", stroke: "#c62828", width: 110, height: 40,
   },
-  StreakDetector: {
-    role: "sd",
-    inputs: [{ name: "old", kind: "edge-connection" }, { name: "new", kind: "edge-connection" }],
-    outputs: [{ name: "done", kind: "signal" }, { name: "streak", kind: "streak" }],
-    shape: "pill", fill: "#e8f5e9", stroke: "#2e7d32", width: 100, height: 40,
-  },
-  AndGate: {
+AndGate: {
     role: "and-gate",
     inputs: [{ name: "a", kind: "signal" }, { name: "b", kind: "signal" }],
     outputs: [{ name: "out", kind: "and-out" }],
