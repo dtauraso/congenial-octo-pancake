@@ -33,8 +33,9 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
     const topogen = new TopogenRunner((status) =>
       post({ type: "topogen-status", ...status }),
     );
-    const runner = new BuildAndRunRunner((status) =>
-      post({ type: "run-status", ...status }),
+    const runner = new BuildAndRunRunner(
+      (status) => post({ type: "run-status", ...status }),
+      (event) => post({ type: "trace-event", event }),
     );
 
     // Suppress the `onDidChangeTextDocument` fire we trigger ourselves

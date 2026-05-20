@@ -1,8 +1,25 @@
 import * as vscode from "vscode";
 import * as cp from "child_process";
-import type { RunStatus } from "./messages";
+import type { RunStatus, TraceEvent } from "./messages";
 
 export type { RunStatus };
+
+// isTraceEvent: a stdout line is a trace event when it's valid JSON
+// and has both `step` (number) and `kind` ("recv"|"fire"|"send") fields.
+function tryParseTraceEvent(line: string): TraceEvent | undefined {
+  if (!line.startsWith("{")) return undefined;
+  try {
+    const obj = JSON.parse(line);
+    if (
+      typeof obj === "object" && obj !== null &&
+      typeof obj.step === "number" &&
+      (obj.kind === "recv" || obj.kind === "fire" || obj.kind === "send")
+    ) {
+      return obj as TraceEvent;
+    }
+  } catch { /* not JSON */ }
+  return undefined;
+}
 
 export class BuildAndRunRunner {
   private proc: cp.ChildProcess | undefined;
@@ -11,8 +28,13 @@ export class BuildAndRunRunner {
   // on its own would be misreported as "cancelled".
   private cancelled = false;
   private channel: vscode.OutputChannel | undefined;
+  // Partial line buffer for stdout — trace lines are newline-delimited.
+  private stdoutBuf = "";
 
-  constructor(private readonly post: (s: RunStatus) => void) {}
+  constructor(
+    private readonly post: (s: RunStatus) => void,
+    private readonly onTraceEvent?: (e: TraceEvent) => void,
+  ) {}
 
   run() {
     if (this.proc) return;
@@ -29,8 +51,8 @@ export class BuildAndRunRunner {
     // SIGTERM hits the `go` driver but leaves the compiled binary orphaned
     // on macOS.
     this.proc = cp.spawn("go", ["run", "."], { cwd: folder.uri.fsPath, detached: true });
-    this.proc.stdout?.on("data", (d) => this.channel!.append(d.toString()));
-    this.proc.stderr?.on("data", (d) => this.channel!.append(d.toString()));
+    this.proc.stdout?.on("data", (d: Buffer) => this.handleStdout(d.toString()));
+    this.proc.stderr?.on("data", (d: Buffer) => this.channel!.append(d.toString()));
     this.proc.on("close", (code) => {
       const cancelled = this.cancelled;
       this.proc = undefined;
@@ -53,6 +75,21 @@ export class BuildAndRunRunner {
       this.channel!.appendLine(`\n[spawn error: ${err.message}]`);
       this.post({ state: "error", message: err.message });
     });
+  }
+
+  private handleStdout(chunk: string) {
+    this.stdoutBuf += chunk;
+    let nl: number;
+    while ((nl = this.stdoutBuf.indexOf("\n")) !== -1) {
+      const line = this.stdoutBuf.slice(0, nl);
+      this.stdoutBuf = this.stdoutBuf.slice(nl + 1);
+      const ev = tryParseTraceEvent(line);
+      if (ev && this.onTraceEvent) {
+        this.onTraceEvent(ev);
+      } else {
+        this.channel!.appendLine(line);
+      }
+    }
   }
 
   cancel() {
