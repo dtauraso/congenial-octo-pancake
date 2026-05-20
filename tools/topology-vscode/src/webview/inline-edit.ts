@@ -9,7 +9,7 @@
 // inner DOM avoids a positioning round-trip and keeps the edited label
 // visually identical to the rendered one.
 
-import { mutateSpec, patchViewerState, getSpec, getViewerState } from "./state";
+import { mutateSpec, getSpec, getViewerState } from "./state";
 import { scheduleSave, scheduleViewSave } from "./save";
 import { applyRename } from "./state/ops/rename";
 import { rfSetNodes, rfSetEdges } from "./rf/rf-imperative";
@@ -121,16 +121,17 @@ export function beginEditSublabel(nodeId: string, el: HTMLElement | null) {
     activeClass: "sublabel-active",
     onCommit: (next) => {
       if (next === original) return "";
-      patchViewerState((v) => {
-        if (!v.nodes) v.nodes = {};
-        const existing = v.nodes[nodeId] ?? { x: 0, y: 0 };
+      pushSnapshot();
+      rfSetNodes((ns) => ns.map((n) => {
+        if (n.id !== nodeId) return n;
+        const data = { ...n.data };
         if (next === "") {
-          const { sublabel: _sl, ...rest } = existing;
-          v.nodes[nodeId] = rest as typeof existing;
+          delete data.sublabel;
         } else {
-          v.nodes[nodeId] = { ...existing, sublabel: next };
+          data.sublabel = next;
         }
-      });
+        return { ...n, data };
+      }));
       scheduleViewSave();
       return null;
     },
