@@ -11,6 +11,22 @@ import (
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
 	T "github.com/dtauraso/wirefold/Trace"
 	W "github.com/dtauraso/wirefold/nodes/Wiring"
+
+	// Trigger self-registration init() in each node kind package.
+	_ "github.com/dtauraso/wirefold/nodes/AndGateNode"
+	_ "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode"
+	_ "github.com/dtauraso/wirefold/nodes/EdgeInhibitorNode"
+	_ "github.com/dtauraso/wirefold/nodes/EdgeNode"
+	_ "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode"
+	_ "github.com/dtauraso/wirefold/nodes/InhibitorNode"
+	_ "github.com/dtauraso/wirefold/nodes/InputNode"
+	_ "github.com/dtauraso/wirefold/nodes/PartitionNode"
+	_ "github.com/dtauraso/wirefold/nodes/ReadGateNode"
+	_ "github.com/dtauraso/wirefold/nodes/ReadLatchNode"
+	_ "github.com/dtauraso/wirefold/nodes/StreakBreakDetector"
+	_ "github.com/dtauraso/wirefold/nodes/StreakDetector"
+	_ "github.com/dtauraso/wirefold/nodes/SyncGateNode"
+	_ "github.com/dtauraso/wirefold/nodes/TransferInhibitorNode"
 )
 
 // RunTest wires the topology and lets it run for `dur` before

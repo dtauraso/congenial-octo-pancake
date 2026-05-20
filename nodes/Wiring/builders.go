@@ -16,21 +16,7 @@ import (
 	"fmt"
 	"reflect"
 
-	AG "github.com/dtauraso/wirefold/nodes/AndGateNode"
-	CI "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode"
-	SD "github.com/dtauraso/wirefold/nodes/StreakDetector"
-	SBD "github.com/dtauraso/wirefold/nodes/StreakBreakDetector"
-	EI "github.com/dtauraso/wirefold/nodes/EdgeInhibitorNode"
-	EN "github.com/dtauraso/wirefold/nodes/EdgeNode"
-	IRG "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode"
-	INN "github.com/dtauraso/wirefold/nodes/InhibitorNode"
-	IPN "github.com/dtauraso/wirefold/nodes/InputNode"
-	PN "github.com/dtauraso/wirefold/nodes/PartitionNode"
-	RGN "github.com/dtauraso/wirefold/nodes/ReadGateNode"
-	RLN "github.com/dtauraso/wirefold/nodes/ReadLatchNode"
 	S "github.com/dtauraso/wirefold/nodes/SafeWorker"
-	SGN "github.com/dtauraso/wirefold/nodes/SyncGateNode"
-	TIN "github.com/dtauraso/wirefold/nodes/TransferInhibitorNode"
 )
 
 // PortDir describes which direction a port flows.
@@ -91,15 +77,6 @@ func (pb *PortBindings) OutSlice(name string) []chan<- int {
 		result[i] = c
 	}
 	return result
-}
-
-// kindEntry is one entry in the kind registry.
-type kindEntry struct {
-	// newNode returns a fresh zero-valued pointer to the node struct.
-	newNode func() any
-	// populate optionally sets non-channel fields after channels are wired.
-	// id and name are already set before populate is called.
-	populate func(id int, name string, data *NodeData, node any)
 }
 
 var (
@@ -172,71 +149,6 @@ func reflectBuild(id int, name string, data *NodeData, pb PortBindings, e kindEn
 		return nil, fmt.Errorf("reflectBuild: %T does not implement S.Node", nodePtr)
 	}
 	return node, nil
-}
-
-// kindRegistry maps spec kind name → kindEntry.
-var kindRegistry = map[string]kindEntry{
-	"Input": {
-		newNode: func() any { return &IPN.InputNode{} },
-		populate: func(id int, name string, data *NodeData, node any) {
-			n := node.(*IPN.InputNode)
-			init := []int{}
-			if data != nil {
-				init = data.Init
-			}
-			buf := len(init)
-			if buf < 1 {
-				buf = 1
-			}
-			ch := make(chan int, buf)
-			for _, v := range init {
-				ch <- v
-			}
-			n.Input = ch
-		},
-	},
-	"ReadGate": {newNode: func() any { return &RGN.ReadGateNode{} }},
-	"ChainInhibitor": {
-		newNode: func() any { return &CI.ChainInhibitorNode{} },
-		populate: func(id int, name string, data *NodeData, node any) {
-			n := node.(*CI.ChainInhibitorNode)
-			if data != nil {
-				if v, ok := data.InitialSlots["held"]; ok {
-					n.HeldValue = v
-				}
-			}
-			if len(n.ToEdge) == 0 {
-				n.ToEdge = []chan<- int{make(chan int, 1)}
-			}
-		},
-	},
-	"InhibitRightGate": {newNode: func() any { return &IRG.InhibitRightGateNode{} }},
-	"AndGate":          {newNode: func() any { return &AG.AndGateNode{} }},
-	"ReadLatch":        {newNode: func() any { return &RLN.ReadLatchNode{} }},
-	"SyncGate":         {newNode: func() any { return &SGN.SyncGateNode{} }},
-	"Inhibitor": {
-		newNode: func() any { return &INN.InhibitorNode{} },
-		populate: func(id int, name string, data *NodeData, node any) {
-			n := node.(*INN.InhibitorNode)
-			n.TransferEndPartitionChannelFromCurrentInhibitorToNextInhibitor = make(chan chan<- int, 1)
-			rcv := make(chan chan<- int, 1)
-			n.TransferEndPartitionChannelFromPrevInhibitorToCurrentInhibitor = rcv
-		},
-	},
-	"Partition": {newNode: func() any { return &PN.PartitionNode{} }},
-	"Edge":      {newNode: func() any { return &EN.EdgeNode{} }},
-	"TransferInhibitor": {
-		newNode: func() any { return &TIN.TransferInhibitorNode{} },
-		populate: func(id int, name string, data *NodeData, node any) {
-			n := node.(*TIN.TransferInhibitorNode)
-			rcv := make(chan chan<- int, 1)
-			n.TransferIn = rcv
-			n.TransferOut = make(chan chan<- int, 1)
-		},
-	},
-	"EdgeInhibitor":       {newNode: func() any { return &EI.EdgeInhibitorNode{} }},
-	"StreakDetector":      {newNode: func() any { return &SD.StreakDetector{} }},
-	"StreakBreakDetector": {newNode: func() any { return &SBD.StreakBreakDetector{} }},
 }
 
 // NodeBuilder is the public-facing type consumed by the loader.
