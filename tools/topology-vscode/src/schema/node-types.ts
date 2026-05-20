@@ -18,19 +18,21 @@ export const RUNTIME_IMPLEMENTED_KINDS: ReadonlySet<string> = new Set([
   "Input",
   "ReadGate",
   "ChainInhibitor",
+  "InhibitRightGate",
 ]);
 
 export const NODE_TYPES: Record<string, NodeTypeDef> = {
-  Generic: {
-    role: "generic",
-    inputs: [], outputs: [],
-    shape: "rect", fill: "#ffffff", stroke: "#888", width: 110, height: 60,
-  },
   Input: {
     role: "input",
     inputs: [],
     outputs: [{ name: "ToOut", kind: "chain" }],
     shape: "rect", fill: "#e0e0e0", stroke: "#666", width: 80, height: 60,
+  },
+  ReadGate: {
+    role: "and-gate",
+    inputs: [{ name: "FromValue", kind: "chain" }, { name: "FromAck", kind: "chain" }],
+    outputs: [{ name: "ToGated", kind: "chain" }],
+    shape: "rect", fill: "#f3e5f5", stroke: "#7b1fa2", width: 70, height: 40,
   },
   ChainInhibitor: {
     role: "inhibitor",
@@ -47,6 +49,11 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     outputs: [{ name: "ToPassed", kind: "and-out" }],
     shape: "rect", fill: "#fce4ec", stroke: "#880e4f", width: 110, height: 36,
   },
+  Generic: {
+    role: "generic",
+    inputs: [], outputs: [],
+    shape: "rect", fill: "#ffffff", stroke: "#888", width: 110, height: 60,
+  },
   DetectorLatch: {
     role: "latch",
     inputs: [{ name: "in", kind: "chain" }, { name: "release", kind: "release" }],
@@ -54,16 +61,10 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     shape: "rect", fill: "#e0f7fa", stroke: "#00838f", width: 90, height: 50,
     defaultProps: { delay: 1 },
   },
-PatternAnd: {
+  PatternAnd: {
     role: "pattern-and",
     inputs: [{ name: "a", kind: "signal" }, { name: "b", kind: "signal" }],
     outputs: [{ name: "out", kind: "and-out" }],
     shape: "rect", fill: "#e8eaf6", stroke: "#283593", width: 70, height: 40,
-  },
-  ReadGate: {
-    role: "and-gate",
-    inputs: [{ name: "FromValue", kind: "chain" }, { name: "FromAck", kind: "chain" }],
-    outputs: [{ name: "ToGated", kind: "chain" }],
-    shape: "rect", fill: "#f3e5f5", stroke: "#7b1fa2", width: 70, height: 40,
   },
 };
