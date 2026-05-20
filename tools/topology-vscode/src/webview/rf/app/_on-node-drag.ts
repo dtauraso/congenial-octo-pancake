@@ -3,6 +3,8 @@ import type { Node as RFNode } from "reactflow";
 import { NODE_TYPES } from "../../../schema";
 import { scheduleSave, scheduleViewSave } from "../../save";
 import { mutateSpec, patchViewerState, spec, viewerState } from "../../state";
+import { pushSnapshot } from "../history";
+import { rfSetNodes } from "../rf-imperative";
 import { ALIGN_TOL } from "./_constants";
 import type { AppCtx } from "./_ctx";
 
@@ -40,13 +42,15 @@ export function useNodeDrag(
   const onNodeDragStop = useCallback((_ev: React.MouseEvent, node: RFNode) => {
     setGuides({ vx: null, hy: null });
     if (node.type === "fold") {
-      // Persist fold-placeholder drags back into viewerState.folds so
-      // the position survives reload (folds live in the sidecar).
+      // Persist fold-placeholder drags back to RF node data so the
+      // position is available for serialization.
       if (!viewerState.folds?.some((x) => x.id === node.id)) return;
-      patchViewerState((v) => {
-        const f = v.folds?.find((x) => x.id === node.id);
-        if (f) f.position = [node.position.x, node.position.y];
-      });
+      pushSnapshot();
+      rfSetNodes((ns) => ns.map((n) =>
+        n.id === node.id
+          ? { ...n, data: { ...n.data, position: [node.position.x, node.position.y] } }
+          : n
+      ));
       scheduleViewSave();
       return;
     }
