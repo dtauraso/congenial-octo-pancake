@@ -1,7 +1,7 @@
 import { parseSpec, type Spec } from "../../../schema";
 import { postLog } from "../../log/post";
 import { specToFlow } from "../adapter";
-import { clearSpecHistory, patchViewerState, setSpec, viewerState } from "../../state";
+import { patchViewerState, setSpec, viewerState } from "../../state";
 import { useStore } from "../../state/store";
 import { scheduleViewSave } from "../../save";
 import { migrateLegacyFields } from "./_migrate-legacy-fields";
@@ -28,9 +28,6 @@ export function handleLoad(ctx: AppCtx, text: string) {
     if (migrated) scheduleViewSave();
     const next: Spec = parseSpec(rawJson);
     setSpec(next);
-    // Fresh load drops history — undoing into a previous file's spec
-    // would be incoherent (ids may not even exist there).
-    clearSpecHistory();
     ctx.lastSpec.current = next;
     postLog("load", { nodes: next.nodes.length, edges: next.edges.length });
     const flow = specToFlow(next, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);

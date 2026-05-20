@@ -1,6 +1,6 @@
 import { specToFlow } from "../adapter";
 import { markViewSynced, scheduleViewSave } from "../../save";
-import { clearViewerHistory, patchViewerState, setViewerState } from "../../state";
+import { patchViewerState, setViewerState } from "../../state";
 import { useStore } from "../../state/store";
 import { parseViewerState, serializeViewerState } from "../../state/viewer/types";
 import { resolveViewLoadViewport } from "./_resolve-view-load-viewport";
@@ -23,9 +23,6 @@ export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
     }
   }
   setViewerState(next);
-  // A fresh sidecar makes prior viewer history incoherent (folds/views/
-  // bookmarks may not exist there).
-  clearViewerHistory();
   markViewSynced(text ?? serializeViewerState(next));
   // If the spec already loaded, rebuild now so the freshly-installed
   // viewerState (positions, folds, sublabels, edge routes) is applied.
