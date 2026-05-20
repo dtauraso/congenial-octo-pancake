@@ -3,6 +3,7 @@ import type { Edge as RFEdge, Node as RFNode } from "reactflow";
 import { applyDelete } from "../../state/ops/delete";
 import { flushViewSave, scheduleSave, scheduleViewSave } from "../../save";
 import { getSpec, mutateBoth, mutateViewer, viewerState } from "../../state";
+import { pushSnapshot } from "../history";
 import type { AppCtx } from "./_ctx";
 
 export function useDeleteHandlers(ctx: AppCtx) {
@@ -17,6 +18,9 @@ export function useDeleteHandlers(ctx: AppCtx) {
     for (const e of getSpec().edges) {
       if (delNodes.has(e.source) || delNodes.has(e.target)) delEdges.add(e.id);
     }
+
+    // Snapshot BEFORE deletion so undo restores the pre-delete state.
+    pushSnapshot();
 
     // RF mutation (parallel with mutateBoth — temporary dual-write).
     ctx.setNodes((ns) => ns.filter((n) => !delNodes.has(n.id)));

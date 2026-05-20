@@ -13,6 +13,7 @@ import { mutateBoth, mutateSpec, patchViewerState, getSpec, getViewerState } fro
 import { scheduleSave, scheduleViewSave } from "./save";
 import { applyRename } from "./state/ops/rename";
 import { rfSetNodes, rfSetEdges } from "./rf/rf-imperative";
+import { pushSnapshot } from "./rf/history";
 
 type RerenderFn = () => void;
 
@@ -95,6 +96,8 @@ export function beginRenameNodeId(oldId: string, labelEl: HTMLElement | null) {
         next,
       );
       if (probeErr) return `rename rejected: ${probeErr}`;
+      // Snapshot BEFORE rename so undo restores the pre-rename state.
+      pushSnapshot();
       // RF mutation: update node id and edge endpoints in RF state
       // (parallel with mutateBoth — temporary dual-write).
       rfSetNodes((ns) => ns.map((n) => n.id === oldId ? { ...n, id: next, data: { ...n.data, label: next } } : n));
