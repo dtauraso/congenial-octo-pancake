@@ -65,7 +65,6 @@ prebuild). `builders.go` is not touched.
   calls `Wiring.Register`. `Wiring.LoadTopology` parses `topology.json`
   and uses reflection on each registered struct to build the port manifest.
   Non-channel fields are populated from `data.*` JSON via `wire:` struct tags.
-- **Editor-only kinds (no Go body):** Relay, Join.
 
 ## Next options (priority order — pick on friction)
 
