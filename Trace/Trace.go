@@ -54,6 +54,7 @@ type Trace struct {
 	mu     sync.Mutex
 	events []Event
 	closed bool
+	sink   io.Writer // if non-nil, each event is written as JSONL in real time
 }
 
 // New allocates a Trace with a buffered emit channel. buf controls
@@ -61,12 +62,20 @@ type Trace struct {
 // plenty for the current topology sizes; bump if Emit is observed
 // to back-pressure node loops.
 func New(buf int) *Trace {
+	return NewWithSink(buf, nil)
+}
+
+// NewWithSink is like New but writes each event as JSONL to sink in
+// real time (inside the drain goroutine) in addition to buffering.
+// Pass nil for sink to disable streaming (identical to New).
+func NewWithSink(buf int, sink io.Writer) *Trace {
 	if buf <= 0 {
 		buf = 1024
 	}
 	t := &Trace{
 		ch:   make(chan Event, buf),
 		done: make(chan struct{}),
+		sink: sink,
 	}
 	go t.drain()
 	return t
@@ -185,6 +194,12 @@ func (t *Trace) drain() {
 		ev.Step = len(t.events)
 		t.events = append(t.events, ev)
 		t.mu.Unlock()
+		if t.sink != nil {
+			if b, err := marshalEvent(ev); err == nil {
+				_, _ = t.sink.Write(b)
+				_, _ = t.sink.Write([]byte{'\n'})
+			}
+		}
 	}
 	close(t.done)
 }

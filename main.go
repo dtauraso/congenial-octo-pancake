@@ -25,10 +25,10 @@ func RunTest(dur time.Duration, tracePath string) {
 	wg := new(sync.WaitGroup)
 	wg.Add(len(nodes))
 
-	var tr *T.Trace
-	if tracePath != "" {
-		tr = T.New(0)
-	}
+	// Always stream trace events to stdout as JSONL in real time.
+	// Lines starting with {"step": are trace events; all other stdout
+	// output is build/log noise the extension routes to OutputChannel.
+	tr := T.NewWithSink(0, os.Stdout)
 	s := S.SafeWorker{Ctx: ctx, Wg: wg, Trace: tr}
 
 	for _, node := range nodes {
@@ -38,8 +38,9 @@ func RunTest(dur time.Duration, tracePath string) {
 	cancel()
 	wg.Wait()
 
-	if tr != nil {
-		tr.Close()
+	tr.Close()
+	// Optionally also write to a file for offline diffing/replay.
+	if tracePath != "" {
 		f, err := os.Create(tracePath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "trace write: %v\n", err)
