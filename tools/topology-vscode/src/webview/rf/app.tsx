@@ -7,7 +7,7 @@ import { specToFlow } from "./adapter";
 import { RunButton } from "./panels/RunButton";
 import { SaveLifecycle } from "../SaveLifecycle";
 import { TimelinePanel } from "./panels/TimelinePanel";
-import { useDimmed, viewerState } from "../state";
+import { viewerState } from "../state";
 import { getFolds } from "./folds-state";
 import { isLegacyCamera } from "../state/viewer/types";
 import { AppView } from "./app/AppView";
@@ -28,12 +28,14 @@ import { registerHistory, undo as rfUndo, redo as rfRedo } from "./history";
 import { registerRunStatusSetter } from "./run-status-state";
 import { RunStatusCtx } from "./run-status-ctx";
 import type { RunStatusUI } from "../state/store";
+import { registerDimmedSetter } from "./dimmed-state";
+import { DimmedCtx, useDimmedCtx } from "./dimmed-ctx";
 import { useHotkeys } from "react-hotkeys-hook";
 
 function Inner() {
   const [nodes, setNodes] = useState<RFNode[]>([]);
   const [edges, setEdges] = useState<RFEdge[]>([]);
-  const dimmed = useDimmed();
+  const dimmed = useDimmedCtx();
 
   const rf = useReactFlow();
   // Expose setNodes/setEdges imperatively for non-React callers (inline-edit).
@@ -129,8 +131,11 @@ function Inner() {
 
 export default function App() {
   const [runStatus, setRunStatus] = useState<RunStatusUI>({ state: "idle" });
+  const [dimmed, setDimmed] = useState<Set<string> | null>(null);
   useEffect(() => { registerRunStatusSetter(setRunStatus); }, []);
+  useEffect(() => { registerDimmedSetter(setDimmed); }, []);
   return (
+    <DimmedCtx.Provider value={dimmed}>
     <RunStatusCtx.Provider value={runStatus}>
       <ReactFlowProvider>
         <SaveLifecycle />
@@ -139,5 +144,6 @@ export default function App() {
         <TimelinePanel />
       </ReactFlowProvider>
     </RunStatusCtx.Provider>
+    </DimmedCtx.Provider>
   );
 }

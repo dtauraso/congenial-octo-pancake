@@ -3,8 +3,8 @@ import { specToFlow } from "../adapter";
 import { setInlineEditRerender } from "../../inline-edit";
 import { vscode } from "../../vscode-api";
 import { getSpec, viewerState } from "../../state";
-import { useStore } from "../../state/store";
 import { getFolds } from "../folds-state";
+import { getDimmed } from "../dimmed-state";
 import type { AppCtx } from "./_ctx";
 import { handleLoad } from "./_handle-load";
 import { handleViewLoad } from "./_handle-view-load";
@@ -17,7 +17,7 @@ export function useHostMessages(ctx: AppCtx) {
     const rerenderFromSpec = () => {
       const next = getSpec();
       ctx.lastSpec.current = next;
-      const flow = specToFlow(next, getFolds(), viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
+      const flow = specToFlow(next, getFolds(), viewerState, viewerState.lastSelectionIds ?? [], getDimmed());
       ctx.setNodes(flow.nodes);
       ctx.setEdges(flow.edges);
     };

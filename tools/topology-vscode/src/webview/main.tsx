@@ -4,8 +4,9 @@ import "./webview.css";
 import App from "./rf/app";
 import { flushSave, flushViewSave, setTopogenStatus } from "./save";
 import { parseHostToWebview } from "../messages";
-import { getSpec, setDimmed } from "./state";
+import { getSpec } from "./state";
 import { setRunStatusImperative } from "./rf/run-status-state";
+import { setDimmedImperative } from "./rf/dimmed-state";
 import { ErrorBoundary } from "./log/ErrorBoundary";
 import { CrashListeners } from "./log/CrashListeners";
 
@@ -21,7 +22,7 @@ import { CrashListeners } from "./log/CrashListeners";
   // the saved-views panel. Pass a string[] of member ids to dim everything
   // *not* in the set; pass undefined to clear.
   applyDim: (members: string[] | undefined) =>
-    setDimmed(members ? new Set(members) : null),
+    setDimmedImperative(members ? new Set(members) : null),
 };
 
 const app = document.getElementById("app")!;
