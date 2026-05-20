@@ -7,7 +7,7 @@
 //   arrival, fire+three sends on the second arrival that completes
 //   the join.
 //
-// Patterned on AndGateNode/SyncGateNode: non-blocking polled selects
+// Patterned on AndGateNode: non-blocking polled selects
 // on each input, S.Send for outputs. The previous version had a
 // FromPrevEdge channel that was drained but never used; dropped here
 // to match the TS contract (re-add when it gains meaning).

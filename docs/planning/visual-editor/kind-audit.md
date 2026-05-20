@@ -63,7 +63,7 @@ Worth scrutinizing before the audit table is filled:
 | StreakBreakDetector | 2 → 1 (old+new / done) | Emit 1 if sign(old)≠sign(new). | 1 code ref | StreakDetector | 🗑️ **deleted (2026-05-20)** — unused. |
 | ReadGate | 2 → 1 (value+ack / gated) | Buffer both; emit value when both arrive. | topology: 1; docs: 1 | SyncGate, Join | ✅ **keep**. |
 | ReadLatch | 2 → 2 (in+release / next+ack) | FromIn buffers; FromRelease emits held+ack. | 2 code refs | — | 🗑️ **deleted (2026-05-20)** — release-trigger semantics unused. |
-| SyncGate | 2 → 1 | Buffer both; emit 1 unconditionally. | 1 code ref | ReadGate | 🔀 **merge → ReadGate + flag**. |
+| SyncGate | 2 → 1 | Buffer both; emit 1 unconditionally. | 1 code ref | ReadGate | 🗑️ **deleted (2026-05-20)** — unused; semantics subsumed by ReadGate. |
 | AndGate | 2 → 1 | Emit 1 if a==1 AND b==1. | 1 code ref | InhibitRightGate | ✅ **keep**. |
 | InhibitRightGate | 2 → 1 (left+right / passed) | Emit 1 if left==1 AND right==0. | topology: 1; docs: 1 | AndGate | ✅ **keep**. |
 | EdgeNode | 2 → 3 (left+right / inhibitor+partition+next) | XOR; fan out identically. | 0 | AndGate, InhibitRightGate | 🗑️ **delete** — unused; fan-out replaceable by direct wiring. |
@@ -97,6 +97,7 @@ Usage counts are from the agent's grep sweep; verify per-kind before any deletio
 - 🗑️ **StreakDetector** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; `node-defs.ts` regenerated.
 - 🗑️ **StreakBreakDetector** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; `node-defs.ts` regenerated; fixture parity test removed.
 - 🗑️ **ReadLatch** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; `node-defs.ts` regenerated; fixture parity tests removed (FixtureParity_ReadLatch_test.go and FixtureParity_test.go which wired ReadLatch as integration harness).
+- 🗑️ **SyncGate** — deleted 2026-05-20 on `task/kind-audit-consolidation`. Go body + SPEC removed; main.go blank import removed; dropped from `node-types.ts`; `node-defs.ts` regenerated; fixture parity test removed.
 
 ## Migration plan template
 

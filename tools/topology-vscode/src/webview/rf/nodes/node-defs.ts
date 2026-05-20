@@ -28,5 +28,4 @@ export const NODE_DEFS: Record<string, NodeDef> = {
   input: { defaultLabel: "input", bg: "#1a1f2e", border: "#3fb950", text: "#c9d1d9", accent: "#3fb950", minWidth: 90, sources: [{ id: "ToOut" }], displays: ["queue", "repeat"] },
   partition: { defaultLabel: "partition", bg: "#fce4ec", border: "#ad1457", text: "#880e4f", accent: "#ad1457", minWidth: 90, targets: [{ id: "FromIn" }], sources: [{ id: "ToOut" }] },
   readGate: { defaultLabel: "readgate", bg: "#f3e5f5", border: "#7b1fa2", text: "#4a148c", accent: "#7b1fa2", minWidth: 70, sublabel: "val / ack", targets: [{ id: "FromValue" }, { id: "FromAck" }], sources: [{ id: "ToGated" }] },
-  syncGate: { defaultLabel: "syncGate", bg: "#f3e5f5", border: "#7b1fa2", text: "#4a148c", accent: "#7b1fa2", minWidth: 70, targets: [{ id: "FromA" }, { id: "FromB" }], sources: [{ id: "ToRelease", accent: "#80cbc4" }] },
 };

@@ -67,12 +67,6 @@ AndGate: {
     outputs: [{ name: "out", kind: "and-out" }],
     shape: "rect", fill: "#e8eaf6", stroke: "#283593", width: 70, height: 40,
   },
-  SyncGate: {
-    role: "sync-gate",
-    inputs: [{ name: "a", kind: "signal" }, { name: "b", kind: "signal" }],
-    outputs: [{ name: "release", kind: "release" }],
-    shape: "rect", fill: "#f3e5f5", stroke: "#7b1fa2", width: 70, height: 40,
-  },
   ReadGate: {
     role: "and-gate",
     inputs: [{ name: "FromValue", kind: "chain" }, { name: "FromAck", kind: "chain" }],
