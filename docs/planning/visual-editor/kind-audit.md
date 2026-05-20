@@ -54,7 +54,7 @@ Worth scrutinizing before the audit table is filled:
 |------|------------------|------------------------|--------|---------|----------|
 | Input | 0 → 1 (ToReadGate) | Poll init queue; forward once; clear on send. | topology: 2; docs: 1 | — | ✅ **keep** — source node. |
 | ReadGate | 2 → 1 (value+inhibitor / gated) | Buffer both; emit value when both arrive. | topology: 1; docs: 1 | SyncGate, Join | ✅ **keep**. |
-| ChainInhibitor | 1 → 3 (prev / next+edge+ack) | Block on prev; emit old to ToEdge/ToNextChainInhibitorNode, 1 to ToReadGate. | topology: 2; docs: 2 | Inhibitor | ✅ **keep** — superset; fan-out + ack. |
+| ChainInhibitor | 1 → 1 (prev / ToNext fan-out) | Block on prev; emit old HeldValue to all ToNext receivers; update HeldValue. | topology: 2; docs: 2 | Inhibitor | ✅ **keep** — superset; fan-out. |
 | InhibitRightGate | 2 → 1 (left+right / passed) | Emit 1 if left==1 AND right==0. | topology: 1; docs: 1 | AndGate | ✅ **keep**. |
 
 ## Findings (haiku sweep, 2026-05-19)
@@ -151,7 +151,7 @@ type ReadGateNode struct {
 }
 ```
 
-- **Inputs:** `FromInput <-chan int` — value to gate, `FromChainInhibitor <-chan int` — chain-inhibitor signal
+- **Inputs:** `FromInput <-chan int` — value to gate, `FromChainInhibitor <-chan int` — gate signal (carries the held int from ChainInhibitor's `ToNext` fanout; arrival triggers firing, value is discarded)
 - **Outputs:** `ToChainInhibitor chan<- int` — passes value through when both inputs arrive
 - **State:** `Value int`, `HasValue bool`, `HasChainInhibitor bool`
 - **Firing rule:** non-blocking poll each input independently; when both `HasValue && HasChainInhibitor`, send `Value` to `ToChainInhibitor` and clear both
@@ -196,18 +196,16 @@ type ChainInhibitorNode struct {
 	Id         int
 	Name       string
 	HeldValue  int
-	FromPrevChainInhibitorNode   <-chan int
-	ToNextChainInhibitorNode     chan<- int
-	ToReadGate      chan<- int
-	ToEdge     []chan<- int
+	FromPrevChainInhibitorNode <-chan int
+	ToNext                     []chan<- int
 }
 ```
 
 - **Inputs:** `FromPrevChainInhibitorNode <-chan int` — incoming value to hold
-- **Outputs:** `ToNextChainInhibitorNode chan<- int`, `ToReadGate chan<- int`, `ToEdge []chan<- int` — old value fan-out
+- **Outputs:** `ToNext []chan<- int` — fan-out of old `HeldValue` to all receivers (downstream ChainInhibitors, edge-gate inputs, ReadGate pacing port — all wired as entries in the slice)
 - **State:** `HeldValue int`
-- **Firing rule:** blocking receive on `FromPrevChainInhibitorNode`; emit old `HeldValue` to all `ToEdge` and `ToNextChainInhibitorNode`, ack 1 to `ToReadGate`, then update `HeldValue`
-- **Populate:** `populateChainInhibitor` seeds `HeldValue` from `data.InitialSlots["held"]`; ensures `ToEdge` has at least one channel
+- **Firing rule:** blocking receive on `FromPrevChainInhibitorNode`; emit old `HeldValue` to every channel in `ToNext`, then update `HeldValue`
+- **Populate:** `populateChainInhibitor` seeds `HeldValue` from `data.InitialSlots["held"]`; ensures `ToNext` has at least one channel
 
 #### RF (node-defs entry)
 
@@ -223,20 +221,18 @@ chainInhibitor: {
     { id: "FromPrevChainInhibitorNode" },
   ],
   sources: [
-    { id: "ToNextChainInhibitorNode" },
-    { id: "ToReadGate" },
-    { id: "ToEdge" },
+    { id: "ToNext" },
   ],
   displays: ["held"],
 },
 ```
 
 - **Visual:** label `"chainInhibitor"`, accent `#e65100`, minWidth 90
-- **Handles:** targets [`FromPrevChainInhibitorNode`], sources [`ToNextChainInhibitorNode`, `ToReadGate`, `ToEdge`]
+- **Handles:** targets [`FromPrevChainInhibitorNode`], sources [`ToNext`]
 - **Displays:** `["held"]`
 
 #### Drift
-- none — handle ids match Go fields; `ToEdge` is a slice field in Go; RF represents it as a single source handle (fan-out is implicit)
+- none — handle id `ToNext` matches Go field; `ToNext` is a slice field in Go; RF represents it as a single source handle (fan-out is implicit)
 
 ---
 
