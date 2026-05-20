@@ -21,7 +21,6 @@ _ "github.com/dtauraso/wirefold/nodes/EdgeNode"
 	_ "github.com/dtauraso/wirefold/nodes/PartitionNode"
 	_ "github.com/dtauraso/wirefold/nodes/ReadGateNode"
 	_ "github.com/dtauraso/wirefold/nodes/ReadLatchNode"
-	_ "github.com/dtauraso/wirefold/nodes/StreakBreakDetector"
 _ "github.com/dtauraso/wirefold/nodes/SyncGateNode"
 )
 

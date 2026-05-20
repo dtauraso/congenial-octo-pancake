@@ -61,12 +61,6 @@ export const NODE_TYPES: Record<string, NodeTypeDef> = {
     shape: "rect", fill: "#e0f7fa", stroke: "#00838f", width: 90, height: 50,
     defaultProps: { delay: 1 },
   },
-  StreakBreakDetector: {
-    role: "sbd",
-    inputs: [{ name: "old", kind: "edge-connection" }, { name: "new", kind: "edge-connection" }],
-    outputs: [{ name: "done", kind: "signal" }],
-    shape: "pill", fill: "#ffebee", stroke: "#c62828", width: 110, height: 40,
-  },
 AndGate: {
     role: "and-gate",
     inputs: [{ name: "a", kind: "signal" }, { name: "b", kind: "signal" }],
