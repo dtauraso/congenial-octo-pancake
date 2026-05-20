@@ -1,6 +1,7 @@
 import { specToFlow } from "../adapter";
 import { markViewSynced, scheduleViewSave } from "../../save";
 import { setViewerState } from "../../state";
+import { getFolds, setFolds } from "../folds-state";
 import { useStore } from "../../state/store";
 import { parseViewerState, serializeViewerState } from "../../state/viewer/types";
 import { resolveViewLoadViewport } from "./_resolve-view-load-viewport";
@@ -23,6 +24,7 @@ export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
     }
   }
   setViewerState(next);
+  setFolds(next.folds ?? []);
   markViewSynced(text ?? serializeViewerState(next));
   // If the spec already loaded, rebuild now so the freshly-installed
   // viewerState (positions, folds, sublabels, edge routes) is applied.
@@ -31,7 +33,7 @@ export function handleViewLoad(ctx: AppCtx, text: string | undefined) {
   // node falls back to its default position (visually: stacked at the
   // origin) whenever the sidecar lacks folds.
   if (ctx.lastSpec.current) {
-    const flow = specToFlow(ctx.lastSpec.current, next.folds ?? [], next, next.lastSelectionIds ?? [], useStore.getState().dimmed);
+    const flow = specToFlow(ctx.lastSpec.current, getFolds(), next, next.lastSelectionIds ?? [], useStore.getState().dimmed);
     ctx.setNodes(flow.nodes);
     ctx.setEdges(flow.edges);
   }

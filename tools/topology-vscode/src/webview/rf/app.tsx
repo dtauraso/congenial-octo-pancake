@@ -8,6 +8,7 @@ import { RunButton } from "./panels/RunButton";
 import { SaveLifecycle } from "../SaveLifecycle";
 import { TimelinePanel } from "./panels/TimelinePanel";
 import { useDimmed, viewerState } from "../state";
+import { getFolds } from "./folds-state";
 import { isLegacyCamera } from "../state/viewer/types";
 import { AppView } from "./app/AppView";
 import { decorate } from "./app/_decorate";
@@ -56,7 +57,7 @@ function Inner() {
 
   const rebuildFlow = useCallback(() => {
     if (!s.lastSpec.current) return;
-    const flow = specToFlow(s.lastSpec.current, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], dimmed);
+    const flow = specToFlow(s.lastSpec.current, getFolds(), viewerState, viewerState.lastSelectionIds ?? [], dimmed);
     setNodes(flow.nodes);
     setEdges(flow.edges);
   }, [s.lastSpec, dimmed]);

@@ -3,6 +3,7 @@ import { postLog } from "../../log/post";
 import { specToFlow } from "../adapter";
 import { patchViewerState, setSpec, viewerState } from "../../state";
 import { useStore } from "../../state/store";
+import { getFolds } from "../../rf/folds-state";
 import { scheduleViewSave } from "../../save";
 import { migrateLegacyFields } from "./_migrate-legacy-fields";
 import { reconcileSelection } from "./_reconcile-selection";
@@ -30,7 +31,7 @@ export function handleLoad(ctx: AppCtx, text: string) {
     setSpec(next);
     ctx.lastSpec.current = next;
     postLog("load", { nodes: next.nodes.length, edges: next.edges.length });
-    const flow = specToFlow(next, viewerState.folds, viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
+    const flow = specToFlow(next, getFolds(), viewerState, viewerState.lastSelectionIds ?? [], useStore.getState().dimmed);
     const filtered = reconcileSelection(viewerState.lastSelectionIds, flow.nodes.map((n) => n.id));
     const sel = new Set(filtered);
     if (sel.size > 0) {
