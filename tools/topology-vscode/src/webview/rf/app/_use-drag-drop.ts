@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { NODE_TYPES } from "../../../schema";
 import { IDENT_RE } from "../../state/ops/rename";
 import { scheduleSave, scheduleViewSave } from "../../save";
-import { mutateSpec, patchViewerState, spec } from "../../state";
+import { mutateSpec, spec } from "../../state";
 import { pushSnapshot } from "../history";
 import { rfSetNodes } from "../rf-imperative";
 import { PALETTE_DATA_TYPE } from "../panels/NodePalette";
@@ -35,10 +35,6 @@ export function useDragDrop(ctx: AppCtx) {
     mutateSpec((s) => {
       const nodeData = type === "Input" ? { init: [0, 1] } : undefined;
       s.nodes.push({ id, type, ...(nodeData ? { data: nodeData } : {}) });
-    });
-    patchViewerState((v) => {
-      if (!v.nodes) v.nodes = {};
-      v.nodes[id] = { x: pos.x, y: pos.y };
     });
     const def = NODE_TYPES[type];
     const width = def?.width ?? 110;
