@@ -23,11 +23,15 @@ import { useNodeDrag } from "./app/_on-node-drag";
 import { useUndoRedo } from "./app/_use-undo-redo";
 import type { AppCtx } from "./app/_ctx";
 import { EdgeActionsCtx } from "./app/_edge-actions-ctx";
+import { registerRFSetters } from "./rf-imperative";
 
 function Inner() {
   const [nodes, setNodes] = useState<RFNode[]>([]);
   const [edges, setEdges] = useState<RFEdge[]>([]);
   const dimmed = useDimmed();
+
+  // Expose setNodes/setEdges imperatively for non-React callers (inline-edit).
+  useEffect(() => { registerRFSetters(setNodes, setEdges); }, []);
   const s = useInnerState();
   const rf = useReactFlow();
   const [guides, setGuides] = useState<{ vx: number | null; hy: number | null }>({ vx: null, hy: null });
