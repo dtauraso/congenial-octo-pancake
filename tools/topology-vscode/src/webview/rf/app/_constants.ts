@@ -5,10 +5,11 @@ import { RSubstrateEdge } from "../../substrate-r/RSubstrateEdge";
 import { RSubstrateNode } from "../../substrate-r/RSubstrateNode";
 import { InputNode } from "../nodes/InputNode";
 import { RelayNode } from "../nodes/RelayNode";
+import { JoinNode } from "../nodes/JoinNode";
 import { SubstrateEdge } from "../edges/SubstrateEdge";
 
 export const EDGE_TYPES = { animated: RSubstrateEdge, substrate: SubstrateEdge };
-export const RF_NODE_TYPES = { animated: RSubstrateNode, fold: FoldNode, note: NoteNode, input: InputNode, relay: RelayNode };
+export const RF_NODE_TYPES = { animated: RSubstrateNode, fold: FoldNode, note: NoteNode, input: InputNode, relay: RelayNode, join: JoinNode };
 
 // Alignment-guide tolerance is in flow units; 4 covers off-grid drag
 // noise without firing on every near-miss.
