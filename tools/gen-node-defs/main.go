@@ -148,7 +148,7 @@ func parsePortsFromAST(pkgDir string) ([]port, error) {
 	if err != nil {
 		return nil, err
 	}
-	pkgs := map[string]*ast.Package{}
+	pkgs := map[string][]*ast.File{}
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
@@ -160,14 +160,11 @@ func parsePortsFromAST(pkgDir string) ([]port, error) {
 			return nil, err
 		}
 		pkgName := f.Name.Name
-		if pkgs[pkgName] == nil {
-			pkgs[pkgName] = &ast.Package{Name: pkgName, Files: map[string]*ast.File{}}
-		}
-		pkgs[pkgName].Files[fullPath] = f
+		pkgs[pkgName] = append(pkgs[pkgName], f)
 	}
 	var ports []port
-	for _, pkg := range pkgs {
-		for _, file := range pkg.Files {
+	for _, files := range pkgs {
+		for _, file := range files {
 			for _, decl := range file.Decls {
 				genDecl, ok := decl.(*ast.GenDecl)
 				if !ok || genDecl.Tok != token.TYPE {
