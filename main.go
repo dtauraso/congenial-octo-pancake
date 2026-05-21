@@ -1,5 +1,7 @@
 package main
 
+//go:generate go run ./tools/gen-kind-imports
+
 import (
 	"context"
 	"flag"
@@ -12,11 +14,6 @@ import (
 	T "github.com/dtauraso/wirefold/Trace"
 	W "github.com/dtauraso/wirefold/nodes/Wiring"
 
-	// Trigger self-registration init() in each node kind package.
-	_ "github.com/dtauraso/wirefold/nodes/InputNode"
-	_ "github.com/dtauraso/wirefold/nodes/ReadGateNode"
-	_ "github.com/dtauraso/wirefold/nodes/ChainInhibitorNode"
-	_ "github.com/dtauraso/wirefold/nodes/InhibitRightGateNode"
 )
 
 // RunTest wires the topology and lets it run for `dur` before
