@@ -89,7 +89,7 @@ channel ports.
 
 ## Working-tree state
 
-`topology.view.json` has unstaged edits — leave untouched. Otherwise clean.
+Clean. `topology.view.json` was merged into `topology.json#view` and deleted (Step 4 of collapse-representations).
 
 ## Dev-loop
 

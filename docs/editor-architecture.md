@@ -153,13 +153,15 @@ checked against them.
    writes. Conflicts between human intent and generated spec
    resolve by editing wiring or notes — never spec.
 
-5. **`topology.json` is AI-authoritative; `topology.view.json`
+5. **`topology.json` is AI-authoritative; `topology.json#view`
    is presentation-only.** AI never writes layout. Layout is a
-   private dialect of the visual editor.
+   private dialect of the visual editor (stored under the `view`
+   key of the same file since Step 4 of collapse-representations).
 
-6. **No semantic information lives only in `topology.view.json`
+6. **No semantic information lives only in `topology.json#view`
    or runtime state.** Every fact a node or edge represents must
-   be expressible in `topology.json` alone. This preserves the
+   be expressible in the structural keys of `topology.json` alone.
+   This preserves the
    future-DSL door without requiring it now.
 
 7. **Deterministic serialization.** Sorted keys, sorted node and

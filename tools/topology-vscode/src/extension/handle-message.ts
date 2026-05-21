@@ -5,7 +5,7 @@
 
 import * as vscode from "vscode";
 import { BuildAndRunRunner } from "../runCommand";
-import { writeSidecar } from "../sidecar";
+import { injectViewText } from "../sidecar";
 import { parseWebviewToHost, type HostToWebviewMsg, type WebviewToHostMsg } from "../messages";
 import { applyEdit } from "./html";
 import { appendWebviewLog } from "./webview-log";
@@ -13,7 +13,6 @@ import { toErrorMessage } from "../utils/error";
 
 export type MessageCtx = {
   document: vscode.TextDocument;
-  sidecarUri: vscode.Uri;
   runner: BuildAndRunRunner;
   post: (msg: HostToWebviewMsg) => Thenable<boolean>;
   send: () => Thenable<boolean>;
@@ -31,7 +30,7 @@ export async function handleMessage(raw: unknown, ctx: MessageCtx): Promise<void
 }
 
 async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
-  const { document, sidecarUri, runner, post } = ctx;
+  const { document, runner, post } = ctx;
   switch (msg.type) {
     case "ready":
       ctx.send();
@@ -48,7 +47,13 @@ async function dispatch(msg: WebviewToHostMsg, ctx: MessageCtx): Promise<void> {
       }
       return;
     case "view-save":
-      try { await writeSidecar(sidecarUri, msg.text); }
+      try {
+        const merged = injectViewText(document.getText(), msg.text);
+        ctx.setLastAppliedVersion(document.version + 1);
+        await applyEdit(document, merged);
+        await document.save();
+        ctx.setLastAppliedVersion(document.version);
+      }
       catch (err) { post({ type: "save-error", message: toErrorMessage(err) }); }
       return;
     case "run":

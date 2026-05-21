@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as vscode from "vscode";
 import { BuildAndRunRunner } from "./runCommand";
-import { viewSidecarUri, readSidecar } from "./sidecar";
+import { extractViewText } from "./sidecar";
 import type { HostToWebviewMsg } from "./messages";
 import { buildWebviewHtml } from "./extension/html";
 import { handleMessage } from "./extension/handle-message";
@@ -27,7 +27,6 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
     panel.webview.options = { enableScripts: true, localResourceRoots: [outDir] };
     panel.webview.html = buildWebviewHtml(panel.webview, this.context.extensionPath);
 
-    const sidecarUri = viewSidecarUri(document.uri);
     const post = (msg: HostToWebviewMsg) => panel.webview.postMessage(msg);
     const runner = new BuildAndRunRunner(
       (status) => post({ type: "run-status", ...status }),
@@ -40,8 +39,11 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
     // whose version bumps); version comparison handles those correctly.
     let lastAppliedVersion = document.version;
     const send = () => post({ type: "load", text: document.getText() });
-    const sendView = async () =>
-      post({ type: "view-load", text: await readSidecar(sidecarUri) });
+    // View state is now stored under the `view` key of topology.json.
+    const sendView = () => {
+      post({ type: "view-load", text: extractViewText(document.getText()) });
+      return Promise.resolve();
+    };
 
     const docSub = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() !== document.uri.toString()) return;
@@ -101,7 +103,6 @@ class TopologyEditorProvider implements vscode.CustomTextEditorProvider {
     panel.webview.onDidReceiveMessage((raw) =>
       handleMessage(raw, {
         document,
-        sidecarUri,
         runner,
         post,
         send,
