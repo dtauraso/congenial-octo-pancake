@@ -9,17 +9,18 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-20, post collapse-representations)
+## State at handoff (2026-05-20, post collapse-representations merge)
 
-**Active branch:** `task/collapse-representations` — ready to merge to main.
-No further code changes needed; merge is David's call.
+**Active branch:** `main` at `041bb7b`. No task in flight.
+`task/collapse-representations` merged ff and deleted (local + remote).
 
 ### What landed (4-step collapse)
 
 Planned in `docs/planning/visual-editor/collapse-representations.md`.
 
-- **Step 1** (`9237801`) — generate `nodes/blank_imports.go` via `go:generate`;
-  `main.go` no longer needs manual blank-import maintenance.
+- **Step 1** (`9237801`) — generate `kinds_generated.go` at repo root via
+  `go:generate` (generator at `tools/gen-kind-imports/`); `main.go` no longer
+  needs manual blank-import maintenance.
 - **Step 2** (`2af47b8`, `ebc5eb3`, `c94ea7e`) — `tools/gen-node-defs` Go program
   walks `nodes/*/*.go` AST to derive port names and node-data types; replaces the
   old `gen-node-defs.mjs` (deleted). Generates `node-defs.ts` and
@@ -68,7 +69,7 @@ before execution.
   (generated from Go AST) and renders all kinds. `SubstrateEdge` for wires.
   State via RF + thin helpers. `gen-node-defs.mjs` is gone; replaced by
   `tools/gen-node-defs` (Go program, `go run ../../tools/gen-node-defs`).
-- **Runtime (Go):** `go generate ./...` writes `nodes/blank_imports.go`.
+- **Runtime (Go):** `go generate ./...` writes `kinds_generated.go` at repo root.
   Each kind's `init()` calls `Wiring.Register`. `Wiring.LoadTopology` parses
   `topology.json` (including `"view"` key) and uses reflection on each
   registered struct to build the port manifest. Non-channel fields populated
