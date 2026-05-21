@@ -24,6 +24,12 @@ type port struct {
 	accent    string // optional hex color from SPEC.md
 }
 
+// dataField represents a wire:"data.*" tagged struct field.
+type dataField struct {
+	wireTag string // full tag value after wire:"data." prefix, e.g. "init" or "initialSlots.held"
+	goType  string // Go type string, e.g. "[]int", "int", "string"
+}
+
 // viewDef holds the SPEC.md ## View section fields.
 type viewDef struct {
 	kind         string
@@ -39,9 +45,11 @@ type viewDef struct {
 
 // kindEntry is one node kind to emit.
 type kindEntry struct {
-	kind  string
-	view  viewDef
-	ports []port
+	kind       string // RF/view kind name (camelCase, from SPEC.md)
+	goKind     string // Go/topology kind name (PascalCase, from Wiring.Register)
+	view       viewDef
+	ports      []port
+	dataFields []dataField
 }
 
 func main() {
@@ -76,6 +84,14 @@ func main() {
 		if err != nil {
 			fatalf("parse ports %s: %v", e.Name(), err)
 		}
+		dataFields, err := parseDataFieldsFromAST(pkgDir)
+		if err != nil {
+			fatalf("parse data fields %s: %v", e.Name(), err)
+		}
+		goKind, err := parseGoKindName(pkgDir)
+		if err != nil {
+			fatalf("parse go kind name %s: %v", e.Name(), err)
+		}
 		view, accentOverrides, err := parseSpecMD(pkgDir)
 		if err != nil {
 			// SPEC.md missing or no View section — skip this kind.
@@ -90,7 +106,7 @@ func main() {
 				ports[i].accent = a
 			}
 		}
-		kinds = append(kinds, kindEntry{kind: view.kind, view: view, ports: ports})
+		kinds = append(kinds, kindEntry{kind: view.kind, goKind: goKind, view: view, ports: ports, dataFields: dataFields})
 	}
 
 	// Sort alphabetically by RF kind name (matching original generator behaviour).
@@ -103,6 +119,12 @@ func main() {
 		fatalf("write %s: %v", outPath, err)
 	}
 	fmt.Fprintf(os.Stderr, "gen-node-defs: wrote %s (%d entries)\n", outPath, len(kinds))
+
+	dataTypesPath := filepath.Join(repoRoot, "tools", "topology-vscode", "src", "schema", "node-data-types.ts")
+	if err := writeNodeDataTypes(dataTypesPath, kinds); err != nil {
+		fatalf("write %s: %v", dataTypesPath, err)
+	}
+	fmt.Fprintf(os.Stderr, "gen-node-defs: wrote %s\n", dataTypesPath)
 }
 
 // findRepoRoot walks up from dir until it finds a directory containing "nodes/".
@@ -456,6 +478,263 @@ func filterPorts(ports []port, dir string) []port {
 		}
 	}
 	return out
+}
+
+// goTypeToTS converts a Go type expression string to a TypeScript type string.
+// Supported: int, string, bool, []int, []string, map[string]int.
+// Returns an error for unsupported types.
+func goTypeToTS(goType string) (string, error) {
+	switch goType {
+	case "int":
+		return "number", nil
+	case "string":
+		return "string", nil
+	case "bool":
+		return "boolean", nil
+	case "[]int":
+		return "number[]", nil
+	case "[]string":
+		return "string[]", nil
+	case "map[string]int":
+		return "Record<string, number>", nil
+	}
+	return "", fmt.Errorf("unsupported Go type %q — add it to goTypeToTS", goType)
+}
+
+// goTypeExprStr converts an ast.Expr to a Go type string.
+func goTypeExprStr(expr ast.Expr) (string, bool) {
+	switch t := expr.(type) {
+	case *ast.Ident:
+		return t.Name, true
+	case *ast.ArrayType:
+		elt, ok := goTypeExprStr(t.Elt)
+		if !ok {
+			return "", false
+		}
+		return "[]" + elt, true
+	case *ast.MapType:
+		k, ok1 := goTypeExprStr(t.Key)
+		v, ok2 := goTypeExprStr(t.Value)
+		if !ok1 || !ok2 {
+			return "", false
+		}
+		return "map[" + k + "]" + v, true
+	}
+	return "", false
+}
+
+// parseGoKindName extracts the first string argument to Wiring.Register in pkgDir.
+func parseGoKindName(pkgDir string) (string, error) {
+	entries, err := os.ReadDir(pkgDir)
+	if err != nil {
+		return "", err
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(pkgDir, name))
+		if err != nil {
+			continue
+		}
+		s := string(data)
+		const marker = `Wiring.Register("`
+		idx := strings.Index(s, marker)
+		if idx == -1 {
+			continue
+		}
+		rest := s[idx+len(marker):]
+		end := strings.Index(rest, `"`)
+		if end == -1 {
+			continue
+		}
+		return rest[:end], nil
+	}
+	return "", fmt.Errorf("Wiring.Register not found in %s", pkgDir)
+}
+
+// parseDataFieldsFromAST reads all .go files in pkgDir and returns data fields
+// derived from struct fields tagged with wire:"data.*".
+func parseDataFieldsFromAST(pkgDir string) ([]dataField, error) {
+	fset := token.NewFileSet()
+	entries, err := os.ReadDir(pkgDir)
+	if err != nil {
+		return nil, err
+	}
+	var files []*ast.File
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		fullPath := filepath.Join(pkgDir, name)
+		f, err := parser.ParseFile(fset, fullPath, nil, 0)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, f)
+	}
+	var fields []dataField
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			genDecl, ok := decl.(*ast.GenDecl)
+			if !ok || genDecl.Tok != token.TYPE {
+				continue
+			}
+			for _, spec := range genDecl.Specs {
+				typeSpec, ok := spec.(*ast.TypeSpec)
+				if !ok {
+					continue
+				}
+				structType, ok := typeSpec.Type.(*ast.StructType)
+				if !ok {
+					continue
+				}
+				for _, field := range structType.Fields.List {
+					if field.Tag == nil {
+						continue
+					}
+					tag := strings.Trim(field.Tag.Value, "`")
+					const prefix = `wire:"data.`
+					idx := strings.Index(tag, prefix)
+					if idx == -1 {
+						continue
+					}
+					rest := tag[idx+len(prefix):]
+					end := strings.Index(rest, `"`)
+					if end == -1 {
+						continue
+					}
+					wireKey := rest[:end]
+					typeStr, ok := goTypeExprStr(field.Type)
+					if !ok {
+						return nil, fmt.Errorf("field %v: cannot stringify type", field.Names)
+					}
+					fields = append(fields, dataField{wireTag: wireKey, goType: typeStr})
+				}
+			}
+		}
+	}
+	return fields, nil
+}
+
+// tsValidatorBody returns a TS snippet that validates one dataField path.
+// path is the dot-separated path after "data.", e.g. "init" or "initialSlots.held".
+func tsValidatorSnippets(fields []dataField) []string {
+	var lines []string
+	for _, f := range fields {
+		tsType, err := goTypeToTS(f.goType)
+		if err != nil {
+			// This will fail at go build time if unsupported.
+			lines = append(lines, fmt.Sprintf(`    // ERROR: %v`, err))
+			continue
+		}
+		parts := strings.Split(f.wireTag, ".")
+		// Build accessor chain with type checks.
+		switch len(parts) {
+		case 1:
+			key := parts[0]
+			switch tsType {
+			case "number":
+				lines = append(lines, fmt.Sprintf(`    if (typeof d["%s"] !== "number") throw new ParseError(path+".data.%s: expected number");`, key, key))
+			case "boolean":
+				lines = append(lines, fmt.Sprintf(`    if (typeof d["%s"] !== "boolean") throw new ParseError(path+".data.%s: expected boolean");`, key, key))
+			case "string":
+				lines = append(lines, fmt.Sprintf(`    if (typeof d["%s"] !== "string") throw new ParseError(path+".data.%s: expected string");`, key, key))
+			case "number[]":
+				lines = append(lines, fmt.Sprintf(`    if (!Array.isArray(d["%s"]) || !(d["%s"] as unknown[]).every((x) => typeof x === "number")) throw new ParseError(path+".data.%s: expected number[]");`, key, key, key))
+			case "string[]":
+				lines = append(lines, fmt.Sprintf(`    if (!Array.isArray(d["%s"]) || !(d["%s"] as unknown[]).every((x) => typeof x === "string")) throw new ParseError(path+".data.%s: expected string[]");`, key, key, key))
+			case "Record<string, number>":
+				lines = append(lines, fmt.Sprintf(`    if (typeof d["%s"] !== "object" || d["%s"] === null || Array.isArray(d["%s"])) throw new ParseError(path+".data.%s: expected object");`, key, key, key, key))
+			}
+		case 2:
+			// e.g. initialSlots.held → d.initialSlots.held
+			parent := parts[0]
+			child := parts[1]
+			lines = append(lines, fmt.Sprintf(`    { const p = d["%s"] as Record<string, unknown>|undefined; if (!p || typeof p !== "object") throw new ParseError(path+".data.%s: expected object"); if (typeof p["%s"] !== "number") throw new ParseError(path+".data.%s.%s: expected number"); }`, parent, parent, child, parent, child))
+		}
+	}
+	return lines
+}
+
+// writeNodeDataTypes emits the node-data-types.ts file.
+func writeNodeDataTypes(outPath string, kinds []kindEntry) error {
+	var buf bytes.Buffer
+	w := bufio.NewWriter(&buf)
+
+	fmt.Fprintln(w, `// GENERATED by tools/gen-node-defs — do not edit. Source: nodes/<Kind>/<Kind>.go wire:"data.*" tags.`)
+	fmt.Fprintln(w, `// Validates node.data blobs against Go struct field types.`)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, `import { ParseError } from "./parse-primitives";`)
+	fmt.Fprintln(w)
+
+	// Emit per-kind interfaces.
+	for _, e := range kinds {
+		if len(e.dataFields) == 0 {
+			continue
+		}
+		fmt.Fprintf(w, "export interface %sData {\n", e.goKind)
+		// Group fields by top-level key.
+		topKeys := map[string][]dataField{}
+		var topOrder []string
+		for _, f := range e.dataFields {
+			parts := strings.SplitN(f.wireTag, ".", 2)
+			key := parts[0]
+			if _, exists := topKeys[key]; !exists {
+				topOrder = append(topOrder, key)
+			}
+			topKeys[key] = append(topKeys[key], f)
+		}
+		for _, key := range topOrder {
+			fields := topKeys[key]
+			if len(fields) == 1 && !strings.Contains(fields[0].wireTag, ".") {
+				tsType, _ := goTypeToTS(fields[0].goType)
+				fmt.Fprintf(w, "  %s: %s;\n", key, tsType)
+			} else {
+				// Nested object (e.g. initialSlots).
+				fmt.Fprintf(w, "  %s: {\n", key)
+				for _, f := range fields {
+					parts := strings.SplitN(f.wireTag, ".", 2)
+					child := parts[1]
+					tsType, _ := goTypeToTS(f.goType)
+					fmt.Fprintf(w, "    %s: %s;\n", child, tsType)
+				}
+				fmt.Fprintln(w, "  };")
+			}
+		}
+		fmt.Fprintln(w, "}")
+		fmt.Fprintln(w)
+	}
+
+	// Emit parseNodeData function.
+	fmt.Fprintln(w, `// parseNodeData validates node.data for known kinds. Unknown kinds pass through.`)
+	fmt.Fprintln(w, `// Throws ParseError if the data shape does not match the Go struct.`)
+	fmt.Fprintln(w, `export function parseNodeData(kind: string, data: unknown, path: string): unknown {`)
+	fmt.Fprintln(w, `  if (data === undefined || data === null) return data;`)
+	fmt.Fprintln(w, `  switch (kind) {`)
+	for _, e := range kinds {
+		if len(e.dataFields) == 0 {
+			continue
+		}
+		fmt.Fprintf(w, "    case %q: {\n", e.goKind)
+		fmt.Fprintln(w, `      if (typeof data !== "object" || Array.isArray(data)) throw new ParseError(path+".data: expected object");`)
+		fmt.Fprintln(w, `      const d = data as Record<string, unknown>;`)
+		snippets := tsValidatorSnippets(e.dataFields)
+		for _, s := range snippets {
+			fmt.Fprintln(w, s)
+		}
+		fmt.Fprintln(w, `      return data;`)
+		fmt.Fprintln(w, `    }`)
+	}
+	fmt.Fprintln(w, `    default:`)
+	fmt.Fprintln(w, `      return data;`)
+	fmt.Fprintln(w, `  }`)
+	fmt.Fprintln(w, `}`)
+
+	w.Flush()
+	return os.WriteFile(outPath, buf.Bytes(), 0644)
 }
 
 func fatalf(format string, args ...any) {

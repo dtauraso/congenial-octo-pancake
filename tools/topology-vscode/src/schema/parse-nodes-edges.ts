@@ -19,6 +19,7 @@ import {
   stateMap,
   str,
 } from "./parse-primitives";
+import { parseNodeData } from "./node-data-types";
 
 function parsePort(v: unknown, path: string): Port {
   const o = obj(v, path);
@@ -67,7 +68,7 @@ export function parseNode(v: unknown, path: string): Node {
     props: opt(o.props, (x) => stateMap(x, `${path}.props`)),
     spec: opt(o.spec, (x) => parseNodeSpec(x, `${path}.spec`)),
     notes: opt(o.notes, (x) => str(x, `${path}.notes`)),
-    data: o.data,
+    data: parseNodeData(str(o.type, `${path}.type`), o.data, path),
     inputs: opt(o.inputs, (x) => parsePorts(x, `${path}.inputs`)),
     outputs: opt(o.outputs, (x) => parsePorts(x, `${path}.outputs`)),
     initialSlots: opt(o.initialSlots, (x) => stateMap(x, `${path}.initialSlots`)),
