@@ -22,10 +22,8 @@ code. Goroutines and channels replace conventional control flow.
 Lateral inhibition, contrast detection, and competitive binding are
 implemented as circuit primitives.
 
-The long-term goal is constant-time equality, multiplication, and set
-membership using the same topology. The visual editor is the medium
-for authoring and observing the network; the goal is a property of
-the diagram+Go runtime, not of the editor itself.
+The visual editor is the medium for authoring and observing the
+network; the network itself is the diagram+Go runtime.
 
 ## What things are
 
