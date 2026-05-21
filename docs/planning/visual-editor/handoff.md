@@ -40,13 +40,6 @@ Input, ReadGate, ChainInhibitor, InhibitRightGate.
 Per-kind firing-rule unit tests at `nodes/<Kind>Node/firing_rule_test.go`.
 `go test ./...` green.
 
-### Stale planning doc
-
-`docs/planning/visual-editor/pulse-secondary-value.md` was written in
-pre-RF vocabulary. The full secondary-value mechanism (payload
-`{primary, secondary}`, new `register` kind, ReadGate slot-fill emit rule)
-is still unimplemented. Needs rewriting against current RF + Go architecture
-before execution.
 
 ## Adding a kind (2 files)
 
@@ -77,9 +70,7 @@ before execution.
 
 ## Next options (priority order — pick on friction)
 
-**(a) Re-spec `pulse-secondary-value.md`** against the current RF + Go
-architecture, then execute. Payload `{primary, secondary}`, new `register`
-kind, ReadGate slot-fill emit rule. Doc must be rewritten before any code.
+No task is in flight. Pick the next option on friction.
 
 ## Parked follow-ups
 

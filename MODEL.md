@@ -13,6 +13,20 @@ destination and becomes empty on arrival. The slot lives on the
 destination node in Go. Source nodes observe destination slot phase
 directly, not through wire phase.
 
+## What this network computes
+
+The diagram+Go runtime network is a concurrent dataflow system. The
+topology IS the logic — behavior emerges from wiring, not procedural
+code. Goroutines and channels replace conventional control flow.
+
+Lateral inhibition, contrast detection, and competitive binding are
+implemented as circuit primitives.
+
+The long-term goal is constant-time equality, multiplication, and set
+membership using the same topology. The visual editor is the medium
+for authoring and observing the network; the goal is a property of
+the diagram+Go runtime, not of the editor itself.
+
 ## What things are
 
 - **Node.** Owns its firing rule, its output references (each = a

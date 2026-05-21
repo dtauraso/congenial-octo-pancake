@@ -10,14 +10,6 @@ vocabulary, you are in the wrong frame — stop and re-derive from the
 model. Do not propose multi-step plans with options for substrate/wire
 work; state the next single concrete step and wait.
 
-## What this project is
-
-A concurrent dataflow system implemented in Go. The topology IS the logic — behavior emerges from wiring, not procedural code. Goroutines and channels replace conventional control flow.
-
-Lateral inhibition, contrast detection, and competitive binding are implemented as circuit primitives.
-
-The long-term goal is constant-time equality, multiplication, and set membership using the same topology.
-
 ## Core concepts and backpressure
 
 Both live in [MODEL.md](MODEL.md): the inhibitor chain, edge nodes,
@@ -44,10 +36,6 @@ editor path is silently incomplete.
 
 **Drift rule:** if TS code outside `pump.ts` starts accumulating slot-phase,
 backpressure, or firing-rule logic, that is drift — those belong in Go.
-
-## Two modes, same machinery
-
-Disruption mode (external input perturbs the running system) is built first; self-sustaining mode (partitions cycling continuously) layers on top.
 
 ## Node kinds
 
