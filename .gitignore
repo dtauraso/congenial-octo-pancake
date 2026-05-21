@@ -63,6 +63,8 @@ tools/topology-vscode/test-results/
 # Local dev binaries (build outputs from go build at project root)
 /topogen
 /topogend
+# go build output if accidentally run from the tools/topology-vscode dir
+tools/topology-vscode/gen-node-defs
 
 # Local working notes / scratch
 /notes/
