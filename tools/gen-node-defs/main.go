@@ -540,16 +540,15 @@ func parseGoKindName(pkgDir string) (string, error) {
 		}
 		s := string(data)
 		const marker = `Wiring.Register("`
-		idx := strings.Index(s, marker)
-		if idx == -1 {
+		_, rest, ok := strings.Cut(s, marker)
+		if !ok {
 			continue
 		}
-		rest := s[idx+len(marker):]
-		end := strings.Index(rest, `"`)
-		if end == -1 {
+		name2, _, ok2 := strings.Cut(rest, `"`)
+		if !ok2 {
 			continue
 		}
-		return rest[:end], nil
+		return name2, nil
 	}
 	return "", fmt.Errorf("Wiring.Register not found in %s", pkgDir)
 }
@@ -597,16 +596,14 @@ func parseDataFieldsFromAST(pkgDir string) ([]dataField, error) {
 					}
 					tag := strings.Trim(field.Tag.Value, "`")
 					const prefix = `wire:"data.`
-					idx := strings.Index(tag, prefix)
-					if idx == -1 {
+					_, after, ok := strings.Cut(tag, prefix)
+					if !ok {
 						continue
 					}
-					rest := tag[idx+len(prefix):]
-					end := strings.Index(rest, `"`)
-					if end == -1 {
+					wireKey, _, ok2 := strings.Cut(after, `"`)
+					if !ok2 {
 						continue
 					}
-					wireKey := rest[:end]
 					typeStr, ok := goTypeExprStr(field.Type)
 					if !ok {
 						return nil, fmt.Errorf("field %v: cannot stringify type", field.Names)
