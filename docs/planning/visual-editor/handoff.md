@@ -9,19 +9,26 @@ handoff.md is exempt from the 100-LOC budget.
 
 ---
 
-## State at handoff (2026-05-20, post Populator API removal)
+## State at handoff (2026-05-20, post collapse-representations)
 
-**Active branch:** `main` at `f432cb4`. No task in flight.
+**Active branch:** `task/collapse-representations` — ready to merge to main.
+No further code changes needed; merge is David's call.
 
-### What landed since last handoff
+### What landed (4-step collapse)
 
-- **`d1f0156`** refactor(Wiring): replace Populator API with wire struct tags —
-  deleted `Populator` type, `populate` field on `kindEntry`, third arg from
-  `Register`. Non-channel fields use `wire:"data.<key>"` or
-  `wire:"data.initialSlots.<key>"` struct tags. `InputNode.Init` and
-  `ChainInhibitorNode.HeldValue` migrated.
-- **`f432cb4`** docs(handoff): refresh after Populator API removal. Merged
-  `task/remove-populator-api` ff to main; branch deleted local + remote.
+Planned in `docs/planning/visual-editor/collapse-representations.md`.
+
+- **Step 1** (`9237801`) — generate `nodes/blank_imports.go` via `go:generate`;
+  `main.go` no longer needs manual blank-import maintenance.
+- **Step 2** (`2af47b8`, `ebc5eb3`, `c94ea7e`) — `tools/gen-node-defs` Go program
+  walks `nodes/*/*.go` AST to derive port names and node-data types; replaces the
+  old `gen-node-defs.mjs` (deleted). Generates `node-defs.ts` and
+  `node-data-types.ts`. SPEC.md is now optional (view metadata / accent colors only).
+- **Step 3** (implicit) — hand-maintained layers dropped from 6 to 2:
+  Go struct (source of truth) + `topology.json` (instance data). Generated
+  artifacts: `kinds_generated.go`, `node-defs.ts`, `node-data-types.ts`.
+- **Step 4** (`9e915f7`) — `topology.view.json` merged into `topology.json#view`
+  and deleted. View metadata now lives under the `"view"` key of `topology.json`.
 
 ### Surviving kinds (4)
 
@@ -29,53 +36,49 @@ Input, ReadGate, ChainInhibitor, InhibitRightGate.
 
 ### Tests
 
-Per-kind firing-rule unit tests live at `nodes/<Kind>Node/firing_rule_test.go`.
-No `Trace/FixtureParity_*` files; no `.trace.jsonl` fixtures.
+Per-kind firing-rule unit tests at `nodes/<Kind>Node/firing_rule_test.go`.
 `go test ./...` green.
 
 ### Stale planning doc
 
 `docs/planning/visual-editor/pulse-secondary-value.md` was written in
-pre-RF substrate-r vocabulary. The ChainInhibitor port restructure piece
-of it just landed standalone. The full secondary-value mechanism (payload
+pre-RF vocabulary. The full secondary-value mechanism (payload
 `{primary, secondary}`, new `register` kind, ReadGate slot-fill emit rule)
-is still unimplemented. The doc needs re-writing against the current RF +
-Go architecture before execution.
+is still unimplemented. Needs rewriting against current RF + Go architecture
+before execution.
 
-## Adding a kind (3 files)
+## Adding a kind (2 files)
 
 1. `nodes/<Kind>/<Kind>.go` — struct + firing rule + `init() {
    Wiring.Register("Kind", func() any { return &Struct{} }) }`.
    Non-channel fields read from `data.*` JSON use struct tags:
    - `wire:"data.<key>"` — copies `NodeData.<Key>` (e.g. `[]int` from `data.init`)
    - `wire:"data.initialSlots.<key>"` — reads `NodeData.InitialSlots[key]` (int)
-2. `nodes/<Kind>/SPEC.md` — ports table, View section, firing rule,
-   runtime status (per `nodes/SPEC-FORMAT.md`).
-3. `main.go` — one blank import line: `_ "github.com/dtauraso/wirefold/nodes/<Kind>"`.
+   `go generate ./...` picks it up automatically (blank import generated).
+2. `nodes/<Kind>/SPEC.md` — **optional**; only needed for non-default view
+   metadata (accent color, display name override). Port names and data types
+   are now derived from the Go struct by `tools/gen-node-defs`.
 
-`node-defs.ts` regenerates via `npm run gen:node-defs` (also runs as
-prebuild). `builders.go` is not touched.
+`node-defs.ts` and `node-data-types.ts` regenerate via `npm run gen:node-defs`
+(also runs as prebuild). `builders.go` is not touched.
 
 ## Architecture summary
 
 - **Editor (TS / React Flow):** one `GenericNode.tsx` reads `node-defs.ts`
-  (generated) and renders all kinds. `SubstrateEdge` for wires. State via
-  RF + thin helpers. `gen-node-defs.mjs` walks `nodes/*/SPEC.md`.
-- **Runtime (Go):** `main.go` blank-imports the 4 kinds; each `init()`
-  calls `Wiring.Register`. `Wiring.LoadTopology` parses `topology.json`
-  and uses reflection on each registered struct to build the port manifest.
-  Non-channel fields are populated from `data.*` JSON via `wire:` struct tags.
+  (generated from Go AST) and renders all kinds. `SubstrateEdge` for wires.
+  State via RF + thin helpers. `gen-node-defs.mjs` is gone; replaced by
+  `tools/gen-node-defs` (Go program, `go run ../../tools/gen-node-defs`).
+- **Runtime (Go):** `go generate ./...` writes `nodes/blank_imports.go`.
+  Each kind's `init()` calls `Wiring.Register`. `Wiring.LoadTopology` parses
+  `topology.json` (including `"view"` key) and uses reflection on each
+  registered struct to build the port manifest. Non-channel fields populated
+  via `wire:` struct tags.
 
 ## Next options (priority order — pick on friction)
 
 **(a) Re-spec `pulse-secondary-value.md`** against the current RF + Go
 architecture, then execute. Payload `{primary, secondary}`, new `register`
 kind, ReadGate slot-fill emit rule. Doc must be rewritten before any code.
-
-**(b) Go-AST port parsing** — derive port names from Go structs instead of
-SPEC.md tables. Eliminates dual-maintenance. Natural follow-on to the
-Populator removal: `data.*` is now tag-driven; extend the same idea to
-channel ports.
 
 ## Parked follow-ups
 
@@ -89,7 +92,7 @@ channel ports.
 
 ## Working-tree state
 
-Clean. `topology.view.json` was merged into `topology.json#view` and deleted (Step 4 of collapse-representations).
+Clean.
 
 ## Dev-loop
 
