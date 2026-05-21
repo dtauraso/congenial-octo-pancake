@@ -144,9 +144,26 @@ func hasRegister(dir string) bool {
 // from channel-typed struct fields. Fields with wire:"data.*" tags are skipped.
 func parsePortsFromAST(pkgDir string) ([]port, error) {
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, pkgDir, nil, 0)
+	entries, err := os.ReadDir(pkgDir)
 	if err != nil {
 		return nil, err
+	}
+	pkgs := map[string]*ast.Package{}
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		fullPath := filepath.Join(pkgDir, name)
+		f, err := parser.ParseFile(fset, fullPath, nil, 0)
+		if err != nil {
+			return nil, err
+		}
+		pkgName := f.Name.Name
+		if pkgs[pkgName] == nil {
+			pkgs[pkgName] = &ast.Package{Name: pkgName, Files: map[string]*ast.File{}}
+		}
+		pkgs[pkgName].Files[fullPath] = f
 	}
 	var ports []port
 	for _, pkg := range pkgs {
